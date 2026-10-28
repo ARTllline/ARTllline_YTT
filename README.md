@@ -1,132 +1,136 @@
 # YTT — Your Tabletop
 
-A self-hostable, browser-based tabletop designed around the Game Master's
-workspace. React handles the application UI; PixiJS renders the tabletop; Laravel
-provides the web application foundation. Product direction lives in `AGENTS.md`.
+A self-hostable tabletop built around the Game Master's workspace. React owns
+the interface, PixiJS draws the table, and Laravel is authoritative for saved
+state. The product contract is `AGENTS.md`.
 
 ## Current status
 
-**Task 01: foundation + renderer vertical slice.** One original demo scene with
-four tokens, camera pan/zoom, square grid calibration, selection, drag, snapping
-and a two-way Inspector. Custom dark workspace, collapsible panels, responsive
-overlays, shortcut help, loading states and error recovery are included.
+**Task 02: persistent campaigns and scenes.** Register, create a campaign and
+scene, upload a map, calibrate the grid, add tokens, edit them and return later.
+The prepared world survives reload and sign-out. Editing a scene is independent
+of activating it for future players.
 
-This is a local renderer preview. Changes reset on reload. Multiplayer, scene
-persistence, campaign CRUD, authentication, upload, fog and cues are not built.
-Disabled controls and prototype panels identify future capabilities honestly.
+Session authentication, GM/Player memberships, policies, filtered snapshots,
+private image delivery and atomic scene revisions are implemented. Player UI,
+invitations, realtime, fog, measurements, audio and cues are intentionally deferred.
+There is no automatic demo data or seeded account.
 
 ## Requirements
 
-- PHP **8.3+** and Composer 2 (Laravel 13 platform requirements).
-- PHP extensions required by Laravel, including mbstring, OpenSSL, PDO, tokenizer,
-  XML/DOM, fileinfo, ctype, curl; use `composer check-platform-reqs` to verify.
-- Node **20.19+** (or supported newer LTS), npm.
-- A browser with WebGL enabled. Desktop/laptop is the primary GM target.
+- PHP **8.3+**, Composer 2 and Laravel's required extensions, including PDO MySQL
+  and fileinfo. Tests also use PDO SQLite and GD for generated upload fixtures.
+- A dedicated **MySQL** database. File sessions/cache and synchronous actions are
+  sufficient at this stage; Redis/Reverb are not needed.
+- Node **20.19+** or a supported newer LTS; npm.
+- A WebGL-capable browser. Desktop/laptop is the primary GM target.
 
-MySQL and Redis are the intended future backend services. Neither is needed for
-this preview: sessions/cache use files and no route queries the database.
+## Install and run
 
-## Install
-
-Run from the repository root:
+From the repository root:
 
 ```sh
 composer install
 cp .env.example .env
 php artisan key:generate
 npm ci
+```
+
+On PowerShell use `Copy-Item .env.example .env`. Copy the environment and generate
+a key only for a **new installation**; preserve an existing `.env` and `APP_KEY`.
+Create a dedicated database (the example uses `ytt`) and set `DB_HOST`,
+`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` and `APP_URL` in `.env`. Then run:
+
+```sh
+php artisan migrate
 npm run build
 php artisan serve
 ```
 
-On PowerShell use `Copy-Item .env.example .env` instead of `cp`. Copy the environment
-file and generate a key only on first installation; preserve an existing `.env`
-and `APP_KEY`. Open **http://127.0.0.1:8000**. No migration is needed for this stage.
+Open **http://127.0.0.1:8000** and register your own account. Migrations create
+schema only. No seeding is required. The registration → campaign → scene → map →
+token workflow requires no manual domain rows.
 
-Configure `APP_URL` if using another local hostname. `.env.example` has an empty
-key and database password; `.env`, dependencies and generated builds are ignored.
-When database features arrive, configure a dedicated MySQL database before
-running their migrations. Do not use the development server for public hosting;
-the production web root will be `public/` with `APP_DEBUG=false`.
+### Upload limits
+
+The application accepts PNG/JPEG/WebP up to **16 MiB**, **8192 px per side** and
+**32 million pixels**. PHP and the web server must permit that request size:
+`upload_max_filesize=16M`, `post_max_size=20M`, and an equivalent proxy body limit.
+The stock PHP configuration on some machines allows only 2 MiB.
+
+For a local session without changing system PHP configuration, stop the other
+dev server and run the following from the repository root. The working directory
+must be `public`, because Laravel's built-in router uses it:
+
+```sh
+cd public
+php -d upload_max_filesize=16M -d post_max_size=20M -S 127.0.0.1:8000 ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php
+```
+
+This is a development server, not a public deployment configuration. For hosting,
+use `public/` as the web root, HTTPS, `APP_DEBUG=false`, secure session cookies,
+application-specific database credentials and writable `storage`/`bootstrap/cache`.
+
+### Private files and backups
+
+Images live under `storage/app/campaigns-private/campaigns/{campaign}/{kind}/`.
+They are served only through authorized `/api/assets/{id}` requests. Do **not**
+expose this directory through a public alias or storage symlink. `storage:link`
+is not needed. Detached images are retained for future reuse, not garbage-collected.
+
+Back up the database, private image directory and existing application key
+together. Session files are not the canonical scene state.
 
 ## Development
 
-Use two terminals:
+Run Laravel (one of the commands above) and `npm run dev` in separate terminals.
+Open the Laravel URL, not the Vite URL. Stop Vite and run `npm run build` to use
+the production bundle. Remove a stale `public/hot` only if a terminated Vite
+process left it behind. Both dependency lockfiles are checked in.
 
-```sh
-php artisan serve
-# or: composer dev
-```
+## Controls and saving
 
-```sh
-npm run dev
-```
+| Action                             | Control                                                   |
+| ---------------------------------- | --------------------------------------------------------- |
+| Select a token                     | Click the token or scene outline                          |
+| Move an unlocked token             | Drag with Select; save once on drop                       |
+| Pan                                | Middle mouse, Pan tool, or Space + drag on focused canvas |
+| Zoom                               | Wheel toward cursor; +/- buttons; Fit scene               |
+| Edit properties                    | Inspector; numeric/text fields commit on Enter or blur    |
+| Cancel a draft/drag                | Escape                                                    |
+| Grid calibration                   | Grid toolbar; short save debounce                         |
+| Add/replace map                    | Scene setup upload or drop an image on the tabletop       |
+| Token image, owner, hidden, locked | Selected token's Inspector                                |
+| Delete token/scene                 | Contextual action with confirmation                       |
+| Switch campaign/scene              | Campaign picker / Scenes sidebar                          |
+| Set live scene                     | Separate Activate/Deactivate button                       |
 
-Open the Laravel URL, not the Vite server URL. Vite supplies assets and React HMR.
-To use a production bundle, stop Vite and run `npm run build`. If Vite was killed
-uncleanly, remove its stale `public/hot` file so Laravel uses the build manifest.
+The status bar shows **Saved**, **Saving…**, or **Save failed**. Failed writes
+retain local edits and stop the queue. Use **Retry**, or explicitly discard
+unconfirmed edits with **Reload saved**. In-app navigation waits for saving;
+closing/reloading a dirty tab asks for confirmation. Pending edits are memory-only
+and do not survive a forced close. This is not an offline editor.
+
+World positions use token centers in map pixels, independent of the camera.
+Snap places centers at cell centers only on drop. Inspector coordinates stay
+exact. Locked tokens remain selectable; unlock before dragging. Hidden tokens
+are dimmed for the GM and absent from Player snapshots.
 
 ## Checks
 
 ```sh
 composer test
-php vendor/bin/pint --test
+npm run test
 npm run typecheck
 npm run lint
-npm run test
 npm run build
+php vendor/bin/pint --test
+composer validate
+composer check-platform-reqs
 ```
 
-`npm run format` formats authored frontend files and documentation with Prettier.
-`composer validate` and `composer check-platform-reqs` check backend packaging.
-Both dependency lockfiles are included for reproducible installation.
-
-## Controls
-
-| Action                        | Control                                                        |
-| ----------------------------- | -------------------------------------------------------------- |
-| Select token                  | Click it, or select it in the scene outline                    |
-| Move token                    | Drag with Select tool; 3 px threshold                          |
-| Pan                           | Middle mouse drag, Pan tool, or Space + drag on focused canvas |
-| Zoom toward cursor            | Mouse wheel                                                    |
-| Fit scene                     | Frame icon beside zoom percentage                              |
-| Cancel drag / clear selection | Escape                                                         |
-| Change grid / snap            | Grid tool; visibility and snap are independent                 |
-| Edit selected token           | Inspector; commit fields with Enter or blur                    |
-| Cancel numeric draft          | Escape                                                         |
-| Shortcut reference            | Shortcuts button in status bar                                 |
-
-Positions are token centers in world pixels. Snap places centers at cell centers
-when dropped; the cell outline previews the destination. Inspector coordinates
-remain exact. Rotation changes the token's directional emblem while its name
-stays readable. No delete action is provided until a recovery/undo workflow exists.
-
-## Source map
-
-```text
-routes/web.php                   Laravel entry route
-resources/views/workspace.blade.php
-resources/js/app.tsx             React entry + error boundary
-resources/js/workspace/          Shell, Inspector, toolbar and lifecycle adapter
-resources/js/tabletop/
-  renderer/                     Pixi lifecycle, camera and pointer controller
-  layers/                       Map, grid, props, tokens and interaction overlay
-  objects/                      Token presentation
-  state/                        Demo fixture and local observable scene store
-  types/                        Scene, token, camera and grid contracts
-  utils/                        Pure coordinate and snapping math
-resources/css/                  Design tokens and workspace styles
-tests/Feature/                  Laravel route smoke tests
-```
-
-The renderer uses direct Pixi updates for raw movement, a sampled transient
-Inspector preview, and one committed scene mutation on drop. React subscribes
-through `useSyncExternalStore`; camera and scene data remain separate. No global
-state dependency or speculative multiplayer infrastructure is introduced.
-
-Read [Architecture](docs/ARCHITECTURE.md) for data flow, lifecycle and next-stage
-integration boundaries, and [Validation](docs/VALIDATION.md) for actual checks,
-responsive coverage and the manual acceptance checklist.
-
-All scene artwork and token emblems are original vector primitives in this
-repository. UI icons use Lucide (ISC); there are no external image/font requests.
+PHP feature tests use an isolated in-memory SQLite database and fake private
+storage, never the configured working MySQL campaign database. Browser acceptance
+also exercises real MySQL. See [Validation](docs/VALIDATION.md) for evidence and
+limits; [Architecture](docs/ARCHITECTURE.md) documents routes, contracts, permissions,
+revision locking, renderer integration and next-stage decisions.

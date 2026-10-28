@@ -1,19 +1,21 @@
-import { Application, Container } from 'pixi.js';
+import { Application, Container, Texture } from 'pixi.js';
 import { Camera } from './camera/Camera';
 import { PointerController } from './interaction/PointerController';
-import { MapLayer } from '../layers/MapLayer';
+import { BattleMapLayer } from '../layers/BattleMapLayer';
 import { GridLayer } from '../layers/GridLayer';
-import { PropLayer } from '../layers/PropLayer';
 import { TokenLayer } from '../layers/TokenLayer';
 import { InteractionLayer } from '../layers/InteractionLayer';
 import type { SceneStore } from '../state/SceneStore';
 import type { Tool } from '../types/scene';
+import { screenToWorld } from '../utils/coordinates';
 
 export class TabletopRenderer {
     private app = new Application();
     private world = new Container();
     private camera = new Camera();
     private grid = new GridLayer();
+    private map = new BattleMapLayer();
+    private textures = new Map<string, Texture>();
     private tokens = new TokenLayer();
     private overlay = new InteractionLayer();
     private input?: PointerController;
@@ -56,7 +58,7 @@ export class TabletopRenderer {
         canvas.addEventListener('webglcontextlost', this.contextLost);
         this.host.appendChild(canvas);
         this.world.eventMode = 'none';
-        this.world.addChild(new MapLayer(), this.grid, new PropLayer(), this.tokens, this.overlay);
+        this.world.addChild(this.map, this.grid, this.tokens, this.overlay);
         this.app.stage.addChild(this.world);
         this.input = new PointerController(
             canvas,
@@ -71,11 +73,14 @@ export class TabletopRenderer {
             if (scene.grid !== previousScene.grid)
                 this.grid.update(scene.grid, scene.width, scene.height);
             this.tokens.sync(scene.tokens);
+            if (scene !== previousScene) this.syncImages();
+            this.input?.reapplyPreview();
             this.input?.refresh();
             previousScene = scene;
         };
         this.grid.update(previousScene.grid, previousScene.width, previousScene.height);
         sync();
+        this.syncImages();
         this.unsubscribe = this.store.subscribe(sync);
         this.observer = new ResizeObserver(() => this.resize());
         this.observer.observe(this.host);
@@ -108,6 +113,22 @@ export class TabletopRenderer {
         const scene = this.store.getSnapshot().scene;
         this.camera.fit(this.width, this.height, scene.width, scene.height);
     }
+    center() {
+        return screenToWorld({ x: this.width / 2, y: this.height / 2 }, this.camera.state);
+    }
+    setImages(images: Map<string, HTMLImageElement>) {
+        for (const [id, image] of images) {
+            if (!this.textures.has(id)) this.textures.set(id, Texture.from(image));
+        }
+        this.syncImages();
+    }
+    private syncImages() {
+        const scene = this.store.getSnapshot().scene;
+        this.map.update(scene, scene.map ? this.textures.get(scene.map.asset.id) : undefined);
+        this.tokens.views.forEach((view) =>
+            view.setImage(view.model.image ? this.textures.get(view.model.image.id) : undefined),
+        );
+    }
     zoom(factor: number) {
         this.camera.zoomBy(factor, { x: this.width / 2, y: this.height / 2 });
     }
@@ -128,6 +149,8 @@ export class TabletopRenderer {
     private release() {
         this.app.canvas.removeEventListener('webglcontextlost', this.contextLost);
         this.app.destroy(true, { children: true });
+        this.textures.forEach((texture) => texture.destroy(true));
+        this.textures.clear();
         this.ready = false;
     }
 }

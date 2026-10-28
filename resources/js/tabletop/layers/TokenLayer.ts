@@ -4,6 +4,12 @@ import { TokenView } from '../objects/TokenView';
 export class TokenLayer extends Container {
     views = new Map<string, TokenView>();
     sync(tokens: readonly Token[]) {
+        for (const [id, view] of this.views) {
+            if (!tokens.some((token) => token.id === id)) {
+                view.destroy({ children: true });
+                this.views.delete(id);
+            }
+        }
         for (const token of tokens) {
             const existing = this.views.get(token.id);
             if (existing) {

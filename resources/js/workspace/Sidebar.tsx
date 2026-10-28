@@ -6,12 +6,34 @@ import {
     ChevronDown,
     Plus,
     Shield,
-    Circle,
-    ArrowUpRight,
+    EyeOff,
+    Lock,
     X,
+    Pencil,
+    Trash2,
+    FolderOpen,
 } from 'lucide-react';
 import type { SceneStore } from '../tabletop/state/SceneStore';
-export function Sidebar({ store, onClose }: { store: SceneStore; onClose: () => void }) {
+import type { Campaign } from '../api/workspace';
+export function Sidebar({
+    store,
+    campaign,
+    onClose,
+    onNavigate,
+    onCreate,
+    onRename,
+    onDelete,
+    onCampaignRename,
+}: {
+    store: SceneStore;
+    campaign: Campaign;
+    onClose: () => void;
+    onNavigate: (url: string) => void;
+    onCreate: () => void;
+    onRename: () => void;
+    onDelete: () => void;
+    onCampaignRename: () => void;
+}) {
     const [tab, setTab] = useState<'Scenes' | 'Assets' | 'Cues'>('Scenes');
     const { scene, selectedIds } = useSyncExternalStore(store.subscribe, store.getSnapshot);
     return (
@@ -25,9 +47,21 @@ export function Sidebar({ store, onClose }: { store: SceneStore; onClose: () => 
                 >
                     <X size={15} />
                 </button>
-                <div className="eyebrow">DEMO CAMPAIGN</div>
-                <strong>The Hollow Marches</strong>
-                <span>A place for your next story</span>
+                <div className="eyebrow">CAMPAIGN WORKSPACE</div>
+                <strong>{campaign.name}</strong>
+                <div className="campaign-links">
+                    <button onClick={() => onNavigate('/')}>
+                        <FolderOpen size={12} /> Switch campaign
+                    </button>
+                    <button
+                        className="icon-button"
+                        aria-label="Rename campaign"
+                        title="Rename campaign"
+                        onClick={onCampaignRename}
+                    >
+                        <Pencil size={12} />
+                    </button>
+                </div>
             </div>
             <nav className="library-tabs" aria-label="Workspace library">
                 {(
@@ -52,35 +86,53 @@ export function Sidebar({ store, onClose }: { store: SceneStore; onClose: () => 
                 <>
                     <div className="section-heading">
                         <span>
-                            SCENES <b>01</b>
+                            SCENES <b>{campaign.scenes.length.toString().padStart(2, '0')}</b>
                         </span>
                         <button
                             className="icon-button"
-                            disabled
-                            title="Scene creation comes in a later stage"
-                            aria-label="Create scene (coming later)"
+                            title="Create scene"
+                            aria-label="Create scene"
+                            onClick={onCreate}
                         >
                             <Plus size={15} />
                         </button>
                     </div>
-                    <button
-                        className="scene-card active"
-                        onClick={() => store.select(null)}
-                        aria-label="The Sunken Observatory demo scene"
-                    >
-                        <div className="scene-thumbnail">
-                            <div className="mini-ruin" />
-                            <span className="demo-tag">DEMO</span>
-                            <span className="scene-number">01</span>
+                    <div className="scene-list">
+                        {campaign.scenes.map((item) => (
+                            <button
+                                className={`persistent-scene ${scene.id === item.id ? 'selected' : ''}`}
+                                key={item.id}
+                                onClick={() =>
+                                    onNavigate(`/campaigns/${campaign.id}/scenes/${item.id}`)
+                                }
+                            >
+                                <span className="scene-tile">
+                                    <Layers size={19} />
+                                </span>
+                                <span>
+                                    <strong>{item.name}</strong>
+                                    <small>
+                                        {campaign.activeSceneId === item.id
+                                            ? 'Active for players'
+                                            : scene.id === item.id
+                                              ? 'Editing'
+                                              : 'Prepared'}
+                                    </small>
+                                </span>
+                                {campaign.activeSceneId === item.id && <i className="status-dot" />}
+                            </button>
+                        ))}
+                    </div>
+                    {scene.id && (
+                        <div className="scene-actions">
+                            <button onClick={onRename}>
+                                <Pencil size={12} /> Rename
+                            </button>
+                            <button onClick={onDelete}>
+                                <Trash2 size={12} /> Delete
+                            </button>
                         </div>
-                        <div className="scene-card-copy">
-                            <strong>The Sunken Observatory</strong>
-                            <small>Exploration · Lower court</small>
-                            <span className="scene-active">
-                                <i /> Open in workspace
-                            </span>
-                        </div>
-                    </button>
+                    )}
                     <div className="outline-title">
                         <ChevronDown size={14} />
                         <span>SCENE OUTLINE</span>
@@ -95,42 +147,47 @@ export function Sidebar({ store, onClose }: { store: SceneStore; onClose: () => 
                                 onClick={() => store.select(token.id)}
                             >
                                 <span
-                                    className={
-                                        token.kind === 'hero'
-                                            ? 'object-icon hero'
-                                            : 'object-icon enemy'
-                                    }
+                                    className={`object-icon ${token.isHidden ? 'gm-only' : 'hero'}`}
                                 >
                                     <Shield size={14} />
                                 </span>
                                 <span>{token.name}</span>
-                                <Circle size={6} fill="currentColor" />
+                                {token.isHidden ? (
+                                    <EyeOff size={12} />
+                                ) : token.isLocked ? (
+                                    <Lock size={12} />
+                                ) : null}
                             </button>
                         ))}
+                        {!scene.tokens.length && (
+                            <p className="hint outline-empty">
+                                Your cast starts here.
+                                <br />
+                                Add a token to the tabletop.
+                            </p>
+                        )}
                     </div>
                 </>
             ) : (
                 <div className="library-empty">
                     {tab === 'Assets' ? <Images size={26} /> : <Clapperboard size={26} />}
-                    <h2>{tab === 'Assets' ? 'Your future collection' : 'Set the scene'}</h2>
+                    <h2>{tab === 'Assets' ? 'A place for your collection' : 'Set the scene'}</h2>
                     <p>
                         {tab === 'Assets'
-                            ? 'Maps, tokens and handouts will live here. This demo uses original vector artwork.'
-                            : 'Prepared reveals and cinematic sequences will live here once the tabletop foundation is ready.'}
+                            ? 'Upload a map in Scene setup, or a token image in Inspector. Collections and reusable browsing come later.'
+                            : 'Prepared reveals and cinematic sequences will live here in a future stage.'}
                     </p>
-                    <span className="pill">Planned · not available yet</span>
+                    <span className="pill">Full library · coming later</span>
                 </div>
             )}
             <div className="sidebar-note">
-                <span className="eyebrow">
-                    A SMALL BEGINNING <ArrowUpRight size={12} />
-                </span>
+                <span className="eyebrow">YOUR WORLD, AT YOUR PACE</span>
                 <p>
                     Set the stage.
                     <br />
                     Make it your story.
                 </p>
-                <small>Renderer preview / 01</small>
+                <small>Changes save as you work.</small>
             </div>
         </aside>
     );

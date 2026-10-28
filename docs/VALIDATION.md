@@ -1,65 +1,160 @@
-# Task 01 validation
+# Task 02 validation
 
-Validated on Windows with PHP 8.3.32, Node 20.20.2 and the installed lockfiles.
+Validated locally on 2026-10-28 with PHP 8.3.32, Node 20.20.2, Laravel 13.39,
+MySQL 8 and the installed lockfiles. `AGENTS.md` was preserved unchanged.
 
 ## Automated checks
 
-- `composer test`: 2 feature tests / 6 assertions. Workspace boots without a
-  database connection or authentication; `/up` responds successfully.
-- `npm run test`: 15 meaningful tests. Fractional and negative world-coordinate
-  round trips; cursor-anchored zoom at each interpolation step; zoom bounds;
-  cell-center snap, offsets and disabled snap; immutable scene updates;
-  preview/commit separation; selection; invalid values; HP and grid validation.
-- `npm run typecheck`: strict TypeScript.
-- `npm run lint`: ESLint, TypeScript and React Hooks rules.
-- `npm run build`: production Vite build, with renderer loaded separately.
-- `npm audit`: 0 known vulnerabilities after upgrading Vitest to its fixed branch.
+| Command                        | Result                                                               |
+| ------------------------------ | -------------------------------------------------------------------- |
+| `composer test`                | 15 tests, 144 assertions passed                                      |
+| `npm run test`                 | 22 tests passed, including all 15 Task 01 math/store tests           |
+| `npm run typecheck`            | Strict TypeScript passed                                             |
+| `npm run lint`                 | ESLint/TypeScript/React Hooks passed                                 |
+| `npm run build`                | Production Vite build passed; renderer remains a separate lazy chunk |
+| `php vendor/bin/pint --test`   | Passed                                                               |
+| `composer validate`            | Valid package definition and lockfile                                |
+| `composer check-platform-reqs` | Installed backend platform requirements satisfied                    |
 
-The agent sandbox initially denied Vite's native `realpath` and loopback socket
-access on drive B:. Tests/build and the Laravel dev server succeeded with the
-appropriate execution permission. There is no workaround embedded in source.
+Feature tests use `RefreshDatabase`, SQLite in memory and fake private storage.
+They do not migrate/reset the real working MySQL database. Coverage includes:
 
-## Browser checks
+- Registration, hashed passwords, current user, login failure/success, logout,
+  guest access and a real CSRF middleware rejection (testing bypass disabled).
+- Creator GM membership, unique membership constraint, additional GM access,
+  Player read-only campaign scope and unrelated-user denial.
+- Scene creation, activation independent of editing, active-scene deletion
+  rejection, token cascade deletion and cross-campaign URL/activation rejection.
+- Player snapshot omits hidden entities entirely, inactive scenes and GM fields;
+  GM sees required editing metadata and hidden tokens.
+- Player move requires active + owned + visible + unlocked; common administrative
+  PATCH is denied and extra admin fields in move cannot change those values.
+- GM can move hidden/locked tokens through the authorized action; foreign owner
+  and token-image assignments are rejected.
+- Every successful scene command increments revision, failures do not, and
+  persisted map/grid/token fields round-trip through a new snapshot.
+- Private asset access follows current visible usage, including revocation after
+  hiding; prepared inactive maps and unrelated users are denied.
+- PNG/JPEG/WebP acceptance; spoofed MIME, SVG, excess dimensions/bytes rejected;
+  adversarial client filename/extension never controls the generated storage path.
 
-Playwright controlled a real Chromium browser against Laravel serving the
-**production bundle** at `http://127.0.0.1:8000/`.
+Frontend tests cover immutable scene math/state, hydration replacing prior
+selection/preview, zero writes for previews and one committed move, grid
+coalescing/flush, serial failure/retry, stale acknowledgement suppression, the
+explicit Inspector-to-wire field contract, CSRF headers and actionable API errors.
 
-- Shell, original vector map, four tokens and canvas render; one canvas only.
-- Canvas click selects Kern; background click/Escape clear selection.
-- Drag preview updates while held and receives the final trailing sample.
-- Drag from `(630, 750)` toward `(708, 655)` lands at `(690, 630)` with 60 px snap.
-- Escape during drag restores the previous committed position.
-- Middle mouse and Space + drag pan over a token without changing its coordinates.
-- Wheel zoom increases 60% → 82% while the same token remains under the cursor.
-- Rotation 90°, scale 1.3 and HP 12 edits round-trip through Inspector.
-- Escape in a numeric draft discards it instead of accidentally committing on blur.
-- With snap off, a drag to `(707, 653)` keeps those exact coordinates.
-- Grid visibility, 80 px cell size and X offset 10 do not move existing tokens.
-- Hiding/showing library resizes the canvas and preserves world coordinates.
-- Shortcut dialog opens, traps focus via native dialog and closes with Escape.
-- Long names wrap in panels; canvas names abbreviate for readability.
-- Widths 1920, 1440, 1366, 1180, 1179, 900, 899, 768 and 390 were checked;
-  no document horizontal overflow, no duplicate canvas, no lost token position.
-- Narrow panel open/close paths were tested after fixing overlay collisions.
-- Vite development mode also boots with one canvas under React StrictMode;
-  toolbar Pan, background deselection and window-blur drag rollback were exercised.
-- A simulated `webglcontextlost` event displays the renderer recovery overlay;
-  its reload button restores the scene. This is an event-path check, not a physical GPU failure test.
-- Desktop and 390 px screenshots were visually inspected; native browser console
-  reported no warnings/errors during normal interaction.
+## Real MySQL concurrency check
 
-Local QA screenshots are in ignored `artifacts/` (not required to run the app).
+The local dedicated `ytt` database was initially absent. It was created and the
+application migrations ran successfully; no unrelated database, existing `.env`
+or application key was changed. Normal fixture campaigns were created through
+the browser, not direct SQL.
 
-## Repeatable manual acceptance
+An additional guarded local QA script ran **4 independent PHP processes × 10
+moves** against the explicitly marked QA campaign. These used the real
+`TokenActions`/`SceneTransaction` and MySQL row locks, not an HTTP server that
+serializes all requests. Starting at revision 18, results were every revision
+19–58 exactly once. Final revision was 58; restoring the original world position
+was revision 59. No lost increments or duplicate revisions were observed.
+The ignored script is `artifacts/check-concurrent-revisions.php`; it requires the
+specific local QA fixture. This is a correctness check, not a throughput benchmark
+or a multi-GM conflict-resolution test.
 
-1. Run the production build and `php artisan serve`; open `/`.
-2. Select a token directly, drag from its edge, inspect the preview and drop.
-3. Toggle snap and grid independently; change size/offset; repeat the drag.
-4. Hold Space and drag over a token; middle-drag; zoom around a token under cursor.
-5. Edit position, rotation, scale and HP; try blank/invalid values and Escape.
-6. Cancel a drag with Escape, browser blur and pointer cancellation.
-7. Toggle both panels; resize across the documented breakpoints; inspect long names.
-8. Verify Assets/Cues/Present and future tools clearly indicate deferred behavior.
-9. Reload and confirm the demo intentionally resets, matching its status message.
+## Browser vertical slice
 
-No multiplayer, real persistence or production deployment was tested or claimed.
+Playwright drove Chromium against Laravel at `http://127.0.0.1:8000` with the
+production bundle and real MySQL. A separate Vite/StrictMode pass followed.
+
+1. Registered a QA GM, created a campaign and an empty scene, with no seeded demo.
+2. Uploaded an original procedural PNG test map, created a token at viewport
+   center and assigned a separately uploaded token image.
+3. Edited name, HP/max HP, AC, speed, rotation 45°, scale 1.3 and controller through
+   Inspector. Hidden/locked controls persisted and reflected in GM treatment.
+4. Dragged with 20 pointer samples: **0 requests while held, 1 POST on release**,
+   payload `{x:870,y:570}`. Snapped coordinates matched the subsequent snapshot.
+5. Set grid size 80, offsets `(10,-15)`, disabled snapping, changed map X to 12.5,
+   and activated the scene. Snapshot before and after reload was identical.
+   Inspector restored X/HP/hidden/locked values correctly.
+6. Created another scene: no previous tokens, one canvas, editing changed while
+   the active scene remained Moonlit Crossing. Renamed, switched back and used
+   browser Back; URLs and scene contents were correct.
+7. Created/deleted a token in the second scene, then deleted the inactive scene.
+   Deleting the active scene was rejected with the deactivate-first explanation.
+8. Signed out, verified API 401, tested invalid login, signed back in and reopened
+   the campaign. Saved state remained intact.
+9. Dropped an image onto the tabletop to replace the map. New asset attached;
+   original private asset remained available to its GM. Removal was also tested
+   in a temporary scene without deleting image storage.
+10. Uploaded a **3,608,765-byte PNG** through the browser with per-process PHP
+    upload limits 16M/20M. This verifies the path beyond PHP's stock 2 MiB limit.
+11. Locked drag generated no write. Middle/Space pan and cursor zoom generated no
+    domain writes and left `(870,570)` unchanged.
+
+The local server was restarted with the documented per-process upload settings;
+no system `php.ini` was modified. The QA campaign/accounts and retained private
+images are local test data, not application seed data.
+
+## Error and security browser paths
+
+- A fake PNG containing PHP text was rejected with an image-format explanation.
+- Real backend validation rejected map width 0. Save failed remained visible;
+  confirmed Reload saved restored server state.
+- Intercepted HTTP 503 on a token edit: local HP was 29, saved HP remained 34,
+  footer showed Save failed. Retry persisted 29 and advanced revision once.
+- A later rejected edit was explicitly discarded through Reload saved; the
+  last confirmed HP returned. No silent reset occurred.
+- Intercepted asset 503 showed the media-load recovery state. Reload after service
+  recovery rendered the map again with one canvas.
+- A separate authenticated non-member received HTML 403 with no workspace/canvas
+  and JSON 403 for the private map URL. Guest API access returned 401.
+- Normal interaction produced no JS exceptions. Native HTTP console errors in
+  the log correspond to deliberately exercised 401/403/422/503 failures.
+
+The 503/asset outages are browser interception tests, not a physical network or
+server outage. Backend permissions are additionally exercised by feature tests.
+Player UI/realtime were not implemented or claimed as browser-tested.
+
+## Development lifecycle and visuals
+
+Vite/React StrictMode boots one canvas, loads private imagery and uses the same
+save queue shown by the footer. A forced failed mutation displayed Save failed;
+Retry saved successfully. Self-review fixed a double-initializer command binding
+hazard by constructing SceneStore and its persistence queue as one pair. Media
+loading now waits until renderer initialization completes.
+
+Visual inspection covered custom desktop/mobile login, campaign cards, real scene
+sidebar, map/token Inspector, native dialogs, map/scene empty states, save/error
+status, and active-scene indicator. The Task 01 design system and canvas layout
+remain. Requested widths 1920, 1440, 1366, 1180, 1179, 900, 899, 768 and 390 were
+checked without document horizontal overflow or duplicate canvases. At 390 px,
+library/Inspector open/close paths remain usable with one overlay at a time.
+A tablet regression hiding Activate was fixed and rechecked at 768 px.
+
+Ignored evidence screenshots are in `artifacts/task02-*.png`, including workspace,
+mobile Inspector, campaign picker and desktop/mobile authentication. They are
+QA evidence, not assets needed to run the application.
+
+## Repeatable acceptance
+
+1. Configure a new dedicated MySQL database, migrate, build and start Laravel with
+   sufficient upload limits. Register instead of seeding an account.
+2. Create a campaign and scene; upload PNG/JPEG/WebP; place/size/remove/replace map.
+3. Add a token, upload an image, edit transforms/vitals/owner, hide and lock it.
+4. Drag with and without snap; inspect requests; verify only a committed drop saves.
+5. Change grid calibration, reload and compare the snapshot/Inspector values.
+6. Activate scene A, edit scene B, refresh and use browser Back/Forward; A stays active.
+7. Try deleting active A; deactivate first and retry. Delete a token with confirmation.
+8. Force a failed mutation, verify visible unsaved state, Retry or explicitly reconcile.
+9. Exercise private image load failure and recovery, fake upload and unrelated-user URLs.
+10. Sign out/in; reopen the campaign. Resize panels/viewport and check one canvas.
+
+## Explicit limits
+
+Revision is not optimistic concurrency control; concurrent field edits are last
+accepted write wins. Retries do not yet have command IDs, so a lost accepted
+response can produce a second revision. Create/upload retries need manual
+reconciliation. Pending edits live in memory with an unload warning, not durable
+offline storage. Other tabs do not receive updates automatically. Reconnect,
+Player UI, invitations, broadcasts, fog, undo, asset GC and a production rollout
+remain next-stage work. Safari/Firefox, real touch devices and multiplayer load
+were not tested in this pass.

@@ -1,4 +1,5 @@
-import type { GridSettings, Point, Scene, TokenPatch } from '../types/scene';
+import type { GridSettings, Point, Scene, SceneMap, Token, TokenPatch } from '../types/scene';
+import type { Mutation } from '../../api/workspace';
 import { clamp } from '../utils/coordinates';
 
 export interface WorkspaceSnapshot {
@@ -6,10 +7,22 @@ export interface WorkspaceSnapshot {
     selectedIds: readonly string[];
     preview: { id: string; position: Point } | null;
 }
-/** Local demo domain state. Camera, hover and raw drag coordinates belong to the renderer. */
+export type SceneCommand =
+    | { type: 'move'; id: string; position: Point }
+    | { type: 'token'; id: string; patch: TokenPatch }
+    | { type: 'grid'; grid: GridSettings }
+    | { type: 'map'; map: SceneMap | null };
+/** Observable domain projection. Network requests are delegated to the persistence adapter. */
 export class SceneStore {
     private snapshot: WorkspaceSnapshot;
     private listeners = new Set<() => void>();
+    private command?: (command: SceneCommand) => void;
+    bindCommands(handler: (command: SceneCommand) => void) {
+        this.command = handler;
+    }
+    hydrate(scene: Scene) {
+        this.emit({ scene, selectedIds: [], preview: null });
+    }
     constructor(scene: Scene) {
         this.snapshot = { scene, selectedIds: [], preview: null };
     }
@@ -34,7 +47,7 @@ export class SceneStore {
     clearPreview() {
         this.emit({ ...this.snapshot, preview: null });
     }
-    updateToken(id: string, patch: TokenPatch) {
+    updateToken(id: string, patch: TokenPatch, persist = true) {
         const tokens = this.snapshot.scene.tokens.map((token) => {
             if (token.id !== id) return token;
             const next = { ...token, ...patch };
@@ -49,6 +62,64 @@ export class SceneStore {
             return next;
         });
         this.emit({ ...this.snapshot, scene: { ...this.snapshot.scene, tokens }, preview: null });
+        if (persist) {
+            const token = tokens.find((token) => token.id === id);
+            if (token) {
+                const normalized: TokenPatch = {};
+                for (const key of Object.keys(patch) as (keyof TokenPatch)[])
+                    Object.assign(normalized, { [key]: token[key] });
+                this.command?.({ type: 'token', id, patch: normalized });
+            }
+        }
+    }
+    moveToken(id: string, position: Point) {
+        this.updateToken(id, position, false);
+        this.command?.({ type: 'move', id, position });
+    }
+    setMap(map: SceneMap | null) {
+        this.emit({ ...this.snapshot, scene: { ...this.snapshot.scene, map } });
+        this.command?.({ type: 'map', map });
+    }
+    addToken(token: Token, revision: number) {
+        this.emit({
+            ...this.snapshot,
+            scene: {
+                ...this.snapshot.scene,
+                revision: Math.max(this.snapshot.scene.revision ?? 0, revision),
+                tokens: [...this.snapshot.scene.tokens, token],
+            },
+            selectedIds: [token.id],
+        });
+    }
+    removeToken(id: string, revision: number) {
+        this.emit({
+            ...this.snapshot,
+            scene: {
+                ...this.snapshot.scene,
+                revision: Math.max(this.snapshot.scene.revision ?? 0, revision),
+                tokens: this.snapshot.scene.tokens.filter((token) => token.id !== id),
+            },
+            selectedIds: [],
+            preview: null,
+        });
+    }
+    accept(result: Mutation, apply: boolean) {
+        let scene = {
+            ...this.snapshot.scene,
+            revision: Math.max(this.snapshot.scene.revision ?? 0, result.revision),
+        };
+        if (apply) {
+            if (result.token)
+                scene = {
+                    ...scene,
+                    tokens: scene.tokens.map((token) =>
+                        token.id === result.token!.id ? result.token! : token,
+                    ),
+                };
+            if (result.grid) scene = { ...scene, grid: result.grid };
+            if ('map' in result) scene = { ...scene, map: result.map };
+        }
+        this.emit({ ...this.snapshot, scene });
     }
     updateGrid(patch: Partial<GridSettings>) {
         const grid = { ...this.snapshot.scene.grid, ...patch };
@@ -57,5 +128,6 @@ export class SceneStore {
             : this.snapshot.scene.grid.size;
         if (!Number.isFinite(grid.offset.x) || !Number.isFinite(grid.offset.y)) return;
         this.emit({ ...this.snapshot, scene: { ...this.snapshot.scene, grid } });
+        this.command?.({ type: 'grid', grid });
     }
 }

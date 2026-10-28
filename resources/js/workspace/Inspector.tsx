@@ -1,8 +1,26 @@
 import { useSyncExternalStore } from 'react';
-import { Crosshair, SlidersHorizontal, Shield, X, MousePointer2 } from 'lucide-react';
+import { Crosshair, SlidersHorizontal, Shield, X, Trash2, ImagePlus } from 'lucide-react';
 import type { SceneStore } from '../tabletop/state/SceneStore';
 import { NumberField } from './NumberField';
-export function Inspector({ store, onClose }: { store: SceneStore; onClose: () => void }) {
+import { MapInspector } from './MapInspector';
+import type { Campaign } from '../api/workspace';
+export function Inspector({
+    store,
+    onClose,
+    campaign,
+    uploadMap,
+    uploadToken,
+    busy,
+    deleteToken,
+}: {
+    store: SceneStore;
+    onClose: () => void;
+    campaign: Campaign;
+    uploadMap: (file: File) => void;
+    uploadToken: (id: string, file: File) => void;
+    busy: boolean;
+    deleteToken: () => void;
+}) {
     const { scene, selectedIds, preview } = useSyncExternalStore(
         store.subscribe,
         store.getSnapshot,
@@ -34,7 +52,11 @@ export function Inspector({ store, onClose }: { store: SceneStore; onClose: () =
                             TOKEN · {token.kind === 'hero' ? 'ADVENTURER' : 'CREATURE'}
                         </span>
                         <h2>{token.name}</h2>
-                        <span className="muted">Local demo object</span>
+                        <span className="muted">
+                            {token.isHidden
+                                ? 'GM only · hidden from players'
+                                : 'Visible in the scene'}
+                        </span>
                     </div>
                     <section>
                         <h3>Identity</h3>
@@ -42,10 +64,12 @@ export function Inspector({ store, onClose }: { store: SceneStore; onClose: () =
                             <span>Name</span>
                             <input
                                 aria-label="Token name"
+                                key={token.name}
                                 defaultValue={token.name}
                                 maxLength={80}
                                 onBlur={(event) => {
-                                    store.updateToken(token.id, { name: event.target.value });
+                                    if (event.target.value !== token.name)
+                                        store.updateToken(token.id, { name: event.target.value });
                                     event.target.value = store
                                         .getSnapshot()
                                         .scene.tokens.find((t) => t.id === token.id)!.name;
@@ -94,9 +118,40 @@ export function Inspector({ store, onClose }: { store: SceneStore; onClose: () =
                         </div>
                     </section>
                     <section>
-                        <h3>
-                            Vitals <span>DEMO</span>
-                        </h3>
+                        <NumberField
+                            label="Base size"
+                            value={token.size}
+                            min={20}
+                            max={300}
+                            onChange={(size) => store.updateToken(token.id, { size })}
+                        />
+                        <h3>Token image</h3>
+                        <label className="upload-button">
+                            <ImagePlus size={14} />
+                            {busy ? 'Uploading…' : token.image ? 'Replace image' : 'Upload image'}
+                            <input
+                                type="file"
+                                aria-label="Upload token image"
+                                accept="image/png,image/jpeg,image/webp"
+                                disabled={busy}
+                                onChange={(event) => {
+                                    const file = event.target.files?.[0];
+                                    if (file) uploadToken(token.id, file);
+                                    event.target.value = '';
+                                }}
+                            />
+                        </label>
+                        {token.image && (
+                            <button
+                                className="text-button"
+                                onClick={() => store.updateToken(token.id, { image: null })}
+                            >
+                                Use placeholder
+                            </button>
+                        )}
+                    </section>
+                    <section>
+                        <h3>Vitals</h3>
                         <div className="field-row">
                             <NumberField
                                 label="HP"
@@ -116,6 +171,63 @@ export function Inspector({ store, onClose }: { store: SceneStore; onClose: () =
                         <div className="health-track">
                             <i style={{ width: `${(token.hp / token.maxHp) * 100}%` }} />
                         </div>
+                        <div className="field-row">
+                            <NumberField
+                                label="AC"
+                                value={token.ac ?? 0}
+                                min={0}
+                                max={99}
+                                onChange={(ac) => store.updateToken(token.id, { ac })}
+                            />
+                            <NumberField
+                                label="Speed"
+                                value={token.speed ?? 0}
+                                min={0}
+                                max={999}
+                                onChange={(speed) => store.updateToken(token.id, { speed })}
+                            />
+                        </div>
+                    </section>
+                    <section>
+                        <h3>Access & visibility</h3>
+                        <label className="toggle-row">
+                            Hidden from players
+                            <input
+                                type="checkbox"
+                                checked={token.isHidden ?? false}
+                                onChange={(event) =>
+                                    store.updateToken(token.id, { isHidden: event.target.checked })
+                                }
+                            />
+                        </label>
+                        <label className="toggle-row">
+                            Lock position
+                            <input
+                                type="checkbox"
+                                checked={token.isLocked ?? false}
+                                onChange={(event) =>
+                                    store.updateToken(token.id, { isLocked: event.target.checked })
+                                }
+                            />
+                        </label>
+                        <label className="field">
+                            <span>Controlled by</span>
+                            <select
+                                value={token.ownerUserId ?? ''}
+                                onChange={(event) =>
+                                    store.updateToken(token.id, {
+                                        ownerUserId: event.target.value || null,
+                                    })
+                                }
+                            >
+                                <option value="">Unassigned</option>
+                                {campaign.members?.map((member) => (
+                                    <option key={member.id} value={member.id}>
+                                        {member.name} · {member.role.toUpperCase()}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
                     </section>
                     <section>
                         <h3>Placement</h3>
@@ -138,31 +250,14 @@ export function Inspector({ store, onClose }: { store: SceneStore; onClose: () =
                     <div className="inspector-foot">
                         <Crosshair size={13} /> World coordinates · px
                     </div>
+                    <section>
+                        <button className="danger-button" onClick={deleteToken}>
+                            <Trash2 size={14} /> Delete token
+                        </button>
+                    </section>
                 </div>
             ) : (
-                <div className="empty-inspector">
-                    <div className="empty-symbol">
-                        <MousePointer2 size={25} />
-                    </div>
-                    <h2>A closer look</h2>
-                    <p>
-                        Select a token on the tabletop to adjust its position, appearance and
-                        vitals.
-                    </p>
-                    <div className="scene-facts">
-                        <span>SCENE</span>
-                        <strong>The Sunken Observatory</strong>
-                        <dl>
-                            <dt>Dimensions</dt>
-                            <dd>1440 × 1080</dd>
-                            <dt>Grid</dt>
-                            <dd>{scene.grid.size} px · square</dd>
-                            <dt>Objects</dt>
-                            <dd>{scene.tokens.length} tokens</dd>
-                        </dl>
-                    </div>
-                    <p className="hint">You can also select a token from the scene outline.</p>
-                </div>
+                <MapInspector store={store} upload={uploadMap} busy={busy} />
             )}
         </aside>
     );

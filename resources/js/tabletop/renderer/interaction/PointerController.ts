@@ -84,6 +84,10 @@ export class PointerController {
             return;
         }
         const model = this.store.getSnapshot().scene.tokens.find((item) => item.id === token);
+        if (model?.isLocked) {
+            this.refresh();
+            return;
+        }
         this.gesture = {
             pointer: e.pointerId,
             start: point,
@@ -108,6 +112,7 @@ export class PointerController {
         if (!gesture.moved) return;
         if (!gesture.token) this.camera.pan(point.x - gesture.last.x, point.y - gesture.last.y);
         else {
+            gesture.last = point;
             const position = this.dragPosition(point, gesture);
             this.tokens.preview(gesture.token, position);
             const grid = this.store.getSnapshot().scene.grid;
@@ -144,7 +149,9 @@ export class PointerController {
                 this.dragPosition(this.local(e), gesture),
                 this.store.getSnapshot().scene.grid,
             );
-            this.store.updateToken(gesture.token, position);
+            this.finish();
+            this.store.moveToken(gesture.token, position);
+            return;
         }
         this.finish();
     };
@@ -163,6 +170,11 @@ export class PointerController {
         if (this.gesture.token) this.tokens.preview(this.gesture.token, this.gesture.origin);
         this.finish();
     };
+    reapplyPreview() {
+        const gesture = this.gesture;
+        if (gesture?.token && gesture.moved)
+            this.tokens.preview(gesture.token, this.dragPosition(gesture.last, gesture));
+    }
     private blur = () => {
         this.space = false;
         this.cancel();

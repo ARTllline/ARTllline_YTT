@@ -6,15 +6,15 @@ use Tests\TestCase;
 
 class WorkspaceTest extends TestCase
 {
-    public function test_workspace_boots_without_database_or_authentication(): void
+    public function test_login_shell_is_available_without_authentication(): void
     {
         $this->withoutVite();
         config(['database.default' => 'unconfigured', 'session.driver' => 'array']);
 
-        $this->get('/')
+        $this->get('/login')
             ->assertOk()
             ->assertViewIs('workspace')
-            ->assertSee('YTT · The Sunken Observatory')
+            ->assertSee('YTT · Your Tabletop')
             ->assertSee('Preparing your workspace')
             ->assertSee('id="root"', false);
     }
