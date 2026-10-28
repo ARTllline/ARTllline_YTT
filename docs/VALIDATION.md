@@ -1,3 +1,196 @@
+# Task 05 validation
+
+Validated locally on 2026-10-28 against Task 04 commit `5bb1d8f`. Laravel 13.39,
+PHP 8.3.32, MySQL 8, Reverb 1.12.0, Node 20.20.2 and Chromium. The additive combat
+migration was applied to local YTT. AGENTS, dependency lockfiles, application key,
+system PHP configuration and production systems were not changed.
+
+## Automated checks
+
+| Command                        | Result                                     |
+| ------------------------------ | ------------------------------------------ |
+| `composer test`                | **38 tests / 440 assertions passed**       |
+| `npm run test`                 | **52 tests passed**                        |
+| `npm run typecheck`            | Passed                                     |
+| `npm run lint`                 | Passed                                     |
+| `npm run build`                | Passed; Pixi remains a separate lazy chunk |
+| `php vendor/bin/pint --test`   | Passed                                     |
+| `composer validate`            | Passed                                     |
+| `composer check-platform-reqs` | Passed                                     |
+| `git diff --check`             | Passed                                     |
+
+Six new PHP feature tests use isolated SQLite and after-commit event fakes. They
+exercise lifecycle/round wrapping/jump/end history; preparation sorting/nulls/ties,
+manual order and active-order stability; empty and duplicate participation; stale
+turn conflict and exact-once retry; hidden current/reveal/hide and composite deletion;
+HP delta replay/clamping/max reduction/ownership transfer; condition normalization,
+visibility/remove replay and old movement-receipt filtering; all GM-only command
+boundaries and cross-scene rejection. Previous tests were updated only where the
+Task 05 contract intentionally changes: owner HP is now visible and hide can carry
+a nullable combat projection.
+
+Six new client cases cover hydration/replacement/current-ring mapping, coherent
+delete+combat reducer behavior, duplicate/gap handling, removal of former-owner HP,
+terminal conflict recovery with a retained explanation, and same-UUID lost-response
+retry for both HP and Next. Server tests own the authoritative sorting/round rules;
+there is no duplicated client rules implementation to test.
+
+## Real MySQL concurrency — finding and correction
+
+The ignored guarded script `artifacts/task05-check.php` creates only explicitly
+marked QA05 fixtures in campaign **QA05 · The Last Watch**. Four independent PHP
+processes execute five `IdempotentCommand` + `TokenCombatActions` deltas each and replay
+every UUID. This bypasses the single-worker HTTP server, so database concurrency is
+real. A second pair executes Next with the same expected turn and distinct UUIDs.
+
+The first runs exposed two issues that sequential SQLite/HTTP tests could not:
+
+- Receipt insertion took a shared campaign FK lock before SceneTransaction requested
+  its writer lock, producing lock-upgrade deadlocks under concurrent commands.
+- Moving the writer lock earlier while retaining a nonlocking read inside the outer
+  transaction still pinned MySQL REPEATABLE READ to an older snapshot: HP deltas could
+  overwrite each other, and both turn commands could accept the old current state.
+
+The final fix resolves routing before opening the outer transaction and makes the
+campaign writer lock its first transactional query, before receipt insertion. It
+preserves the campaign → scene authority order and the existing receipt semantics;
+no global isolation setting was changed.
+
+**Final result:** 20 accepted damage commands, 20 harmless retries, HP **30 → 10**,
+unique contiguous revisions **4–23**. Two concurrent Next commands produced **200
+and 409**, with one additional revision **24**. No deadlock or lost delta remained
+in this run. This is a correctness burst, not an unbounded contention guarantee.
+Failed preliminary QA scenes were deleted only after checking their campaign/name;
+this also exercised real MySQL scene/combat/condition cascade deletion. Final
+concurrency fixture remains for inspection; no application seed data was introduced.
+
+## Real GM / Player combat acceptance
+
+Separate Chromium cookie contexts used real MySQL, HTTP and Reverb. The main fixture
+is **The Lantern Ambush** (scene 10) in **QA05 · The Last Watch**, with **Prepared
+Courtyard** (scene 11). Campaign, members, four initial tokens and a map were created
+through authorized HTTP/UI flows. The original generated QA map was copied through
+private upload; no external asset was fetched.
+
+1. GM prepared combat, used the searchable picker to add all four tokens at once,
+   entered initiatives 15/12/12/8 with Enter, then dragged Goblin Archer ahead of Mira
+   in their tie. Player saw no preparing tracker. Begin automatically displayed
+   round 1, visible order and Your Turn for Rowan; hidden Dragon was absent.
+2. Four Next clicks wrapped to round 2. Previous returned to the last participant in
+   round 1 and Player displayed **GM Turn**. Make current jumped to Mira. The tracker
+   and canvas current ring followed authoritative state.
+3. Damage -7 changed Rowan **30 → 23** in both views. NPC damage produced no exact NPC
+   HP in Player snapshots or captured WebSocket DTOs. Public Poisoned appeared;
+   GM-only Secret Mark was absent from both network and UI. Later public/private
+   toggles updated Player live; Heal restored **22 → 27** through the UI.
+4. A committed Damage -5 response was aborted. Save failed retained the command;
+   Retry reused its UUID and HP stayed **18**, revision **28 → 28** on retry. A
+   committed Next response was aborted separately; Retry kept the same current turn
+   and revision **29 → 29**. No double application in either case.
+5. Hidden Dragon became current with no identity in Player's event. Reveal emitted
+   token+combat together at **r30**, restoring the participant without reload.
+   Deleting that current Token through the confirmation dialog emitted one coherent
+   removal+corrected-combat envelope at **r31**. Both trackers had three entries;
+   current became Rowan, with no second same-revision event.
+6. A second independent GM context received an initiative edit. A barrier released
+   both Next requests with the same expected state and different UUIDs: **200/409**,
+   scene **r32 → r33**, same final current in both windows. Self-review fixed the
+   conflict explanation being cleared by a following subscriber resync; a client
+   regression test protects its persistence. A final browser race injection confirmed
+   that the explanation remains visible after resync and clears on the next command.
+7. Reload restored order/current/HP/conditions. The verified local Reverb process was
+   stopped; Player visibly showed **Reconnecting…**. GM advanced the turn, healed and
+   added Concentrating while disconnected (**r33 → r36**). After restarting Reverb,
+   Player actually received snapshot **r36**, correct current, **22 HP**, Poisoned
+   and Concentrating without page reload. An initial automation attempt waited for
+   the wrong exact status text and was repeated; it is not counted as acceptance.
+8. Activating Prepared Courtyard cleared old combat/indicators and did not expose
+   its preparing combat. Returning restored active combat. End used confirmation,
+   removed the Player tracker and retained token HP/conditions and ended history.
+9. A later active-combat Player drag moved Rowan **(330,450) → (450,450)** and advanced
+   exactly **r43 → r44**, after using fog/ruler/area/ping in the stress scene.
+10. A temporary Player WebSocket proxy dropped exactly one combat event. The next HP
+    event caused **one repair snapshot**, restoring both current and **26 HP at r46**.
+    The temporary context was then closed, so interception does not affect normal play.
+
+Normal interaction and load produced no JavaScript page exceptions. Browser network
+errors during aborted responses, deliberate 409s and broker outages are expected.
+Snapshots/events were inspected as JSON, not inferred only from hidden UI controls.
+HTTP and Reverb were left running; no production deployment occurred.
+
+## Six-participant sanity test
+
+**1 GM + 5 independently authenticated Players**, six real Reverb connections.
+The marked stress fixture has an actual **4096×3072 PNG**, a world of the same size,
+**30 tokens, 205 fog actions, 15 combatants**, and public conditions on the combatants.
+The guarded local QA script generated this synthetic scene; gameplay commands in
+this test went through authenticated HTTP and normal publication.
+
+Four rounds sent **32 persistent commands**: 20 concurrent Player movements, four
+Next commands, four HP deltas and four condition additions. Every client received
+all **32 events**: **192/192 deliveries**. All six snapshots agreed on **r240**.
+Each Player received numeric HP for exactly its one owned token. No HTTP failure or
+JavaScript exception occurred. This run exercised final movement, not saturation
+at the preview rate limit.
+
+Elapsed workload/collection time: **4.90 s**. Request-start → matching WebSocket
+frame latency over 192 samples: **p50 113 ms / p95 787 ms / max 993 ms**. CSRF sessions
+were fetched before timing; commands had distinct UUIDs. PHP used the same
+process-local OPcache setup from Task 04. Persistent personal DTOs still publish per
+recipient. This is a Windows single-worker local burst, not a WAN/VPS/Redis or
+8-player capacity claim; p95 was higher than the Task 04 ephemeral batching workload.
+
+## Renderer, lifecycle and visual checks
+
+On the stress scene, a real fog brush appended one action **205 → 206**, revision
+**240 → 241**. Ruler, area and ping gestures produced overlays without extra scene
+revisions. Four simultaneous remote ruler/circle/cone/rectangle overlays were shown
+with combat active while Space-pan and wheel zoom operated. Canvas count stayed one.
+
+A 180-frame sample during pan/zoom/overlays and screenshot capture measured
+**p50 8.3 ms / p95 8.4 ms / max 58.2 ms**. A later steady sample without screenshot
+capture measured **8.3 / 8.4 / 8.5 ms**. The outlier is retained; these browser frame
+intervals are not a GPU profiler or proof of all-device performance.
+
+Ten scene transitions initially measured DOM nodes **455 → 458**, listeners
+**212 → 225**, heap **8.88 → 10.28 MB** with explicit GC and one canvas. Because the
+initial sample could overlap renderer setup, a further six transitions were checked
+after settling: nodes **453 → 453**, listeners **225 → 225**, heap **10.47 → 10.88 MB**,
+one canvas. No continuing DOM/listener accumulation was observed; heap growth and
+long-session GPU behavior still require a soak test. New TokenView resources are
+owned children destroyed with their token. Fog's 2048 mask cap/history limits remain.
+
+Inspected desktop GM/Player screenshots, current rings, compact condition chips,
+manual reorder feedback, hidden-turn state and collapsed Player tracker. Player
+widths **1440, 1024 (reported CSS 1025), 768, 390** had no horizontal document overflow
+and one canvas. A 15-entry tracker scrolls within a bounded panel; collapse preserves
+map space. Native dialogs, labeled buttons, focus styles and keyboard reorder remain.
+Local ignored evidence includes `artifacts/task05-gm-combat.png`,
+`task05-player-combat.png`, `task05-stress-spatial.png`, `task05-player-{width}.png`,
+and `task05-player-390-collapsed.png`.
+Final working views are `task05-final-gm.png` and `task05-final-player.png`.
+
+## Repeat and deferred boundaries
+
+Follow README's normal startup, migrate and build. In separate browser profiles:
+prepare → batch add → initiative → drag tie → begin → wrap/previous/jump → damage/heal
+→ public/private conditions → hide/reveal → delete current → end. Inspect Player
+JSON and frames, then abort committed damage/Next responses and Retry. Test two GM
+windows with the same expected turn. Stop/restart the verified Reverb process and
+confirm a fresh snapshot; deliberately omit one combat event to exercise gap repair.
+Use a dedicated QA scene for parallel MySQL actions and load fixtures, never real
+campaigns. Tests do not run migrations against the working MySQL database.
+
+No dice, attack/save adjudication, spell automation, temporary HP, death saves,
+condition durations, encounter library, combat-history UI or automated turns were
+added. History currently retains combat metadata/references, not immutable token
+identity. Richer HP sharing is a future policy decision. Conditions cap at 30 with
+three canvas badges; larger scales need UX/performance review. Fog compaction, GPU
+soak testing, durable offline queues, touch/Safari/Firefox and production hosting
+remain deferred. Earlier sections below are historical evidence only.
+
+---
+
 # Task 04 validation
 
 Validated locally on 2026-10-28 against committed Task 03 (`cba8b48`). Laravel 13.39,

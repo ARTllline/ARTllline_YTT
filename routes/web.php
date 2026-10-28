@@ -3,6 +3,7 @@
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CampaignController;
+use App\Http\Controllers\CombatController;
 use App\Http\Controllers\FogController;
 use App\Http\Controllers\InviteController;
 use App\Http\Controllers\MovePreviewController;
@@ -35,6 +36,12 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
     });
     Route::middleware('auth')->group(function () {
+        foreach (['prepare', 'add', 'remove', 'initiative', 'sort', 'reorder', 'begin', 'next', 'previous', 'current', 'end'] as $command) {
+            Route::post('/scenes/{scene}/combat/'.$command, [CombatController::class, 'combat'])->defaults('command', $command)->name('scene.combat.'.$command)->middleware(IdempotentMutation::class);
+        }
+        foreach (['hp', 'condition-add', 'condition-remove', 'condition-visibility'] as $command) {
+            Route::post('/tokens/{token}/'.$command, [CombatController::class, 'token'])->defaults('command', $command)->name('token.'.$command)->middleware(IdempotentMutation::class);
+        }
         Route::get('/campaigns/{campaign}/invites', [InviteController::class, 'index']);
         Route::post('/campaigns/{campaign}/invites', [InviteController::class, 'store'])->middleware('throttle:20,1');
         Route::delete('/invites/{invite}', [InviteController::class, 'revoke']);

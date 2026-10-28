@@ -1,4 +1,5 @@
 import type { FogState } from './spatial';
+import type { Combat, TokenCondition } from './combat';
 export interface Point {
     x: number;
     y: number;
@@ -15,6 +16,8 @@ export interface GridSettings {
     offset: Point;
 }
 export interface Token extends Point {
+    conditions?: TokenCondition[];
+    isOwner?: boolean;
     id: string;
     name: string;
     kind: 'hero' | 'scout' | 'archer';
@@ -44,6 +47,7 @@ export interface SceneMap extends Point {
     height: number;
 }
 export interface Scene {
+    combat?: Combat | null;
     fog?: FogState;
     id?: string;
     campaignId?: string;

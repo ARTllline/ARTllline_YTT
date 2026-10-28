@@ -10,6 +10,8 @@ import { useSceneLive } from '../realtime/useSceneLive';
 import { ConnectionBadge } from './PlayersPanel';
 import { Toolbar } from './Toolbar';
 import { Tabletop } from './Tabletop';
+import { CombatPanel } from './combat/CombatPanel';
+import { ConditionList } from './combat/TokenCombatControls';
 export function PlayerView({ campaign: initial, user }: { campaign: Campaign; user: User }) {
     const [campaign, setCampaign] = useState(initial);
     const { echo, connection } = useCampaignLive(campaign.id, setCampaign);
@@ -124,6 +126,7 @@ function PlayerTabletop({
     return (
         <main className="player-tabletop">
             <Tabletop store={store} rendererRef={renderer} onZoom={setZoom} />
+            <CombatPanel store={store} queue={queue} />
             <Toolbar store={store} onTool={(tool) => renderer.current?.setTool(tool)} />
             {(status || save.error) && (
                 <div className="player-notice" role="status">
@@ -140,6 +143,12 @@ function PlayerTabletop({
                 {selected ? (
                     <>
                         <strong>{selected.name}</strong>
+                        {selected.hp !== undefined && (
+                            <span>
+                                {selected.hp} / {selected.maxHp} HP
+                            </span>
+                        )}
+                        <ConditionList token={selected} />
                         <span>
                             {selected.canMove
                                 ? 'Your token · drag to move'

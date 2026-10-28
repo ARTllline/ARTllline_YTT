@@ -6,11 +6,12 @@ state. The product contract is `AGENTS.md`.
 
 ## Current status
 
-**Task 04: spatial play tools on the persistent multiplayer foundation.**
+**Task 05: combat at the table, on the persistent multiplayer foundation.**
 Prepare scenes, invite players, move assigned tokens, paint shared manual fog,
 measure distances, sketch temporary areas and ping the table. Laravel/MySQL remain
 authoritative; Reverb delivers authorized changes. No demo data is automatically seeded.
-Initiative, dynamic vision, audio, cues and the larger asset library remain deferred.
+Prepare combat, enter initiative, advance turns, adjust HP and manage conditions.
+Dynamic vision, dice, encounters, audio, cues and the larger asset library remain deferred.
 
 ## Requirements
 
@@ -175,6 +176,45 @@ Choose Circle / Cone / Rectangle from the area tool's contextual selector.
 fog still exist in the Player snapshot and can be inspected by a determined client.
 Use **Hidden** for secrets: hidden tokens remain absent from Player snapshots,
 private image access and broadcasts, regardless of the fog geometry.
+
+## Combat at the table
+
+1. Open the collapsible **Combat** panel and choose **Prepare Combat**. Preparation
+   stays private to the GM, including on the active scene. **Add combatants** searches
+   scene tokens and accepts several at once; Inspector also adds/removes its token.
+2. Enter initiative inline (Enter or blur). Values may have two decimal places.
+   Preparation sorts descending, with unset values last and stable ties. Drag a row's
+   grip to set order; focused grips also support Up/Down. Editing initiative during
+   preparation sorts again. During active combat it preserves the manual order;
+   use **Re-sort by Initiative** explicitly when wanted.
+3. **Begin Combat** starts round 1 at the first row. Next/Previous wrap rounds;
+   Previous never goes below round 1. Select a row for **Make current**, Damage/Heal
+   and conditions. New combatants append; removing the current one chooses its next
+   remaining neighbor without changing round. Empty combat stays active until End.
+4. Damage/Heal apply the entered magnitude; Enter in the adjustment field applies its
+   signed value. These are atomic server deltas. Set exact HP and maximum HP in the
+   Inspector. HP stays between zero and maximum; decreasing maximum clamps current HP.
+   Zero HP has a subdued bar, with no automatic death, removal or skipped turn.
+5. Add a built-in condition or a custom label (40 characters; up to 30 per token).
+   Conditions persist until removed. The eye control switches public/GM-only;
+   even token owners never receive GM-only conditions. Duplicate names are normalized.
+   The map shows up to three abbreviated diamond badges plus an overflow count;
+   selection and the tracker show the full permitted list. Presets do not apply rules.
+6. **End Combat** asks for confirmation, clears turn indicators and the Player tracker,
+   and retains HP, conditions and the ended combat record. No history browser yet.
+
+Players see only active combat, visible participants, initiative, round and current
+turn. An owned token says **Your Turn**; an undisclosed current participant says
+**GM Turn** without its identity or order position. Exact HP is provided only for
+the player's own tokens, including locked ones. Players cannot edit HP, conditions
+or combat. Their compact tracker can collapse to the current turn.
+
+Next/Previous include the expected round/current participant. A stale command from
+another GM window returns a conflict and restores current state; it does not advance
+again. Buttons pause while a command saves. Lost HTTP responses retain the original
+mutation UUID in the save queue, so **Retry** cannot double damage or advance twice.
+Reload/reconnect restore the authoritative combat snapshot. Ordinary changes do not
+produce success toasts. Hidden remains the security boundary; fog still conceals pixels.
 
 ## Receipt retention
 

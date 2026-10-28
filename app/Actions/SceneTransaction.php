@@ -6,6 +6,7 @@ use App\Models\Campaign;
 use App\Models\Scene;
 use App\Realtime\CommandContext;
 use App\Realtime\ScenePublisher;
+use App\Services\CombatView;
 use Closure;
 use Illuminate\Support\Facades\DB;
 
@@ -19,6 +20,10 @@ class SceneTransaction
             $locked = Scene::whereKey($scene->id)->lockForUpdate()->firstOrFail();
             $locked->setRelation('campaign', $campaign);
             $result = $mutation($locked);
+            if ($result['_combatChanged'] ?? false) {
+                $result['combat'] = app(CombatView::class)->build($locked, true);
+            }
+            unset($result['_combatChanged']);
             $wasVisible = $result['_wasVisible'] ?? false;
             unset($result['_wasVisible']);
             $locked->increment('revision');

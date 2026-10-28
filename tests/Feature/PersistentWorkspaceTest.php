@@ -116,7 +116,7 @@ class PersistentWorkspaceTest extends TestCase
         $this->actingAs($this->player)->getJson('/api/scenes/'.$this->scene->id.'/snapshot')->assertOk()
             ->assertJsonCount(1, 'tokens')->assertJsonPath('tokens.0.id', (string) $visible->id)
             ->assertJsonMissing(['name' => 'Ancient Dragon'])->assertJsonMissingPath('tokens.0.ownerUserId')
-            ->assertJsonMissingPath('tokens.0.hp')->assertJsonMissingPath('tokens.0.isHidden');
+            ->assertJsonPath('tokens.0.hp', 7)->assertJsonMissingPath('tokens.0.isHidden');
         $this->getJson('/api/scenes/'.$this->secret->id.'/snapshot')->assertForbidden();
         $this->actingAs($this->gm)->getJson('/api/scenes/'.$this->scene->id.'/snapshot')->assertOk()->assertJsonCount(2, 'tokens')->assertJsonFragment(['id' => (string) $hidden->id, 'isHidden' => true]);
         $this->actingAs($this->stranger)->getJson('/api/scenes/'.$this->scene->id.'/snapshot')->assertForbidden();
@@ -125,7 +125,7 @@ class PersistentWorkspaceTest extends TestCase
     public function test_player_movement_boundary_and_admin_mass_assignment(): void
     {
         $owned = $this->token();
-        $this->actingAs($this->player)->postJson('/api/tokens/'.$owned->id.'/move', ['x' => 123.125, 'y' => -48.75, 'hp' => 999, 'is_hidden' => true])->assertOk()->assertJsonPath('revision', 1)->assertJsonMissingPath('token.hp');
+        $this->actingAs($this->player)->postJson('/api/tokens/'.$owned->id.'/move', ['x' => 123.125, 'y' => -48.75, 'hp' => 999, 'is_hidden' => true])->assertOk()->assertJsonPath('revision', 1)->assertJsonPath('token.hp', 7);
         $this->assertDatabaseHas('tokens', ['id' => $owned->id, 'x' => 123.125, 'y' => -48.75, 'hp' => 7, 'is_hidden' => false]);
         $this->patchJson('/api/tokens/'.$owned->id, ['owner_user_id' => $this->player->id, 'hp' => 999])->assertForbidden();
         foreach ([$this->token(['owner_user_id' => $this->gm->id]), $this->token(['is_hidden' => true]), $this->token(['is_locked' => true]), $this->token([], $this->secret)] as $token) {

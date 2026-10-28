@@ -26,6 +26,7 @@ import type { TabletopRenderer } from '../tabletop/renderer/TabletopRenderer';
 import type { Tool, Scene } from '../tabletop/types/scene';
 import { Sidebar } from './Sidebar';
 import { Inspector } from './Inspector';
+import { CombatPanel } from './combat/CombatPanel';
 import { Tabletop } from './Tabletop';
 import { Toolbar } from './Toolbar';
 import { PlayersPanel } from './PlayersPanel';
@@ -289,6 +290,7 @@ export function Workspace({
                     }}
                 >
                     {scene.id && <Tabletop store={store} rendererRef={renderer} onZoom={setZoom} />}
+                    {scene.id && <CombatPanel store={store} queue={queue} />}
                     {!scene.id ? (
                         <div className="canvas-empty">
                             <span className="eyebrow">YOUR FIRST SCENE</span>
@@ -433,6 +435,7 @@ export function Workspace({
                 </main>
                 {right && (
                     <Inspector
+                        combatBusy={save.status !== 'saved'}
                         store={store}
                         campaign={campaign}
                         uploadMap={uploadMap}
@@ -550,7 +553,7 @@ export function Workspace({
                         const id = store.getSnapshot().selectedIds[0];
                         if (id) {
                             const result = await api.deleteToken(id);
-                            store.removeToken(id, result.revision);
+                            store.accept(result, true);
                         }
                     }}
                 />

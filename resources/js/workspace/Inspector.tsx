@@ -4,6 +4,7 @@ import type { SceneStore } from '../tabletop/state/SceneStore';
 import { NumberField } from './NumberField';
 import { MapInspector } from './MapInspector';
 import type { Campaign } from '../api/workspace';
+import { TokenCombatControls } from './combat/TokenCombatControls';
 export function Inspector({
     store,
     onClose,
@@ -12,6 +13,7 @@ export function Inspector({
     uploadToken,
     busy,
     deleteToken,
+    combatBusy,
 }: {
     store: SceneStore;
     onClose: () => void;
@@ -20,6 +22,7 @@ export function Inspector({
     uploadToken: (id: string, file: File) => void;
     busy: boolean;
     deleteToken: () => void;
+    combatBusy: boolean;
 }) {
     const { scene, selectedIds, preview } = useSyncExternalStore(
         store.subscribe,
@@ -152,6 +155,47 @@ export function Inspector({
                     </section>
                     <section>
                         <h3>Vitals</h3>
+                        <div className="token-combat-context">
+                            {scene.combat ? (
+                                (() => {
+                                    const combat = scene.combat;
+                                    const entry = combat.combatants.find(
+                                        (c) => c.tokenId === token.id,
+                                    );
+                                    return (
+                                        <button
+                                            className="text-button"
+                                            disabled={combatBusy}
+                                            onClick={() =>
+                                                store.combatCommand(
+                                                    entry
+                                                        ? {
+                                                              action: 'remove',
+                                                              combatId: combat.id,
+                                                              combatantId: entry.id,
+                                                          }
+                                                        : {
+                                                              action: 'add',
+                                                              combatId: combat.id,
+                                                              tokenIds: [token.id],
+                                                          },
+                                                )
+                                            }
+                                        >
+                                            {entry ? 'Remove from Combat' : 'Add to Combat'}
+                                        </button>
+                                    );
+                                })()
+                            ) : (
+                                <button
+                                    className="text-button"
+                                    disabled={combatBusy}
+                                    onClick={() => store.combatCommand({ action: 'prepare' })}
+                                >
+                                    Prepare Combat
+                                </button>
+                            )}
+                        </div>
                         <div className="field-row">
                             <NumberField
                                 label="HP"
@@ -175,6 +219,7 @@ export function Inspector({
                                 }}
                             />
                         </div>
+                        <TokenCombatControls token={token} store={store} disabled={combatBusy} />
                         <div className="field-row">
                             <NumberField
                                 label="AC"

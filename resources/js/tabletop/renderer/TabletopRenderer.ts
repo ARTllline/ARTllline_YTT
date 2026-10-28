@@ -9,6 +9,7 @@ import { TokenLayer } from '../layers/TokenLayer';
 import { InteractionLayer } from '../layers/InteractionLayer';
 import type { SceneStore } from '../state/SceneStore';
 import type { Tool } from '../types/scene';
+import { currentTokenId } from '../types/combat';
 import { screenToWorld } from '../utils/coordinates';
 
 export class TabletopRenderer {
@@ -81,7 +82,11 @@ export class TabletopRenderer {
                 scene.height !== previousScene.height
             )
                 this.grid.update(scene.grid, scene.width, scene.height);
-            this.tokens.sync(scene.tokens, this.store.role === 'player');
+            this.tokens.sync(
+                scene.tokens,
+                this.store.role === 'player',
+                currentTokenId(scene.combat),
+            );
             if (scene !== previousScene) this.syncImages();
             this.input?.reapplyPreview();
             this.input?.refresh();

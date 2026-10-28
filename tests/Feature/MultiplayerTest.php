@@ -118,7 +118,7 @@ class MultiplayerTest extends TestCase
         $this->actingAs($this->gm)->patchJson('/api/tokens/'.$this->token->id, $this->command(['is_hidden' => true]))->assertOk();
         $events = $this->playerEvents();
         $this->assertSame('token.removed', $events[0]->envelope['type']);
-        $this->assertSame(['deletedId' => (string) $this->token->id], $events[0]->envelope['payload']);
+        $this->assertSame(['deletedId' => (string) $this->token->id, 'combat' => null], $events[0]->envelope['payload']);
         $this->patchJson('/api/tokens/'.$this->token->id, $this->command(['name' => 'Secret dragon']))->assertOk();
         $events = $this->playerEvents();
         $this->assertSame('scene.revision', $events[1]->envelope['type']);
@@ -128,7 +128,7 @@ class MultiplayerTest extends TestCase
         $event = $this->playerEvents()[2];
         $this->assertSame('token.created', $event->envelope['type']);
         $this->assertTrue($event->envelope['payload']['token']['canMove']);
-        foreach (['hp', 'maxHp', 'ownerUserId', 'isHidden', 'isLocked', 'ac', 'speed'] as $key) {
+        foreach (['ownerUserId', 'isHidden', 'isLocked', 'ac', 'speed'] as $key) {
             $this->assertArrayNotHasKey($key, $event->envelope['payload']['token']);
         }
         $this->deleteJson('/api/tokens/'.$this->token->id, $this->command())->assertOk();

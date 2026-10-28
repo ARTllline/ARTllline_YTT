@@ -6,6 +6,7 @@ use App\Events\TabletopEvent;
 use App\Models\Campaign;
 use App\Models\Scene;
 use App\Models\Token;
+use App\Services\CombatView;
 use App\Services\SceneSnapshotBuilder;
 use Illuminate\Support\Facades\DB;
 
@@ -17,7 +18,7 @@ class ScenePublisher
     public function changed(Scene $scene, string $type, array $result, bool $wasVisible): void
     {
         $members = $scene->campaign->members()->get();
-        $token = isset($result['token']) ? $scene->tokens()->with('imageAsset')->find($result['token']['id']) : null;
+        $token = isset($result['token']) ? $scene->tokens()->with(['imageAsset', 'conditions'])->find($result['token']['id']) : null;
         $base = ['type' => $type, 'sceneId' => (string) $scene->id, 'revision' => $scene->revision, 'mutationId' => $this->context->id()];
         if ($this->context->dragSessionId) {
             $base['dragSessionId'] = $this->context->dragSessionId;
@@ -34,6 +35,7 @@ class ScenePublisher
         if ($scene->campaign->active_scene_id !== $scene->id) {
             return;
         }
+        $playerCombat = array_key_exists('combat', $result) ? app(CombatView::class)->build($scene, false) : null;
         foreach ($members as $member) {
             if ($member->pivot->role !== 'player') {
                 continue;
@@ -60,6 +62,12 @@ class ScenePublisher
                     if (array_key_exists($key, $result)) {
                         $payload[$key] = $result[$key];
                     }
+                }
+            }
+            if (array_key_exists('combat', $result)) {
+                $payload['combat'] = $playerCombat;
+                if ($payload['combat'] === null && str_starts_with($type, 'combat.')) {
+                    $event['type'] = 'scene.revision';
                 }
             }
             $this->schedule(ChannelAccess::player($scene->campaign_id, $scene->id, $scene->campaign->live_revision, $member->id), $event + ['payload' => $payload]);

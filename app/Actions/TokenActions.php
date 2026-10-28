@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Models\Asset;
 use App\Models\CampaignMember;
+use App\Models\Combat;
 use App\Models\Scene;
 use App\Models\Token;
 use App\Models\User;
@@ -52,7 +53,7 @@ class TokenActions
             $token->refresh();
             $token->setRelation('scene', $scene);
 
-            return ['token' => $this->snapshots->token($token, $scene->campaign->roleFor($user) === 'gm', $user), '_wasVisible' => $wasVisible];
+            return ['token' => $this->snapshots->token($token, $scene->campaign->roleFor($user) === 'gm', $user), '_wasVisible' => $wasVisible, '_combatChanged' => array_key_exists('is_hidden', $data)];
         }, $move ? 'token.moved' : 'token.updated');
     }
 
@@ -62,9 +63,13 @@ class TokenActions
             $token = $scene->tokens()->whereKey($token->id)->firstOrFail();
             $token->setRelation('scene', $scene);
             Gate::forUser($user)->authorize('update', $token);
+            $combat = Combat::where('scene_id', $scene->id)->whereIn('status', ['preparing', 'active'])->first();
+            if ($combat && ($entry = $combat->combatants()->where('token_id', $token->id)->first())) {
+                app(CombatActions::class)->remove($combat, (string) $entry->id);
+            }
             $token->delete();
 
-            return ['deletedId' => (string) $token->id, '_wasVisible' => ! $token->is_hidden];
+            return ['deletedId' => (string) $token->id, '_wasVisible' => ! $token->is_hidden, '_combatChanged' => true];
         }, 'token.removed');
     }
 }

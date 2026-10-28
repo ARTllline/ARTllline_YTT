@@ -3,7 +3,7 @@ import type { Token, Point } from '../types/scene';
 import { TokenView } from '../objects/TokenView';
 export class TokenLayer extends Container {
     views = new Map<string, TokenView>();
-    sync(tokens: readonly Token[], player = false) {
+    sync(tokens: readonly Token[], player = false, currentTokenId?: string) {
         for (const [id, view] of this.views) {
             if (!tokens.some((token) => token.id === id)) {
                 view.destroy({ children: true });
@@ -19,6 +19,7 @@ export class TokenLayer extends Container {
                 this.views.set(token.id, view);
                 this.addChild(view);
             }
+            this.views.get(token.id)?.setActiveTurn(token.id === currentTokenId);
         }
     }
     hit(point: Point) {

@@ -69,8 +69,9 @@ Policies are discovered by Laravel's standard model/policy naming:
 | Asset bytes                      | Any campaign asset                              | Only active map or visible active token image | Denied     |
 
 `SceneSnapshotBuilder` owns the explicit projection. Player JSON contains no
-hidden entities, ownership metadata, hidden/locked flags, HP/AC/speed, private
-paths, or inactive scene metadata. `canMove` exposes only the resulting capability.
+hidden entities, owner IDs, hidden/locked flags, AC/speed, private paths, or inactive
+scene metadata. Task 05 adds exact HP/maxHP only for the recipient's owned tokens,
+an `isOwner` presentation flag, and public conditions. `canMove` exposes the resulting capability.
 The rendered Token type permits absent private fields; Player rendering never
 assumes HP exists. `SceneStore.role` gates local dragging using `canMove` and
 connection state. This affordance is not a replacement for server authorization.
@@ -369,7 +370,7 @@ the final move still uses normal policy validation rather than optimistic lockin
 
 ## Remaining boundaries
 
-No initiative, LOS, audio, cue system, rules engine, Story integration,
+No LOS, audio, cue system, rules engine, Story integration,
 generic plugin platform or event-sourcing framework was introduced. Before adding
 member eviction/role management, design immediate channel revocation, not merely
 HTTP denial. Durable offline work, upload deduplication, asset
@@ -505,3 +506,141 @@ scheduler entry has overlap protection; operators must run the scheduler. Receip
 retention bounds retry guarantees, not campaign history. In-memory browser queues
 must be reconciled before retry after the retention window. No receipt archive or
 background queue infrastructure was introduced.
+
+## Task 05 — Combat core
+
+### Domain and lifecycle
+
+`combats` belongs to a scene and stores status (`preparing|active|ended`), round,
+nullable current combatant FK, creator and start/end timestamps. Campaign/scene
+writer locks enforce one non-ended combat per scene. `combatants` references the
+canonical Token and stores nullable `DECIMAL(8,2)` initiative and explicit position.
+Unique `(combat_id,token_id)` prevents duplicate participation. No HP/name/image is
+copied into Combatant. Combat IDs in commands prevent stale controls from mutating
+a newly prepared replacement combat.
+
+Prepare is GM-only and persistent on any scene. Begin requires at least one entry,
+sets active/round 1/current first and records start time. End records completion and
+clears current, while retaining the combat row and participants. Token deletion
+cascades participant references (including historical ones); this is retained combat
+metadata, not a complete immutable combat log. Scene deletion cascades the combat.
+History browsing, archival participant identity and combat deletion UI are future work.
+
+Preparation initiative edits sort descending, null last, ties by existing position.
+Manual reordering writes explicit positions; a later preparation initiative edit
+intentionally re-sorts. Active initiative edits preserve order. Explicit re-sort
+keeps the current combatant by ID. Add appends and preserves current. Remove current
+chooses the next remaining entry, wrapping without incrementing round; removing the
+last sets current null. Empty active combat can be ended or repopulated, with Next
+selecting the first entry. Nothing automatically skips zero-HP participants.
+
+### Commands and locking
+
+All routes are GM-only POST commands using existing session/CSRF/receipt middleware:
+
+- `/api/scenes/{scene}/combat/{prepare,add,remove,initiative,reorder,sort,begin,next,previous,current,end}`.
+- `/api/tokens/{token}/{hp,condition-add,condition-remove,condition-visibility}`.
+
+`CombatController` validates explicit payloads; `CombatActions` and
+`TokenCombatActions` own behavior. Scene/Token policies recheck under the locks.
+Combat commands include `combatId` except Prepare. Add takes token IDs from this scene;
+reorder must contain every current combatant exactly once. Initiative supports at
+most two decimals, -9999 through 9999. There is no D&D rules interpretation.
+
+```text
+GM Combat Action
+  → authorization + validation
+  → IdempotentCommand (campaign lock → receipt reservation)
+  → CombatActions / TokenCombatActions
+  → SceneTransaction (campaign → scene lock, authorization recheck)
+  → domain writes + scene revision++ + coherent mutation result
+  → recipient-safe serialization under the locks
+  → outer commit → Reverb
+  → existing revision reducer → SceneStore tokens + combat
+  → React Combat/Inspector + Pixi turn/condition indicators
+```
+
+**MySQL correction found by the Task 05 concurrency check:** receipt routing lookup
+runs before the outer transaction. Its first transactional query locks the campaign
+for update, before inserting the receipt. Inserting a receipt first acquired a shared
+campaign FK lock and could deadlock on upgrade. A nonlocking routing read inside the
+transaction also pinned REPEATABLE READ to a stale pre-lock snapshot, losing deltas
+or accepting a stale turn. Both hazards are removed without changing global database
+isolation. Do not add nonlocking reads before that first campaign lock, or wrap this
+entrypoint in an older read transaction. The receipt unique key still deduplicates
+simultaneous retries; stored-resource authorization is checked on replay.
+
+Next/Previous carry `expectedRound` and nullable `expectedCurrentCombatantId`. The
+action compares both under the writer lock and returns HTTP 409 if stale. Next wraps
+last→first and increments round; Previous wraps first→last/decrements only above
+round 1. Make current is an explicit jump without round change. The client disables
+combat controls while saving. A 409 terminates that rejected queued command after a
+successful snapshot resync and retains a visible explanation; it never silently
+reissues Next against the new current turn. If resync fails, the original command
+remains queued until recovery. Lost-response retry uses the original UUID and gets
+the receipt before attempting the turn precondition again.
+
+### HP and conditions
+
+`Token.hp/max_hp` remain canonical. HP POST accepts an integer `delta` and computes
+`clamp(current + delta, 0, max_hp)` inside SceneTransaction. Repeated UUID does not
+apply a delta twice. Exact Set HP uses the existing administrative patch; maximum
+reduction clamps current HP in that same mutation. No temporary HP, rolls, resistances,
+concentration logic, death saves, automatic deletion or turn effects are introduced.
+
+`token_conditions` stores token FK, optional preset key, label, normalized label,
+public/GM-only visibility, creator and timestamps. Unique token/normalized-label
+prevents duplicates, including custom casing/spacing variants of a preset. Labels
+are limited to 40 characters, entries to 30 per token. Adding an existing label is an
+accepted no-op; it does not unexpectedly change its visibility. Add/remove/toggle are
+persistent, idempotent, GM-only commands. No durations or automatic expiration.
+
+Safe token serialization is shared by snapshots, HTTP results and broadcasts.
+GM receives all vitals/conditions; Player receives exact HP/maxHP only when owner and
+only public conditions. Owner is not an exception to GM-only condition secrecy.
+Ownership transfer replaces the whole DTO so former-owner HP disappears locally.
+Player movement replay rejects a former GM receipt using the privileged `isHidden`
+field marker (HP is now legitimate owner data), checks current move permission and
+filters old receipt conditions against currently permitted IDs. These contracts
+apply outside combat as well as inside it.
+
+### Player-safe combat and composite mutations
+
+`CombatView` constructs `{id,status,round,currentTurn,combatants}`. Entries contain
+only `{id,tokenId,initiative}`; array order conveys relative visible order. Original
+positions, total hidden counts, hidden IDs/names and hidden initiative never appear.
+Preparing/inactive/ended combat projects as null. Current turn is either null,
+`{combatantId}` for a visible participant, or `{gmHiddenTurn:true}`. Preparing
+mutations publish only a no-content combat projection with a `scene.revision` type.
+
+The same scene revision envelope may contain both `token`/`deletedId` and `combat`.
+Hide/reveal sets `_combatChanged`; token deletion repairs the combatant/current
+before deleting the token under the same SceneTransaction. That internal marker is
+removed and replaced by a canonical GM combat result; ScenePublisher constructs one
+safe Player combat view for all active recipients. There is exactly one persistent
+envelope per recipient/revision, never a second same-revision event dropped as stale.
+HP/condition changes replace the canonical token; combat references it by tokenId,
+so they require no duplicated combat-token payload. Ordinary movement sends no combat.
+
+`Mutation`, `SceneEvent` and Scene types carry optional nullable `combat`. Presence
+of the key replaces or clears combat; omission leaves it unchanged. Existing
+current+1/stale/gap rules, subscription recovery, pending-write buffering and scene
+epoch isolation apply unchanged. HTTP deletion acknowledgement also applies the
+composite result in one SceneStore notification. Reconnect restores current state,
+not a combat history replay. The existing 15-second recovery probe remains.
+
+### UI and renderer
+
+`CombatPanel` is a collapsible map overlay with portrait rows, initiative fields,
+current/round emphasis, searchable batch picker, native drag ordering and keyboard
+grip Up/Down. `TokenCombatControls` is shared by selected combat rows and Inspector;
+its local state is only form drafts. Persisted HP/conditions live solely in
+SceneStore.tokens. React reads this projection; no component has its own Echo listener.
+
+Player tracker is read-only, shows Your Turn for an owned current token, and offers
+only selection/collapse. Canvas TokenView draws a restrained current ring below Fog,
+optional authorized HP bar and three abbreviated diamond condition badges plus
+count. Full labels appear on selection/in the tracker. It uses owned Graphics/Text
+objects destroyed with the token; no new per-frame React state, timers or HTTP.
+Current is resolved from combat references and disappears with null combat or scene
+replacement. Condition presets use Lucide icons in the UI, no emoji icon system.

@@ -21,7 +21,7 @@ class SceneSnapshotBuilder
             $scene->setRelation('campaign', $campaign);
             Gate::forUser($user)->authorize('view', $scene);
             $gm = $scene->campaign->roleFor($user) === 'gm';
-            $tokens = $scene->tokens()->with('imageAsset')->when(! $gm, fn ($query) => $query->where('is_hidden', false))->orderBy('z_index')->orderBy('id')->get();
+            $tokens = $scene->tokens()->with(['imageAsset', 'conditions'])->when(! $gm, fn ($query) => $query->where('is_hidden', false))->orderBy('z_index')->orderBy('id')->get();
 
             return [
                 'id' => (string) $scene->id, 'campaignId' => (string) $scene->campaign_id,
@@ -31,6 +31,7 @@ class SceneSnapshotBuilder
                 'fog' => ['base' => $scene->fog_base, 'actions' => $scene->fogActions()->get()->map(fn ($action) => $action->projection())->all()],
                 'grid' => $this->grid($scene), 'map' => $this->map($scene),
                 'tokens' => $tokens->map(fn ($token) => $this->token($token, $gm, $user))->all(),
+                'combat' => app(CombatView::class)->build($scene, $gm),
             ];
         });
     }
@@ -63,6 +64,15 @@ class SceneSnapshotBuilder
             'scale' => (float) $token->scale, 'size' => (float) $token->size,
             'kind' => 'hero', 'color' => 9751480, 'image' => $this->asset($token->imageAsset),
             'canMove' => $gm || ($token->owner_user_id === $user->id && ! $token->is_locked)];
+        $data['conditions'] = $token->conditions->filter(fn ($condition) => $gm || $condition->visibility === 'public')->values()->map(fn ($condition) => [
+            'id' => (string) $condition->id, 'key' => $condition->key, 'label' => $condition->label,
+        ] + ($gm ? ['visibility' => $condition->visibility] : []))->all();
+        if ($gm || $token->owner_user_id === $user->id) {
+            $data += ['hp' => $token->hp, 'maxHp' => $token->max_hp];
+        }
+        if (! $gm) {
+            $data['isOwner'] = $token->owner_user_id === $user->id;
+        }
         if ($gm) {
             $data += ['hp' => $token->hp, 'maxHp' => $token->max_hp, 'ac' => $token->ac, 'speed' => $token->speed,
                 'isHidden' => $token->is_hidden, 'isLocked' => $token->is_locked,

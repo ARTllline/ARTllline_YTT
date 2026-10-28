@@ -23,14 +23,20 @@ class IdempotentCommand
             return array_map(fn ($item) => is_array($item) ? $sort($item) : $item, $value);
         };
         $hash = hash('sha256', json_encode([$operation, $resource, $sort($payload)], JSON_THROW_ON_ERROR));
+        // Resolve routing before opening the transaction: a consistent read here
+        // would pin MySQL REPEATABLE READ to a snapshot older than the writer lock.
+        $existing = DB::table('scene_mutation_receipts')->where('user_id', $user->id)->where('client_mutation_id', $id)->first();
+        $campaignId = $existing?->campaign_id ?? match (true) {
+            str_starts_with($operation, 'token.') => Token::findOrFail($resource)->scene->campaign_id,
+            in_array($operation, ['scene.create', 'scene.activate']) => Campaign::findOrFail($resource)->id,
+            default => Scene::findOrFail($resource)->campaign_id,
+        };
         try {
-            return DB::transaction(function () use ($user, $id, $operation, $resource, $hash, $next) {
-                $existing = DB::table('scene_mutation_receipts')->where('user_id', $user->id)->where('client_mutation_id', $id)->first();
-                $campaignId = $existing?->campaign_id ?? match (true) {
-                    str_starts_with($operation, 'token.') => Token::findOrFail($resource)->scene->campaign_id,
-                    in_array($operation, ['scene.create', 'scene.activate']) => Campaign::findOrFail($resource)->id,
-                    default => Scene::findOrFail($resource)->campaign_id,
-                };
+            return DB::transaction(function () use ($user, $id, $operation, $resource, $hash, $next, $campaignId) {
+                // Acquire the campaign writer lock before the receipt FK acquires a
+                // shared lock on it. Concurrent receipt inserts otherwise deadlock
+                // when SceneTransaction later upgrades that same campaign lock.
+                $campaign = Campaign::whereKey($campaignId)->lockForUpdate()->firstOrFail();
                 // Unique insertion serializes retries even across processes and scenes.
                 // Reservation and result commit together; no incomplete receipt is visible.
                 DB::table('scene_mutation_receipts')->insertOrIgnore([
@@ -41,16 +47,16 @@ class IdempotentCommand
                 $receipt = DB::table('scene_mutation_receipts')->where('user_id', $user->id)->where('client_mutation_id', $id)->lockForUpdate()->first();
                 abort_unless(hash_equals($receipt->fingerprint, $hash), 409, 'This mutation ID was already used for a different command.');
                 if ($receipt->result !== null) {
-                    $campaign = Campaign::findOrFail($receipt->campaign_id);
                     $result = json_decode($receipt->result, true, flags: JSON_THROW_ON_ERROR);
                     if ($operation === 'token.move' && $campaign->roleFor($user) !== 'gm') {
-                        abort_if(array_key_exists('hp', $result['token']), 403, 'Your role changed. Reload the scene before moving again.');
+                        abort_if(array_key_exists('isHidden', $result['token']), 403, 'Your role changed. Reload the scene before moving again.');
                         $token = Token::findOrFail($resource);
                         Gate::forUser($user)->authorize('move', $token);
                         // A former GM may now be a player. Never replay the older privileged DTO.
                         $safe = app(SceneSnapshotBuilder::class)->token($token, false, $user);
                         $result['token'] = array_intersect_key($result['token'], $safe);
                         $result['token']['canMove'] = $safe['canMove'];
+                        $result['token']['conditions'] = array_values(array_filter($result['token']['conditions'] ?? [], fn ($condition) => in_array($condition['id'], array_column($safe['conditions'], 'id'), true)));
                     } else {
                         Gate::forUser($user)->authorize('update', $campaign);
                     }

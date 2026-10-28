@@ -4,6 +4,12 @@ export class TokenView extends Container {
     private body = new Graphics();
     private art = new Graphics();
     private ring = new Graphics();
+    private turnRing = new Graphics();
+    private badges = new Text({
+        text: '',
+        style: { fontFamily: 'Arial', fontSize: 11, fontWeight: 'bold', fill: 0xd7e4da },
+    });
+    private activeTurn = false;
     private portraitImage = new Sprite();
     private imageMask = new Graphics();
     private nameplate = new Text({
@@ -19,17 +25,20 @@ export class TokenView extends Container {
     ) {
         super();
         this.addChild(
+            this.turnRing,
             this.body,
             this.art,
             this.portraitImage,
             this.imageMask,
             this.ring,
             this.nameplate,
+            this.badges,
         );
         this.portraitImage.anchor.set(0.5);
         this.portraitImage.mask = this.imageMask;
         this.portraitImage.visible = false;
         this.nameplate.anchor.set(0.5, 0);
+        this.badges.anchor.set(0.5, 1);
         this.update(model);
     }
     update(token: Token) {
@@ -101,6 +110,33 @@ export class TokenView extends Container {
                 .roundRect(-healthWidth / 2, r - 4, (healthWidth * token.hp) / token.maxHp, 3, 1)
                 .fill(c);
         this.drawRing();
+        const conditions = token.conditions ?? [];
+        this.badges.text =
+            conditions
+                .slice(0, 3)
+                .map((c) => `◇${c.label.slice(0, 2).toUpperCase()}`)
+                .join(' ') + (conditions.length > 3 ? ` +${conditions.length - 3}` : '');
+        this.badges.position.set(0, -r - 12);
+        if (token.hp === 0)
+            this.body
+                .moveTo(-5, r - 4)
+                .lineTo(5, r - 4)
+                .stroke({ color: 0xb58f84, width: 3 });
+        this.drawTurn();
+    }
+    setActiveTurn(active: boolean) {
+        if (this.activeTurn === active) return;
+        this.activeTurn = active;
+        this.drawTurn();
+    }
+    private drawTurn() {
+        this.turnRing.clear();
+        if (this.activeTurn)
+            this.turnRing
+                .circle(0, 0, this.radius + 10)
+                .stroke({ color: 0xb9cba3, width: 3, alpha: 0.85 })
+                .circle(0, 0, this.radius + 13)
+                .stroke({ color: 0xb9cba3, width: 5, alpha: 0.1 });
     }
     setImage(texture?: Texture) {
         this.portraitImage.visible = !!texture;

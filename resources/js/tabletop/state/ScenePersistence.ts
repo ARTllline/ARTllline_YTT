@@ -16,7 +16,7 @@ export class ScenePersistence {
         const mutationId = commandId();
         this.store.trackMutation(mutationId);
         const key =
-            command.type === 'token' || command.type === 'move'
+            command.type === 'token' || command.type === 'move' || command.type === 'tokenCombat'
                 ? `token:${command.id}`
                 : command.type;
         const version = (this.versions.get(key) ?? 0) + 1;
@@ -26,6 +26,16 @@ export class ScenePersistence {
             async () => {
                 try {
                     let result: Mutation;
+                    if (command.type === 'combat' || command.type === 'tokenCombat') {
+                        result =
+                            command.type === 'combat'
+                                ? await api.combat(this.sceneId, command.command, mutationId)
+                                : await api.tokenCombat(command.id, command.command, mutationId);
+                        const current = this.versions.get(key) === version;
+                        this.store.accept(result, current);
+                        if (!current) this.store.onRevisionGap?.();
+                        return;
+                    }
                     if (command.type === 'fog' || command.type === 'fogReset') {
                         result =
                             command.type === 'fog'
@@ -51,6 +61,17 @@ export class ScenePersistence {
                     else result = await api.map(this.sceneId, command.map, mutationId);
                     this.store.accept(result, this.versions.get(key) === version);
                 } catch (error) {
+                    if (
+                        command.type === 'combat' &&
+                        error instanceof ApiError &&
+                        error.status === 409
+                    ) {
+                        // A rejected stale turn is terminal, not a command to retry against a new turn.
+                        // If this read fails the queue retains the original command until recovery.
+                        this.store.reconcile(await api.snapshot(this.sceneId));
+                        this.store.combatNotice(error.message);
+                        return;
+                    }
                     if (
                         this.store.role === 'player' &&
                         error instanceof ApiError &&

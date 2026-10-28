@@ -6,7 +6,10 @@ export interface SceneEvent {
     revision: number;
     mutationId: string;
     dragSessionId?: string;
-    payload: Pick<Mutation, 'token' | 'grid' | 'map' | 'deletedId' | 'fog' | 'fogAction'> & {
+    payload: Pick<
+        Mutation,
+        'token' | 'grid' | 'map' | 'deletedId' | 'fog' | 'fogAction' | 'combat'
+    > & {
         scene?: Partial<Scene>;
     };
 }
@@ -35,6 +38,7 @@ export function reduceEvent(scene: Scene, event: SceneEvent): Scene | 'gap' {
         ...scene,
         ...payload.scene,
         tokens,
+        ...('combat' in payload ? { combat: payload.combat } : {}),
         ...(payload.fog
             ? { fog: payload.fog }
             : payload.fogAction

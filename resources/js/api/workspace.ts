@@ -1,4 +1,5 @@
 import type { FogAction, FogState, FogStroke, FogBase } from '../tabletop/types/spatial';
+import type { Combat, CombatCommand, TokenCombatCommand } from '../tabletop/types/combat';
 import { request, setCsrf } from './client';
 import type {
     Scene,
@@ -26,6 +27,7 @@ export interface Campaign extends CampaignSummary {
     members?: { id: string; name: string; role: string }[];
 }
 export interface Mutation {
+    combat?: Combat | null;
     fog?: FogState;
     fogAction?: FogAction;
     mutationId?: string;
@@ -44,6 +46,17 @@ export interface RealtimeConfig {
 export let realtimeConfig: RealtimeConfig;
 export const commandId = () => crypto.randomUUID();
 export const api = {
+    combat: (scene: string, command: CombatCommand, clientMutationId: string) => {
+        const { action, ...data } = command;
+        return request<Mutation>(`/scenes/${scene}/combat/${action}`, 'POST', {
+            ...data,
+            clientMutationId,
+        });
+    },
+    tokenCombat: (id: string, command: TokenCombatCommand, clientMutationId: string) => {
+        const { action, ...data } = command;
+        return request<Mutation>(`/tokens/${id}/${action}`, 'POST', { ...data, clientMutationId });
+    },
     session: async () => {
         const value = await request<{ user: User | null; csrf: string; realtime: RealtimeConfig }>(
             '/session',

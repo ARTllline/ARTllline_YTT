@@ -3,13 +3,17 @@ import type { Mutation } from '../../api/workspace';
 import { SpatialState } from './SpatialState';
 import type { FogStroke, FogBase } from '../types/spatial';
 import { clamp } from '../utils/coordinates';
+import type { CombatCommand, TokenCombatCommand } from '../types/combat';
 
 export interface WorkspaceSnapshot {
+    combatNotice?: string;
     scene: Scene;
     selectedIds: readonly string[];
     preview: { id: string; position: Point } | null;
 }
 export type SceneCommand =
+    | { type: 'combat'; command: CombatCommand }
+    | { type: 'tokenCombat'; id: string; command: TokenCombatCommand }
     | { type: 'move'; id: string; position: Point; dragSessionId?: string }
     | { type: 'token'; id: string; patch: TokenPatch }
     | { type: 'fog'; stroke: FogStroke; localId: string }
@@ -47,6 +51,7 @@ export class SceneStore {
     }
     reconcile(scene: Scene) {
         this.emit({
+            ...this.snapshot,
             scene,
             selectedIds: this.snapshot.selectedIds.filter((id) =>
                 scene.tokens.some((t) => t.id === id),
@@ -83,6 +88,18 @@ export class SceneStore {
     select(id: string | null) {
         if (id && !this.snapshot.scene.tokens.some((token) => token.id === id)) return;
         this.emit({ ...this.snapshot, selectedIds: id ? [id] : [], preview: null });
+    }
+    combatCommand(command: CombatCommand) {
+        if (this.role !== 'gm') return;
+        this.combatNotice('');
+        this.command?.({ type: 'combat', command });
+    }
+    tokenCombat(id: string, command: TokenCombatCommand) {
+        if (this.role !== 'gm') return;
+        this.command?.({ type: 'tokenCombat', id, command });
+    }
+    combatNotice(message: string) {
+        this.emit({ ...this.snapshot, combatNotice: message });
     }
     previewMove(id: string, position: Point) {
         this.onPreview?.(id, position, false);
@@ -216,8 +233,17 @@ export class SceneStore {
                 };
             if (result.grid) scene = { ...scene, grid: result.grid };
             if ('map' in result) scene = { ...scene, map: result.map };
+            if ('combat' in result) scene = { ...scene, combat: result.combat };
+            if (result.deletedId)
+                scene = { ...scene, tokens: scene.tokens.filter((t) => t.id !== result.deletedId) };
         }
-        this.emit({ ...this.snapshot, scene });
+        this.emit({
+            ...this.snapshot,
+            scene,
+            selectedIds: this.snapshot.selectedIds.filter((id) =>
+                scene.tokens.some((t) => t.id === id),
+            ),
+        });
     }
     updateGrid(patch: Partial<GridSettings>) {
         const grid = { ...this.snapshot.scene.grid, ...patch };
