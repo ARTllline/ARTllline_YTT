@@ -47,6 +47,7 @@ export interface SceneMap extends Point {
     height: number;
 }
 export interface Scene {
+    notes?: readonly SceneNote[];
     combat?: Combat | null;
     fog?: FogState;
     id?: string;
@@ -79,4 +80,15 @@ export type TokenPatch = Partial<
         | 'image'
     >
 >;
-export type Tool = 'select' | 'pan' | 'fog' | 'ruler' | 'circle' | 'cone' | 'rectangle' | 'ping';
+export interface SceneNote extends Point {
+    id: string;
+    title: string;
+    body: string;
+    icon: 'note' | 'warning' | 'secret' | 'encounter' | 'clue';
+}
+export type NoteCommand =
+    | { action: 'create'; x: number; y: number }
+    | { action: 'update'; id: string; patch: Partial<Omit<SceneNote, 'id'>> }
+    | { action: 'delete'; id: string };
+export type Tool =
+    'select' | 'pan' | 'fog' | 'ruler' | 'circle' | 'cone' | 'rectangle' | 'ping' | 'note';

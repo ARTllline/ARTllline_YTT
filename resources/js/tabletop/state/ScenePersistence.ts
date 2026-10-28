@@ -18,7 +18,9 @@ export class ScenePersistence {
         const key =
             command.type === 'token' || command.type === 'move' || command.type === 'tokenCombat'
                 ? `token:${command.id}`
-                : command.type;
+                : command.type === 'note'
+                  ? `note:${command.command.action === 'create' ? mutationId : command.command.id}`
+                  : command.type;
         const version = (this.versions.get(key) ?? 0) + 1;
         this.versions.set(key, version);
         this.queue.enqueue(
@@ -26,6 +28,13 @@ export class ScenePersistence {
             async () => {
                 try {
                     let result: Mutation;
+                    if (command.type === 'note') {
+                        result = await api.note(this.sceneId, command.command, mutationId);
+                        this.store.accept(result, this.versions.get(key) === version);
+                        if (command.command.action === 'create' && result.note)
+                            this.store.selectNote(result.note.id);
+                        return;
+                    }
                     if (command.type === 'combat' || command.type === 'tokenCombat') {
                         result =
                             command.type === 'combat'
@@ -88,7 +97,7 @@ export class ScenePersistence {
                     throw error;
                 }
             },
-            command.type === 'grid' ? 250 : 0,
+            command.type === 'grid' ? 250 : command.type === 'note' && command.debounce ? 450 : 0,
         );
     }
 }

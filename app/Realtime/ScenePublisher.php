@@ -41,6 +41,9 @@ class ScenePublisher
                 continue;
             }
             $event = $base;
+            if (str_starts_with($type, 'note.')) {
+                $event['type'] = 'scene.revision';
+            }
             $payload = [];
             if ($token) {
                 if (! $token->is_hidden) {

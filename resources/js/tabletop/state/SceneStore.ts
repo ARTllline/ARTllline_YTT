@@ -1,4 +1,13 @@
-import type { GridSettings, Point, Scene, SceneMap, Token, TokenPatch } from '../types/scene';
+import type {
+    GridSettings,
+    Point,
+    Scene,
+    SceneMap,
+    Token,
+    TokenPatch,
+    NoteCommand,
+    SceneNote,
+} from '../types/scene';
 import type { Mutation } from '../../api/workspace';
 import { SpatialState } from './SpatialState';
 import type { FogStroke, FogBase } from '../types/spatial';
@@ -6,12 +15,15 @@ import { clamp } from '../utils/coordinates';
 import type { CombatCommand, TokenCombatCommand } from '../types/combat';
 
 export interface WorkspaceSnapshot {
+    selectedNoteId?: string;
+    showNotes?: boolean;
     combatNotice?: string;
     scene: Scene;
     selectedIds: readonly string[];
     preview: { id: string; position: Point } | null;
 }
 export type SceneCommand =
+    | { type: 'note'; command: NoteCommand; debounce?: boolean }
     | { type: 'combat'; command: CombatCommand }
     | { type: 'tokenCombat'; id: string; command: TokenCombatCommand }
     | { type: 'move'; id: string; position: Point; dragSessionId?: string }
@@ -53,6 +65,9 @@ export class SceneStore {
         this.emit({
             ...this.snapshot,
             scene,
+            selectedNoteId: scene.notes?.some((n) => n.id === this.snapshot.selectedNoteId)
+                ? this.snapshot.selectedNoteId
+                : undefined,
             selectedIds: this.snapshot.selectedIds.filter((id) =>
                 scene.tokens.some((t) => t.id === id),
             ),
@@ -87,7 +102,46 @@ export class SceneStore {
     }
     select(id: string | null) {
         if (id && !this.snapshot.scene.tokens.some((token) => token.id === id)) return;
-        this.emit({ ...this.snapshot, selectedIds: id ? [id] : [], preview: null });
+        this.emit({
+            ...this.snapshot,
+            selectedIds: id ? [id] : [],
+            selectedNoteId: undefined,
+            preview: null,
+        });
+    }
+    selectNote(id?: string) {
+        if (this.role !== 'gm') return;
+        this.emit({ ...this.snapshot, selectedIds: [], selectedNoteId: id });
+    }
+    toggleNotes() {
+        this.emit({
+            ...this.snapshot,
+            showNotes: this.snapshot.showNotes === false,
+            selectedNoteId: undefined,
+        });
+    }
+    noteCommand(command: NoteCommand, debounce = false) {
+        if (this.role !== 'gm') return;
+        if (command.action === 'update') {
+            const noteId = command.id;
+            const note = this.snapshot.scene.notes?.find((n) => n.id === noteId);
+            if (!note) return;
+            const updated = { ...note, ...command.patch };
+            this.emit({
+                ...this.snapshot,
+                scene: {
+                    ...this.snapshot.scene,
+                    notes: this.snapshot.scene.notes!.map((n) => (n.id === note.id ? updated : n)),
+                },
+            });
+            // Coalesced body drafts carry the complete current note, preserving earlier fields.
+            const { id, ...patch } = updated;
+            command = { action: 'update', id, patch };
+        }
+        this.command?.({ type: 'note', command, debounce });
+    }
+    updateNote(id: string, patch: Partial<Omit<SceneNote, 'id'>>, debounce = false) {
+        this.noteCommand({ action: 'update', id, patch }, debounce);
     }
     combatCommand(command: CombatCommand) {
         if (this.role !== 'gm') return;
@@ -224,6 +278,19 @@ export class SceneStore {
             revision: Math.max(this.snapshot.scene.revision ?? 0, result.revision),
         };
         if (apply && !stale) {
+            if (this.role === 'gm' && result.note)
+                scene = {
+                    ...scene,
+                    notes: [
+                        ...(scene.notes ?? []).filter((n) => n.id !== result.note!.id),
+                        result.note,
+                    ],
+                };
+            if (result.deletedNoteId)
+                scene = {
+                    ...scene,
+                    notes: scene.notes?.filter((n) => n.id !== result.deletedNoteId),
+                };
             if (result.token)
                 scene = {
                     ...scene,

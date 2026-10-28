@@ -5,6 +5,7 @@ import { ErrorBoundary } from './workspace/ErrorBoundary';
 import '../css/app.css';
 import '../css/persistence.css';
 import '../css/multiplayer.css';
+import '../css/preparation.css';
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>

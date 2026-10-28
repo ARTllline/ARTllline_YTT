@@ -1,6 +1,7 @@
 import { Application, Container, Texture } from 'pixi.js';
 import { FogLayer } from '../layers/FogLayer';
 import { SpatialLayer } from '../layers/SpatialLayer';
+import { GMLayer } from '../layers/GMLayer';
 import { Camera } from './camera/Camera';
 import { PointerController } from './interaction/PointerController';
 import { BattleMapLayer } from '../layers/BattleMapLayer';
@@ -22,6 +23,7 @@ export class TabletopRenderer {
     private tokens = new TokenLayer();
     private fog = new FogLayer();
     private spatial = new SpatialLayer();
+    private notes?: GMLayer;
     private overlay = new InteractionLayer();
     private input?: PointerController;
     private observer?: ResizeObserver;
@@ -65,6 +67,10 @@ export class TabletopRenderer {
         this.host.appendChild(canvas);
         this.world.eventMode = 'none';
         this.world.addChild(this.map, this.grid, this.tokens, this.fog, this.spatial, this.overlay);
+        if (this.store.role === 'gm') {
+            this.notes = new GMLayer();
+            this.world.addChildAt(this.notes, this.world.children.length - 1);
+        }
         this.app.stage.addChild(this.world);
         this.input = new PointerController(
             canvas,
@@ -72,10 +78,16 @@ export class TabletopRenderer {
             this.store,
             this.tokens,
             this.overlay,
+            this.notes,
         );
         let previousScene = this.store.getSnapshot().scene;
         const sync = () => {
             const { scene } = this.store.getSnapshot();
+            this.notes?.sync(
+                scene.notes ?? [],
+                this.store.getSnapshot().selectedNoteId,
+                this.store.getSnapshot().showNotes !== false,
+            );
             if (
                 scene.grid !== previousScene.grid ||
                 scene.width !== previousScene.width ||
@@ -122,6 +134,7 @@ export class TabletopRenderer {
             }
             this.camera.tick(ticker.deltaMS);
             const camera = this.camera.state;
+            this.notes?.zoom(camera.zoom);
             const scene = this.store.getSnapshot().scene;
             this.fog.update(
                 this.app.renderer,
@@ -164,6 +177,14 @@ export class TabletopRenderer {
     center() {
         return screenToWorld({ x: this.width / 2, y: this.height / 2 }, this.camera.state);
     }
+    dropTarget(clientX: number, clientY: number) {
+        const bounds = this.app.canvas.getBoundingClientRect();
+        const point = screenToWorld(
+            { x: clientX - bounds.left, y: clientY - bounds.top },
+            this.camera.state,
+        );
+        return { point, tokenId: this.tokens.hit(point) };
+    }
     setImages(images: Map<string, HTMLImageElement>) {
         for (const [id, image] of images) {
             if (!this.textures.has(id)) this.textures.set(id, Texture.from(image));
@@ -176,6 +197,12 @@ export class TabletopRenderer {
         this.tokens.views.forEach((view) =>
             view.setImage(view.model.image ? this.textures.get(view.model.image.id) : undefined),
         );
+        const used = new Set([scene.map?.asset.id, ...scene.tokens.map((t) => t.image?.id)]);
+        for (const [id, texture] of this.textures)
+            if (!used.has(id)) {
+                texture.destroy(true);
+                this.textures.delete(id);
+            }
     }
     zoom(factor: number) {
         this.camera.zoomBy(factor, { x: this.width / 2, y: this.height / 2 });

@@ -6,17 +6,19 @@ state. The product contract is `AGENTS.md`.
 
 ## Current status
 
-**Task 05: combat at the table, on the persistent multiplayer foundation.**
+**Task 06: prepare, place, remember and reveal inside the GM workspace.**
 Prepare scenes, invite players, move assigned tokens, paint shared manual fog,
 measure distances, sketch temporary areas and ping the table. Laravel/MySQL remain
 authoritative; Reverb delivers authorized changes. No demo data is automatically seeded.
 Prepare combat, enter initiative, advance turns, adjust HP and manage conditions.
-Dynamic vision, dice, encounters, audio, cues and the larger asset library remain deferred.
+Browse reusable private assets, prepare image handouts and place private GM notes.
+Dynamic vision, dice, encounters, audio and cues remain deferred.
 
 ## Requirements
 
 - PHP **8.3+**, Composer 2 and Laravel's required extensions, including PDO MySQL
-  and fileinfo. Tests also use PDO SQLite and GD for generated upload fixtures.
+  and fileinfo. **GD with WebP support is required for thumbnails**. Tests also use
+  PDO SQLite and GD for generated upload fixtures.
 - A dedicated **MySQL** database and **Laravel Reverb** process. File sessions/cache
   and synchronous broadcasts suffice for one application instance. Redis is optional
   until deploying multiple Reverb instances; no queue worker is required here.
@@ -84,7 +86,9 @@ application-specific database credentials and writable `storage`/`bootstrap/cach
 Images live under `storage/app/campaigns-private/campaigns/{campaign}/{kind}/`.
 They are served only through authorized `/api/assets/{id}` requests. Do **not**
 expose this directory through a public alias or storage symlink. `storage:link`
-is not needed. Detached images are retained for future reuse, not garbage-collected.
+is not needed. Detached images remain in the library until explicitly deleted.
+Only unused images can be deleted; the server checks map, token and handout references.
+Cached `.thumb.webp` files and their generation locks stay in the same private disk.
 
 Back up the database, private image directory and existing application key
 together. Session files are not the canonical scene state.
@@ -177,6 +181,50 @@ fog still exist in the Player snapshot and can be inspected by a determined clie
 Use **Hidden** for secrets: hidden tokens remain absent from Player snapshots,
 private image access and broadcasts, regardless of the fog geometry.
 
+## Preparing a session
+
+Open **Assets** in the left library. Choose All / Maps / Tokens / Handouts, search
+by display name, original filename or tag, and combine tag/collection filters.
+Recent uploads and Name sorting use pages of 40. Cards request private 320 px WebP
+thumbnails, never full-resolution maps. Click a card to rename it, add comma-separated
+tags/collections, inspect usage or delete an unused image after confirmation. New
+labels create campaign-local tags/collections; removing a label detaches it.
+Collections are many-to-many, so one image can belong to several sessions.
+
+Choose an upload type, then drop multiple files into the library or use Upload.
+Each file reports its own success/error; a rejected file does not cancel others.
+PNG/JPEG/WebP use the same 16 MiB / 8192-side / 32 MP limits. SVG and PDF are not
+supported in this stage. Duplicate filenames remain independent assets with generated
+private paths. Upload requests are rate-limited to 30/minute per user; large batches
+can receive individual retryable failures. Review results before leaving the page.
+
+- Drag a **map** onto the table to use it. Replacing an existing map asks first.
+  One asset can be reused by several scenes without another upload.
+- Drag a **token image** onto empty space to create a named token at the world
+  location, with grid-cell size and normal snap. Drop onto an existing token to
+  replace its image; the drop hint names that token. Inspector also offers
+  **Choose image from library** and **Choose map from library**.
+- Dropping an operating-system file onto the table opens a small Map / Token /
+  Handout choice. Uploading from a map-specific control already identifies its use.
+- Click a **handout image**, edit its display title/description, then **Prepare /
+  Preview**. The full image viewer offers fit, zoom and pan. **Show to Players**
+  persistently discovers it for every current Player and opens their viewer live.
+  Players can close with Escape and reopen from **Handouts / Discovered**, including
+  after reload or scene changes. Later joiners receive it only after another Show.
+  Re-show reopens the presentation without duplicate discovery records. A missed
+  live presentation is repaired as discovery on reconnect or the 15-second probe.
+- Choose **Note**, then click the map. Edit title, plaintext body and marker type in
+  the compact private editor. Body edits debounce 450 ms through the same save queue;
+  closing the editor does not discard pending edits. Drag a marker to save one move
+  on release. **Show GM Notes** only toggles local presentation. Notes draw above fog
+  for the GM and never enter Player snapshots, events, private file grants or UI.
+
+Library metadata and handouts are campaign-level. Scene maps, token images and
+notes use normal scene revisions; library organization does not advance the scene.
+Handout images are private before discovery. Originals and thumbnails share current
+usage authorization; knowing an old URL does not bypass hiding/replacement. Bytes
+already received cannot be erased from another browser's memory.
+
 ## Combat at the table
 
 1. Open the collapsible **Combat** panel and choose **Prepare Combat**. Preparation
@@ -245,7 +293,7 @@ The command deletes only completed receipts older than the configured cutoff;
 | Edit properties                    | Inspector; numeric/text fields commit on Enter or blur    |
 | Cancel a draft/drag                | Escape                                                    |
 | Grid calibration                   | Grid toolbar; short save debounce                         |
-| Add/replace map                    | Scene setup upload or drop an image on the tabletop       |
+| Add/replace map                    | Scene setup / Assets library / explicit file-drop choice  |
 | Token image, owner, hidden, locked | Selected token's Inspector                                |
 | Delete token/scene                 | Contextual action with confirmation                       |
 | Switch campaign/scene              | Campaign picker / Scenes sidebar                          |

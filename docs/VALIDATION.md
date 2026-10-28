@@ -1,3 +1,150 @@
+# Task 06 validation
+
+Validated locally on 2026-10-28 against committed Task 05 (`1ce037f`). Laravel 13.39,
+PHP 8.3.32 with GD/WebP, MySQL 8, Reverb 1.12.0, Node 20.20.2 and Chromium. The additive
+preparation migration ran on the local YTT database. Existing assets received display
+names; originals, APP_KEY, environment credentials and earlier QA campaigns were
+preserved. AGENTS and dependency lockfiles are unchanged. No production deployment.
+
+## Automated checks
+
+| Command                                              | Result                               |
+| ---------------------------------------------------- | ------------------------------------ |
+| `composer test` / final `php artisan test --compact` | **44 tests / 569 assertions passed** |
+| `npm run test`                                       | **62 tests passed**                  |
+| `npm run typecheck`                                  | Passed                               |
+| `npm run lint`                                       | Passed                               |
+| `npm run build`                                      | Passed; renderer remains lazy        |
+| `php vendor/bin/pint --test`                         | Passed                               |
+| `composer validate`                                  | Passed                               |
+| `composer check-platform-reqs`                       | Passed                               |
+| `git diff --check`                                   | Passed                               |
+
+Six preparation PHP tests cover paged combined search/filtering, campaign-local tags
+and collections, attach/detach, original-name retention, duplicate-file paths, private
+thumbnails, referenced deletion denial/physical unused cleanup, token-image creation
+and replacement, old-URL revocation, unique handout discovery/re-show/retry, later
+members, no-active-scene access, cross-campaign handout references, actual private
+channel authorization, private note snapshots/events, exact-once note creation,
+position-only edits preserving body, cross-scene note denial and deletion. Existing
+upload spoofing/limits and prior stage suites remain. Tests use isolated SQLite/fake
+storage; real MySQL is used separately by browser acceptance.
+
+Ten client cases cover combined query encoding, independent batch failure/success,
+invalid drag payloads, camera conversion at 50/100/200%, note hydration/selection
+cleanup, GM-only command affordance, note revision ordering/delete/gaps, body debounce
+and retained same-UUID retry after closing, plus handout presentation duplicate,
+close/reopen/re-show and other-campaign rejection. Backend remains the authority.
+
+Final production-bundle regression also prepared a new handout, closed its first
+preview, edited the description without reopening asset details, and saved again.
+The persisted handout contained the new description. All automated checks above
+were rerun after the final UI fixes.
+
+## Real GM / Player workflow
+
+Dedicated campaign **QA06 · The Cartographer’s Desk** (6), scenes **The Old Observatory**
+(18), **Prepared Archive** (19) and **QA06 · Preparation Stress** (20). Existing QA users
+joined through a new invitation; a second independent GM cookie context verified
+private realtime. Generated QA images were uploaded, not external copyrighted assets.
+
+- Library Upload accepted two maps in one batch while a third SVG reported its own
+  failure. Token batch and an image handout also succeeded. Renamed a map, added two
+  tags and two collections, then combined search `night`, tag and collection filters:
+  exactly that asset remained. Metadata survived reload. Details showed both scene
+  usages of a reused map and disabled deletion after the reference check completed.
+  An unused generated library fixture was deleted through confirmation.
+- Real native HTML drag from a map card placed the empty scene map at r1. A second
+  map drag prompted Replace; accepted state appeared for Player. The old map URL
+  returned **403**, new map **200**. Map reuse references were checked in two scenes.
+- Token-card drops after camera pan at exact **50%, 100%, 200%** yielded snapped
+  world coordinates **(330,930), (930,810), (810,690)** respectively, matching the
+  camera calculation. Each creation advanced one revision and used the existing
+  asset. Dropping onto a token performed PATCH/image assignment instead of creation.
+  Early QA drops landing exactly on a snap boundary or an existing token were
+  repeated away from those ambiguities; only the final runs establish these values.
+  Windows native wheel deltas were quantized, so exact zoom setup dispatched bounded
+  wheel events; the actual asset drag/drop still used pointer movement.
+- A handout image was **403 before Show**, then **200**. GM preview → Show opened
+  Player's modal automatically. Zoom, Escape close, shelf reopen, reload/reopen and
+  explicit Show again all worked. The discovered list retained one entry. Description
+  hydration initially could overwrite a just-typed draft; editing now waits for its
+  metadata read. The title/description save was repeated and verified from the API.
+- Note tool → click → title/type/body → immediate Escape retained the draft and saved
+  it. Dragging held scene **r15** until release, then saved **r16**, moving the note
+  **(450,300) → (630,420)** with its text intact. Reload restored it. Another GM
+  received a body edit live. Captured Player frame was only `scene.revision`, r17,
+  empty payload; Player snapshot had no notes key or secret text. Local marker
+  hide/show left the scene revision unchanged (**244 → 244** in the stress scene).
+- Active scene B while editing A: private note and hidden-token edits in A produced
+  **zero Player old-scene frames**. A revealed handout reopened while B was active;
+  a hidden token image remained 403. Returning to A restored normal state.
+- Verified and stopped the local Reverb process. Player visibly showed Reconnecting.
+  GM showed **The Lost Star Chart** while the broker was down: HTTP saved discovery,
+  no Player popup arrived. Restarted Reverb; without page reload, Player returned to
+  Live and the new card appeared in Discovered and opened correctly. HTTP and Reverb
+  were left running. This tests a real local broker outage, not production hosting.
+
+Expected HTTP/WS errors occurred for deliberately invalid SVG, denied private files
+and the broker interruption. No normal-workflow JavaScript exception was observed.
+Screenshots include `artifacts/task06-gm-note.png`, `task06-player-handout.png`,
+`task06-library-365.png` and `task06-stress-spatial.png` (local, ignored QA evidence).
+
+## Library scale and renderer regression
+
+The guarded ignored fixture script generated **365 campaign assets**, each with its
+own private original path. During 12 page transitions, the library mounted at most
+**40 cards**, issued **12 bounded list requests**, **165 lazy thumbnail requests** and
+**zero original-image requests for cards**. Largest thumbnail in this synthetic set:
+**2912 bytes**. Repeated scrolling did not mount additional pages. An unused fixture
+was deleted later, so the final library has 364 of those records.
+
+An initial GC sample taken near image loading showed detached DOM/listener retention
+(nodes 1298→3202, listeners 399→969, heap 9.13→9.57 MB). It was investigated rather than
+reported as a clean leak test. After waiting for loads and two collections, another
+8 page transitions measured nodes **1312→1322**, listeners **402→405**, heap
+**9.36→9.36 MB**, and live DOM **620→620**. This bounded pass does not establish an
+hours-long memory guarantee. Cards use private no-store responses; the server caches
+thumbnail generation, not browser authorization. Huge taxonomies and tens of thousands
+of assets remain a separate scaling concern.
+
+Stress scene: actual **4096×3072 map, 30 tokens, 206→207 fog actions, 15 active
+combatants and 20 GM notes**. A real fog stroke advanced r242→243 once. Ruler, circle
+AoE, ping, Space-pan, wheel zoom and Next Turn remained functional. GM/Player combat
+snapshots agreed after Next (r244); Player snapshot still omitted every note. GM
+markers render above fog; Player renderer has no GMLayer.
+
+A 180-frame requestAnimationFrame sample during pan/zoom/spatial interaction and
+screenshot capture measured **p50 8.3 ms / p95 16.7 ms / max 33.4 ms**. These are local
+browser frame intervals, not GPU timings or all-hardware guarantees. Existing fog
+2048-side mask/history growth, long GPU soak, immutable combat history and hosted
+network-latency debts remain unchanged.
+
+Player handout/shelf layouts at **1440, 1024 (reported CSS 1025), 768 and 390** retained
+one canvas, no horizontal document overflow and a viewport-bounded modal. Inspected
+GM desktop library, note editor, marker layer and stress-scene screenshots. Physical
+touch, Safari and Firefox are not claimed. The viewer uses pointer pan/touch-action,
+while full tabletop pinch/touch authoring remains earlier-stage debt.
+
+## Repeat and deferred decisions
+
+Migrate/build using README, enable GD/WebP, start HTTP/Reverb and invite a second
+browser profile. Upload a mixed batch, organize/search, drag maps/tokens, replace
+images, inspect old private URLs, prepare/show/reopen handouts, place/edit/drag notes,
+and inspect Player snapshots/frames. Stop the verified local broker during a Show,
+restart it and check discovery. Use only dedicated QA fixtures for scale tests.
+
+PDF, audio/music, Props authoring, Prefabs, reusable Encounters, Cues/Triggers,
+Camera Director, cloud adapters, marketplace, AI/image editing, LOS/walls and Story
+integration are deferred. Current collections are many-to-many labels, not folders.
+Thumbnail generation is synchronous local GD with a bounded memory allowance; S3,
+pre-generation/queueing, derivative versions, orphan reconciliation and large taxonomy
+pagination require future decisions. Handouts require images and currently share to
+all current players; selective UI/revocation/history and text-only documents remain
+future work. Pending editor writes and upload status are not durable offline storage.
+
+---
+
 # Task 05 validation
 
 Validated locally on 2026-10-28 against Task 04 commit `5bb1d8f`. Laravel 13.39,

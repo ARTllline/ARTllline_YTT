@@ -20,6 +20,16 @@ export function SpatialSettings({
         setSettings(store.spatial.settings);
     };
     if (tool === 'select' || tool === 'pan') return null;
+    if (tool === 'note')
+        return (
+            <div className="spatial-settings" aria-label="Active tool settings">
+                <strong>Private GM note</strong>
+                <p>
+                    Click the map to place a marker. Escape cancels. Only Game Masters receive these
+                    notes.
+                </p>
+            </div>
+        );
     return (
         <>
             <div className="spatial-settings" aria-label="Active tool settings">

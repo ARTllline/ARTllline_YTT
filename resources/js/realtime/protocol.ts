@@ -8,7 +8,15 @@ export interface SceneEvent {
     dragSessionId?: string;
     payload: Pick<
         Mutation,
-        'token' | 'grid' | 'map' | 'deletedId' | 'fog' | 'fogAction' | 'combat'
+        | 'token'
+        | 'grid'
+        | 'map'
+        | 'deletedId'
+        | 'fog'
+        | 'fogAction'
+        | 'combat'
+        | 'note'
+        | 'deletedNoteId'
     > & {
         scene?: Partial<Scene>;
     };
@@ -38,6 +46,17 @@ export function reduceEvent(scene: Scene, event: SceneEvent): Scene | 'gap' {
         ...scene,
         ...payload.scene,
         tokens,
+        ...(payload.note
+            ? {
+                  notes: [
+                      ...(scene.notes ?? []).filter((n) => n.id !== payload.note!.id),
+                      payload.note,
+                  ],
+              }
+            : {}),
+        ...(payload.deletedNoteId
+            ? { notes: scene.notes?.filter((n) => n.id !== payload.deletedNoteId) }
+            : {}),
         ...('combat' in payload ? { combat: payload.combat } : {}),
         ...(payload.fog
             ? { fog: payload.fog }

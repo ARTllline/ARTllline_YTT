@@ -36,6 +36,8 @@ export function Tabletop({
                 ...scene.tokens.flatMap((t) => (t.image ? [t.image] : [])),
             ];
             const unique = [...new Map(assets.map((asset) => [asset.id, asset])).values()];
+            for (const id of decoded.keys())
+                if (!unique.some((a) => a.id === id)) decoded.delete(id);
             const key = unique
                 .map((asset) => asset.id)
                 .sort()

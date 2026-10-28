@@ -16,7 +16,7 @@ class TokenController extends Controller
     {
         Gate::authorize('update', $scene);
 
-        return $actions->create($request->user(), $scene, $request->validate(self::POSITION + ['name' => 'required|string|max:80']));
+        return $actions->create($request->user(), $scene, $request->validate(self::POSITION + ['name' => 'required|string|max:80', 'token_image_asset_id' => 'sometimes|integer|min:1']));
     }
 
     public function move(Request $request, Token $token, TokenActions $actions): array

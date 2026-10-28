@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Asset;
 use App\Models\Campaign;
 use App\Models\Scene;
+use App\Models\SceneNote;
 use App\Models\Token;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +33,7 @@ class SceneSnapshotBuilder
                 'grid' => $this->grid($scene), 'map' => $this->map($scene),
                 'tokens' => $tokens->map(fn ($token) => $this->token($token, $gm, $user))->all(),
                 'combat' => app(CombatView::class)->build($scene, $gm),
+                ...($gm ? ['notes' => SceneNote::where('scene_id', $scene->id)->orderBy('id')->get()->map(fn ($n) => $n->projection())->all()] : []),
             ];
         });
     }

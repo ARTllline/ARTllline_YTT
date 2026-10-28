@@ -20,6 +20,13 @@ class TokenActions
     {
         return $this->transaction->run($scene, function ($scene) use ($user, $data) {
             Gate::forUser($user)->authorize('update', $scene);
+            if (! empty($data['token_image_asset_id'])) {
+                $asset = Asset::whereKey($data['token_image_asset_id'])->where('campaign_id', $scene->campaign_id)->where('kind', 'token')->first();
+                if (! $asset) {
+                    throw ValidationException::withMessages(['token_image_asset_id' => 'Choose a token image belonging to this campaign.']);
+                }
+                $data['size'] = $scene->grid_visible ? max(20, min(300, $scene->grid_size)) : 60;
+            }
             $token = $scene->tokens()->create($data);
             $token->refresh();
 

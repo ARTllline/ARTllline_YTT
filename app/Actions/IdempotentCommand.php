@@ -28,7 +28,7 @@ class IdempotentCommand
         $existing = DB::table('scene_mutation_receipts')->where('user_id', $user->id)->where('client_mutation_id', $id)->first();
         $campaignId = $existing?->campaign_id ?? match (true) {
             str_starts_with($operation, 'token.') => Token::findOrFail($resource)->scene->campaign_id,
-            in_array($operation, ['scene.create', 'scene.activate']) => Campaign::findOrFail($resource)->id,
+            in_array($operation, ['scene.create', 'scene.activate']) || str_starts_with($operation, 'campaign.') => Campaign::findOrFail($resource)->id,
             default => Scene::findOrFail($resource)->campaign_id,
         };
         try {

@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import type { SceneStore } from '../tabletop/state/SceneStore';
 import type { Campaign } from '../api/workspace';
+import type { LibraryAsset } from '../api/preparation';
+import { AssetLibrary } from './assets/AssetLibrary';
 export function Sidebar({
     store,
     campaign,
@@ -24,6 +26,7 @@ export function Sidebar({
     onRename,
     onDelete,
     onCampaignRename,
+    onUseAsset,
 }: {
     store: SceneStore;
     campaign: Campaign;
@@ -33,6 +36,7 @@ export function Sidebar({
     onRename: () => void;
     onDelete: () => void;
     onCampaignRename: () => void;
+    onUseAsset: (asset: LibraryAsset) => void;
 }) {
     const [tab, setTab] = useState<'Scenes' | 'Assets' | 'Cues'>('Scenes');
     const { scene, selectedIds } = useSyncExternalStore(store.subscribe, store.getSnapshot);
@@ -168,27 +172,29 @@ export function Sidebar({
                         )}
                     </div>
                 </>
+            ) : tab === 'Assets' ? (
+                <AssetLibrary campaignId={campaign.id} onUse={onUseAsset} />
             ) : (
                 <div className="library-empty">
-                    {tab === 'Assets' ? <Images size={26} /> : <Clapperboard size={26} />}
-                    <h2>{tab === 'Assets' ? 'A place for your collection' : 'Set the scene'}</h2>
+                    <Clapperboard size={26} />
+                    <h2>Set the scene</h2>
                     <p>
-                        {tab === 'Assets'
-                            ? 'Upload a map in Scene setup, or a token image in Inspector. Collections and reusable browsing come later.'
-                            : 'Prepared reveals and cinematic sequences will live here in a future stage.'}
+                        Prepared reveals and cinematic sequences will live here in a future stage.
                     </p>
                     <span className="pill">Full library · coming later</span>
                 </div>
             )}
-            <div className="sidebar-note">
-                <span className="eyebrow">YOUR WORLD, AT YOUR PACE</span>
-                <p>
-                    Set the stage.
-                    <br />
-                    Make it your story.
-                </p>
-                <small>Changes save as you work.</small>
-            </div>
+            {tab !== 'Assets' && (
+                <div className="sidebar-note">
+                    <span className="eyebrow">YOUR WORLD, AT YOUR PACE</span>
+                    <p>
+                        Set the stage.
+                        <br />
+                        Make it your story.
+                    </p>
+                    <small>Changes save as you work.</small>
+                </div>
+            )}
         </aside>
     );
 }

@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Asset;
+use App\Models\Handout;
 use App\Models\Scene;
 use App\Models\Token;
 use App\Models\User;
@@ -16,7 +17,14 @@ class AssetPolicy
         if ($role === 'gm') {
             return true;
         }
-        if ($role !== 'player' || ! $campaign->active_scene_id) {
+        if ($role !== 'player') {
+            return false;
+        }
+
+        if (Handout::where('campaign_id', $campaign->id)->where('asset_id', $asset->id)->whereHas('reveals', fn ($q) => $q->where('user_id', $user->id))->exists()) {
+            return true;
+        }
+        if (! $campaign->active_scene_id) {
             return false;
         }
 

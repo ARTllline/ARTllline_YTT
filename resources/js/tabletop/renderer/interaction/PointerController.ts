@@ -4,9 +4,11 @@ import type { SceneStore } from '../../state/SceneStore';
 import type { Camera } from '../camera/Camera';
 import type { TokenLayer } from '../../layers/TokenLayer';
 import type { InteractionLayer } from '../../layers/InteractionLayer';
+import type { GMLayer } from '../../layers/GMLayer';
 import { screenToWorld, snapPoint } from '../../utils/coordinates';
 
 type Gesture = {
+    note?: string;
     spatial?: boolean;
     pointer: number;
     start: Point;
@@ -39,6 +41,7 @@ export class PointerController {
         private store: SceneStore,
         private tokens: TokenLayer,
         private overlay: InteractionLayer,
+        private notes?: GMLayer,
     ) {
         this.spatial = new SpatialGesture(store);
         const signal = this.abort.signal;
@@ -92,6 +95,32 @@ export class PointerController {
         const point = this.local(e),
             world = screenToWorld(point, this.camera.state);
         const panning = e.button === 1 || this.space || this.tool === 'pan';
+        if (!panning && this.tool === 'note' && this.store.role === 'gm') {
+            this.store.noteCommand({ action: 'create', ...world });
+            this.tool = 'select';
+            this.refresh();
+            return;
+        }
+        const noteId =
+            !panning && this.tool === 'select'
+                ? this.notes?.hit(world, this.camera.state.zoom)
+                : null;
+        if (noteId) {
+            const note = this.store.getSnapshot().scene.notes!.find((n) => n.id === noteId)!;
+            this.store.selectNote(noteId);
+            this.gesture = {
+                pointer: e.pointerId,
+                start: point,
+                last: point,
+                token: null,
+                note: noteId,
+                origin: { x: note.x, y: note.y },
+                moved: false,
+            };
+            this.canvas.setPointerCapture(e.pointerId);
+            this.refresh();
+            return;
+        }
         if (!panning && !['select', 'pan'].includes(this.tool)) {
             if (this.store.role === 'player' && !this.store.movementEnabled) return;
             this.gesture = {
@@ -156,6 +185,11 @@ export class PointerController {
         }
         gesture.moved ||= Math.hypot(point.x - gesture.start.x, point.y - gesture.start.y) > 3;
         if (!gesture.moved) return;
+        if (gesture.note) {
+            gesture.last = point;
+            this.notes?.preview(gesture.note, this.dragPosition(point, gesture));
+            return;
+        }
         if (!gesture.token) this.camera.pan(point.x - gesture.last.x, point.y - gesture.last.y);
         else {
             gesture.last = point;
@@ -195,6 +229,12 @@ export class PointerController {
             this.finish();
             return;
         }
+        if (gesture.note) {
+            const position = this.dragPosition(this.local(e), gesture);
+            this.finish();
+            if (gesture.moved) this.store.updateNote(gesture.note, position);
+            return;
+        }
         if (gesture.token && gesture.moved) {
             const position = snapPoint(
                 this.dragPosition(this.local(e), gesture),
@@ -219,6 +259,12 @@ export class PointerController {
     cancel = () => {
         this.spatial.cancel();
         if (!this.gesture) return;
+        if (this.gesture.note) {
+            const note = this.store
+                .getSnapshot()
+                .scene.notes?.find((n) => n.id === this.gesture!.note);
+            if (note) this.notes?.preview(note.id, note);
+        }
         if (this.gesture.token) {
             const token = this.store
                 .getSnapshot()
@@ -233,6 +279,8 @@ export class PointerController {
     reapplyPreview() {
         this.spatial.tick();
         const gesture = this.gesture;
+        if (gesture?.note && gesture.moved)
+            this.notes?.preview(gesture.note, this.dragPosition(gesture.last, gesture));
         if (gesture?.spatial && this.store.role === 'player' && !this.store.movementEnabled) {
             this.cancel();
             return;
@@ -260,7 +308,7 @@ export class PointerController {
         this.camera.zoomBy(Math.exp(-Math.max(-160, Math.min(160, delta)) * 0.002), this.local(e));
     };
     private keyDown = (e: KeyboardEvent) => {
-        if (isEditing(e.target)) return;
+        if (isEditing(e.target) || document.querySelector('dialog[open]')) return;
         if (e.code === 'Space' && document.activeElement === this.canvas) {
             e.preventDefault();
             this.space = true;

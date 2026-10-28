@@ -27,6 +27,8 @@ export interface Campaign extends CampaignSummary {
     members?: { id: string; name: string; role: string }[];
 }
 export interface Mutation {
+    note?: import('../tabletop/types/scene').SceneNote;
+    deletedNoteId?: string;
     combat?: Combat | null;
     fog?: FogState;
     fogAction?: FogAction;
@@ -46,6 +48,18 @@ export interface RealtimeConfig {
 export let realtimeConfig: RealtimeConfig;
 export const commandId = () => crypto.randomUUID();
 export const api = {
+    note: (
+        scene: string,
+        command: import('../tabletop/types/scene').NoteCommand,
+        clientMutationId: string,
+    ) =>
+        request<Mutation>(
+            `/scenes/${scene}/notes`,
+            'POST',
+            command.action === 'update'
+                ? { action: command.action, id: command.id, ...command.patch, clientMutationId }
+                : { ...command, clientMutationId },
+        ),
     combat: (scene: string, command: CombatCommand, clientMutationId: string) => {
         const { action, ...data } = command;
         return request<Mutation>(`/scenes/${scene}/combat/${action}`, 'POST', {
@@ -117,10 +131,11 @@ export const api = {
                   }
                 : { assetId: null, x: 0, y: 0, width: 1440, height: 1080, clientMutationId },
         ),
-    createToken: (scene: string, point: Point) =>
+    createToken: (scene: string, point: Point, asset?: ImageAsset & { name: string }) =>
         request<Mutation>(`/scenes/${scene}/tokens`, 'POST', {
             ...point,
-            name: 'New token',
+            name: asset?.name.slice(0, 80) ?? 'New token',
+            ...(asset ? { token_image_asset_id: asset.id } : {}),
             clientMutationId: commandId(),
         }),
     move: (id: string, point: Point, clientMutationId = commandId(), dragSessionId?: string) =>

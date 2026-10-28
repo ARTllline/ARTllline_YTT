@@ -14,6 +14,7 @@ export function Inspector({
     busy,
     deleteToken,
     combatBusy,
+    chooseImage,
 }: {
     store: SceneStore;
     onClose: () => void;
@@ -23,6 +24,7 @@ export function Inspector({
     busy: boolean;
     deleteToken: () => void;
     combatBusy: boolean;
+    chooseImage: (kind: 'map' | 'token', tokenId?: string) => void;
 }) {
     const { scene, selectedIds, preview } = useSyncExternalStore(
         store.subscribe,
@@ -63,6 +65,19 @@ export function Inspector({
                     </div>
                     <section>
                         <h3>Identity</h3>
+                        {token.image && (
+                            <img
+                                className="token-image-preview"
+                                src={token.image.url}
+                                alt="Current token image"
+                            />
+                        )}
+                        <button
+                            className="secondary-button"
+                            onClick={() => chooseImage('token', token.id)}
+                        >
+                            Choose image from library
+                        </button>
                         <label className="field">
                             <span>Name</span>
                             <input
@@ -306,7 +321,12 @@ export function Inspector({
                     </section>
                 </div>
             ) : (
-                <MapInspector store={store} upload={uploadMap} busy={busy} />
+                <div className="map-library-choice">
+                    <button className="secondary-button" onClick={() => chooseImage('map')}>
+                        Choose map from library
+                    </button>
+                    <MapInspector store={store} upload={uploadMap} busy={busy} />
+                </div>
             )}
         </aside>
     );

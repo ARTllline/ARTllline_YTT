@@ -5,8 +5,10 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CombatController;
 use App\Http\Controllers\FogController;
+use App\Http\Controllers\HandoutController;
 use App\Http\Controllers\InviteController;
 use App\Http\Controllers\MovePreviewController;
+use App\Http\Controllers\NoteController;
 use App\Http\Controllers\SceneController;
 use App\Http\Controllers\SpatialController;
 use App\Http\Controllers\TokenController;
@@ -36,6 +38,15 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
     });
     Route::middleware('auth')->group(function () {
+        Route::get('/campaigns/{campaign}/assets', [AssetController::class, 'index']);
+        Route::get('/assets/{asset}/detail', [AssetController::class, 'detail']);
+        Route::get('/assets/{asset}/thumbnail', [AssetController::class, 'thumbnail']);
+        Route::patch('/assets/{asset}', [AssetController::class, 'update']);
+        Route::delete('/assets/{asset}', [AssetController::class, 'destroy']);
+        Route::get('/campaigns/{campaign}/handouts', [HandoutController::class, 'index']);
+        Route::post('/campaigns/{campaign}/handouts', [HandoutController::class, 'store'])->name('campaign.handout.save')->middleware(IdempotentMutation::class);
+        Route::post('/campaigns/{campaign}/handouts/show', [HandoutController::class, 'show'])->name('campaign.handout.show')->middleware(IdempotentMutation::class);
+        Route::post('/scenes/{scene}/notes', NoteController::class)->name('scene.notes')->middleware(IdempotentMutation::class);
         foreach (['prepare', 'add', 'remove', 'initiative', 'sort', 'reorder', 'begin', 'next', 'previous', 'current', 'end'] as $command) {
             Route::post('/scenes/{scene}/combat/'.$command, [CombatController::class, 'combat'])->defaults('command', $command)->name('scene.combat.'.$command)->middleware(IdempotentMutation::class);
         }

@@ -12,6 +12,7 @@ import { Toolbar } from './Toolbar';
 import { Tabletop } from './Tabletop';
 import { CombatPanel } from './combat/CombatPanel';
 import { ConditionList } from './combat/TokenCombatControls';
+import { HandoutShelf } from './handouts/HandoutShelf';
 export function PlayerView({ campaign: initial, user }: { campaign: Campaign; user: User }) {
     const [campaign, setCampaign] = useState(initial);
     const { echo, connection } = useCampaignLive(campaign.id, setCampaign);
@@ -53,6 +54,7 @@ export function PlayerView({ campaign: initial, user }: { campaign: Campaign; us
                     <strong>{current?.scene.name ?? 'Your table'}</strong>
                 </div>
                 <ConnectionBadge state={connection} />
+                <HandoutShelf campaignId={campaign.id} userId={user.id} echo={echo} />
                 <span className="player-name">{user.name}</span>
             </header>
             {current ? (

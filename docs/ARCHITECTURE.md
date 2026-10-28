@@ -27,14 +27,14 @@ transition can reuse `SceneStore.hydrate`, but must retain these isolation rules
 
 ## Domain model
 
-| Entity         | Relationships and invariants                                                                       |
-| -------------- | -------------------------------------------------------------------------------------------------- |
-| User           | Laravel session identity; passwords hashed; explicit safe serialization                            |
-| Campaign       | Has scenes and members; optional `active_scene_id`; creator becomes GM                             |
-| CampaignMember | Unique `(campaign_id, user_id)`; role `gm` or `player`; multiple GMs supported                     |
-| Scene          | Belongs to campaign; name/order, revision, dimensions, explicit square grid and one positioned map |
-| Asset          | Campaign, uploader, kind `map`/`token`, safe stored path, MIME, byte size and dimensions           |
-| Token          | Scene, optional image and controller; position, size/scale/rotation, vitals, hidden/locked, order  |
+| Entity         | Relationships and invariants                                                                                     |
+| -------------- | ---------------------------------------------------------------------------------------------------------------- |
+| User           | Laravel session identity; passwords hashed; explicit safe serialization                                          |
+| Campaign       | Has scenes and members; optional `active_scene_id`; creator becomes GM                                           |
+| CampaignMember | Unique `(campaign_id, user_id)`; role `gm` or `player`; multiple GMs supported                                   |
+| Scene          | Belongs to campaign; name/order, revision, dimensions, explicit square grid and one positioned map               |
+| Asset          | Campaign, uploader, kind `map`/`token`/`handout`, display name, safe stored path, MIME, byte size and dimensions |
+| Token          | Scene, optional image and controller; position, size/scale/rotation, vitals, hidden/locked, order                |
 
 There is no universal object JSON blob. Token positions and map placement use
 `DECIMAL(...,3)` logical world pixels. Tokens use centers; maps use top-left
@@ -60,13 +60,13 @@ use HTTPS and disable debug responses.
 
 Policies are discovered by Laravel's standard model/policy naming:
 
-| Operation                        | GM                                              | Player                                        | Non-member |
-| -------------------------------- | ----------------------------------------------- | --------------------------------------------- | ---------- |
-| Campaign read                    | Full preparation list + member choices          | Active scene only, no members                 | Denied     |
-| Scene snapshot                   | Any campaign scene, all tokens + editing fields | Active scene only, visible tokens             | Denied     |
-| Campaign/scene/admin token write | Allowed                                         | Denied                                        | Denied     |
-| Token move                       | Any campaign token                              | Active + owned + visible + unlocked           | Denied     |
-| Asset bytes                      | Any campaign asset                              | Only active map or visible active token image | Denied     |
+| Operation                        | GM                                              | Player                                                | Non-member |
+| -------------------------------- | ----------------------------------------------- | ----------------------------------------------------- | ---------- |
+| Campaign read                    | Full preparation list + member choices          | Active scene only, no members                         | Denied     |
+| Scene snapshot                   | Any campaign scene, all tokens + editing fields | Active scene only, visible tokens                     | Denied     |
+| Campaign/scene/admin token write | Allowed                                         | Denied                                                | Denied     |
+| Token move                       | Any campaign token                              | Active + owned + visible + unlocked                   | Denied     |
+| Asset bytes                      | Any campaign asset                              | Active map / visible token image / discovered handout | Denied     |
 
 `SceneSnapshotBuilder` owns the explicit projection. Player JSON contains no
 hidden entities, owner IDs, hidden/locked flags, AC/speed, private paths, or inactive
@@ -101,8 +101,8 @@ usage exists. Hiding a token removes access when no other visible use remains.
 Previously delivered bytes cannot be revoked from a client that already saw them.
 
 Upload bounds: 16 MiB, 8192 px each side, 32 MP. Proxy/PHP limits are separate;
-see README. No image transcoding, thumbnail pipeline, garbage collection or S3
-integration is included. The disk boundary permits a later storage adapter.
+see README. Task 06 adds private cached thumbnails and explicit unused-asset deletion;
+originals are not transcoded. The disk boundary permits a later storage adapter.
 
 ## HTTP contracts
 
@@ -202,7 +202,7 @@ loads. Failed image loads have a recovery state. Texture resources are owned and
 destroyed by the renderer on teardown.
 
 Current layer order: viewport background → BattleMapLayer → GridLayer → TokenLayer
-→ FogLayer → SpatialLayer → InteractionLayer. TokenView contains selection/hover rings, optional cropped
+→ FogLayer → SpatialLayer → GMLayer (GM only) → InteractionLayer. TokenView contains selection/hover rings, optional cropped
 image, upright nameplate and HP bar. Hidden GM tokens are dimmed; locked tokens
 remain selectable but do not drag. Task 01 vector map/prop classes and demo data
 are retained as development/test material, never loaded into a real workspace.
@@ -374,7 +374,7 @@ No LOS, audio, cue system, rules engine, Story integration,
 generic plugin platform or event-sourcing framework was introduced. Before adding
 member eviction/role management, design immediate channel revocation, not merely
 HTTP denial. Durable offline work, upload deduplication, asset
-cleanup, reverse-proxy production deployment and richer concurrent
+campaign-wide cleanup, reverse-proxy production deployment and richer concurrent
 editing are future work. Already delivered media cannot be revoked from memory.
 
 ## Task 04 — persistent fog and spatial overlays
@@ -644,3 +644,132 @@ count. Full labels appear on selection/in the tracker. It uses owned Graphics/Te
 objects destroyed with the token; no new per-frame React state, timers or HTTP.
 Current is resolved from combat references and disappears with null combat or scene
 replacement. Condition presets use Lucide icons in the UI, no emoji icon system.
+
+## Task 06 — campaign preparation
+
+### Asset domain and library
+
+The additive migration backfills `assets.name` from humanized original filenames and
+widens the old map/token enum to a 32-character kind string. Application validation
+accepts map/token/handout; future kinds need deliberate behavior and authorization.
+Down migration does not narrow that string and risk losing existing kind values.
+No original files, keys or prior scenes are rewritten.
+
+`AssetTag` and `AssetCollection` belong to a campaign; each has a campaign/name unique
+key. Both relations are many-to-many through cascading pivots. Collections reserve
+sort_order and represent manually grouped sessions/content, while tags classify it.
+Inline editing submits names: trimmed new names are created in the asset's campaign,
+existing names reused and removed names detached. There is no independent taxonomy
+admin screen or nested folder tree. Detached taxonomy entries remain available.
+
+GM-only GET `/campaigns/{id}/assets` combines kind, escaped name/original-name/tag
+search, tag ID, collection ID and sort, with 40-item pages. Relations are eager-loaded.
+The explicit library DTO adds display/original name, kind, byte size, dimensions,
+createdAt, tags, collections and thumbnailUrl to the safe visual asset reference.
+This DTO never goes to Player snapshots. Filters/upload drafts live in AssetLibrary,
+not SceneStore. Changing search/filter aborts older reads and debounces 250 ms.
+Only one page's cards is mounted; lazy img elements use thumbnail URLs.
+
+GET `/assets/{id}/detail` includes GM-only reference descriptions and an existing
+handout preview. PATCH changes name/tags/collections. DELETE locks campaign before
+checking every map, token and handout reference, sharing the scene writer lock order.
+Used assets return 409. Unused deletion removes metadata/pivots and, after commit,
+original, cached thumbnail and generation lock. Storage failures can leave orphan
+files; an operator reconciliation/GC tool is future work. No automatic retention job
+deletes uploads. Handout references remain in use even before discovery.
+
+```text
+file batch → independent multipart requests → StoreImage signature/MIME/size checks
+ → generated private file path → Asset row → bounded library DTO
+ → authorized thumbnail request → GD decode/320px WebP cache → private response
+```
+
+GD with WebP is now a runtime requirement. Thumbnails are generated on demand for
+new and legacy images and cached beside the original. A separate private file lock
+serializes generation (locking the original prevented GD reopening it on Windows,
+found and fixed by tests). The input remains bounded at 32 MP. The generation request
+temporarily permits up to 256 MiB when the PHP limit is smaller, avoiding a 128 MiB
+decode ceiling; concurrent large-image decodes still need appropriate worker/memory
+sizing. Cache files are not public and every request rechecks AssetPolicy. Future
+S3 must replace the local path/flock derivative implementation, not authorization.
+
+### Map and token placement
+
+The drag payload uses a typed application/x-ytt-asset MIME and an additional kind
+marker for browser-protected dragover feedback. OS files have a separate chooser.
+TabletopRenderer exposes client-position → world-point/token-hit information; it
+does not perform HTTP. Map attachment goes through the existing map save queue and
+replacement confirmation. Token creation accepts a validated campaign token asset
+and uses a grid cell (bounded 20–300) or 60 px default. Image replacement uses the
+existing token administrative command. No file copies occur for scene reuse.
+
+Both map and token image replacement produce one scene revision and normal safe
+realtime projection. Current-use file permission immediately drops the old reference
+unless another authorized map/token/handout usage remains. Scene media caches evict
+detached decoded images and owned textures; they are not an unbounded library cache.
+
+### Handouts and durable discovery
+
+`Handout` stores campaign, required image Asset, title, nullable plaintext description,
+creator and timestamps. One handout per campaign asset prevents repeated Prepare from
+creating duplicates. `HandoutReveal` stores handout, recipient and revealed_at with a
+unique handout/user pair. It supports later selective recipients without that UI now.
+Show targets current campaign Players; later members have no retroactive discovery.
+
+GM POST `/campaigns/{id}/handouts` prepares/edits. POST `/handouts/show` takes
+handoutId. Both use the existing command receipt boundary, now recognizing explicit
+campaign.* operations before the outer transaction. Campaign locking remains its first
+transactional query. Show retries reuse UUIDs and never broadcast twice; an intentional
+new Show is a new presentation. GET `/campaigns/{id}/handouts` is paged at 40, GM all
+or Player revealed-only. No unrevealed IDs, names, filenames, counts or URLs escape.
+
+```text
+Show → campaign writer lock + GM/campaign checks → unique recipient reveal rows
+ → commit + receipt → safe handout.shown presentation → useHandouts → image viewer
+ → persistent discovered list, independent from active scene
+```
+
+Publication targets private `campaign.{campaign}.handouts.user.{user}` channels,
+authorized by matching identity and current campaign membership. Only recipients
+whose reveal is saved receive the presentation. Payload contains campaignId,
+presentationId and safe handout id/title/description/image reference, no original
+filename/path or uploader. AssetPolicy accepts a matching reveal even with no active
+scene. Campaign membership alone still grants no image access. Original and thumbnail
+routes use the same policy and private/no-store/nosniff headers.
+
+`useHandouts` owns the campaign adapter on the existing Echo connection. Shelf/viewer
+components hold only interaction state. Subscription acknowledgement, online recovery
+and a 15-second probe refresh discovery. Missing a live Show does not require replaying
+the popup; the handout remains discoverable. A bounded presentation reducer deduplicates
+events even after the viewer closes. Explicit re-show has a new ID. Player shelf lives
+outside the scene/epoch-keyed subtree, so a scene transition does not destroy it.
+Native modal dialog supports Escape, fit/zoom/pan and +/-/0 keyboard controls.
+Canvas shortcuts pause while a modal is open. PDF and rich text are intentionally absent.
+
+### Private scene notes
+
+`SceneNote` stores scene, decimal world x/y, title, plaintext body, marker icon,
+creator/timestamps. POST `/scenes/{id}/notes` accepts create/update/delete with an ID
+for existing notes. The scene-scoped route prevents cross-scene note IDs; GM policy
+is checked before validation and again under SceneTransaction's writer locks.
+
+```text
+Note tool click / editor / completed drag → SceneStore → ScenePersistence/SaveQueue
+ → idempotent NoteActions → SceneTransaction → note + revision once → GM delta
+ → SceneStore.notes → GMLayer above fog and compact private editor
+```
+
+Body drafts coalesce for 450 ms as complete current-note patches, preserving title
+and position edits in that queue. Closing/Escape preserves pending commands and the
+existing Saved/Saving/Failed and Retry/unload behavior. A pointer drag changes Pixi
+only until release; it saves one absolute move, with no per-pixel DB writes. Existing
+PointerController owns note hit-testing/drag/cancel/pan alongside tokens and tools.
+Hydration clears note selection; reconciliation removes selection for missing notes.
+Concurrent GM field edits retain the existing last-accepted-write-wins semantics.
+
+GM snapshots include notes; Player snapshots have no notes key/count/entities.
+GM events contain note/deletedNoteId. Player recipients get only an empty
+scene.revision at that revision, and inactive scene changes get no Player publication.
+GMLayer is instantiated only for GM, uses owned vector/Text children and keeps marker
+sizes readable through zoom. Show GM Notes is local presentation only, with no API
+write. No Note is a token, fog patch, handout or generic document page.

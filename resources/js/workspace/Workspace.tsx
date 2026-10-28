@@ -14,7 +14,16 @@ import {
     X,
     ImagePlus,
     LogOut,
+    StickyNote,
+    EyeOff,
 } from 'lucide-react';
+import { preparation, type LibraryAsset, type AssetKind } from '../api/preparation';
+import { ASSET_MIME, readAssetDrag } from './assets/assetDrag';
+import { AssetLibrary } from './assets/AssetLibrary';
+import { AssetDetails } from './assets/AssetDetails';
+import { HandoutShelf } from './handouts/HandoutShelf';
+import { NoteInspector } from './notes/NoteInspector';
+import { Dialog } from './Dialog';
 import { SceneStore } from '../tabletop/state/SceneStore';
 import { api, type User, type Campaign } from '../api/workspace';
 import { ScenePersistence } from '../tabletop/state/ScenePersistence';
@@ -94,6 +103,14 @@ export function Workspace({
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
     const [dropping, setDropping] = useState(false);
+    const [dropHint, setDropHint] = useState('Drop to choose how to use this image');
+    const [replaceMap, setReplaceMap] = useState<LibraryAsset | null>(null);
+    const [fileDrop, setFileDrop] = useState<{
+        file: File;
+        point: { x: number; y: number };
+    } | null>(null);
+    const [picker, setPicker] = useState<{ kind: AssetKind; tokenId?: string } | null>(null);
+    const [handoutAsset, setHandoutAsset] = useState<LibraryAsset | null>(null);
     const activeName = campaign.scenes.find((item) => item.id === campaign.activeSceneId)?.name;
     const run = async (action: () => Promise<void>) => {
         setError('');
@@ -116,17 +133,9 @@ export function Workspace({
         void run(async () => {
             if (!scene.id) return;
             await queue.flush();
-            const asset = await api.upload(campaign.id, file, 'map');
-            store.setMap({
-                asset,
-                x: 0,
-                y: 0,
-                width:
-                    asset.width * Math.min(scene.width / asset.width, scene.height / asset.height),
-                height:
-                    asset.height * Math.min(scene.width / asset.width, scene.height / asset.height),
-            });
-            await queue.flush();
+            const asset = await preparation.upload(campaign.id, file, 'map');
+            if (scene.map) setReplaceMap(asset);
+            else await placeMap(asset);
         });
     };
     const uploadToken = (id: string, file: File) => {
@@ -138,6 +147,53 @@ export function Workspace({
         });
     };
     const renderer = useRef<TabletopRenderer | null>(null);
+    const placeMap = async (asset: LibraryAsset) => {
+        await queue.flush();
+        const ratio = Math.min(scene.width / asset.width, scene.height / asset.height);
+        store.setMap({
+            asset,
+            x: 0,
+            y: 0,
+            width: asset.width * ratio,
+            height: asset.height * ratio,
+        });
+        await queue.flush();
+    };
+    const placeAsset = (
+        asset: LibraryAsset,
+        target = {
+            point: renderer.current?.center() ?? { x: scene.width / 2, y: scene.height / 2 },
+            tokenId: null as string | null,
+        },
+    ) => {
+        if (asset.kind === 'handout') {
+            setHandoutAsset(asset);
+            return;
+        }
+        if (!scene.id) {
+            setError('Create a scene before placing an asset.');
+            return;
+        }
+        if (asset.kind === 'map' && scene.map) {
+            setReplaceMap(asset);
+            return;
+        }
+        return run(async () => {
+            await queue.flush();
+            if (asset.kind === 'map') await placeMap(asset);
+            else if (target.tokenId) {
+                store.updateToken(target.tokenId, { image: asset });
+                await queue.flush();
+            } else {
+                const result = await api.createToken(
+                    scene.id!,
+                    snapPoint(target.point, scene.grid),
+                    asset,
+                );
+                store.addToken(result.token!, result.revision);
+            }
+        });
+    };
     const [zoom, setZoom] = useState(100);
     const [left, setLeft] = useState(() => window.innerWidth >= 900);
     const [right, setRight] = useState(() => window.innerWidth >= 1180);
@@ -206,6 +262,7 @@ export function Workspace({
                     <strong>{scene.name ?? 'New workspace'}</strong>
                 </div>
                 <div className="topbar-actions">
+                    <HandoutShelf campaignId={campaign.id} userId={user.id} echo={live.echo} gm />
                     <PlayersPanel
                         campaign={campaign}
                         members={live.members}
@@ -269,13 +326,33 @@ export function Workspace({
                         onRename={() => setModal('renameScene')}
                         onDelete={() => setModal('deleteScene')}
                         onCampaignRename={() => setModal('renameCampaign')}
+                        onUseAsset={placeAsset}
                     />
                 )}
                 <main
                     className="tabletop"
                     aria-label="Tabletop workspace"
                     onDragOver={(event) => {
+                        if (
+                            !event.dataTransfer.types.includes('Files') &&
+                            !event.dataTransfer.types.includes(ASSET_MIME)
+                        )
+                            return;
                         event.preventDefault();
+                        const target = renderer.current?.dropTarget(event.clientX, event.clientY);
+                        setDropHint(
+                            event.dataTransfer.types.includes('Files')
+                                ? 'Drop to choose: map, token or library'
+                                : event.dataTransfer.types.includes('application/x-ytt-map')
+                                  ? scene.map
+                                      ? 'Drop to replace the map — confirmation follows'
+                                      : 'Drop to place the scene map'
+                                  : event.dataTransfer.types.includes('application/x-ytt-handout')
+                                    ? 'Drop to prepare and preview handout'
+                                    : target?.tokenId
+                                      ? `Replace image: ${scene.tokens.find((t) => t.id === target.tokenId)?.name ?? 'selected token'}`
+                                      : 'Create a token here',
+                        );
                         if (scene.id && !busy) setDropping(true);
                     }}
                     onDragLeave={(event) => {
@@ -286,11 +363,19 @@ export function Workspace({
                         event.preventDefault();
                         setDropping(false);
                         const file = event.dataTransfer.files[0];
-                        if (file && scene.id && !busy) uploadMap(file);
+                        const target = renderer.current?.dropTarget(event.clientX, event.clientY);
+                        if (busy || !target) return;
+                        if (file && scene.id) {
+                            setFileDrop({ file, point: target.point });
+                            return;
+                        }
+                        const asset = readAssetDrag(event.dataTransfer.getData(ASSET_MIME));
+                        if (asset) placeAsset(asset, target);
                     }}
                 >
                     {scene.id && <Tabletop store={store} rendererRef={renderer} onZoom={setZoom} />}
                     {scene.id && <CombatPanel store={store} queue={queue} />}
+                    {scene.id && <NoteInspector store={store} />}
                     {!scene.id ? (
                         <div className="canvas-empty">
                             <span className="eyebrow">YOUR FIRST SCENE</span>
@@ -332,11 +417,7 @@ export function Workspace({
                             </div>
                         )
                     )}
-                    {dropping && (
-                        <div className="drop-overlay">
-                            Drop to {scene.map ? 'replace' : 'add'} the battle map
-                        </div>
-                    )}
+                    {dropping && <div className="drop-overlay">{dropHint}</div>}
                     <div className="canvas-topline">
                         <button
                             className="icon-button surface"
@@ -365,6 +446,26 @@ export function Workspace({
                         <>
                             <Toolbar store={store} onTool={changeTool} />
                             <div className="scene-quick-actions">
+                                <button
+                                    className="secondary-button"
+                                    title="Place a private GM note"
+                                    onClick={() => {
+                                        store.select(null);
+                                        changeTool('note');
+                                    }}
+                                >
+                                    <StickyNote size={14} />
+                                    Note
+                                </button>
+                                <button
+                                    className="icon-button surface"
+                                    title="Show / hide GM notes"
+                                    aria-label="Show GM Notes"
+                                    aria-pressed={store.getSnapshot().showNotes !== false}
+                                    onClick={() => store.toggleNotes()}
+                                >
+                                    <EyeOff size={14} />
+                                </button>
                                 <button
                                     className="secondary-button"
                                     disabled={busy}
@@ -443,6 +544,7 @@ export function Workspace({
                         busy={busy}
                         deleteToken={() => setModal('deleteToken')}
                         onClose={() => setRight(false)}
+                        chooseImage={(kind, tokenId) => setPicker({ kind, tokenId })}
                     />
                 )}
             </div>
@@ -467,6 +569,73 @@ export function Workspace({
                     <Keyboard size={14} /> Shortcuts
                 </button>
             </footer>
+            {replaceMap && (
+                <ConfirmDialog
+                    title="Replace scene map?"
+                    description={`Use “${replaceMap.name}” as this scene’s map? The previous image stays in your library.`}
+                    buttonLabel="Replace map"
+                    onClose={() => setReplaceMap(null)}
+                    submit={() => placeMap(replaceMap)}
+                />
+            )}
+            {fileDrop && (
+                <Dialog title="Use dropped image" onClose={() => !busy && setFileDrop(null)}>
+                    <p>{fileDrop.file.name}</p>
+                    <div className="dialog-actions">
+                        {(['map', 'token', 'handout'] as const).map((kind) => (
+                            <button
+                                key={kind}
+                                className="secondary-button"
+                                disabled={busy}
+                                onClick={() =>
+                                    void run(async () => {
+                                        const asset = await preparation.upload(
+                                            campaign.id,
+                                            fileDrop.file,
+                                            kind,
+                                        );
+                                        const point = fileDrop.point;
+                                        setFileDrop(null);
+                                        await placeAsset(asset, { point, tokenId: null });
+                                    })
+                                }
+                            >
+                                {kind === 'map'
+                                    ? 'Place map'
+                                    : kind === 'token'
+                                      ? 'Create token'
+                                      : 'Add handout to library'}
+                            </button>
+                        ))}
+                    </div>
+                </Dialog>
+            )}
+            {picker && (
+                <Dialog
+                    title={picker.kind === 'token' ? 'Choose token image' : 'Choose map'}
+                    onClose={() => setPicker(null)}
+                >
+                    <AssetLibrary
+                        campaignId={campaign.id}
+                        pickerKind={picker.kind}
+                        onUse={(asset) => {
+                            placeAsset(asset, {
+                                point: renderer.current?.center() ?? { x: 0, y: 0 },
+                                tokenId: picker.tokenId ?? null,
+                            });
+                            setPicker(null);
+                        }}
+                    />
+                </Dialog>
+            )}
+            {handoutAsset && (
+                <AssetDetails
+                    asset={handoutAsset}
+                    campaignId={campaign.id}
+                    onClose={() => setHandoutAsset(null)}
+                    onChanged={() => undefined}
+                />
+            )}
             {(error || save.error) && (
                 <div className="error-banner" role="alert">
                     <span>{error || save.error}</span>
