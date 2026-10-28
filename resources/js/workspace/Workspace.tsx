@@ -24,8 +24,7 @@ import {
 } from 'lucide-react';
 import { preparation, type LibraryAsset, type AssetKind } from '../api/preparation';
 import { ASSET_MIME, readAssetDrag } from './assets/assetDrag';
-import { AssetLibrary } from './assets/AssetLibrary';
-import { AssetDetails } from './assets/AssetDetails';
+import { AssetLibrary, AssetDetails } from './assets/LazyAssets';
 import { HandoutShelf } from './handouts/HandoutShelf';
 import { NoteInspector } from './notes/NoteInspector';
 import { Dialog } from './Dialog';
@@ -46,8 +45,12 @@ import { Toolbar } from './Toolbar';
 import { PlayersPanel } from './PlayersPanel';
 import { useCampaignLive } from '../realtime/useCampaignLive';
 import { useSceneLive } from '../realtime/useSceneLive';
+import { TriggerControl } from '../automation/TriggerControl';
 const MediaPanel = lazy(() =>
     import('../media/MediaPanel').then((m) => ({ default: m.MediaPanel })),
+);
+const SessionConsole = lazy(() =>
+    import('../session/SessionConsole').then((m) => ({ default: m.SessionConsole })),
 );
 export function Workspace({
     user,
@@ -59,6 +62,24 @@ export function Workspace({
     initialScene?: Scene;
 }) {
     const [campaign, setCampaign] = useState(initialCampaign);
+    const [sessionMode, setSessionMode] = useState(() => {
+        try {
+            return localStorage.getItem(`ytt.session-mode.${initialCampaign.id}`) === 'true';
+        } catch {
+            return false;
+        }
+    });
+    const [sessionOpen, setSessionOpen] = useState(sessionMode);
+    const sessionFlush = useRef<(() => Promise<void>) | null>(null);
+    const changeSessionMode = (value: boolean) => {
+        setSessionMode(value);
+        setSessionOpen(true);
+        try {
+            localStorage.setItem(`ytt.session-mode.${campaign.id}`, String(value));
+        } catch {
+            /* Optional local preference. */
+        }
+    };
     const live = useCampaignLive(campaign.id, setCampaign);
     const media = useLiveMedia(
         campaign.id,
@@ -107,6 +128,7 @@ export function Workspace({
         live.connection,
     );
     const { scene } = useSyncExternalStore(store.subscribe, store.getSnapshot);
+    const tool = useSyncExternalStore(store.spatial.subscribe, store.spatial.getTool);
     const [modal, setModal] = useState<
         | 'createScene'
         | 'renameScene'
@@ -153,6 +175,7 @@ export function Workspace({
     };
     const navigate = (url: string) => {
         void run(async () => {
+            await sessionFlush.current?.();
             await queue.flush();
             location.assign(url);
         });
@@ -280,7 +303,7 @@ export function Workspace({
         renderer.current?.setTool(next);
     };
     return (
-        <div className="workspace">
+        <div className={`workspace ${sessionMode ? 'session-mode' : ''}`}>
             <header className="topbar">
                 <a
                     className="brand"
@@ -302,7 +325,24 @@ export function Workspace({
                     <strong>{scene.name ?? t('New workspace')}</strong>
                 </div>
                 <div className="topbar-actions">
+                    <button
+                        className="secondary-button"
+                        aria-pressed={sessionOpen}
+                        onClick={() =>
+                            void run(async () => {
+                                await sessionFlush.current?.();
+                                setSessionOpen(!sessionOpen);
+                            })
+                        }
+                    >
+                        Сессии
+                    </button>
                     <HandoutShelf campaignId={campaign.id} userId={user.id} echo={live.echo} gm />
+                    <TriggerControl
+                        store={store}
+                        queue={queue}
+                        active={campaign.activeSceneId === scene.id}
+                    />
                     <Suspense fallback={null}>
                         <MediaPanel campaignId={campaign.id} gm syncError={media.syncError} />
                     </Suspense>
@@ -349,6 +389,7 @@ export function Workspace({
                         onClick={() =>
                             void run(async () => {
                                 await queue.flush();
+                                await sessionFlush.current?.();
                                 await api.logout();
                                 location.assign('/login');
                             })
@@ -359,9 +400,29 @@ export function Workspace({
                 </div>
             </header>
             <div
-                className={`workspace-body ${left ? '' : 'left-closed'} ${right ? '' : 'right-closed'}`}
+                className={`workspace-body ${sessionOpen ? 'session-open' : ''} ${(left && !sessionMode) || sessionOpen ? '' : 'left-closed'} ${right && !sessionMode ? '' : 'right-closed'}`}
             >
-                {left && (
+                {sessionOpen && (
+                    <Suspense
+                        fallback={
+                            <aside className="session-console panel">Открываем сессии…</aside>
+                        }
+                    >
+                        <SessionConsole
+                            campaign={campaign}
+                            members={live.members}
+                            store={store}
+                            queue={queue}
+                            liveMode={sessionMode}
+                            onMode={changeSessionMode}
+                            onClose={() => setSessionOpen(false)}
+                            onNavigate={navigate}
+                            onPlace={placeTemplate}
+                            flushRef={sessionFlush}
+                        />
+                    </Suspense>
+                )}
+                {left && !sessionOpen && !sessionMode && (
                     <Sidebar
                         store={store}
                         campaign={campaign}
@@ -471,7 +532,9 @@ export function Workspace({
                         !scene.map &&
                         scene.tokens.length === 0 &&
                         !scene.props?.length &&
-                        !scene.notes?.length && (
+                        !scene.notes?.length &&
+                        !scene.regions?.length &&
+                        tool === 'select' && (
                             <div className="canvas-empty map-empty">
                                 <ImagePlus size={27} />
                                 <h2> {t('Set the scene.')} </h2>
@@ -617,7 +680,7 @@ export function Workspace({
                         </div>
                     </div>
                 </main>
-                {right && (
+                {right && !sessionMode && (
                     <Inspector
                         combatBusy={save.status !== 'saved'}
                         store={store}

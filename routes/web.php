@@ -2,16 +2,19 @@
 
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CombatController;
 use App\Http\Controllers\CueController;
 use App\Http\Controllers\FogController;
+use App\Http\Controllers\GameSessionController;
 use App\Http\Controllers\HandoutController;
 use App\Http\Controllers\InviteController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\MovePreviewController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\ObjectController;
+use App\Http\Controllers\PreloadController;
 use App\Http\Controllers\SceneController;
 use App\Http\Controllers\SpatialController;
 use App\Http\Controllers\TemplateController;
@@ -42,6 +45,21 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
     });
     Route::middleware('auth')->group(function () {
+        Route::get('/scenes/{scene}/triggers', [AutomationController::class, 'index']);
+        Route::post('/scenes/{scene}/regions', [AutomationController::class, 'regions'])->name('scene.regions')->middleware(IdempotentMutation::class);
+        Route::post('/scenes/{scene}/triggers', [AutomationController::class, 'triggers'])->name('scene.triggers')->middleware(IdempotentMutation::class);
+        Route::post('/scenes/{scene}/interact', [AutomationController::class, 'interact'])->name('scene.interact')->middleware([IdempotentMutation::class, 'throttle:60,1']);
+        Route::get('/campaigns/{campaign}/sessions', [GameSessionController::class, 'index']);
+        Route::get('/campaigns/{campaign}/session-resources', [GameSessionController::class, 'resources']);
+        Route::get('/campaigns/{campaign}/sessions/{gameSession}', [GameSessionController::class, 'show']);
+        foreach (['create', 'save', 'start', 'focus', 'notes', 'auto', 'complete', 'delete'] as $command) {
+            Route::post('/campaigns/{campaign}/sessions/'.$command, [GameSessionController::class, 'command'])
+                ->defaults('command', $command)->name('campaign.session.'.$command)->middleware(IdempotentMutation::class);
+        }
+        Route::get('/campaigns/{campaign}/preload', [PreloadController::class, 'show']);
+        Route::post('/campaigns/{campaign}/preload', [PreloadController::class, 'start'])->name('campaign.preload')->middleware([IdempotentMutation::class, 'throttle:30,1']);
+        Route::post('/campaigns/{campaign}/preload/readiness', [PreloadController::class, 'acknowledge'])->middleware('throttle:120,1');
+        Route::get('/media/{key}', [PreloadController::class, 'resource'])->whereUuid('key');
         Route::get('/campaigns/{campaign}/media', [MediaController::class, 'show']);
         Route::post('/campaigns/{campaign}/media', [MediaController::class, 'command'])->name('campaign.media')->middleware([IdempotentMutation::class, 'throttle:120,1']);
         Route::get('/scenes/{scene}/cues', [CueController::class, 'index']);

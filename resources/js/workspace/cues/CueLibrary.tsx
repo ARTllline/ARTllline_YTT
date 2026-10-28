@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Film, Play, Square, Plus, Pencil, Trash2, RotateCcw } from 'lucide-react';
 import type { Scene } from '../../tabletop/types/scene';
 import { actionLabels, cues, statusLabels, type Cue, type CueRun } from './model';
-import { CueEditor } from './CueEditor';
+const CueEditor = lazy(() => import('./CueEditor').then((m) => ({ default: m.CueEditor })));
 
 export function CueLibrary({ scene, active }: { scene: Scene; active: boolean }) {
-    const [data, setData] = useState<{ cues: Cue[]; runs: CueRun[] }>({ cues: [], runs: [] });
+    const [data, setData] = useState<{ cues: Cue[]; runs: CueRun[]; pendingCount: number }>({
+        cues: [],
+        runs: [],
+        pendingCount: 0,
+    });
     const [editor, setEditor] = useState<Cue | null>(null),
         [error, setError] = useState(''),
         [busy, setBusy] = useState(false),
@@ -23,6 +27,7 @@ export function CueLibrary({ scene, active }: { scene: Scene; active: boolean })
                         setData((previous) => ({
                             cues: d.cues ?? previous.cues,
                             runs: d.runs,
+                            pendingCount: d.pendingCount,
                         }));
                         setLoaded(true);
                     }
@@ -128,6 +133,12 @@ export function CueLibrary({ scene, active }: { scene: Scene; active: boolean })
                     </button>
                     <small>Выполненные изменения останутся. Будущие действия будут отменены.</small>
                     <small>Если очередь не движется, проверьте рабочий процесс сервера.</small>
+                    {data.pendingCount > 1 && (
+                        <small>
+                            Ожидают следом: {data.pendingCount - 1}. События выполняются по очереди;
+                            ошибка приостанавливает следующие.
+                        </small>
+                    )}
                 </section>
             )}
             <div className="cue-card-list">
@@ -202,15 +213,17 @@ export function CueLibrary({ scene, active }: { scene: Scene; active: boolean })
             )}
             {!loaded && <p className="hint">Загрузка событий…</p>}
             {editor && (
-                <CueEditor
-                    cue={editor}
-                    scene={scene}
-                    onClose={() => setEditor(null)}
-                    onSaved={() => {
-                        setEditor(null);
-                        setRefresh((n) => n + 1);
-                    }}
-                />
+                <Suspense fallback={<p>Открываем редактор…</p>}>
+                    <CueEditor
+                        cue={editor}
+                        scene={scene}
+                        onClose={() => setEditor(null)}
+                        onSaved={() => {
+                            setEditor(null);
+                            setRefresh((n) => n + 1);
+                        }}
+                    />
+                </Suspense>
             )}
         </div>
     );

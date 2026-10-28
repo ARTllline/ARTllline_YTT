@@ -44,7 +44,7 @@ class ScenePublisher
                 continue;
             }
             $event = $base;
-            if (str_starts_with($type, 'note.')) {
+            if (str_starts_with($type, 'note.') || str_starts_with($type, 'region.') || str_starts_with($type, 'trigger.')) {
                 $event['type'] = 'scene.revision';
             }
             $payload = [];
@@ -88,7 +88,7 @@ class ScenePublisher
                     $payload = array_key_exists('combat', $result) ? ['combat' => $playerCombat] : [];
                 }
             }
-            $this->schedule(ChannelAccess::player($scene->campaign_id, $scene->id, $scene->campaign->live_revision, $member->id), $event + ['payload' => $payload]);
+            $this->schedule(ChannelAccess::player($scene->campaign_id, $scene->id, $scene->campaign->live_revision, $member->id), $event + ['payload' => $payload ?: (object) []]);
         }
     }
 

@@ -1,4 +1,5 @@
 import { t } from '../../i18n';
+import { resourceCache } from '../../preload/ResourceCache';
 import { useState, useSyncExternalStore } from 'react';
 import {
     Swords,
@@ -265,7 +266,12 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
                                                 >
                                                     <span className="combat-portrait">
                                                         {token.image ? (
-                                                            <img src={token.image.url} alt="" />
+                                                            <img
+                                                                src={resourceCache.imageUrl(
+                                                                    token.image.url,
+                                                                )}
+                                                                alt=""
+                                                            />
                                                         ) : (
                                                             <Shield size={18} />
                                                         )}

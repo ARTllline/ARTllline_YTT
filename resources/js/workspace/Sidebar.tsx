@@ -19,7 +19,7 @@ import {
 import type { SceneStore } from '../tabletop/state/SceneStore';
 import type { Campaign } from '../api/workspace';
 import type { LibraryAsset } from '../api/preparation';
-import { AssetLibrary } from './assets/AssetLibrary';
+import { AssetLibrary } from './assets/LazyAssets';
 const CueLibrary = lazy(() =>
     import('./cues/CueLibrary').then((module) => ({ default: module.CueLibrary })),
 );

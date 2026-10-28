@@ -7,6 +7,7 @@ use App\Models\Scene;
 use App\Models\Token;
 use App\Models\User;
 use App\Services\SceneSelection;
+use App\Services\TriggerEvents;
 use Illuminate\Support\Facades\Gate;
 
 class SelectionActions
@@ -40,11 +41,17 @@ class SelectionActions
                 abort_if($tokens->contains('is_locked', true) || $props->contains('is_locked', true), 409, 'Сначала разблокируйте все выбранные объекты.');
                 $dx = $data['x'] - $anchor->x;
                 $dy = $data['y'] - $anchor->y;
+                $moves = [];
                 foreach ($tokens->concat($props) as $object) {
                     abort_if(abs($object->x + $dx) > 1000000 || abs($object->y + $dy) > 1000000, 422, 'Объекты выходят за допустимые границы.');
+                    $before = clone $object;
                     $object->update(['x' => $object->x + $dx, 'y' => $object->y + $dy]);
                     $object->refresh();
+                    if ($object instanceof Token) {
+                        $moves[] = [$before, $object];
+                    }
                 }
+                app(TriggerEvents::class)->movement($scene, $moves);
             } else {
                 $duplicate = function ($object) {
                     abort_if(abs($object->x + 30) > 1000000 || abs($object->y + 30) > 1000000, 422, 'Объекты выходят за допустимые границы.');

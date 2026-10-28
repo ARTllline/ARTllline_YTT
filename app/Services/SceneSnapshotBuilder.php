@@ -7,6 +7,7 @@ use App\Models\Campaign;
 use App\Models\Scene;
 use App\Models\SceneNote;
 use App\Models\SceneProp;
+use App\Models\SceneRegion;
 use App\Models\Token;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -35,6 +36,7 @@ class SceneSnapshotBuilder
                 'tokens' => $tokens->map(fn ($token) => $this->token($token, $gm, $user))->all(),
                 'props' => SceneProp::with('asset')->where('scene_id', $scene->id)->when(! $gm, fn ($q) => $q->where('is_hidden', false))->orderBy('z_index')->orderBy('id')->get()->map(fn ($p) => $p->projection($gm))->all(),
                 'combat' => app(CombatView::class)->build($scene, $gm),
+                ...($gm ? ['regions' => SceneRegion::where('scene_id', $scene->id)->orderBy('id')->get()->map(fn ($r) => $r->projection())->all()] : []),
                 ...($gm ? ['notes' => SceneNote::where('scene_id', $scene->id)->orderBy('id')->get()->map(fn ($n) => $n->projection())->all()] : []),
             ];
         });
@@ -50,7 +52,7 @@ class SceneSnapshotBuilder
 
     public function asset(?Asset $asset): ?array
     {
-        return $asset ? ['id' => (string) $asset->id, 'url' => '/api/assets/'.$asset->id,
+        return $asset ? ['id' => (string) $asset->id, 'url' => PreloadService::url($asset),
             'width' => $asset->width, 'height' => $asset->height] : null;
     }
 

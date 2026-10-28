@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Models\Combat;
 use App\Models\Scene;
 use App\Models\User;
+use App\Services\TriggerEvents;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
@@ -17,12 +18,19 @@ class CombatActions
         return $this->transaction->run($scene, function (Scene $scene) use ($user, $command, $data) {
             Gate::forUser($user)->authorize('update', $scene);
             $combat = Combat::where('scene_id', $scene->id)->whereIn('status', ['preparing', 'active'])->first();
+            $previousStatus = $combat?->status;
+            $previousRound = $combat?->round;
             if ($command === 'prepare') {
                 abort_if($combat !== null, 409, 'This scene already has a combat. Reload its current state.');
                 Combat::create(['scene_id' => $scene->id, 'created_by' => $user->id]);
             } else {
                 abort_unless($combat && (string) $combat->id === $data['combatId'], 409, 'Combat changed. Reload its current state.');
                 $this->change($combat, $scene, $command, $data);
+                $type = $previousStatus === 'preparing' && $combat->status === 'active' ? 'combat.started'
+                    : ($previousStatus === 'active' && $combat->round > $previousRound ? 'combat.round' : null);
+                if ($type) {
+                    app(TriggerEvents::class)->event($scene, $type, 'scene:'.$scene->id.':revision:'.($scene->revision + 1).':combat:'.$combat->id, ['round' => $combat->round]);
+                }
             }
 
             return ['_combatChanged' => true];

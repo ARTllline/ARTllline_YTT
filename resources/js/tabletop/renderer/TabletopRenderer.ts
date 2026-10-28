@@ -8,6 +8,7 @@ import { Application, Container, Texture } from 'pixi.js';
 import { FogLayer } from '../layers/FogLayer';
 import { SpatialLayer } from '../layers/SpatialLayer';
 import { GMLayer } from '../layers/GMLayer';
+import { RegionLayer } from '../layers/RegionLayer';
 import { Camera } from './camera/Camera';
 import { PointerController } from './interaction/PointerController';
 import { BattleMapLayer } from '../layers/BattleMapLayer';
@@ -37,6 +38,7 @@ export class TabletopRenderer {
     private fog = new FogLayer();
     private spatial = new SpatialLayer();
     private notes?: GMLayer;
+    private regions?: RegionLayer;
     private overlay = new InteractionLayer();
     private input?: PointerController;
     private observer?: ResizeObserver;
@@ -89,6 +91,8 @@ export class TabletopRenderer {
             this.overlay,
         );
         if (this.store.role === 'gm') {
+            this.regions = new RegionLayer();
+            this.world.addChildAt(this.regions, this.world.children.length - 1);
             this.notes = new GMLayer();
             this.world.addChildAt(this.notes, this.world.children.length - 1);
         }
@@ -102,10 +106,17 @@ export class TabletopRenderer {
             this.overlay,
             this.notes,
             this.props,
+            this.regions,
         );
         let previousScene = this.store.getSnapshot().scene;
         const sync = () => {
             const { scene } = this.store.getSnapshot();
+            const state = this.store.getSnapshot();
+            this.regions?.sync(
+                scene.regions ?? [],
+                state.selectedRegionId,
+                state.showRegions !== false,
+            );
             this.notes?.sync(
                 scene.notes ?? [],
                 this.store.getSnapshot().selectedNoteId,
@@ -166,6 +177,7 @@ export class TabletopRenderer {
             this.director.tick(ticker.deltaMS);
             const camera = this.camera.state;
             this.notes?.zoom(camera.zoom);
+            this.regions?.zoom(camera.zoom);
             const scene = this.store.getSnapshot().scene;
             this.fog.update(
                 this.app.renderer,

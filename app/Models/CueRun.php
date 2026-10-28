@@ -17,7 +17,7 @@ class CueRun extends Model
 
     protected $dateFormat = 'Y-m-d H:i:s.u';
 
-    protected $casts = ['due_at' => 'immutable_datetime', 'position' => 'integer', 'epoch' => 'integer'];
+    protected $casts = ['due_at' => 'immutable_datetime', 'position' => 'integer', 'epoch' => 'integer', 'queue_order' => 'integer', 'trigger_chain' => 'array'];
 
     public function steps(): HasMany
     {

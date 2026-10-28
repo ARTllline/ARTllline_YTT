@@ -47,6 +47,7 @@ export interface SceneMap extends Point {
     height: number;
 }
 export interface Scene {
+    regions?: readonly import('../../automation/model').Region[];
     props?: readonly SceneProp[];
     notes?: readonly SceneNote[];
     combat?: Combat | null;
@@ -143,4 +144,13 @@ export type NoteCommand =
     | { action: 'update'; id: string; patch: Partial<Omit<SceneNote, 'id'>> }
     | { action: 'delete'; id: string };
 export type Tool =
-    'select' | 'pan' | 'fog' | 'ruler' | 'circle' | 'cone' | 'rectangle' | 'ping' | 'note';
+    | 'select'
+    | 'pan'
+    | 'fog'
+    | 'ruler'
+    | 'circle'
+    | 'cone'
+    | 'rectangle'
+    | 'ping'
+    | 'note'
+    | 'region';

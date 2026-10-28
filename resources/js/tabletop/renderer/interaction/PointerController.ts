@@ -1,4 +1,6 @@
 import { ObjectGesture } from './ObjectGesture';
+import { RegionGesture } from './RegionGesture';
+import type { RegionLayer } from '../../layers/RegionLayer';
 import type { ScenePropLayer } from '../../layers/ScenePropLayer';
 import { SpatialGesture } from './SpatialGesture';
 import type { Point, Tool } from '../../types/scene';
@@ -10,6 +12,7 @@ import type { GMLayer } from '../../layers/GMLayer';
 import { screenToWorld, snapPoint } from '../../utils/coordinates';
 
 type Gesture = {
+    region?: boolean;
     objects?: boolean;
     note?: string;
     spatial?: boolean;
@@ -27,6 +30,7 @@ const isEditing = (target: EventTarget | null) =>
 export class PointerController {
     private spatial: SpatialGesture;
     private objects?: ObjectGesture;
+    private regionGesture?: RegionGesture;
     get tool(): Tool {
         return this.store.spatial.tool;
     }
@@ -48,9 +52,11 @@ export class PointerController {
         private overlay: InteractionLayer,
         private notes?: GMLayer,
         private props?: ScenePropLayer,
+        private regions?: RegionLayer,
     ) {
         this.spatial = new SpatialGesture(store);
         if (props) this.objects = new ObjectGesture(store, tokens, props);
+        if (regions) this.regionGesture = new RegionGesture(store, regions);
         const signal = this.abort.signal;
         canvas.addEventListener('pointerdown', this.down, { signal });
         canvas.addEventListener('pointermove', this.move, { signal });
@@ -83,8 +89,9 @@ export class PointerController {
     refresh = () => {
         this.tokens.selection(this.store.getSnapshot().selectedIds, this.hover);
         this.props?.selection(
-            this.store.role === 'gm' ? (this.store.getSnapshot().selectedPropIds ?? []) : [],
-            this.store.role === 'gm' ? this.propHover : null,
+            this.store.getSnapshot().selectedPropIds ?? [],
+            this.propHover,
+            this.store.role === 'gm',
         );
         this.canvas.style.cursor =
             !this.space && !['select', 'pan'].includes(this.tool)
@@ -110,6 +117,21 @@ export class PointerController {
         const point = this.local(e),
             world = screenToWorld(point, this.camera.state);
         const panning = e.button === 1 || this.space || this.tool === 'pan';
+        if (!panning && this.tool === 'region' && this.regionGesture) {
+            this.regionGesture.down(world);
+            this.gesture = {
+                region: true,
+                pointer: e.pointerId,
+                start: point,
+                last: point,
+                token: null,
+                origin: world,
+                moved: false,
+            };
+            this.canvas.setPointerCapture(e.pointerId);
+            this.refresh();
+            return;
+        }
         if (!panning && this.tool === 'note' && this.store.role === 'gm') {
             this.store.noteCommand({ action: 'create', ...world });
             this.tool = 'select';
@@ -167,6 +189,13 @@ export class PointerController {
             return;
         }
         const token = panning ? null : this.tokens.hit(world);
+        const prop =
+            !panning && !token && this.store.role === 'player' ? this.props?.hit(world) : null;
+        if (prop) {
+            this.store.selectObject('prop', prop);
+            this.refresh();
+            return;
+        }
         if (!panning) this.store.select(token);
         if (!panning && !token) {
             this.refresh();
@@ -194,6 +223,7 @@ export class PointerController {
             gesture = this.gesture;
         if (!gesture) {
             const world = screenToWorld(point, this.camera.state);
+            this.regions?.hover(this.tool === 'region' ? this.regions.hit(world) : undefined);
             this.hover = this.tokens.hit(world);
             this.propHover = this.hover ? null : (this.props?.hit(world) ?? null);
             if (this.tool === 'fog' && this.store.spatial.settings.shape === 'brush' && !this.space)
@@ -208,6 +238,10 @@ export class PointerController {
             return;
         }
         if (e.pointerId !== gesture.pointer) return;
+        if (gesture.region) {
+            this.regionGesture?.move(screenToWorld(point, this.camera.state));
+            return;
+        }
         if (gesture.objects) {
             this.objects?.move(screenToWorld(point, this.camera.state));
             return;
@@ -258,6 +292,11 @@ export class PointerController {
     private up = (e: PointerEvent) => {
         const gesture = this.gesture;
         if (!gesture || gesture.pointer !== e.pointerId) return;
+        if (gesture.region) {
+            this.regionGesture?.up(screenToWorld(this.local(e), this.camera.state));
+            this.finish();
+            return;
+        }
         if (gesture.objects) {
             this.objects?.up(screenToWorld(this.local(e), this.camera.state));
             this.finish();
@@ -298,6 +337,7 @@ export class PointerController {
     cancel = () => {
         this.spatial.cancel();
         this.objects?.cancel();
+        this.regionGesture?.cancel();
         if (!this.gesture) return;
         if (this.gesture.note) {
             const note = this.store
@@ -319,6 +359,7 @@ export class PointerController {
     reapplyPreview() {
         this.spatial.tick();
         this.objects?.preview();
+        this.regionGesture?.preview();
         const gesture = this.gesture;
         if (gesture?.note && gesture.moved)
             this.notes?.preview(gesture.note, this.dragPosition(gesture.last, gesture));

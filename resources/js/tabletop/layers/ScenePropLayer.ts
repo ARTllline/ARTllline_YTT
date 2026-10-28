@@ -7,6 +7,7 @@ class PropView extends Container {
     private state = '';
     private selected = false;
     private hovered = false;
+    private editable = true;
     constructor(public model: SceneProp) {
         super();
         this.sprite.anchor.set(0.5);
@@ -25,12 +26,13 @@ class PropView extends Container {
         this.sprite.width = this.model.image.width * x;
         this.sprite.height = this.model.image.height * y;
         this.state = '';
-        this.highlight(this.selected, this.hovered);
+        this.highlight(this.selected, this.hovered, this.editable);
     }
-    highlight(selected: boolean, hovered: boolean) {
+    highlight(selected: boolean, hovered: boolean, editable = true) {
         this.selected = selected;
         this.hovered = hovered;
-        const state = `${selected}:${hovered}:${this.model.isLocked}`;
+        this.editable = editable;
+        const state = `${selected}:${hovered}:${this.model.isLocked}:${editable}`;
         if (state === this.state) return;
         this.state = state;
         const w = this.sprite.width,
@@ -41,7 +43,7 @@ class PropView extends Container {
             this.outline
                 .rect(-w / 2, -h / 2, w, h)
                 .stroke({ color, width: selected ? 2 : 1, alpha: 0.95 });
-        if (selected && !this.model.isLocked)
+        if (selected && editable && !this.model.isLocked)
             this.outline
                 .rect(w / 2 - 5, h / 2 - 5, 10, 10)
                 .fill(color)
@@ -93,8 +95,8 @@ export class ScenePropLayer extends Container {
         }
         this.sortChildren();
     }
-    selection(ids: readonly string[], hover: string | null) {
-        this.views.forEach((v, id) => v.highlight(ids.includes(id), id === hover));
+    selection(ids: readonly string[], hover: string | null, editable = true) {
+        this.views.forEach((v, id) => v.highlight(ids.includes(id), id === hover, editable));
     }
     hit(point: Point) {
         return (

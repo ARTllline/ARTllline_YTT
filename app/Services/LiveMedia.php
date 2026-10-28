@@ -31,7 +31,7 @@ class LiveMedia
 
     public function track(Asset $asset, array $data, string $id): array
     {
-        return ['id' => $id, 'assetId' => (string) $asset->id, 'name' => $asset->name, 'url' => '/api/assets/'.$asset->id,
+        return ['id' => $id, 'assetId' => (string) $asset->id, 'name' => $asset->name, 'url' => PreloadService::url($asset),
             'duration' => (int) $asset->duration_ms, 'volume' => (float) $data['volume'], 'loop' => (bool) ($data['loop'] ?? false),
             'fade' => $data['fade'] ?? 0, 'startedAt' => now()->getTimestampMs(), 'paused' => false, 'position' => 0];
     }

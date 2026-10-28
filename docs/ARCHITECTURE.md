@@ -1,5 +1,242 @@
 # Architecture — persistent multiplayer tabletop
 
+## Task 11 — Regions and Triggers
+
+### Persistent boundaries
+
+`scene_regions` contains scene ownership, name, rectangle/circle geometry and enabled
+state. Rectangle x/y is its top-left; circle x/y is its centre. Sizes and positions
+are independent from the camera, bounded and rounded to three decimals. A token
+uses a circular footprint with radius `size * scale / 2`; rectangle closest-point
+distance or circle distance determines intersection. Boundary contact is inside.
+Only the old/new endpoint pair is compared: there is no swept path or LOS.
+
+`scene_triggers` stores a closed event vocabulary, same-scene Cue FK, explicit
+nullable region/token/prop FKs, optional actor-token FK, author, enabled/once,
+cooldown milliseconds, minimum round, fire count and millisecond last-fired time.
+Deleting a reference nulls its FK; missing targets/Cues cannot fire. Saving requires
+valid same-scene references. The default actor filter accepts tokens owned by a
+current Player campaign member; GM-owned/unassigned tokens require another filter.
+Limits: 100 regions and 100 triggers per scene, cooldown 0–300000 ms, names 160 chars.
+
+RegionActions and TriggerActions use SceneTransaction, GM reauthorization, scene
+revisions and existing IdempotentMutation receipts. Region edits emit small patches;
+trigger definitions/history are fetched only by the GM endpoint. No client timer or
+browser check is authoritative. Full forms replace the definition but preserve its
+fire state; explicit reset clears count/time while retaining history.
+
+### Authoritative event detection
+
+TriggerEvents is a detector and CueRunner caller, not an action executor. It runs
+inside the campaign → scene writer transaction, before commit, only for:
+
+| Event | Source and transition |
+| --- | --- |
+| region.enter / region.exit | TokenActions final xy update or SelectionActions batch movement; previous persisted footprint vs new persisted footprint |
+| object.interact | Explicit authenticated command; current active scene/epoch, membership, same-scene target and current visibility are rechecked |
+| scene.activated | SceneActions changes active_scene_id to a different non-null scene |
+| combat.started | CombatActions accepts preparing → active |
+| combat.round | CombatActions increases the persisted round; minimum-round filter applies |
+
+No detection runs for drag previews, frame ticks, token creation/spawning, region
+edits, size-only token edits, snapshot reads, editing-scene navigation, preloading,
+refresh or reconnect. Movement inside/outside without changing membership is a no-op.
+Only an active scene can fire, including during GM preparation of another scene.
+Relevant enabled triggers are fetched by indexed scene/event/enabled predicate;
+regions and Player owner IDs are fetched in batches. A group move queries once and
+updates the same trigger instances, so once remains once across its token pairs.
+
+### Fire transaction, ordering and recursion
+
+Every writer takes the campaign lock before reads used for decisions. This also
+avoids stale MySQL REPEATABLE READ snapshots. The trigger's accepted run, fire row,
+counter/time and originating scene mutation commit together. A failed transaction
+consumes nothing. `trigger_fires` stores trigger, source type, SHA-256 source key,
+correlation UUID, timestamp and CueRun. Movement source identity is scene + next
+revision + token; combat is scene + next revision + combat; activation uses campaign
+epoch; interaction uses client mutation UUID. Unique trigger/source and trigger/
+correlation keys provide durable duplicate guards. HTTP retries use existing receipts.
+
+`once` consumes at accepted CueRun creation, not at the last executed Cue step.
+Cooldown uses server time and immutable millisecond timestamps. The originating
+author must still be a GM at fire time and at execution. Missing/revoked authors or
+references skip safely. Pending runs snapshot Cue steps through the existing runner.
+
+CueRunner assigns monotonic campaign queue_order under the same lock. Manual starts
+retain the existing busy rejection; automatic starts enqueue behind unfinished runs.
+Execution waits for lower-order queued/running/failed runs. A failed run blocks the
+queue until the GM retries or cancels it. The GM list prioritizes pending runs and
+shows total pending count. There is a 100 unfinished-run bound: overflow rejects and
+rolls back the originating command rather than silently dropping its event.
+Cancelling a run that has not presented any step does not clear another run's camera.
+Scene activation cancels the prior campaign runs using the existing epoch boundary.
+
+CueRun persists `trigger_chain` and `correlation_id`; CueRunner installs/restores them
+around existing CueStepActions in scoped CommandContext. Maximum trigger depth is
+eight. A trigger may fire at most once per root correlation, including sibling
+branches, regardless of its repeat/cooldown setting. This permits A → B but suppresses
+A → B → A and branching repeat storms. History is retained until trigger/scene
+deletion; there is no analytics or automatic history purge in V1.
+
+### Privacy, renderer and Player interaction
+
+Only the GM snapshot contains regions; Players receive neither geometry nor names.
+Region/trigger mutations publish an empty `scene.revision` to Players, encoded as an
+object `{}`. The client also accepts legacy empty-array payloads without mistaking
+Array.prototype.map for a map patch. No Trigger definition, Cue ID, cooldown/once
+state, ancestry or planned steps are broadcast to Players. Existing filtered Cue
+effects are the only presentation output. Generic interaction returns the same
+accepted receipt with or without a bound trigger; retry rechecks visibility and epoch.
+
+Pixi RegionLayer exists only for GM, above fog and below interaction overlays. It
+draws translucent shapes and selection/hover captions, cached until shape/selection/
+camera zoom changes. RegionGesture draws/moves/resizes locally, then sends one final
+command through ScenePersistence/SaveQueue. No per-frame React state or server checks.
+Show-regions is local and independent of enabled. Scene navigation disposes the
+renderer/subscriber and clears selection/editor state. The editor and panel are lazy
+chunks, Russian-first, available from both preparation and Session Mode.
+
+Player selection now supports props without resize/movement controls. Every visible
+prop/token gets the same explicit interaction button, including locked objects and
+objects without triggers. No range, ownership or proximity rules are implied. Hidden
+targets, foreign scenes, stale epochs and outsiders are rejected by the server.
+
+Deferred: polygons, conditions/DSL, variables, loops, random branches, scheduled
+triggers, HP/condition triggers, scripting/macros, graph editor, LOS and spatial audio.
+
+## Task 10 — session plans and safe resource preparation
+
+### Private session domain
+
+`game_sessions` belongs to a campaign and stores name, planned/active/completed
+status, independent plan revision, current item UUID, private session notes,
+automatic-preload preference and start/end timestamps. `session_items` stores an
+ordered closed union: scene, cue, handout, encounter, note, chapter. Explicit nullable
+foreign keys reference existing domain records; encounter references are restricted
+to encounter-kind ContentTemplates. Deletion nulls a reference without deleting the
+item or its notes. Items never copy scene, cue, handout or encounter definitions.
+
+`SessionActions` uses the existing campaign writer lock, membership recheck and
+IdempotentMutation receipts. Limits are 100 sessions/campaign, 200 items/session,
+160-character names/titles, 4,000-character item notes and 30,000-character session
+notes. Session notes use MEDIUMTEXT so the character limit also fits four-byte UTF-8.
+Save replaces the ordered plan atomically using `planRevision` compare-and-swap;
+foreign campaigns and item UUIDs owned by another plan are rejected. Removing the
+focused item selects its next available neighbour. Focus, notes and lifecycle writes
+do not change scene revision or publish scene events. Only one active session per
+campaign is permitted under the same lock. Completion retains focus/content and
+does not call scene, combat or audio actions. Completed plans are read-only.
+
+All session list/detail/write/resource-picker endpoints are GM-only, including
+receipt replay after a role change. There is no Player session projection or
+session broadcast. `SessionPlan` resolves full details in bounded queries per
+reference type; the resource picker returns 40 minimal references per page.
+
+### Existing systems behind an explicit run-of-show
+
+`SessionConsole` is a lazy workspace panel. Its current card and ordered jump list
+are focus controls; a separate labelled button calls the existing activation, Cue,
+handout or encounter-placement API. Scene changes use the normal workspace route;
+encounters use SceneStore/SaveQueue and the existing Add to Combat action. Quick
+access opens existing CueLibrary and selects existing scene/handout/encounter
+resources. AudioEngine, MediaPanel, CombatPanel and Director remain their own systems.
+No second Cue runner, audio manager or camera controller is introduced.
+
+Session Mode hides the Inspector and preparation headings while keeping tabletop
+tools and combat. A per-campaign local preference remembers the visual mode; the
+server remains authoritative for current plan/focus/status. Completed-plan navigation
+is local review only. The planner supports native drag grips plus accessible
+Up/Down buttons, duplicate/delete, private item notes and unsaved-change guards.
+
+Session notes have their own debounced SaveQueue (550 ms), visible status, explicit
+Retry and a stable mutation UUID across retries. Navigation/action/End flush pending
+notes first. Beforeunload warns when work remains unsaved. Successfully saved notes
+survive reconnect/reload; pending offline text is held in the mounted page, not a
+durable offline journal. Concurrent notes use last accepted write; plan edits use
+revision conflicts. Lists refresh every ten seconds, but there is no collaborative
+live merge of another GM's item editor or note field.
+
+### Authoritative preparation and delivery
+
+`scene_preloads` holds one current batch per campaign: random UUID, target scene,
+captured scene revision, include-audio flag, internal resource list and 30-minute
+expiry. `PreloadService::start` locks campaign then scene, verifies GM authority,
+deduplicates eligible assets and rejects over 128 files / 128 MiB. Repeating an
+unchanged unexpired request reuses its UUID/readiness. A changed batch replaces it
+and clears old acknowledgements. Automatic preparation selects the nearest later
+valid scene item, images only; optional audio is an explicit manual choice.
+
+Eligibility includes the map and non-hidden token/prop images. Handout-kind assets
+are always excluded. Optional audio comes only from music.start, ambient.start and
+sfx.play steps of Cues belonging to the target scene. Assets must belong to the same
+campaign. No Cue label/configuration/order, hidden object data or future scene
+snapshot is delivered. Validation compares scene revision and the current eligible
+asset set on every manifest/grant read, including Cue audio edits that do not change
+scene revision. Edits invalidate a batch; the GM prepares again.
+
+`assets.delivery_key` is a nullable unique random UUID, allocated only when first
+prepared. The Player manifest is exactly `{id, expiresAt, resources:[{url,kind,bytes}]}`.
+URLs are `/api/media/{opaque-key}`; the server-only list also contains asset IDs.
+`preload.changed` is an invalidation-only control-channel event without a scene ID.
+Players fetch their manifest over authenticated HTTP. Session metadata and GM-only
+references never enter this channel.
+
+The opaque media route takes a campaign shared lock, rechecks membership and allows
+either ordinary current AssetPolicy access or membership in a still-valid preload
+batch. The numeric asset route retains its existing authorization and gets no
+preload exception. Responses support Range/206 and use the detected MIME, generic
+`filename="resource"`, nosniff, Vary Cookie and private/no-store. Original filenames,
+storage paths and library listings are absent. A stable opaque URL is used by normal
+scene snapshots and new live audio playbacks too, allowing the same cache entry to
+serve preparation and activation. Existing numeric URLs remain supported.
+
+Opaque URLs conceal metadata, **not the downloaded image/audio content**. Preloading
+is a deliberate early grant of those bytes to campaign Players. A map may itself
+depict a secret even when it is under manual fog; the UI states that recipients can
+inspect prepared files. Hidden entities and unrevealed handouts are not grants.
+Revocation/expiry prevents later downloads; it cannot erase bytes already received.
+
+### Readiness, memory and transitions
+
+`preload_readiness` has one row per campaign member, batch/client UUID, status,
+loaded count and timestamp. Only a current Player may acknowledge; batch mismatch
+returns 409, and ready requires the whole resource count. Freshness is 45 seconds;
+late/new members start waiting. Existing presence adds the offline label. The last
+tab reporting for a user wins. Readiness is advisory/self-reported, never an access
+control or activation barrier. Rows are bounded per member and replaced with the
+next batch; expired batches are ignored, with no additional cleanup worker.
+
+`usePlayerPreload` reuses the control subscription, hydrates on connect/online and
+probes every five seconds. It cancels old downloads, serializes acknowledgements,
+reports progress at most once per second plus heartbeat, and provides failed-state
+Retry. The GM polls the small readiness projection every three seconds. Missed
+events repair through HTTP; preload does not trigger scene activation or audio.
+
+`ResourceCache` is page-local, uses two concurrent credentialed no-store fetches,
+validates bounded declared/actual byte sizes, expires entries and evicts least
+recently used blobs within a 128 MiB encoded-byte budget. It retains bounded Blob
+URLs for DOM portraits and revokes them on eviction/teardown. Image loading reuses
+Blobs, decodes with two workers and releases temporary URLs. AudioEngine creates
+voice-owned Blob URLs and releases them with each voice, so cache eviction cannot
+interrupt an existing playback. No service worker, disk cache or autoplay bypass.
+Decoded Pixi textures/audio buffers are separate from this encoded-byte budget.
+
+Activation still hydrates the normal authorized snapshot/epoch. Player Tabletop
+uses the existing dark fade visual primitive until initial image decoding completes,
+then fades out over 180 ms (none under reduced motion). Empty scenes complete too;
+media/renderer errors remain above the curtain with a reload action. Later reveals
+do not reset the initial curtain. The existing Director controls remain independent.
+
+### Natural loading boundaries
+
+App lazily imports GM Workspace or PlayerView. SessionConsole and SessionPlanner,
+AssetLibrary/AssetDetails, CueLibrary/CueEditor and MediaPanel load on demand;
+Pixi's renderer remains lazy. Shared scene/realtime code is extracted by Vite.
+The Player route does not import the GM editor panels. This reduces the main chunk
+without duplicating domain logic or adding a state-management dependency. See the
+Task 10 validation section for per-chunk sizes and the distinction between main
+bundle size and the total route payload.
+
 ## Task 09 — live audio and atmosphere
 
 `StoreAudio` extends the existing private Asset Library with `music`, `ambient` and

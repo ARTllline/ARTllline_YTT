@@ -20,7 +20,7 @@ export function SpatialSettings({
         store.spatial.setSettings(patch);
         setSettings(store.spatial.settings);
     };
-    if (tool === 'select' || tool === 'pan') return null;
+    if (tool === 'select' || tool === 'pan' || tool === 'region') return null;
     if (tool === 'note')
         return (
             <div className="spatial-settings" aria-label={t('Active tool settings')}>

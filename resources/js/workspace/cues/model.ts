@@ -88,9 +88,14 @@ export const statusLabels = {
 };
 export const cues = {
     list: (scene: string, signal?: AbortSignal) =>
-        request<{ cues: Cue[]; runs: CueRun[] }>(`/scenes/${scene}/cues`, 'GET', undefined, signal),
+        request<{ cues: Cue[]; runs: CueRun[]; pendingCount: number }>(
+            `/scenes/${scene}/cues`,
+            'GET',
+            undefined,
+            signal,
+        ),
     runs: (scene: string, signal?: AbortSignal) =>
-        request<{ cues?: Cue[]; runs: CueRun[] }>(
+        request<{ cues?: Cue[]; runs: CueRun[]; pendingCount: number }>(
             `/scenes/${scene}/cues?runsOnly=1`,
             'GET',
             undefined,

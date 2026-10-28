@@ -1,3 +1,4 @@
+import { resourceCache } from '../preload/ResourceCache';
 import {
     playbackPosition,
     type Channel,
@@ -16,6 +17,7 @@ interface Voice {
     target: number;
     retireAt?: number;
     timer?: ReturnType<typeof setTimeout>;
+    blobUrl?: string;
 }
 const defaults: Preferences = { master: 0.8, music: 1, ambient: 1, sfx: 1 };
 
@@ -202,7 +204,9 @@ export class AudioEngine {
             this.emit({
                 error: `Не удалось загрузить «${track.name}». Проверьте соединение или формат записи.`,
             });
-        element.src = track.url;
+        const cached = resourceCache.get(track.url);
+        if (cached) voice.blobUrl = URL.createObjectURL(cached);
+        element.src = voice.blobUrl ?? track.url;
         this.gain(voice, this.level(voice), track.fade);
         if (!track.paused) this.start(voice, false);
     }
@@ -291,6 +295,7 @@ export class AudioEngine {
         voice.element.pause();
         voice.element.removeAttribute('src');
         voice.element.load();
+        if (voice.blobUrl) URL.revokeObjectURL(voice.blobUrl);
         voice.source.disconnect();
         voice.gain.disconnect();
         if (this.voices.get(voice.track.id) === voice) this.voices.delete(voice.track.id);

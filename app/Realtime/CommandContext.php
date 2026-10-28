@@ -13,6 +13,10 @@ class CommandContext
 
     public ?string $dragSessionId = null;
 
+    public array $triggerChain = [];
+
+    public ?string $correlationId = null;
+
     public function id(): string
     {
         return $this->mutationId ??= (string) Str::uuid();

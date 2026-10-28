@@ -182,7 +182,7 @@ class ReusableContentTest extends TestCase
         $this->postJson($this->base.'/spawn', ['templateId' => $template['id'], 'x' => 10, 'y' => 10])->assertOk();
         $player = Event::dispatched(TabletopEvent::class)->pluck(0)->first(fn ($e) => str_contains($e->channel, '.user.'));
         $this->assertSame('scene.revision', $player->envelope['type']);
-        $this->assertSame([], $player->envelope['payload']);
+        $this->assertSame('{}', json_encode($player->envelope['payload']));
         $inactive = $this->campaign->scenes()->create(['name' => 'Preparation']);
         Event::fake([TabletopEvent::class]);
         $this->postJson('/api/scenes/'.$inactive->id.'/spawn', ['templateId' => $template['id'], 'x' => 10, 'y' => 10])->assertOk();

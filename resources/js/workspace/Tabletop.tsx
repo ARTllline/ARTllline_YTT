@@ -15,6 +15,7 @@ export function Tabletop({
 }) {
     const host = useRef<HTMLDivElement>(null);
     const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+    const [presented, setPresented] = useState(false);
     const [media, setMedia] = useState<{ loading: boolean; error: string | null }>({
         loading: false,
         error: null,
@@ -28,7 +29,7 @@ export function Tabletop({
         let instance: TabletopRenderer | undefined;
         let instanceReady = false;
         let mediaAbort: AbortController | undefined;
-        let mediaKey = '';
+        let mediaKey: string | null = null;
         const decoded = new Map<string, HTMLImageElement>();
         const syncMedia = () => {
             if (!instanceReady) return;
@@ -60,6 +61,7 @@ export function Tabletop({
                         images.forEach((image, id) => decoded.set(id, image));
                         instance?.setImages(decoded);
                         setMedia({ loading: false, error: null });
+                        setPresented(true);
                     }
                 })
                 .catch((error) => {
@@ -101,6 +103,12 @@ export function Tabletop({
     return (
         <>
             <div className="canvas-host" ref={host} />
+            {store.role === 'player' && (
+                <div
+                    className={`director-fade scene-arrival ${presented ? 'ready' : ''}`}
+                    aria-hidden="true"
+                />
+            )}
             {status !== 'ready' && (
                 <div className="canvas-message" role="status">
                     <span className="eyebrow"> {t('YTT / TABLETOP')} </span>

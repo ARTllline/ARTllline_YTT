@@ -1,4 +1,5 @@
 import { objects } from '../../api/objects';
+import { automation } from '../../automation/model';
 import { api, commandId, type Mutation } from '../../api/workspace';
 import type { SceneStore, SceneCommand } from './SceneStore';
 import { SaveQueue } from './SaveQueue';
@@ -24,9 +25,11 @@ export class ScenePersistence {
                 ? `token:${command.id}`
                 : command.type === 'objects'
                   ? `objects:${mutationId}`
-                  : command.type === 'note'
-                    ? `note:${command.command.action === 'create' ? mutationId : command.command.id}`
-                    : command.type;
+                  : command.type === 'region'
+                    ? `region:${command.command.id ?? mutationId}`
+                    : command.type === 'note'
+                      ? `note:${command.command.action === 'create' ? mutationId : command.command.id}`
+                      : command.type;
         const version = (this.versions.get(key) ?? 0) + 1;
         this.versions.set(key, version);
         this.queue.enqueue(
@@ -34,6 +37,13 @@ export class ScenePersistence {
             async () => {
                 try {
                     let result: Mutation;
+                    if (command.type === 'region') {
+                        result = await automation.region(this.sceneId, command.command, mutationId);
+                        this.store.accept(result, this.versions.get(key) === version);
+                        if (command.command.action === 'create' && result.region)
+                            this.store.selectRegion(result.region.id);
+                        return;
+                    }
                     if (command.type === 'objects') {
                         result = await objects.command(this.sceneId, command.command, mutationId);
                         this.store.accept(result, true);

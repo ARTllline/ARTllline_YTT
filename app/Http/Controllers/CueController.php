@@ -18,10 +18,14 @@ class CueController extends Controller
     {
         Gate::authorize('update', $scene);
 
-        $runs = CueRun::where('scene_id', $scene->id)->with(['steps' => fn ($q) => $q->select('id', 'cue_run_id', 'position', 'type', 'status')])->latest()->limit(10)->get()
+        $query = CueRun::where('scene_id', $scene->id)->with(['steps' => fn ($q) => $q->select('id', 'cue_run_id', 'position', 'type', 'status')]);
+        $pending = (clone $query)->whereIn('status', ['queued', 'running', 'failed']);
+        $pendingCount = (clone $pending)->count();
+        $runs = $pending->orderBy('queue_order')->limit(10)->get()
+            ->concat((clone $query)->whereIn('status', ['completed', 'cancelled'])->latest()->limit(10)->get())
             ->map(fn ($run) => $run->toArray() + ['displayPosition' => $run->status === 'running' && $run->due_at?->isFuture() ? max(0, $run->position - 1) : $run->position]);
 
-        return ['runs' => $runs] + ($request->boolean('runsOnly') ? [] : ['cues' => Cue::where('scene_id', $scene->id)->with('steps')->orderBy('sort_order')->orderBy('id')->get()]);
+        return ['runs' => $runs, 'pendingCount' => $pendingCount] + ($request->boolean('runsOnly') ? [] : ['cues' => Cue::where('scene_id', $scene->id)->with('steps')->orderBy('sort_order')->orderBy('id')->get()]);
     }
 
     public function command(Request $request, Scene $scene, CueRunner $runner): array

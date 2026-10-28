@@ -1,10 +1,23 @@
 import { t } from '../i18n';
-import { useState, useSyncExternalStore } from 'react';
-import { MousePointer2, Hand, Grid2X2, CloudFog, Ruler, MapPin, X, Circle } from 'lucide-react';
+import { lazy, Suspense, useState, useSyncExternalStore } from 'react';
+import {
+    MousePointer2,
+    Hand,
+    Grid2X2,
+    CloudFog,
+    Ruler,
+    MapPin,
+    X,
+    Circle,
+    Scan,
+} from 'lucide-react';
 import type { Tool } from '../tabletop/types/scene';
 import type { SceneStore } from '../tabletop/state/SceneStore';
 import { SpatialSettings } from './SpatialSettings';
 import { NumberField } from './NumberField';
+const RegionControls = lazy(() =>
+    import('../automation/RegionControls').then((m) => ({ default: m.RegionControls })),
+);
 export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: Tool) => void }) {
     const tool = useSyncExternalStore(store.spatial.subscribe, store.spatial.getTool);
     const [gridOpen, setGridOpen] = useState(false);
@@ -69,6 +82,17 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
                 >
                     <Ruler size={18} />
                 </button>
+                {store.role === 'gm' && (
+                    <button
+                        className={tool === 'region' ? 'active' : ''}
+                        aria-label="Области"
+                        title="Области · только мастер"
+                        aria-pressed={tool === 'region'}
+                        onClick={() => choose('region')}
+                    >
+                        <Scan size={18} />
+                    </button>
+                )}
                 <button
                     className={['circle', 'cone', 'rectangle'].includes(tool) ? 'active' : ''}
                     aria-label={t('Area template tool')}
@@ -89,6 +113,11 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
                 </button>
             </div>
             <SpatialSettings store={store} tool={tool} onTool={choose} />
+            {store.role === 'gm' && tool === 'region' && (
+                <Suspense fallback={<div className="spatial-settings">Открываем области…</div>}>
+                    <RegionControls store={store} />
+                </Suspense>
+            )}
             {gridOpen && (
                 <div
                     className="grid-popover"

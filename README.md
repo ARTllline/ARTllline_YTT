@@ -6,7 +6,7 @@ state. The product contract is `AGENTS.md`.
 
 ## Current status
 
-**Task 09: audio, atmosphere and cinematic events.**
+**Task 11: Regions and server-authoritative Triggers.**
 Prepare scenes, invite players, move assigned tokens, paint shared manual fog,
 measure distances, sketch temporary areas and ping the table. Laravel/MySQL remain
 authoritative; Reverb delivers authorized changes. No demo data is automatically seeded.
@@ -15,8 +15,112 @@ Browse reusable private assets, prepare image handouts and place private GM note
 Place image props, select mixed token/prop groups, and save reusable prefabs and
 encounters. Russian is the default UI language; user content and protocol keys
 are preserved. Prepare **События** and run server-controlled sequences of object,
-encounter, combat, handout, sound and cinematic actions. Dynamic vision, dice and
-automatic triggers remain deferred.
+encounter, combat, handout, sound and cinematic actions. Regions and game events
+can now start those same sequences automatically. Dynamic vision and dice remain deferred.
+
+### When something happens → run a prepared event
+
+Prepare a **Событие** for the scene, then use **Области** in the GM toolbar to draw
+a rectangle or circle. Drag to move, pull the selection handle to resize, or enter
+coordinates; rename, disable or delete it in the nearby controls. All geometry is
+saved in world coordinates. **Показывать области** only changes the local GM view;
+it does not disable automation. Regions never appear in Player snapshots or messages.
+
+Open **Триггеры → Добавить триггер** and choose a prepared event plus one of:
+**Вход в область**, **Выход из области**, **Взаимодействие с объектом**,
+**Сцена активирована**, **Бой начат**, **Новый раунд**. Region filters are
+**Любой токен игрока** (default), **Конкретный токен**, or **Любой токен**.
+Use **Только один раз**, a pause between launches (0–5 minutes), and an optional
+starting round. There is no code editor or second action system. Up to 100 regions
+and 100 triggers per scene are supported. Only the active scene fires triggers.
+
+The token footprint is a disc of radius `size × scale / 2`. Touching a rectangle
+or circle counts as inside. Only a saved movement from outside to inside, or the
+reverse, fires; previews, movement inside, reconnects and geometry edits do not.
+A teleport with both endpoints outside does not fire, even if its path crosses the region.
+
+Players select any visible token or prop and press **Взаимодействовать**. Selection
+itself does nothing; the button and response do not reveal whether a trigger exists.
+Hidden targets are rejected server-side. Object interaction has no distance or
+ownership restriction in this version. Locking prevents editing, not interaction.
+
+The server commits the fire and CueRun together under the campaign writer lock.
+Two simultaneous entrants cannot consume the same once trigger twice. Once is
+consumed when the run is accepted, even if a later Cue step fails. **Разрешить снова**
+resets the counter/pause explicitly and retains history. Automatic runs wait behind
+the current event; a failed event pauses the queue until Retry/Stop. At 100 unfinished
+runs, the originating command is rejected atomically with an actionable error.
+**События и очередь** opens the existing run controls from the trigger panel.
+
+Session Mode keeps **Триггеры: N включено** and quick enable/disable available.
+The count means enabled definitions, including an already-consumed once trigger.
+Automation continues without an open GM browser; the existing Cue queue worker
+and scheduler are required. An ancestry limit of eight plus per-correlation trigger
+deduplication prevents recursive chains. Deleted references stay visibly unavailable;
+removing a trigger does not cancel an already accepted run.
+
+Apply the additive `2026_10_29_001000_create_regions_and_triggers` migration and
+restart existing Cue workers when updating an installation. No additional service
+or dependency is required. See `docs/ARCHITECTURE.md` and `docs/VALIDATION.md` for
+the event contract, privacy boundaries and measured acceptance evidence.
+
+### Plan and run a session
+
+Open **Сессии → Создать сессию**. Add existing scenes, events, handouts and
+encounters, plus private notes and chapter dividers. Drag a grip or use Up/Down
+to reorder; duplicate/delete individual beats and save the plan. References stay
+linked to the original content. Deleted content is marked unavailable; the plan's
+notes remain. A campaign supports 100 plans, each with up to 200 items.
+
+**Начать сессию** opens the compact live console and hides preparation chrome.
+**Следующий / Предыдущий** and clicking an item change only the saved plan focus.
+Use the explicit **Активировать сцену / Запустить событие / Показать игрокам /
+Разместить** action to affect the table. Encounters use the existing placement and
+**Добавить в бой** workflow. Quick scene/event/handout/encounter access, the top-bar
+audio panel and the combat tracker remain available, including out-of-order play.
+**Вернуться к редактору** does not end the session.
+
+Session notes autosave after a short pause, with visible save/error state and Retry.
+Normal navigation flushes pending notes; closing the browser with unsaved work
+prompts a warning. Reload restores the active plan, current item and saved notes.
+Only one session can be active per campaign. **Завершить сессию** asks for confirmation,
+saves pending notes and retains the plan for review. It does not stop music, end
+combat or deactivate the scene. Completed plans are read-only; deleting a plan
+never deletes its referenced scenes, events, handouts or encounters.
+
+### Prepare the next scene for Players
+
+In the session console, choose a scene and press **Предзагрузить игрокам**. The
+optional **Также аудио её событий** includes that scene's prepared music/ambient/SFX
+files, without playing anything. **Автоматически готовить следующую сцену** prepares
+images for the nearest later scene in an active plan. Preloading never activates
+a scene, runs a cue or changes the current scene state.
+
+The GM sees each Player's waiting/loading/ready/failed status and offline presence.
+Players only see a small preparation/retry label. **Активировать сцену** remains
+available regardless of readiness. Late joins and reconnects fetch the current
+preparation. If the scene changes, prepare it again; batches expire after 30 minutes.
+
+Only images used by visible scene objects and the map are included. Hidden objects
+and handouts are excluded. Player manifests contain opaque resource URLs, media
+kind and byte size, with no scene title, object data, GM notes, session plan or Cue
+definition. **Preloaded files are already delivered to Players and can be inspected**:
+opaque names do not hide the content of a map or opted-in audio. Keep genuinely
+secret imagery in hidden objects and reveal it when appropriate.
+
+The browser caches at most 128 files / 128 MiB of encoded media in page memory,
+downloads with two workers and reuses those bytes for rendering, combat portraits
+and audio playback. Reload clears that cache and fetches the current preparation
+again; it is not an offline media library. Readiness confirms downloaded bytes,
+not GPU decoding or permission to autoplay. Scene activation uses a short dark
+transition; Players still control their own camera. Reduced motion is respected.
+
+Existing installations need additive migration
+`2026_10_28_000900_create_game_sessions`, a rebuilt frontend, and the existing
+Reverb/Cue worker setup. No new dependency, seed, environment replacement or
+APP_KEY change is required. See [Architecture](docs/ARCHITECTURE.md) for ownership,
+expiry and concurrency limits, and [Validation](docs/VALIDATION.md) for measured
+bundle sizes, multiplayer checks and performance results.
 
 ### Sound and atmosphere
 

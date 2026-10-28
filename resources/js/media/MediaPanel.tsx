@@ -10,7 +10,7 @@ import {
     type Effect,
     type Intensity,
 } from './model';
-import { AssetLibrary } from '../workspace/assets/AssetLibrary';
+import { AssetLibrary } from '../workspace/assets/LazyAssets';
 import { Dialog } from '../workspace/Dialog';
 import { commandId } from '../api/workspace';
 import type { LibraryAsset } from '../api/preparation';

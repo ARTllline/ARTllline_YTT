@@ -1,5 +1,7 @@
 import { t } from '../i18n';
 import { useLiveMedia } from '../media/useLiveMedia';
+import { usePlayerPreload } from '../preload/usePlayerPreload';
+import { InteractButton } from '../automation/InteractButton';
 import { DirectorLayer } from '../director/DirectorLayer';
 import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ArrowLeft, Maximize, Minus, Plus } from 'lucide-react';
@@ -22,6 +24,7 @@ const MediaPanel = lazy(() =>
 export function PlayerView({ campaign: initial, user }: { campaign: Campaign; user: User }) {
     const [campaign, setCampaign] = useState(initial);
     const { echo, connection } = useCampaignLive(campaign.id, setCampaign);
+    const preload = usePlayerPreload(campaign.id, echo, connection);
     const media = useLiveMedia(
         campaign.id,
         user.id,
@@ -68,6 +71,15 @@ export function PlayerView({ campaign: initial, user }: { campaign: Campaign; us
                     <strong>{current?.scene.name ?? t('Your table')}</strong>
                 </div>
                 <ConnectionBadge state={connection} />
+                {preload.status && (
+                    <button
+                        className="preload-player-status"
+                        onClick={preload.retry}
+                        title="Повторить подготовку"
+                    >
+                        {preload.status}
+                    </button>
+                )}
                 <HandoutShelf campaignId={campaign.id} userId={user.id} echo={echo} />
                 <Suspense fallback={null}>
                     <MediaPanel campaignId={campaign.id} syncError={media.syncError} />
@@ -145,6 +157,7 @@ function PlayerTabletop({
     const renderer = useRef<TabletopRenderer | null>(null);
     const [zoom, setZoom] = useState(100);
     const selected = snapshot.scene.tokens.find((t) => t.id === snapshot.selectedIds[0]);
+    const selectedProp = snapshot.scene.props?.find((p) => p.id === snapshot.selectedPropIds?.[0]);
     return (
         <main className="player-tabletop">
             <Tabletop store={store} rendererRef={renderer} onZoom={setZoom} />
@@ -188,6 +201,8 @@ function PlayerTabletop({
                                 : t('View only · controlled by the GM or another player')}
                         </span>
                     </>
+                ) : selectedProp ? (
+                    <strong>{selectedProp.name || 'Объект'}</strong>
                 ) : (
                     <>
                         <strong> {t('Your seat at the table')} </strong>
@@ -198,6 +213,16 @@ function PlayerTabletop({
                             )}{' '}
                         </span>
                     </>
+                )}
+                {(selected || selectedProp) && (
+                    <InteractButton
+                        key={`${selected ? 'token' : 'prop'}:${(selected ?? selectedProp)!.id}`}
+                        sceneId={initial.id!}
+                        epoch={initial.liveRevision ?? 0}
+                        kind={selected ? 'token' : 'prop'}
+                        id={(selected ?? selectedProp)!.id}
+                        disabled={connection !== 'connected' || save.status !== 'saved'}
+                    />
                 )}
             </div>
             <div className="player-controls">

@@ -10,7 +10,7 @@ class Asset extends Model
 {
     protected $guarded = ['id'];
 
-    protected $hidden = ['storage_path'];
+    protected $hidden = ['storage_path', 'delivery_key'];
 
     public function tags(): BelongsToMany
     {

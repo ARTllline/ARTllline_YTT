@@ -179,7 +179,7 @@ class PreparationTest extends TestCase
         $events = Event::dispatched(TabletopEvent::class)->map(fn ($args) => $args[0]);
         foreach ($events->filter(fn ($e) => str_contains($e->channel, '.user.')) as $event) {
             $this->assertSame('scene.revision', $event->envelope['type']);
-            $this->assertSame([], $event->envelope['payload']);
+            $this->assertSame('{}', json_encode($event->envelope['payload']));
         }
         $this->assertCount(2, $events->filter(fn ($e) => str_ends_with($e->channel, '.gm')));
         $inactive = $this->campaign->scenes()->create(['name' => 'Prepared']);

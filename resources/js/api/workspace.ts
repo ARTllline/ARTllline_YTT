@@ -29,6 +29,8 @@ export interface Campaign extends CampaignSummary {
     members?: { id: string; name: string; role: string }[];
 }
 export interface Mutation extends importObjectPatch {
+    region?: import('../automation/model').Region;
+    deletedRegionId?: string;
     note?: import('../tabletop/types/scene').SceneNote;
     deletedNoteId?: string;
     combat?: Combat | null;

@@ -1,4 +1,5 @@
 import { applyObjectPatch } from '../tabletop/state/objectPatch';
+import { applyRegionPatch } from '../automation/model';
 import type { Scene, Token, Point } from '../tabletop/types/scene';
 import type { Mutation } from '../api/workspace';
 export interface SceneEvent {
@@ -22,6 +23,8 @@ export interface SceneEvent {
         | 'combat'
         | 'note'
         | 'deletedNoteId'
+        | 'region'
+        | 'deletedRegionId'
     > & {
         scene?: Partial<Scene>;
     };
@@ -38,8 +41,10 @@ export interface MovePreview extends Point {
 export function reduceEvent(scene: Scene, event: SceneEvent): Scene | 'gap' {
     if (event.sceneId !== scene.id || event.revision <= (scene.revision ?? 0)) return scene;
     if (event.revision !== (scene.revision ?? 0) + 1) return 'gap';
-    const payload = event.payload;
-    const patched = applyObjectPatch(scene, payload);
+    // Older servers encode an empty PHP payload as []. Array.prototype.map must
+    // never be mistaken for a scene map update by the property checks below.
+    const payload = Array.isArray(event.payload) ? {} : event.payload;
+    const patched = applyRegionPatch(applyObjectPatch(scene, payload), payload);
     let tokens = patched.tokens;
     if (payload.token) {
         const token: Token = payload.token;

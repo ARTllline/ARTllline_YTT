@@ -1,4 +1,5 @@
 import { applyObjectPatch } from './objectPatch';
+import { applyRegionPatch, type Region, type RegionCommand } from '../../automation/model';
 import type { ObjectCommand, ObjectSelection } from '../types/scene';
 import type {
     GridSettings,
@@ -17,6 +18,9 @@ import { clamp } from '../utils/coordinates';
 import type { CombatCommand, TokenCombatCommand } from '../types/combat';
 
 export interface WorkspaceSnapshot {
+    selectedRegionId?: string;
+    showRegions?: boolean;
+    regionShape?: Region['shape'];
     selectedPropIds?: readonly string[];
     spawnedEncounter?: { name: string; tokenIds: string[] };
     selectedNoteId?: string;
@@ -27,6 +31,7 @@ export interface WorkspaceSnapshot {
     preview: { id: string; position: Point } | null;
 }
 export type SceneCommand =
+    | { type: 'region'; command: RegionCommand }
     | { type: 'objects'; command: ObjectCommand }
     | { type: 'note'; command: NoteCommand; debounce?: boolean }
     | { type: 'combat'; command: CombatCommand }
@@ -75,6 +80,9 @@ export class SceneStore {
         this.emit({
             ...this.snapshot,
             scene,
+            selectedRegionId: scene.regions?.some((r) => r.id === this.snapshot.selectedRegionId)
+                ? this.snapshot.selectedRegionId
+                : undefined,
             selectedNoteId: scene.notes?.some((n) => n.id === this.snapshot.selectedNoteId)
                 ? this.snapshot.selectedNoteId
                 : undefined,
@@ -120,6 +128,7 @@ export class SceneStore {
             selectedIds: id ? [id] : [],
             selectedPropIds: [],
             selectedNoteId: undefined,
+            selectedRegionId: undefined,
             preview: null,
         });
     }
@@ -132,6 +141,13 @@ export class SceneStore {
     selectObject(kind: 'token' | 'prop', id: string, toggle = false) {
         if (this.role !== 'gm') {
             if (kind === 'token') this.select(id);
+            else if (this.snapshot.scene.props?.some((p) => p.id === id))
+                this.emit({
+                    ...this.snapshot,
+                    selectedIds: [],
+                    selectedPropIds: [id],
+                    preview: null,
+                });
             return;
         }
         const selection = toggle
@@ -151,6 +167,7 @@ export class SceneStore {
             selectedIds: selection.tokenIds,
             selectedPropIds: selection.propIds,
             selectedNoteId: undefined,
+            selectedRegionId: undefined,
             preview: null,
         });
     }
@@ -211,7 +228,37 @@ export class SceneStore {
     }
     selectNote(id?: string) {
         if (this.role !== 'gm') return;
-        this.emit({ ...this.snapshot, selectedIds: [], selectedPropIds: [], selectedNoteId: id });
+        this.emit({
+            ...this.snapshot,
+            selectedIds: [],
+            selectedPropIds: [],
+            selectedNoteId: id,
+            selectedRegionId: undefined,
+        });
+    }
+    selectRegion(id?: string) {
+        if (this.role !== 'gm') return;
+        this.emit({
+            ...this.snapshot,
+            selectedRegionId: id,
+            selectedIds: [],
+            selectedPropIds: [],
+            selectedNoteId: undefined,
+        });
+    }
+    regionSettings(patch: { showRegions?: boolean; regionShape?: Region['shape'] }) {
+        if (this.role !== 'gm') return;
+        this.emit({
+            ...this.snapshot,
+            ...patch,
+            ...(patch.showRegions === false ? { selectedRegionId: undefined } : {}),
+        });
+    }
+    regionCommand(command: RegionCommand) {
+        if (this.role !== 'gm') return;
+        const patch = command.action === 'update' ? { region: command as Region } : {};
+        this.emit({ ...this.snapshot, scene: applyRegionPatch(this.snapshot.scene, patch) });
+        this.command?.({ type: 'region', command });
     }
     toggleNotes() {
         this.emit({
@@ -380,7 +427,13 @@ export class SceneStore {
             revision: Math.max(this.snapshot.scene.revision ?? 0, result.revision),
         };
         if (apply && !stale) {
-            scene = { ...applyObjectPatch(scene, result), revision: scene.revision };
+            scene = {
+                ...applyRegionPatch(
+                    applyObjectPatch(scene, result),
+                    this.role === 'gm' ? result : {},
+                ),
+                revision: scene.revision,
+            };
             if (this.role === 'gm' && result.note)
                 scene = {
                     ...scene,
@@ -416,6 +469,9 @@ export class SceneStore {
             selectedIds: this.snapshot.selectedIds.filter((id) =>
                 scene.tokens.some((t) => t.id === id),
             ),
+            selectedRegionId: scene.regions?.some((r) => r.id === this.snapshot.selectedRegionId)
+                ? this.snapshot.selectedRegionId
+                : undefined,
         });
     }
     updateGrid(patch: Partial<GridSettings>) {

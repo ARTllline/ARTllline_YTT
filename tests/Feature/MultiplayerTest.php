@@ -122,7 +122,7 @@ class MultiplayerTest extends TestCase
         $this->patchJson('/api/tokens/'.$this->token->id, $this->command(['name' => 'Secret dragon']))->assertOk();
         $events = $this->playerEvents();
         $this->assertSame('scene.revision', $events[1]->envelope['type']);
-        $this->assertSame([], $events[1]->envelope['payload']);
+        $this->assertSame('{}', json_encode($events[1]->envelope['payload']));
         $this->assertStringNotContainsString('Secret dragon', json_encode($events));
         $this->patchJson('/api/tokens/'.$this->token->id, $this->command(['is_hidden' => false]))->assertOk();
         $event = $this->playerEvents()[2];

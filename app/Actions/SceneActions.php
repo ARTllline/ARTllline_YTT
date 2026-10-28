@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Realtime\ScenePublisher;
 use App\Services\LiveMedia;
 use App\Services\SceneSnapshotBuilder;
+use App\Services\TriggerEvents;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -77,11 +78,17 @@ class SceneActions
                 throw ValidationException::withMessages(['sceneId' => 'Choose a scene belonging to this campaign.']);
             }
             app(CueRunner::class)->cancelCampaign($campaign);
+            $previousSceneId = $campaign->active_scene_id;
             $campaign->active_scene_id = $sceneId;
             $campaign->live_revision++;
             $campaign->save();
             app(LiveMedia::class)->sceneChanged($campaign);
             app(ScenePublisher::class)->campaign($campaign, 'scene.activated');
+            if ($sceneId && $previousSceneId !== $sceneId) {
+                $active = Scene::whereKey($sceneId)->lockForUpdate()->firstOrFail();
+                $active->setRelation('campaign', $campaign);
+                app(TriggerEvents::class)->event($active, 'scene.activated', 'campaign:'.$campaign->id.':epoch:'.$campaign->live_revision);
+            }
         });
     }
 

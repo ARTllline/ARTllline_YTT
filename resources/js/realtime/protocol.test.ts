@@ -12,6 +12,12 @@ const event = (patch: Partial<SceneEvent> = {}): SceneEvent => ({
     ...patch,
 });
 describe('authoritative incremental events', () => {
+    it('preserves the map when a private revision has a legacy empty array payload', () => {
+        const initial = { ...scene(), map: null };
+        const packet = JSON.parse(JSON.stringify(event({ type: 'scene.revision', payload: {} })));
+        packet.payload = [];
+        expect(reduceEvent(initial, packet)).toEqual({ ...initial, revision: 11 });
+    });
     it('applies exactly the next revision and ignores duplicate, old, and other-scene events', () => {
         const initial = scene();
         const next = reduceEvent(initial, event());

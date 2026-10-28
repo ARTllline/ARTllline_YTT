@@ -8,6 +8,7 @@ use App\Models\Cue;
 use App\Models\CueRun;
 use App\Models\Scene;
 use App\Models\User;
+use App\Realtime\CommandContext;
 use App\Realtime\DirectorPublisher;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -17,16 +18,20 @@ use Throwable;
 
 class CueRunner
 {
-    public function start(User $user, Scene $scene, Cue $cue): CueRun
+    public function start(User $user, Scene $scene, Cue $cue, array $chain = [], ?string $correlation = null, bool $automatic = false): CueRun
     {
-        return DB::transaction(function () use ($user, $scene, $cue) {
+        return DB::transaction(function () use ($user, $scene, $cue, $chain, $correlation, $automatic) {
             $campaign = Campaign::whereKey($scene->campaign_id)->lockForUpdate()->firstOrFail();
             Gate::forUser($user)->authorize('update', $campaign);
             abort_unless($campaign->active_scene_id === $scene->id, 409, 'Сначала активируйте эту сцену для игроков.');
-            abort_if(CueRun::where('campaign_id', $campaign->id)->whereIn('status', ['queued', 'running', 'failed'])->exists(), 409, 'Сначала завершите или остановите текущее событие.');
+            $pending = CueRun::where('campaign_id', $campaign->id)->whereIn('status', ['queued', 'running', 'failed'])->count();
+            abort_if(! $automatic && $pending > 0, 409, 'Сначала завершите или остановите текущее событие.');
+            abort_if($pending >= 100, 409, 'Очередь событий заполнена. Мастеру нужно завершить или остановить ожидающие события.');
             $cue = Cue::where('scene_id', $scene->id)->with('steps')->findOrFail($cue->id);
             $run = CueRun::create(['id' => (string) Str::uuid(), 'campaign_id' => $campaign->id, 'scene_id' => $scene->id,
-                'cue_id' => $cue->id, 'created_by' => $user->id, 'name' => $cue->name, 'epoch' => $campaign->live_revision, 'due_at' => now()]);
+                'cue_id' => $cue->id, 'created_by' => $user->id, 'name' => $cue->name, 'epoch' => $campaign->live_revision, 'due_at' => now(),
+                'queue_order' => (CueRun::where('campaign_id', $campaign->id)->max('queue_order') ?? 0) + 1,
+                'trigger_chain' => $chain, 'correlation_id' => $correlation]);
             foreach ($cue->steps as $step) {
                 $run->steps()->create(['id' => (string) Str::uuid(), 'position' => $step->position, 'type' => $step->type, 'config' => $step->config]);
             }
@@ -80,6 +85,12 @@ class CueRunner
 
                     return;
                 }
+                if (CueRun::where('campaign_id', $campaignId)->where('queue_order', '<', $run->queue_order)->whereIn('status', ['queued', 'running', 'failed'])->exists()) {
+                    $run->update(['due_at' => now()->addSecond()]);
+                    $this->enqueue($run);
+
+                    return;
+                }
                 $scene = Scene::whereKey($run->scene_id)->lockForUpdate()->firstOrFail();
                 Gate::forUser(User::findOrFail($run->created_by))->authorize('update', $scene);
                 $step = $run->steps()->where('position', $position)->first();
@@ -89,7 +100,17 @@ class CueRunner
                     return;
                 }
                 $step->update(['status' => 'running']);
-                $delay = app(CueStepActions::class)->execute($campaign, $scene, $run, $step);
+                $context = app(CommandContext::class);
+                $previousChain = $context->triggerChain;
+                $previousCorrelation = $context->correlationId;
+                $context->triggerChain = $run->trigger_chain ?? [];
+                $context->correlationId = $run->correlation_id ?? $run->id;
+                try {
+                    $delay = app(CueStepActions::class)->execute($campaign, $scene, $run, $step);
+                } finally {
+                    $context->triggerChain = $previousChain;
+                    $context->correlationId = $previousCorrelation;
+                }
                 $step->update(['status' => 'completed', 'completed_at' => now()]);
                 $run->update(['status' => 'running', 'position' => $position + 1, 'due_at' => now()->addMilliseconds($delay), 'error' => null]);
                 // Database job insertion and domain writes commit together. A killed
@@ -126,7 +147,11 @@ class CueRunner
         if ($status === 'cancelled') {
             $run->steps()->whereIn('status', ['queued', 'failed'])->update(['status' => 'cancelled']);
         }
-        app(DirectorPublisher::class)->send($campaign, $run, (string) Str::uuid(), 'clear');
+        // A waiting run has presented nothing. Cancelling it must not release
+        // the camera/message belonging to the earlier active run.
+        if ($run->position > 0) {
+            app(DirectorPublisher::class)->send($campaign, $run, (string) Str::uuid(), 'clear');
+        }
     }
 
     public function enqueue(CueRun $run): void

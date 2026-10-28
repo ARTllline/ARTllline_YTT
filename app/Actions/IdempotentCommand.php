@@ -32,7 +32,7 @@ class IdempotentCommand
             default => Scene::findOrFail($resource)->campaign_id,
         };
         try {
-            return DB::transaction(function () use ($user, $id, $operation, $resource, $hash, $next, $campaignId) {
+            return DB::transaction(function () use ($user, $id, $operation, $resource, $hash, $next, $campaignId, $payload) {
                 // Acquire the campaign writer lock before the receipt FK acquires a
                 // shared lock on it. Concurrent receipt inserts otherwise deadlock
                 // when SceneTransaction later upgrades that same campaign lock.
@@ -57,6 +57,10 @@ class IdempotentCommand
                         $result['token'] = array_intersect_key($result['token'], $safe);
                         $result['token']['canMove'] = $safe['canMove'];
                         $result['token']['conditions'] = array_values(array_filter($result['token']['conditions'] ?? [], fn ($condition) => in_array($condition['id'], array_column($safe['conditions'], 'id'), true)));
+                    } elseif ($operation === 'scene.interact') {
+                        $scene = Scene::findOrFail($resource);
+                        $scene->setRelation('campaign', $campaign);
+                        app(ObjectInteraction::class)->authorize($user, $scene, $payload);
                     } else {
                         Gate::forUser($user)->authorize('update', $campaign);
                     }

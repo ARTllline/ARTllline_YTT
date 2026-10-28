@@ -9,6 +9,7 @@ use App\Models\Scene;
 use App\Models\Token;
 use App\Models\User;
 use App\Services\SceneSnapshotBuilder;
+use App\Services\TriggerEvents;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
@@ -41,6 +42,7 @@ class TokenActions
             $token->setRelation('scene', $scene);
             Gate::forUser($user)->authorize($move ? 'move' : 'update', $token);
             $wasVisible = ! $token->is_hidden;
+            $before = clone $token;
             if (! $move) {
                 if (! empty($data['owner_user_id']) && ! CampaignMember::where('campaign_id', $scene->campaign_id)->where('user_id', $data['owner_user_id'])->exists()) {
                     throw ValidationException::withMessages(['owner_user_id' => 'The controller must be a member of this campaign.']);
@@ -59,6 +61,10 @@ class TokenActions
             $token->update($data);
             $token->refresh();
             $token->setRelation('scene', $scene);
+
+            if (array_key_exists('x', $data) || array_key_exists('y', $data)) {
+                app(TriggerEvents::class)->movement($scene, [[$before, $token]]);
+            }
 
             return ['token' => $this->snapshots->token($token, $scene->campaign->roleFor($user) === 'gm', $user), '_wasVisible' => $wasVisible, '_combatChanged' => array_key_exists('is_hidden', $data)];
         }, $move ? 'token.moved' : 'token.updated');

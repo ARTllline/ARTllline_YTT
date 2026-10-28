@@ -1,3 +1,299 @@
+# Task 11 validation
+
+Validated locally on **2026-10-29 (Europe/Kiev)**, on top of the uncommitted Task 10
+work. PHP 8.3.32 / Laravel 13.39, MySQL, Reverb, database Cue queue and Chromium with
+the production frontend. Applied additive migration
+`2026_10_29_001000_create_regions_and_triggers`; restarted Cue workers after code
+changes. No dependency/lockfile, APP_KEY or environment changes; no deployment or
+commit/push. Existing campaigns were preserved. New disposable campaign **11**
+(`QA11 · Кладбище у тракта`), scenes **34/35**, two existing QA Player accounts and
+new synthetic door artwork were used for live acceptance.
+
+## Automated checks
+
+- **84 backend tests / 1105 assertions** pass, including 11 Trigger tests and every
+  previous suite. Geometry covers footprint contact, corners and circle boundaries;
+  final enter/exit vs inside/preview/snapshot; filters, disabled region/trigger,
+  millisecond cooldown boundary (4999 ms vs 5000 ms), once, batch movement; same-scene
+  reference validation; Player authorization, hidden token/prop, locked visible prop,
+  stale epoch and receipt replay; activation, combat start retry, round threshold and
+  same-round jump; real CueRunner execution/order; A → B → A suppression and depth
+  bound; revoked author; cancellation of a queued run without clearing another run.
+- **101 client tests / 18 files** pass. Four new region geometry tests plus a regression
+  for legacy empty-array private revision payloads. Existing persistence, realtime,
+  geometry, combat, Director, audio, sessions and preloading tests remain green.
+- TypeScript, ESLint, production build, full Pint, strict Composer validation,
+  platform requirements and `git diff --check` pass. Pint initially caught formatting
+  in ignored QA helpers; those helpers were formatted and the full check rerun.
+- SQLite migration up/down is exercised by backend tests; local MySQL migration up
+  was applied successfully. Production migration/deployment is not claimed.
+
+## GM + two Players, real browser and queue
+
+Three isolated browser contexts joined campaign 11. GM drew a rectangle using the
+new tool, renamed it, created the trigger through the visual editor, and activated
+the scene. Player 1 dragged the owned token across the boundary. The database worker
+ran the existing Cue: the previously hidden ghost appeared and both Players received
+the prepared public message. No extra GM action was needed.
+
+Circle drawing, rename, drag movement and handle resize persisted as centre
+1233.488/883.488 and radius 123.488. Show-regions hid the graphics while the trigger
+remained enabled. Region creation/updates survived reload. Navigating from editing
+scene 34 to scene 35 disposed the prior graphics/selection and loaded the new scene's
+trigger list. An empty-scene upload prompt initially intercepted drawing; it now
+yields to drawing tools and disappears once regions exist.
+
+Live movement checks produced: first enter count **1**, immediate leave/re-enter
+still **1**, leave/re-enter after 5.1 s count **2**, movement within still **2**,
+Player refresh/offline/reconnect still **2**. A separate exit trigger fired **once**.
+Opening another editing scene and reactivating the same active scene produced no
+activation fire. Switching active scene away and back produced **one** activation
+fire. Begin Combat plus identical retry produced **one** start; Jump within round 1
+produced **zero** round fires; next to round 2 produced **one**. Preload + both Player
+refreshes added **zero** fire-history rows.
+
+Player selected the visible door prop and pressed **Взаимодействовать**; its Cue
+displayed the public door message. Selection alone produced no fire. After hiding
+the prop, a direct Player interaction POST returned **403**. Revealing it restored
+interaction. With the GM context offline, Player interaction still ran through the
+server worker and delivered its message. Player controls remain generic for visible
+tokens/props, including targets with no trigger.
+
+Session Mode started a prepared plan and kept the **Триггеры: 6 включено** indicator.
+The GM disabled and re-enabled the enter trigger directly from its panel. During
+this verification, freshly-created session responses were fixed to refresh database
+defaults before projection; status/revision are now usable immediately. Re-selecting
+the current session no longer clears its loaded plan.
+
+## Actual MySQL once concurrency
+
+After resetting the once trigger and placing both owned tokens outside, two separate
+PHP processes ran final TokenActions movement concurrently against the QA fixture.
+Both entered the same region. Each held the normal campaign lock for 700 ms to force
+overlap (helper `artifacts/qa11-race.php`, restricted to campaign 11/tokens 205,206).
+
+| Process | Started (Unix seconds) | Lock acquired | Finished |
+| --- | ---: | ---: | ---: |
+| 41320 / token 205 | 1793226565.459236 | 1793226565.459931 | 1793226566.221169 |
+| 43236 / token 206 | 1793226565.530774 | 1793226566.210471 | 1793226566.955018 |
+
+The second process waited approximately **680 ms** for the same lock. Both final
+positions persisted at 850/450; the trigger count became **1**, history grew by
+**exactly 1**, and that row referenced exactly one queued/completed CueRun. This is
+separate-process MySQL evidence, not a claim based on sequential SQLite HTTP tests.
+
+## Privacy and regression found during acceptance
+
+Player network capture included **259 WebSocket frames and 937 successful API
+responses** at the audit point: zero matches for private `СЕКРЕТ` names or the keys
+regionId, actorFilter, cooldownMs, fireCount, cueId, scene_regions, scene_triggers.
+Player snapshots had no regions/trigger definitions; GM-only read/write routes and
+hidden target denial are covered by backend authorization tests. Actual Cue output
+contains only the existing authorized object/presentation results.
+
+Live QA exposed a prior empty-payload transport issue: PHP `[]` arrived as an array;
+the client used `map in payload` and treated Array.prototype.map as scene-map data.
+Private revisions could then break image loading. Server empty payloads now encode
+as `{}` and the reducer tolerates legacy arrays. Existing projection assertions and
+a client regression test cover it. After rebuilding/reloading, region edits, trigger
+toggles, prop hide/reveal and all later checks produced **zero page errors**.
+
+## Layout and performance
+
+- Trigger panel and editor inspected at **1440, 768, 390 px**. Panel had no internal
+  horizontal overflow and stayed within the viewport; body had none. The parent
+  dialog was widened to fit its content. The narrow GM top bar now wraps within its
+  own height, and region controls are above the combat overlay. Player prop selection
+  and the interaction button were checked at 768/390; 1440 was used for multiplayer.
+- In scene 35, **40 regions / 40 enabled region triggers**: 100 read-only detector
+  samples, median **4.0406 ms**, p95 **4.4265 ms**, max **9.6397 ms**, exactly **3 SQL
+  queries per movement**. Both benchmark endpoints were outside all regions; it
+  measured detection/database reads, not Cue execution, network latency or commits.
+  The helper changes only an in-memory active-scene projection, no live activation.
+- With 40 rendered regions and an actual Space-pan gesture after focusing canvas:
+  240 rAF intervals, median **8.3 ms**, p95 **8.4 ms**, maximum **16.7 ms** on this
+  local Chromium/display. **Zero region mutation requests during pan**. A region
+  drag sends only its final command. These are local measurements, not a cross-device
+  performance guarantee; no spatial index was justified.
+- Main entry remains **282.67 kB / 88.97 kB gzip**. Lazy TriggerPanel **11.71/4.19 kB**,
+  RegionControls **3.11/1.34 kB**; renderer **323.59/100.63 kB**. No new dependencies.
+
+Screenshots and local evidence are ignored artifacts, including `qa11-regions.png`,
+`qa11-player-enter.png`, `qa11-interact.png`, `qa11-panel-{390,768,1440}.png`,
+`qa11-editor-390.png`, `qa11-workspace-{390,768,1440}-final.png`, and
+`qa11-player-{390,768}.png`. QA browser contexts are closed after acceptance.
+
+## Limits / next stage
+
+The existing Cue queue worker and scheduler remain required. Failed CueRuns pause
+later automatic runs until Retry/Stop. Once consumes at accepted run creation;
+reset is explicit. At 100 unfinished runs the originating command fails atomically.
+Enabled count includes consumed once definitions. History has no retention job yet.
+Interaction has no distance/ownership requirement. Only endpoint overlap is tested;
+teleport-through, geometry edits and newly spawned tokens do not create enter events.
+Polygon/DSL/if-else/variables/loops/random/scheduling/HP/condition triggers/macros/
+graph/LOS/spatial audio remain deferred. No production deployment was performed.
+
+---
+
+# Task 10 validation (previous milestone)
+
+Validated locally on 2026-10-28, starting from clean Task 09 commit `2afd4ec`.
+PHP 8.3.32 / Laravel 13.39, existing MySQL/Reverb/Cue worker, Chromium and production
+frontend. Applied additive `2026_10_28_000900_create_game_sessions` to the local
+database; restarted the existing Cue worker for the updated media URL projection.
+No dependency/lockfile, APP_KEY or environment changes; no deployment or commit/push.
+
+## Automated coverage
+
+- **73 backend tests / 964 assertions**, including six new Session tests. Coverage:
+  plan CRUD/order/references, compare-and-swap conflicts, one active session,
+  missing/cross-campaign references, focus without table side effects, resume,
+  completion retaining notes/scene/combat/music and deletion retaining resources;
+  GM-only list/detail/resources/mutations and role-changed receipt replay;
+  safe manifests, opaque Range/206 delivery, hidden/handout/outsider denial,
+  unchanged URLs after activation, readiness count/batch/freshness checks,
+  late membership, expiry/revision invalidation, optional audio with no playback,
+  Cue-definition grant revocation and byte limits. Migration up/down runs in tests.
+- **96 client tests / 17 files**. New tests cover ordered moves/nearest next scene,
+  two-download concurrency, exact-URL reuse, byte limits/LRU/teardown, denied/aborted/
+  oversized/expired resources and retained/released Blob URLs for combat portraits.
+  Existing scene, renderer geometry, combat, persistence, Director and audio tests pass.
+- Typecheck, ESLint, production build, Pint, strict Composer validation, platform
+  requirements and `git diff --check` were run. No new package was installed.
+
+Backend tests use isolated SQLite and fake private storage. Browser checks use the
+separate explicitly labelled **QA10 · Ночь старого тракта** campaign (10), scenes
+29–33 and a nine-item session plan. The heavy fixture is newly generated synthetic
+content, not copied private state from an existing campaign. QA files/screenshots
+are under ignored `artifacts/`; they are not application seeds.
+
+## Real session with a GM and two Players
+
+Three separately authenticated browser contexts completed:
+
+`Chapter → Tavern → Handout → Cue → Note → Forest → Encounter → Boss Scene → Boss Cue`.
+
+- Created all nine items in the planner; reordered using a drag grip, duplicated
+  and removed a temporary note, and saved the linked plan. Up/Down ordering and
+  reference preservation also have deterministic tests.
+- Started Session Mode; Next and item jumps changed focus only. The Tavern stayed
+  active and no handout appeared until **Показать игрокам** was explicitly clicked.
+  Both Players received the prepared letter. The first Cue ran on the real worker.
+- Activated Forest, placed the prepared encounter, used **Добавить в бой**, and
+  started combat. Both Players received the same combat state. Activated the Boss
+  scene and ran its Cue: reveal, music, SFX, embers and message used existing systems.
+- Reloaded the GM during the active session: current item, private notes and live
+  mode returned. A simulated lost response after the notes write had committed
+  retried with the **same mutation UUID** and retained the exact saved text.
+- End displayed its confirmation. Completion retained the focused item and final
+  notes; active scene, combat and all live media fields (excluding `serverNow`)
+  were unchanged. Reload showed the completed read-only plan, and clicking its
+  Note item exposed the stored private reminder for review.
+
+## Preload, authorization and recovery
+
+- Automatic nearest-scene preparation made Forest ready for both Players while
+  Tavern remained active. Manual Boss preparation included its map and two opted-in
+  audio files: **3 resources / 391,672 bytes**. It created zero audio elements before
+  explicit playback and did not reveal the hidden Boss token.
+- Examined the Player manifest and pre-activation WebSocket payloads. The manifest
+  contained only batch UUID/expiry and opaque URL/kind/bytes. No secret scene name,
+  token list, GM note, Cue definition, encounter or future handout metadata appeared.
+  Player session list, session resource picker, inactive snapshot and hidden-image
+  requests returned **403**. No secret metadata appeared in captured pre-activation
+  frames. Backend tests additionally cover opaque/numeric media route boundaries.
+- Interrupted a Player while **two resource requests were in flight**. GM status
+  showed that Player loading while the other was ready. Reconnect recovered both
+  to ready, 3/3. A new participant received 403 before joining, appeared waiting
+  after joining and became ready from the current batch without a new GM preload.
+- Forced media GET failures: the Player showed a retry label, GM readiness became
+  failed, and Retry recovered after the forced failure was removed. Initial scene
+  image errors stayed visibly above the dark transition with a reload button.
+- Forest activation completed for Players in **709 / 714 ms**, with zero repeat
+  opaque media GETs. Boss activation was **853 ms**, also without re-downloading
+  prepared resources. Real audio elements used cached `blob:` URLs and played after
+  the explicit browser Unlock gesture.
+- Initial heavy-scene validation found an extra combat-portrait GET. CombatPanel now
+  shares the same cache; the final activation measured **852 ms** and **zero repeat
+  resource GETs across both Players**. An offline third participant did not block it.
+- An image-free scene also completed the transition. The initial media key now
+  distinguishes 'not loaded' from an empty resource list. The fade does not hide
+  renderer/media errors; reduced motion disables its duration.
+
+These timings are local activation-to-presented-scene observations, including
+snapshot/network/renderer setup, not zero-latency promises. The cache avoids media
+transfers; initial decode/upload and authoritative snapshot hydration still occur.
+
+## Layout and performance
+
+Inspected GM live console, planner and Player View at **1440, 768 and 390 px**.
+No horizontal document overflow; one canvas per Player. At narrow widths the GM
+console overlays the table and remains closable. The selected note editor and Save
+button remain reachable on the 390 px planner. Desktop retains the scene as the
+main workspace. Screenshots include `task10-live-{width}.png`,
+`task10-planner-{width}.png`, `task10-planner-selected-390.png`,
+`task10-player-{width}.png`, `task10-heavy-session.png` and
+`task10-session-completed.png`.
+
+Synthetic heavy scene: **4096×3072 map, 200 props, 30 tokens, 208 fog operations,
+20 GM notes, 15 active combatants**. Three distinct generated image files total
+49,189 encoded bytes: this stresses scene composition/texture dimensions, not WAN
+bandwidth or hundreds of distinct large images. The normal Boss preload separately
+exercises audio download. Frame samples use 360 requestAnimationFrame intervals in
+each condition on this local Chromium/120 Hz environment:
+
+| Condition                         |    p50 |    p95 | Maximum | Frames >20 ms |
+| --------------------------------- | -----: | -----: | ------: | ------------: |
+| Normal Player View                | 8.3 ms | 8.4 ms |  8.5 ms |             0 |
+| Normal view during preload        | 8.3 ms | 8.4 ms | 16.7 ms |             0 |
+| Heavy Player: pan/zoom/ruler/ping | 8.3 ms | 8.4 ms |  8.5 ms |             0 |
+| Heavy GM Session Mode             | 8.3 ms | 8.4 ms |  8.5 ms |             0 |
+| Heavy Player during next preload  | 8.3 ms | 8.4 ms |  8.5 ms |             0 |
+
+Scene revision stayed **208 → 208**, with identical token/prop positions after the
+camera/spatial-tool performance pass. No application page errors were observed.
+One QA-script wait initially called getComputedStyle before its element existed;
+the guarded wait was corrected and recovery was rerun. Forced HTTP failures above
+were deliberate. No multi-hour soak, WAN, Safari, physical tablet or low-end GPU
+claim is made from these short local samples.
+
+## Bundle and loading boundaries
+
+Production Vite build, decimal kB (uncompressed / gzip):
+
+| Chunk                       |                      Size |
+| --------------------------- | ------------------------: |
+| Main app                    |        **282.67 / 88.97** |
+| Shared scene/realtime       |            162.60 / 49.06 |
+| GM Workspace                |             45.39 / 13.14 |
+| PlayerView                  |              10.06 / 3.93 |
+| SessionConsole              |              17.63 / 6.29 |
+| SessionPlanner              |               5.49 / 2.45 |
+| AssetLibrary / AssetDetails |  6.77 / 2.70; 4.35 / 1.86 |
+| CueLibrary / CueEditor      | 5.63 / 2.42; 15.04 / 5.18 |
+| MediaPanel                  |               7.18 / 2.80 |
+| TabletopRenderer            |            319.09 / 99.33 |
+
+Task 09 main was 506.23 / 153.51 kB: the main chunk is about **44% smaller** and
+Vite emits no 500 kB warning. This is not a claim that a whole GM route costs 283 kB:
+main + shared + Workspace are about 490.66 kB before renderer/backend-specific Pixi
+chunks, CSS and optional panels. The Player route avoids the GM Workspace/editor
+chunks. Loading follows existing feature boundaries, without duplicate state stores.
+
+## Limits / deferred
+
+- 128 files / 128 MiB encoded cache, two download/decode workers, 30-minute batches;
+  no persistent offline cache. Large map/audio content must be intentionally granted.
+- Readiness is advisory downloaded-byte state, with a 45-second lease and last-tab-
+  per-user reporting. GPU readiness and autoplay permission are separate. A changed
+  scene invalidates preparation and needs another preload.
+- Notes retry in the current page; unsaved text is not a durable offline journal.
+  Simultaneous GM note edits are last accepted write. Plan saves detect conflicts.
+- Triggers/Regions, calendar, scheduling, recordings, automatic recap, AI summaries,
+  full campaign journal, LOS and voice/video remain deferred. Multi-hour and slower
+  device/network verification are appropriate next acceptance work.
+
 # Task 09 validation
 
 Validated locally on 2026-10-28 over the existing uncommitted Task 07/08 work,

@@ -1,11 +1,11 @@
 import { t } from '../i18n';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { api, type User, type Campaign } from '../api/workspace';
 import { AuthScreen } from './AuthScreen';
 import { CampaignPicker } from './CampaignPicker';
-import { Workspace } from './Workspace';
+const Workspace = lazy(() => import('./Workspace').then((m) => ({ default: m.Workspace })));
 import type { Scene } from '../tabletop/types/scene';
-import { PlayerView } from './PlayerView';
+const PlayerView = lazy(() => import('./PlayerView').then((m) => ({ default: m.PlayerView })));
 import { JoinScreen, authReturn } from './JoinScreen';
 type Loaded = { user: User; campaign?: Campaign; scene?: Scene };
 export function App() {
@@ -75,13 +75,21 @@ export function App() {
                 <small> {t('Opening your workspace…')} </small>
             </div>
         );
-    return loaded.campaign ? (
-        loaded.campaign.role === 'player' ? (
-            <PlayerView user={loaded.user} campaign={loaded.campaign} />
-        ) : (
-            <Workspace user={loaded.user} campaign={loaded.campaign} initialScene={loaded.scene} />
-        )
-    ) : (
-        <CampaignPicker user={loaded.user} />
+    return (
+        <Suspense fallback={<div className="boot">Открываем игровой стол…</div>}>
+            {loaded.campaign ? (
+                loaded.campaign.role === 'player' ? (
+                    <PlayerView user={loaded.user} campaign={loaded.campaign} />
+                ) : (
+                    <Workspace
+                        user={loaded.user}
+                        campaign={loaded.campaign}
+                        initialScene={loaded.scene}
+                    />
+                )
+            ) : (
+                <CampaignPicker user={loaded.user} />
+            )}
+        </Suspense>
     );
 }
