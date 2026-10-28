@@ -14,7 +14,9 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        return ['user' => $user ? ['id' => (string) $user->id, 'name' => $user->name, 'email' => $user->email] : null, 'csrf' => csrf_token()];
+        return ['user' => $user ? ['id' => (string) $user->id, 'name' => $user->name, 'email' => $user->email] : null, 'csrf' => csrf_token(),
+            'realtime' => ['key' => config('broadcasting.connections.reverb.key'), 'host' => config('broadcasting.connections.reverb.options.host'),
+                'port' => config('broadcasting.connections.reverb.options.port'), 'scheme' => config('broadcasting.connections.reverb.options.scheme')]];
     }
 
     public function register(Request $request): array

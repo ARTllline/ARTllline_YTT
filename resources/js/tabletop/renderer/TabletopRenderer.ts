@@ -26,6 +26,7 @@ export class TabletopRenderer {
     private width = 0;
     private height = 0;
     private lastZoom = 0;
+    private reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     private contextLost = (event: Event) => {
         event.preventDefault();
         this.onError(new Error('WebGL context lost. Reload to restore the tabletop.'));
@@ -72,7 +73,7 @@ export class TabletopRenderer {
             const { scene } = this.store.getSnapshot();
             if (scene.grid !== previousScene.grid)
                 this.grid.update(scene.grid, scene.width, scene.height);
-            this.tokens.sync(scene.tokens);
+            this.tokens.sync(scene.tokens, this.store.role === 'player');
             if (scene !== previousScene) this.syncImages();
             this.input?.reapplyPreview();
             this.input?.refresh();
@@ -87,6 +88,25 @@ export class TabletopRenderer {
         this.resize();
         this.fit();
         this.app.ticker.add((ticker) => {
+            this.input?.reapplyPreview();
+            const now = performance.now();
+            for (const [id, preview] of this.store.remotePreviews) {
+                if (preview.expires < now) this.store.remotePreviews.delete(id);
+            }
+            for (const [id, view] of this.tokens.views) {
+                if (this.input?.draggingToken === id) continue;
+                const target = this.store.remotePreviews.get(id);
+                if (target || Math.hypot(view.x - view.model.x, view.y - view.model.y) > 0.1) {
+                    const point = target ?? view.model;
+                    const blend = this.reducedMotion.matches
+                        ? 1
+                        : 1 - Math.exp(-ticker.deltaMS / 45);
+                    view.position.set(
+                        view.x + (point.x - view.x) * blend,
+                        view.y + (point.y - view.y) * blend,
+                    );
+                }
+            }
             this.camera.tick(ticker.deltaMS);
             const camera = this.camera.state;
             this.world.position.set(camera.x, camera.y);

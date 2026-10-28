@@ -10,6 +10,11 @@ class Campaign extends Model
 {
     protected $fillable = ['name'];
 
+    protected function casts(): array
+    {
+        return ['live_revision' => 'integer'];
+    }
+
     public function members(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'campaign_members')->withPivot('role')->withTimestamps();

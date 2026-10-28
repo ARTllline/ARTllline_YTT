@@ -4,6 +4,7 @@ import { SceneStore } from './SceneStore';
 import { ScenePersistence } from './ScenePersistence';
 import { SaveQueue } from './SaveQueue';
 import { createDemoScene } from './demoScene';
+import { ApiError } from '../../api/client';
 
 afterEach(() => {
     vi.restoreAllMocks();
@@ -11,6 +12,30 @@ afterEach(() => {
 });
 
 describe('persistent scene commands', () => {
+    it('resynchronizes a rejected player movement and keeps an understandable error', async () => {
+        const scene = { ...createDemoScene(), id: '1', revision: 5 };
+        const store = new SceneStore(scene, 'player');
+        const persistence = new ScenePersistence(store, '1');
+        vi.spyOn(api, 'move').mockRejectedValue(new ApiError('Permission changed', 403));
+        vi.spyOn(api, 'snapshot').mockResolvedValue(scene);
+        store.moveToken('kern', { x: 999, y: 999 });
+        await expect(persistence.queue.flush()).rejects.toThrow('Permission changed');
+        expect(store.getSnapshot().scene).toEqual(scene);
+    });
+    it('reuses the mutation ID on an ambiguous failure instead of creating a second command', async () => {
+        const store = new SceneStore(createDemoScene());
+        const persistence = new ScenePersistence(store, '1');
+        const move = vi
+            .spyOn(api, 'move')
+            .mockRejectedValueOnce(new Error('Lost response'))
+            .mockResolvedValueOnce({ revision: 11 });
+        store.moveToken('kern', { x: 90, y: 120 });
+        await expect(persistence.queue.flush()).rejects.toThrow('Lost response');
+        persistence.queue.retry();
+        await persistence.queue.flush();
+        expect(move).toHaveBeenCalledTimes(2);
+        expect(move.mock.calls[0][2]).toBe(move.mock.calls[1][2]);
+    });
     it('hydrates a different snapshot without selection or preview from the previous scene', () => {
         const store = new SceneStore(createDemoScene());
         store.select('kern');
@@ -28,7 +53,12 @@ describe('persistent scene commands', () => {
         expect(move).not.toHaveBeenCalled();
         store.moveToken('kern', { x: 120.25, y: 44.75 });
         await persistence.queue.flush();
-        expect(move).toHaveBeenCalledExactlyOnceWith('kern', { x: 120.25, y: 44.75 });
+        expect(move).toHaveBeenCalledExactlyOnceWith(
+            'kern',
+            { x: 120.25, y: 44.75 },
+            expect.any(String),
+            undefined,
+        );
         expect(patch).not.toHaveBeenCalled();
         expect(store.getSnapshot().scene.revision).toBe(1);
     });

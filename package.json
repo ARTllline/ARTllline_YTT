@@ -14,8 +14,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "laravel-echo": "^2.6.3",
     "lucide-react": "^0.468.0",
     "pixi.js": "^8.0.0",
+    "pusher-js": "^8.6.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

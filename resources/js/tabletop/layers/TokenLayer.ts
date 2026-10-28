@@ -3,7 +3,7 @@ import type { Token, Point } from '../types/scene';
 import { TokenView } from '../objects/TokenView';
 export class TokenLayer extends Container {
     views = new Map<string, TokenView>();
-    sync(tokens: readonly Token[]) {
+    sync(tokens: readonly Token[], player = false) {
         for (const [id, view] of this.views) {
             if (!tokens.some((token) => token.id === id)) {
                 view.destroy({ children: true });
@@ -15,7 +15,7 @@ export class TokenLayer extends Container {
             if (existing) {
                 if (existing.model !== token) existing.update(token);
             } else {
-                const view = new TokenView(token);
+                const view = new TokenView(token, player);
                 this.views.set(token.id, view);
                 this.addChild(view);
             }

@@ -155,21 +155,25 @@ export function Inspector({
                         <div className="field-row">
                             <NumberField
                                 label="HP"
-                                value={token.hp}
+                                value={token.hp ?? 0}
                                 min={0}
                                 max={token.maxHp}
                                 onChange={(hp) => store.updateToken(token.id, { hp })}
                             />
                             <NumberField
                                 label="Max HP"
-                                value={token.maxHp}
+                                value={token.maxHp ?? 1}
                                 min={1}
                                 max={9999}
                                 onChange={(maxHp) => store.updateToken(token.id, { maxHp })}
                             />
                         </div>
                         <div className="health-track">
-                            <i style={{ width: `${(token.hp / token.maxHp) * 100}%` }} />
+                            <i
+                                style={{
+                                    width: `${((token.hp ?? 0) / (token.maxHp ?? 1)) * 100}%`,
+                                }}
+                            />
                         </div>
                         <div className="field-row">
                             <NumberField

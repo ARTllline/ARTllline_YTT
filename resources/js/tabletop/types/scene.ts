@@ -18,8 +18,9 @@ export interface Token extends Point {
     rotation: number;
     scale: number;
     size: number;
-    hp: number;
-    maxHp: number;
+    hp?: number;
+    maxHp?: number;
+    canMove?: boolean;
     color: number;
     ac?: number | null;
     speed?: number | null;
@@ -44,6 +45,7 @@ export interface Scene {
     campaignId?: string;
     name?: string;
     revision?: number;
+    liveRevision?: number;
     map?: SceneMap | null;
     width: number;
     height: number;

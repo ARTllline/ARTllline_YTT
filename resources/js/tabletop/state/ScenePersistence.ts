@@ -1,6 +1,7 @@
-import { api, type Mutation } from '../../api/workspace';
+import { api, commandId, type Mutation } from '../../api/workspace';
 import type { SceneStore, SceneCommand } from './SceneStore';
 import { SaveQueue } from './SaveQueue';
+import { ApiError } from '../../api/client';
 
 export class ScenePersistence {
     readonly queue = new SaveQueue();
@@ -12,6 +13,8 @@ export class ScenePersistence {
         store.bindCommands((command) => this.submit(command));
     }
     private submit(command: SceneCommand) {
+        const mutationId = commandId();
+        this.store.trackMutation(mutationId);
         const key =
             command.type === 'token' || command.type === 'move'
                 ? `token:${command.id}`
@@ -21,14 +24,37 @@ export class ScenePersistence {
         this.queue.enqueue(
             key,
             async () => {
-                let result: Mutation;
-                if (command.type === 'token') result = await api.token(command.id, command.patch);
-                else if (command.type === 'move')
-                    result = await api.move(command.id, command.position);
-                else if (command.type === 'grid')
-                    result = await api.grid(this.sceneId, command.grid);
-                else result = await api.map(this.sceneId, command.map);
-                this.store.accept(result, this.versions.get(key) === version);
+                try {
+                    let result: Mutation;
+                    if (command.type === 'token')
+                        result = await api.token(command.id, command.patch, mutationId);
+                    else if (command.type === 'move')
+                        result = await api.move(
+                            command.id,
+                            command.position,
+                            mutationId,
+                            command.dragSessionId,
+                        );
+                    else if (command.type === 'grid')
+                        result = await api.grid(this.sceneId, command.grid, mutationId);
+                    else result = await api.map(this.sceneId, command.map, mutationId);
+                    this.store.accept(result, this.versions.get(key) === version);
+                } catch (error) {
+                    if (
+                        this.store.role === 'player' &&
+                        error instanceof ApiError &&
+                        [403, 404, 422].includes(error.status)
+                    ) {
+                        // Restore the canonical projection immediately after a rejected optimistic
+                        // move; keep the actionable error until retry or an explicit reload.
+                        try {
+                            this.store.reconcile(await api.snapshot(this.sceneId));
+                        } catch {
+                            /* Activation may already have revoked this scene. */
+                        }
+                    }
+                    throw error;
+                }
             },
             command.type === 'grid' ? 250 : 0,
         );

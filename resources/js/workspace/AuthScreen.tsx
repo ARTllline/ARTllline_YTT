@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Box, ArrowRight } from 'lucide-react';
 import { api } from '../api/workspace';
+import { authReturn } from './JoinScreen';
 export function AuthScreen() {
     const register = location.pathname === '/register';
     const [error, setError] = useState('');
@@ -15,7 +16,7 @@ export function AuthScreen() {
         >;
         try {
             await api.auth(register ? 'register' : 'login', fields);
-            location.assign('/');
+            location.assign(authReturn());
         } catch (error) {
             setError((error as Error).message);
             setBusy(false);
@@ -108,7 +109,9 @@ export function AuthScreen() {
                     </button>
                     <div className="entry-switch">
                         {register ? 'Already have an account?' : 'New to YTT?'}{' '}
-                        <a href={register ? '/login' : '/register'}>
+                        <a
+                            href={`${register ? '/login' : '/register'}?returnTo=${encodeURIComponent(authReturn())}`}
+                        >
                             {register ? 'Sign in' : 'Create an account'}
                         </a>
                     </div>

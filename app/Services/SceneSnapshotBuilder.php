@@ -26,6 +26,7 @@ class SceneSnapshotBuilder
             return [
                 'id' => (string) $scene->id, 'campaignId' => (string) $scene->campaign_id,
                 'name' => $scene->name, 'revision' => $scene->revision,
+                'liveRevision' => $campaign->live_revision,
                 'width' => $scene->width, 'height' => $scene->height,
                 'grid' => $this->grid($scene), 'map' => $this->map($scene),
                 'tokens' => $tokens->map(fn ($token) => $this->token($token, $gm, $user))->all(),

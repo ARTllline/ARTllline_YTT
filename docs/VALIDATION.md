@@ -1,4 +1,155 @@
-# Task 02 validation
+# Task 03 validation
+
+Validated locally on 2026-10-28 with PHP 8.3.32, Node 20.20.2, Laravel 13.39,
+Reverb 1.12.0, Echo 2.6.3, MySQL 8 and Chromium. Task 02's committed baseline
+was preserved and extended. `AGENTS.md` is unchanged. No production deployment
+or unrelated database was modified.
+
+## Current automated checks
+
+| Command                                      | Result                                                                  |
+| -------------------------------------------- | ----------------------------------------------------------------------- |
+| `composer test`                              | **27 tests / 242 assertions passed**, including all Task 02 tests       |
+| `npm test`                                   | **38 tests passed**, including prior coordinate/store/persistence tests |
+| `npm run typecheck` / build's `tsc --noEmit` | Passed                                                                  |
+| `npm run lint`                               | Passed                                                                  |
+| `npm run build`                              | Passed; Pixi renderer remains a lazy chunk                              |
+| `php vendor/bin/pint --test`                 | Passed                                                                  |
+| `composer validate`                          | Valid manifest and lockfile                                             |
+| `composer check-platform-reqs`               | All installed requirements satisfied                                    |
+| `git diff --check`                           | No whitespace errors                                                    |
+
+PHP tests use isolated SQLite, not the configured MySQL campaign database. New
+broadcast tests use `DatabaseMigrations` so after-commit publication is exercised;
+event fakes capture materialized recipient-safe messages. Coverage includes:
+
+- Invite hashing, expiry, revocation, max uses, idempotent existing membership,
+  guest denial and refusal to promote a submitted `role=gm`.
+- Actual `/broadcasting/auth` responses for GM, Player and outsider; private
+  channel identity/role/activation epoch checks; presence contains no email.
+- Hidden → visible create, visible → hidden removal, secret edit no-op revisions,
+  deletion, and no Player messages from inactive prepared scenes.
+- Receipt replay: same response, one revision and one publication; conflicting
+  payload 409; deletion replay after model deletion; create replay without a
+  duplicate; replay denied after permission or privileged-role changes.
+- Preview performs no token write, revision increment or receipt insertion.
+  Ownership, lock, hidden and inactive checks match final movement; previews
+  based on the pre-final revision are ignored after commit.
+- Failed authorization/validation rolls back the receipt and emits nothing.
+  The transport failure boundary does not throw after a commit notification.
+
+New client tests exercise gap detection, duplicate/old/other-scene events,
+selection reconciliation, capability changes, preview ordering/final precedence,
+stable retry IDs, ambiguous create retry, rejected Player move rollback, snapshot
+on resubscribe, buffering during concurrent local writes, late/disposed fetches,
+slow snapshots racing accepted writes and recovery after an HTTP probe failure
+without any scene revision change. Normal own movement/echo does not refetch a
+whole scene.
+
+## Real two-context multiplayer acceptance
+
+Chromium used **independent GM and Player browser contexts** (separate cookies),
+the production bundle, real Laravel/Reverb and real MySQL at `127.0.0.1`.
+A second GM tab was also exercised. The dedicated QA campaign is
+**QA03 · The Lantern Coast**, with **Lantern Crossing** and **The Quiet Harbor**.
+Fixtures were created through authorized HTTP/UI flows, not seeded production rows.
+
+1. GM created an invitation in the Players dialog. The new Player followed it,
+   registered, returned to the invitation, joined and opened `/campaigns/{id}/play`.
+   A separate max-one-use invitation joined the dedicated acceptance campaign.
+   GM presence displayed both users Online with no email fields.
+   A final browser pass also copied an invitation successfully, revoked it through
+   the dialog and verified that its landing page reported the revoked state.
+2. With no active scene the Player saw the waiting screen. Clicking Activate in
+   the GM workspace automatically opened the active scene without a Player reload.
+3. Player snapshot contained only two visible tokens, with `canMove=true` only
+   for the assigned token. HP/AC/owner/hidden flags and the secret token were absent.
+4. A real Player mouse drag moved its token from `(630,510)` to `(750,630)` and
+   advanced the stored scene revision by **exactly one**. Temporary preview
+   requests carried drag UUID/sequence/base revision; one final HTTP move carried
+   a stable mutation UUID. The origin received no own scene echo.
+5. A real GM mouse drag delivered **14 preview events before drop** to the Player.
+   A database-backed snapshot taken while the mouse was held still had revision
+   11; releasing produced revision 12 and the canonical `(750,510)` position.
+   No full scene was sent in preview/final commands or broadcast payloads.
+6. Hide/reveal used the actual Inspector checkbox. Player received removal and
+   then safe creation; the hidden snapshot omitted the token. Editing a different
+   always-hidden token produced only an empty revision event. Captured Player
+   WebSocket frames contained no secret token name, HP, owner or image metadata.
+7. Locking the assigned token during a Player drag cancelled the gesture. The
+   final saved position stayed `(870,630)` and the Player showed view-only state.
+8. A second GM tab edited The Quiet Harbor while Player stayed in Lantern Crossing.
+   Activating Harbor moved the Player and updated the first GM's active indicator;
+   that GM's editing scene remained Crossing. Inactive Crossing edits produced
+   **zero** old-scene Player events and no inactive secret text in captured frames.
+9. Rapid A → B → C activation was tested with B's snapshot artificially delayed
+   by one second. C remained **Beacon Hold** after the delayed B response completed;
+   there was one canvas. The temporary C fixture was removed after returning to A.
+10. Playwright's WebSocket proxy deliberately dropped one persistent event, then
+    delivered the next revision. Player fetched **one** repair snapshot containing
+    both changes. Duplicate same-revision events with a deliberately corrupted
+    token name were ignored; the selected label remained canonical.
+11. Playwright allowed a token creation to commit and then aborted its HTTP
+    response. Clicking Add token again reused the **same UUID**: token count and
+    revision each advanced once, not twice. The temporary test token was deleted.
+12. The verified local Reverb process was stopped. Player showed **Reconnecting**.
+    A GM HTTP move succeeded while the broker was down (revision **19 → 20**).
+    After Reverb restarted, both clients recovered without reload; GM showed r20,
+    and clicking the Player token at its new `(870,630)` position selected Rowan.
+    HTTP request failure / WebSocket connection errors in this fault-injection
+    phase are expected; normal interaction produced no JavaScript page errors.
+
+A final **Vite / React StrictMode** pass ran the documented three processes.
+Changing a token name through the GM Inspector updated the selected Player label;
+both contexts retained exactly one canvas and no JavaScript page errors. The
+temporary Vite process was then stopped and the app returned to the built bundle.
+StrictMode's deliberate first-effect teardown produced one expected Pusher
+warning about closing a socket before its handshake completed; no duplicate
+active subscription, canvas or application exception remained.
+
+## Visual checks
+
+Inspected screenshots of the GM workspace, Players/invitation dialog, full Player
+tabletop and narrow Player layout. The existing restrained dark shell is retained;
+the Player has only the scene title, connection state, contextual token hint and
+pan/zoom/fit controls. Owned tokens have a small pale marker/ring. No GM Inspector,
+scene preparation list, vitals or invitation controls appear in Player View.
+
+GM widths **1440 / 1366 / 1024** and Player widths **1440 / 1024 / 768 / 390**
+had no document horizontal overflow and exactly one canvas. Resizing preserves
+the local camera; Fit restores the whole scene. Evidence is local/ignored:
+
+- `artifacts/task03-gm-desktop.png`
+- `artifacts/task03-player-desktop.png`
+- `artifacts/task03-player-768.png`
+- `artifacts/task03-player-390.png`
+- `artifacts/task03-players-panel.png`
+- `artifacts/task03-player-waiting.png`
+
+## Repeat and limitations
+
+Follow README's three-process startup. Use distinct browser profiles for GM and
+Player; tabs sharing cookies do not represent different users. Repeat invite →
+waiting → activate → assign → drag → hide/reveal → change active scene, then stop
+and restart Reverb while making an HTTP edit. Unit tests cover controlled ordering
+and race cases; browser validation above additionally injected actual transport
+loss and duplicates. Re-run visual checks after changing chrome or renderer input.
+
+This is not a 4–8-player load benchmark, WAN latency study, Safari/Firefox run,
+physical touch-device test or production reverse-proxy deployment. File cache and
+single-process local PHP were used; Redis scaling was not exercised. Preview
+delivery may fall below its 12.5 Hz ceiling under HTTP backpressure. Pending edits
+and retry IDs are memory-only; forced close does not preserve unsaved work.
+Receipts currently have no automatic retention cleanup. Upload deduplication,
+membership eviction/role-management UI, durable event delivery, fog, initiative,
+audio and cues remain deferred. Field conflicts use last accepted write wins.
+
+---
+
+# Task 02 validation — historical baseline
+
+The following records the prior stage. Its explicit limitations describe Task 02
+only; current multiplayer behavior and results are documented above.
 
 Validated locally on 2026-10-28 with PHP 8.3.32, Node 20.20.2, Laravel 13.39,
 MySQL 8 and the installed lockfiles. `AGENTS.md` was preserved unchanged.

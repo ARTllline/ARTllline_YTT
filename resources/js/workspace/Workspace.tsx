@@ -28,6 +28,9 @@ import { Sidebar } from './Sidebar';
 import { Inspector } from './Inspector';
 import { Tabletop } from './Tabletop';
 import { Toolbar } from './Toolbar';
+import { PlayersPanel } from './PlayersPanel';
+import { useCampaignLive } from '../realtime/useCampaignLive';
+import { useSceneLive } from '../realtime/useSceneLive';
 export function Workspace({
     user,
     campaign: initialCampaign,
@@ -38,6 +41,7 @@ export function Workspace({
     initialScene?: Scene;
 }) {
     const [campaign, setCampaign] = useState(initialCampaign);
+    const live = useCampaignLive(campaign.id, setCampaign);
     // Construct the bound pair together: StrictMode may evaluate this twice,
     // and a discarded adapter must never replace the live store's command sink.
     const [{ store, queue }] = useState(() => {
@@ -55,6 +59,13 @@ export function Workspace({
         return { store, queue };
     });
     const save = useSyncExternalStore(queue.subscribe, queue.getSnapshot);
+    const syncStatus = useSceneLive(
+        live.echo,
+        initialScene?.id ? `campaign.${campaign.id}.scene.${initialScene.id}.gm` : null,
+        store,
+        queue,
+        live.connection,
+    );
     const { scene } = useSyncExternalStore(store.subscribe, store.getSnapshot);
     const [modal, setModal] = useState<
         | 'createScene'
@@ -182,6 +193,11 @@ export function Workspace({
                     <strong>{scene.name ?? 'New workspace'}</strong>
                 </div>
                 <div className="topbar-actions">
+                    <PlayersPanel
+                        campaign={campaign}
+                        members={live.members}
+                        connection={live.connection}
+                    />
                     <span className="local-badge">
                         <i /> {activeName ? `Active: ${activeName}` : 'No active scene'}
                     </span>
@@ -424,7 +440,9 @@ export function Workspace({
                     {busy
                         ? 'Working…'
                         : save.status === 'saved'
-                          ? 'Saved'
+                          ? scene.id && syncStatus
+                              ? syncStatus
+                              : 'Saved'
                           : save.status === 'saving'
                             ? 'Saving…'
                             : 'Save failed'}

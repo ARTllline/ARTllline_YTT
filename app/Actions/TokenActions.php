@@ -23,7 +23,7 @@ class TokenActions
             $token->refresh();
 
             return ['token' => $this->snapshots->token($token, true, $user)];
-        });
+        }, 'token.created');
     }
 
     public function update(User $user, Token $token, array $data, bool $move = false): array
@@ -32,6 +32,7 @@ class TokenActions
             $token = $scene->tokens()->whereKey($token->id)->firstOrFail();
             $token->setRelation('scene', $scene);
             Gate::forUser($user)->authorize($move ? 'move' : 'update', $token);
+            $wasVisible = ! $token->is_hidden;
             if (! $move) {
                 if (! empty($data['owner_user_id']) && ! CampaignMember::where('campaign_id', $scene->campaign_id)->where('user_id', $data['owner_user_id'])->exists()) {
                     throw ValidationException::withMessages(['owner_user_id' => 'The controller must be a member of this campaign.']);
@@ -51,8 +52,8 @@ class TokenActions
             $token->refresh();
             $token->setRelation('scene', $scene);
 
-            return ['token' => $this->snapshots->token($token, $scene->campaign->roleFor($user) === 'gm', $user)];
-        });
+            return ['token' => $this->snapshots->token($token, $scene->campaign->roleFor($user) === 'gm', $user), '_wasVisible' => $wasVisible];
+        }, $move ? 'token.moved' : 'token.updated');
     }
 
     public function delete(User $user, Token $token): array
@@ -63,7 +64,7 @@ class TokenActions
             Gate::forUser($user)->authorize('update', $token);
             $token->delete();
 
-            return ['deletedId' => (string) $token->id];
-        });
+            return ['deletedId' => (string) $token->id, '_wasVisible' => ! $token->is_hidden];
+        }, 'token.removed');
     }
 }

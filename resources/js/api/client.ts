@@ -14,6 +14,14 @@ let csrf =
 export function setCsrf(value: string) {
     csrf = value;
 }
+export const getCsrf = () => csrf;
+let socketId: () => string | undefined = () => undefined;
+export const bindSocket = (get: () => string | undefined) => {
+    socketId = get;
+};
+// Retain ambiguous one-off dialog/button commands too, not only SaveQueue jobs.
+// The next identical retry uses the original ID; a confirmed command is removed.
+const ambiguous = new Map<string, string>();
 export async function request<T>(
     path: string,
     method = 'GET',
@@ -21,6 +29,20 @@ export async function request<T>(
     signal?: AbortSignal,
 ): Promise<T> {
     const form = body instanceof FormData;
+    let commandKey: string | undefined;
+    let mutationId: string | undefined;
+    if (body && !form && typeof body === 'object' && 'clientMutationId' in body) {
+        const { clientMutationId, ...payload } = body as Record<string, unknown>;
+        commandKey = JSON.stringify([method, path, payload]);
+        mutationId = ambiguous.get(commandKey) ?? String(clientMutationId);
+        body = { ...payload, clientMutationId: mutationId };
+    }
+    const retain = () => {
+        if (commandKey && mutationId) {
+            ambiguous.set(commandKey, mutationId);
+            if (ambiguous.size > 100) ambiguous.delete(ambiguous.keys().next().value!);
+        }
+    };
     let response: Response;
     try {
         response = await fetch(`/api${path}`, {
@@ -30,18 +52,22 @@ export async function request<T>(
             headers: {
                 Accept: 'application/json',
                 'X-CSRF-TOKEN': csrf,
+                ...(socketId() ? { 'X-Socket-ID': socketId()! } : {}),
                 ...(body && !form ? { 'Content-Type': 'application/json' } : {}),
             },
-            body: body === undefined ? undefined : form ? body : JSON.stringify(body),
+            body: body === undefined ? undefined : form ? (body as FormData) : JSON.stringify(body),
         });
     } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') throw error;
+        retain();
         throw new ApiError(
             'Connection lost. Your changes have not been confirmed. Check the connection and retry.',
             0,
         );
     }
     const data = await response.json().catch(() => ({}));
+    if (response.status >= 500) retain();
+    else if (commandKey) ambiguous.delete(commandKey);
     if (!response.ok) {
         const fields = data.errors as Record<string, string[]> | undefined;
         const message =

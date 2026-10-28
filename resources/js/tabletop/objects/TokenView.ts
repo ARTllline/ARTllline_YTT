@@ -13,7 +13,10 @@ export class TokenView extends Container {
     private selected = false;
     private hovered = false;
     private radius = 26;
-    constructor(public model: Token) {
+    constructor(
+        public model: Token,
+        private player = false,
+    ) {
         super();
         this.addChild(
             this.body,
@@ -91,8 +94,9 @@ export class TokenView extends Container {
             .roundRect(-this.nameplate.width / 2 - 7, r + 8, this.nameplate.width + 14, 27, 4)
             .fill({ color: 0x142120, alpha: 0.9 });
         const healthWidth = Math.max(2, (r - 5) * 2);
-        this.body.roundRect(-healthWidth / 2, r - 4, healthWidth, 3, 1).fill(0x182723);
-        if (token.hp > 0)
+        if (token.hp !== undefined)
+            this.body.roundRect(-healthWidth / 2, r - 4, healthWidth, 3, 1).fill(0x182723);
+        if (token.hp !== undefined && token.hp > 0 && token.maxHp)
             this.body
                 .roundRect(-healthWidth / 2, r - 4, (healthWidth * token.hp) / token.maxHp, 3, 1)
                 .fill(c);
@@ -116,6 +120,13 @@ export class TokenView extends Container {
     private drawRing() {
         this.ring.clear();
         const r = this.radius;
+        if (this.player && this.model.canMove) {
+            this.ring.circle(0, 0, r + 3).stroke({ color: 0xa7d8c1, width: 1, alpha: 0.5 });
+            this.ring
+                .circle(r * 0.72, -r * 0.72, 4)
+                .fill(0xb9e4cd)
+                .stroke({ color: 0x172d23, width: 1.5 });
+        }
         if (this.selected) {
             this.ring.circle(0, 0, r + 6).stroke({ color: 0xc3f0da, width: 2 });
             this.ring.poly([-4, -r - 13, 4, -r - 13, 0, -r - 8]).fill(0xc3f0da);

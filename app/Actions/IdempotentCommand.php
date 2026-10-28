@@ -1,0 +1,77 @@
+<?php
+
+namespace App\Actions;
+
+use App\Models\Campaign;
+use App\Models\Scene;
+use App\Models\Token;
+use App\Models\User;
+use App\Services\SceneSnapshotBuilder;
+use Closure;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Symfony\Component\HttpFoundation\Response;
+
+class IdempotentCommand
+{
+    public function execute(User $user, string $id, string $operation, int $resource, array $payload, Closure $next): Response
+    {
+        $sort = function (array $value) use (&$sort): array {
+            ksort($value);
+
+            return array_map(fn ($item) => is_array($item) ? $sort($item) : $item, $value);
+        };
+        $hash = hash('sha256', json_encode([$operation, $resource, $sort($payload)], JSON_THROW_ON_ERROR));
+        try {
+            return DB::transaction(function () use ($user, $id, $operation, $resource, $hash, $next) {
+                $existing = DB::table('scene_mutation_receipts')->where('user_id', $user->id)->where('client_mutation_id', $id)->first();
+                $campaignId = $existing?->campaign_id ?? match (true) {
+                    str_starts_with($operation, 'token.') => Token::findOrFail($resource)->scene->campaign_id,
+                    in_array($operation, ['scene.create', 'scene.activate']) => Campaign::findOrFail($resource)->id,
+                    default => Scene::findOrFail($resource)->campaign_id,
+                };
+                // Unique insertion serializes retries even across processes and scenes.
+                // Reservation and result commit together; no incomplete receipt is visible.
+                DB::table('scene_mutation_receipts')->insertOrIgnore([
+                    'user_id' => $user->id, 'client_mutation_id' => $id, 'fingerprint' => $hash,
+                    'campaign_id' => $campaignId, 'operation' => $operation, 'resource_id' => $resource,
+                    'created_at' => now(), 'updated_at' => now(),
+                ]);
+                $receipt = DB::table('scene_mutation_receipts')->where('user_id', $user->id)->where('client_mutation_id', $id)->lockForUpdate()->first();
+                abort_unless(hash_equals($receipt->fingerprint, $hash), 409, 'This mutation ID was already used for a different command.');
+                if ($receipt->result !== null) {
+                    $campaign = Campaign::findOrFail($receipt->campaign_id);
+                    $result = json_decode($receipt->result, true, flags: JSON_THROW_ON_ERROR);
+                    if ($operation === 'token.move' && $campaign->roleFor($user) !== 'gm') {
+                        abort_if(array_key_exists('hp', $result['token']), 403, 'Your role changed. Reload the scene before moving again.');
+                        $token = Token::findOrFail($resource);
+                        Gate::forUser($user)->authorize('move', $token);
+                        // A former GM may now be a player. Never replay the older privileged DTO.
+                        $safe = app(SceneSnapshotBuilder::class)->token($token, false, $user);
+                        $result['token'] = array_intersect_key($result['token'], $safe);
+                        $result['token']['canMove'] = $safe['canMove'];
+                    } else {
+                        Gate::forUser($user)->authorize('update', $campaign);
+                    }
+
+                    return new JsonResponse($result, $receipt->status, ['Idempotent-Replay' => 'true']);
+                }
+                $response = $next();
+                if ($response->getStatusCode() >= 400) {
+                    throw new RejectedCommand($response);
+                }
+                $result = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+                $result['mutationId'] = $id;
+                DB::table('scene_mutation_receipts')->where('id', $receipt->id)->update([
+                    'result_revision' => $result['revision'] ?? null, 'result' => json_encode($result, JSON_THROW_ON_ERROR),
+                    'status' => $response->getStatusCode(), 'updated_at' => now(),
+                ]);
+
+                return new JsonResponse($result, $response->getStatusCode());
+            }, 3);
+        } catch (RejectedCommand $rejected) {
+            return $rejected->response;
+        }
+    }
+}

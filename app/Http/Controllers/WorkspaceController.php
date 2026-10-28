@@ -9,6 +9,13 @@ use Illuminate\View\View;
 
 class WorkspaceController extends Controller
 {
+    public function play(Campaign $campaign): View
+    {
+        Gate::authorize('view', $campaign);
+
+        return view('workspace');
+    }
+
     public function campaign(Campaign $campaign): View
     {
         Gate::authorize('update', $campaign);

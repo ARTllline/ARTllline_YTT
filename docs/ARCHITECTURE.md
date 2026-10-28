@@ -1,16 +1,20 @@
-# Architecture — persistent GM workspace
+# Architecture — persistent multiplayer tabletop
 
 ## Boundaries and routing
 
 One Laravel 13 application serves a Blade entry document and the React/Vite
-bundle. There is no second production SPA server, starter-kit replacement,
-WebSocket transport or command bus. MySQL is authoritative. File sessions/cache
-and synchronous HTTP actions suffice for this stage.
+bundle. MySQL is authoritative. Reverb and Laravel Echo supply the realtime
+transport; HTTP Actions remain the only command path. There is no second Node
+server, Socket.IO layer or duplicate WebSocket domain implementation. File
+sessions/cache and synchronous broadcasts support a single self-hosted instance.
 
 - `/login`, `/register`: custom authentication screens.
 - `/`: authenticated compact campaign picker.
 - `/campaigns/{campaign}`: GM workspace; opens the first scene when one exists.
 - `/campaigns/{campaign}/scenes/{scene}`: explicit GM editing location.
+- `/campaigns/{campaign}/play`: member-authorized, minimal Player View.
+- `/join/{token}`: public invitation landing; authentication returns here.
+- `/broadcasting/auth`: session-authenticated private/presence channel authorization.
 - `/up`: framework health route.
 
 Workspace HTML routes authorize the GM and check the campaign/scene relationship.
@@ -67,8 +71,9 @@ Policies are discovered by Laravel's standard model/policy naming:
 `SceneSnapshotBuilder` owns the explicit projection. Player JSON contains no
 hidden entities, ownership metadata, hidden/locked flags, HP/AC/speed, private
 paths, or inactive scene metadata. `canMove` exposes only the resulting capability.
-The present TypeScript Scene/Token projection is for the GM editor; the future
-Player client must use its own reduced type rather than assume HP exists.
+The rendered Token type permits absent private fields; Player rendering never
+assumes HP exists. `SceneStore.role` gates local dragging using `canMove` and
+connection state. This affordance is not a replacement for server authorization.
 Token image relations are eager-loaded, so the snapshot has no per-token queries.
 
 `TokenPolicy::move` is separate from the GM-only administrative patch. Movement
@@ -152,8 +157,8 @@ projection. Creation, activation and deletion also lock the campaign. New scenes
 start at 0; every accepted scene mutation advances once, including accepted
 no-op patches. Reading/selecting does not advance it. Standalone uploads and
 campaign metadata/activation are not scene mutations; deletion removes the
-revision with the scene. A future live activation event needs its own campaign
-version/ordering contract.
+revision with the scene. Activation separately increments `campaign.live_revision`,
+which identifies the Player subscription epoch even when reactivating the same scene.
 
 Revision currently provides ordering, **not** optimistic locking. Concurrent
 requests serialize and the last accepted write to a field wins. The four-worker
@@ -184,8 +189,9 @@ server-authoritative; optimistic client edits are not proof of persistence.
   overwriting later optimistic edits. Scene revision never decreases.
 - An in-flight drag preview is reapplied after server acknowledgements, avoiding
   jumps caused by a prior response while the pointer is held.
-- Create/delete/upload actions wait for pending edits. They are not automatically
-  retried after ambiguous network failures; see next-stage limitations.
+- Create/delete/upload actions wait for pending edits. Scene command retries reuse
+  IDs; the API boundary retains ambiguous one-off commands until confirmation.
+  Upload deduplication remains separate future work.
 
 `api/client.ts` handles cookies, CSRF and readable failures; `api/workspace.ts`
 contains the typed commands. `api/images.ts` fetches private images and decodes
@@ -221,24 +227,151 @@ validation failures are visible. Browser console HTTP errors are expected only
 in deliberately failed QA requests. Full mobile authoring, pinch zoom, docking,
 keyboard deletion and undo are deferred.
 
-## Decisions required before realtime
+## Invitations and membership
 
-- Add invitations, membership management and a deliberately simpler Player UI.
-- Define command IDs/idempotency, expected revision/conflict behavior and accepted
-  event envelopes before automatic retries across reconnects. A lost response
-  followed by retry may advance revision twice; set operations remain convergent.
-- Acknowledge creates reliably; an ambiguous create/upload must be reconciled by
-  reload before manually repeating it, to avoid duplicates/orphan images.
-- Add snapshot + incremental events with gap detection and reconnect resync;
-  filter both snapshots **and broadcasts** per recipient. Never broadcast GM
-  serialization onto a shared Player channel.
-- Coordinate temporary movement previews with final authoritative moves; don't
-  write every pixel or send full scene state. Decide ownership handover and
-  in-progress-drag conflicts explicitly.
-- Version campaign activation separately and design transition/revocation events.
-- Define durable offline pending work, asset cleanup, backup/restore operations,
-  multi-GM concurrency and production deployment limits. Current pending work
-  lives only in memory and other tabs are not updated automatically.
+`CampaignInvite` stores a SHA-256 hash of 32 cryptographically random bytes, creator,
+expiry, revocation time, maximum uses and usage count. The raw token is returned
+only when creating the URL. Create/list/revoke are GM-only. Join locks the invite
+and campaign, validates its state, and inserts only a Player membership. Existing
+members keep their role and do not consume another use; exhausted invitations
+still accept an existing member. Expired/revoked links do not accept joins.
 
-No Story application coupling, queues/realtime scaffolding, LOS, rules engine,
-plugin platform or universal object/event-sourcing framework has been introduced.
+Routes: GET/POST `/api/campaigns/{id}/invites`, GET `/api/invites/{token}`,
+POST `/api/invites/{token}/join`, DELETE `/api/invites/{id}`. Join and creation are
+throttled. Auth return targets accept only the local `/join/{64-hex-token}` form.
+Member removal and role-management UI are deliberately deferred; revoking an
+invitation is not eviction of current players.
+
+## Channels, visibility and event publication
+
+| Echo channel                                                                 | Authorized audience                          | Contents                                                            |
+| ---------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------- |
+| presence `campaign.{campaign}`                                               | Campaign members                             | `{id,name,role}`; no emails                                         |
+| private `campaign.{campaign}.control`                                        | Campaign members                             | Activation epoch/active ID; safe membership/scene-list invalidation |
+| private `campaign.{campaign}.scene.{scene}.gm`                               | Campaign GMs                                 | Full scene editing events, including prepared scenes                |
+| private `campaign.{campaign}.scene.{scene}.epoch.{liveRevision}.user.{user}` | Matching Player, active scene, current epoch | Per-player safe projection and `canMove`                            |
+
+`ChannelAccess` rechecks membership, role, scene/campaign relationship, active
+scene, epoch and participant identity at authorization. **Epoch-scoped channels
+also protect subscriptions that were already open:** after deactivation no new
+prepared-scene edit is published to the old channel. React unsubscribing is not
+the security mechanism. Reverb client events/whispers are explicitly disabled.
+
+`ScenePublisher` materializes DTOs while the campaign/scene locks are held, using
+the same `SceneSnapshotBuilder` serializers as HTTP. `DB::afterCommit` publishes
+`TabletopEvent` (`ShouldBroadcastNow`, wire name `tabletop`) only after the outer
+receipt transaction commits. No queue worker or full-scene broadcast is involved.
+Origin `X-Socket-ID` is excluded for scene changes/previews; control invalidations
+also reach the origin. The socket ID changes delivery only, never authorization.
+
+Persistent scene event envelope:
+
+```json
+{
+    "type": "token.moved",
+    "sceneId": "5",
+    "revision": 12,
+    "mutationId": "a client command UUID",
+    "dragSessionId": "optional drag UUID",
+    "payload": { "token": { "id": "4", "x": 750, "y": 510, "canMove": true } }
+}
+```
+
+The example token is abbreviated; the actual DTO contains the safe visual fields.
+Types: `token.created`, `token.updated`, `token.moved`, `token.removed`,
+`grid.updated`, `map.updated`, `scene.updated`, `scene.revision`. Hidden → visible
+uses `token.created`; visible → hidden sends only `token.removed` + `deletedId`.
+Hidden → hidden sends an empty `scene.revision` payload, never an ID, name, image,
+owner or vitals. This intentionally exposes revision advancement, not secret
+content, so gaps remain meaningful. Inactive scenes publish only to GMs.
+
+Control messages are separate from scene revision: `scene.activated` or
+`campaign.changed` carries `{campaignId,liveRevision,activeSceneId}`; clients fetch
+the role-filtered campaign projection. No inactive scene names enter this channel.
+
+Transport failure after commit is logged and does not turn accepted HTTP writes
+into false save failures. Guzzle has a 1-second connection/2-second total timeout;
+after the first transport failure, remaining recipients in that publisher are
+skipped. Reconnect and periodic revision probes repair missed publication. This
+is not a durable event log or transactional outbox.
+
+## Idempotent HTTP commands
+
+`IdempotentMutation` runs after authentication and before route model binding, so
+a repeated DELETE still resolves its receipt after the resource has disappeared.
+`IdempotentCommand` atomically reserves `(user_id,client_mutation_id)`, validates a
+canonical payload/operation/resource fingerprint and stores the JSON result/status
+with the command in one transaction. An identical retry returns the receipt and
+does not increment revision or broadcast again. Changed payload/operation with the
+same UUID is HTTP 409. Failed authorization/validation leaves no receipt.
+
+Replay rechecks current authorization. A Player cannot reuse a privileged GM
+receipt after a role change. Token move replay also checks current ownership,
+visibility, lock and activation. Receipt rows deliberately have no resource FK:
+delete results must remain replayable. Campaign/user FKs still bound their lifetime.
+
+`ScenePersistence` creates a UUID once per logical queued command; coalesced grid
+drafts get the surviving command's ID. Retries reuse it. The API client also keeps
+up to 100 ambiguous one-off commands by method/path/payload so retrying a dialog or
+Add token after a lost response does not duplicate a committed create. These IDs
+are memory-only. Legacy API requests without an ID still work with a server UUID,
+but have no cross-request retry guarantee; all current UI scene commands send IDs.
+Uploads and campaign creation/rename are outside the scene receipt contract.
+
+## Reconciliation and movement protocol
+
+`useCampaignLive` owns Echo, presence and connection lifecycle. `SceneSubscriber`
+owns one scene subscription, buffering, resync and preview transport. The pure
+`reduceEvent` function ignores other scenes and revisions <= current, applies
+exactly current+1, and requests a snapshot on a gap. Renderer code has no HTTP
+or Echo imports. `useSceneLive` connects this lifecycle to the existing store.
+
+Subscribe acknowledgement (including resubscribe) fetches a fresh authoritative
+snapshot. Events arriving during that request are buffered. Cleanup aborts the
+fetch and ignores late results. Player transitions key the renderer/store by both
+scene ID and activation epoch; stale A/B fetches cannot replace C. The previous
+canvas, selection and preview state disappear immediately on an activation change.
+Camera is independent and local, reset to Fit when entering a new scene.
+
+While local commands are pending, remote persistent changes defer reconciliation;
+after successful drain, one snapshot repairs the projection. HTTP revision jumps
+also trigger this repair, even if an acknowledgement arrived before the missing
+remote event. Ordinary contiguous acknowledgements and own echoes do **not** fetch
+a snapshot. Own mutation IDs are bounded/deduplicated in memory. Permission loss
+and token removal still cancel Player gestures immediately during pending writes.
+Rejected Player moves fetch saved state and retain a readable retry/reload error.
+Unsaved GM edits are never silently discarded by reconnect.
+
+Every 15 seconds, a lightweight `/api/scenes/{id}/revision` probe and filtered
+campaign refresh repair missed final publications/activation. This is a recovery
+mechanism, not the movement transport. Player movement pauses while disconnected,
+syncing or after a failed save. Connection and save indicators remain distinct.
+
+Movement has three layers:
+
+1. Local pointer movement updates Pixi immediately; sampled notifications occur
+   at most every 80 ms (~12.5 Hz), with at most one preview request in flight.
+2. POST `/api/tokens/{id}/preview` validates the same move policy under shared
+   campaign/scene locks. Payload: `{x,y,dragSessionId,sequence,baseRevision,cancelled?}`.
+   It is rate-limited to 20 requests/second/user, never writes token positions,
+   increments revision or creates receipts, and never broadcasts hidden tokens
+   to Players. A stale base revision is accepted as an ignored preview.
+3. Drop snaps once and sends one persisted move command. The final event carries
+   the drag ID. Preview ordering rejects old sequences, completed/cancelled drags,
+   other scenes, absent tokens and stale base revisions. Previews expire after
+   1.2 seconds; Pixi interpolates toward the preview/canonical position with a
+   45 ms time constant, respecting reduced motion. No React render runs per frame.
+
+Final server state always wins. Concurrent authoritative field edits remain last
+accepted write wins; there is no drag lease or collaborative field merge. An
+unrelated committed scene change invalidates older preview bases conservatively;
+the final move still uses normal policy validation rather than optimistic locking.
+
+## Remaining boundaries
+
+No fog, initiative, LOS, audio, cue system, rules engine, Story integration,
+generic plugin platform or event-sourcing framework was introduced. Before adding
+member eviction/role management, design immediate channel revocation, not merely
+HTTP denial. Durable offline work, upload deduplication, receipt retention, asset
+cleanup, load testing, reverse-proxy production deployment and richer concurrent
+editing are future work. Already delivered media cannot be revoked from memory.

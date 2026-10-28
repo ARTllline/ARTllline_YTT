@@ -19,20 +19,33 @@ export interface CampaignSummary {
     role: 'gm' | 'player';
 }
 export interface Campaign extends CampaignSummary {
+    liveRevision: number;
     activeSceneId: string | null;
     scenes: { id: string; name: string }[];
     members?: { id: string; name: string; role: string }[];
 }
 export interface Mutation {
+    mutationId?: string;
     revision: number;
     token?: Token;
     grid?: GridSettings;
     map?: SceneMap | null;
     deletedId?: string;
 }
+export interface RealtimeConfig {
+    key: string;
+    host: string;
+    port: number;
+    scheme: string;
+}
+export let realtimeConfig: RealtimeConfig;
+export const commandId = () => crypto.randomUUID();
 export const api = {
     session: async () => {
-        const value = await request<{ user: User | null; csrf: string }>('/session');
+        const value = await request<{ user: User | null; csrf: string; realtime: RealtimeConfig }>(
+            '/session',
+        );
+        realtimeConfig = value.realtime;
         setCsrf(value.csrf);
         return value.user;
     },
@@ -48,18 +61,28 @@ export const api = {
     createCampaign: (name: string) => request<Campaign>('/campaigns', 'POST', { name }),
     renameCampaign: (id: string, name: string) =>
         request<Campaign>(`/campaigns/${id}`, 'PATCH', { name }),
-    createScene: (campaign: string, name: string) =>
-        request<{ id: string; name: string }>(`/campaigns/${campaign}/scenes`, 'POST', { name }),
+    createScene: (campaign: string, name: string, clientMutationId = commandId()) =>
+        request<{ id: string; name: string }>(`/campaigns/${campaign}/scenes`, 'POST', {
+            name,
+            clientMutationId,
+        }),
     renameScene: (id: string, name: string) =>
-        request<{ revision: number }>(`/scenes/${id}`, 'PATCH', { name }),
-    deleteScene: (id: string) => request(`/scenes/${id}`, 'DELETE'),
+        request<{ revision: number }>(`/scenes/${id}`, 'PATCH', {
+            name,
+            clientMutationId: commandId(),
+        }),
+    deleteScene: (id: string) =>
+        request(`/scenes/${id}`, 'DELETE', { clientMutationId: commandId() }),
     activate: (campaign: string, sceneId: string | null) =>
-        request<Campaign>(`/campaigns/${campaign}/activate`, 'POST', { sceneId }),
+        request<Campaign>(`/campaigns/${campaign}/activate`, 'POST', {
+            sceneId,
+            clientMutationId: commandId(),
+        }),
     snapshot: (id: string, signal?: AbortSignal) =>
         request<Scene>(`/scenes/${id}/snapshot`, 'GET', undefined, signal),
-    grid: (scene: string, grid: GridSettings) =>
-        request<Mutation>(`/scenes/${scene}/grid`, 'PUT', grid),
-    map: (scene: string, map: SceneMap | null) =>
+    grid: (scene: string, grid: GridSettings, clientMutationId = commandId()) =>
+        request<Mutation>(`/scenes/${scene}/grid`, 'PUT', { ...grid, clientMutationId }),
+    map: (scene: string, map: SceneMap | null, clientMutationId = commandId()) =>
         request<Mutation>(
             `/scenes/${scene}/map`,
             'PUT',
@@ -70,13 +93,23 @@ export const api = {
                       y: map.y,
                       width: map.width,
                       height: map.height,
+                      clientMutationId,
                   }
-                : { assetId: null, x: 0, y: 0, width: 1440, height: 1080 },
+                : { assetId: null, x: 0, y: 0, width: 1440, height: 1080, clientMutationId },
         ),
     createToken: (scene: string, point: Point) =>
-        request<Mutation>(`/scenes/${scene}/tokens`, 'POST', { ...point, name: 'New token' }),
-    move: (id: string, point: Point) => request<Mutation>(`/tokens/${id}/move`, 'POST', point),
-    token: (id: string, patch: TokenPatch) => {
+        request<Mutation>(`/scenes/${scene}/tokens`, 'POST', {
+            ...point,
+            name: 'New token',
+            clientMutationId: commandId(),
+        }),
+    move: (id: string, point: Point, clientMutationId = commandId(), dragSessionId?: string) =>
+        request<Mutation>(`/tokens/${id}/move`, 'POST', {
+            ...point,
+            clientMutationId,
+            dragSessionId,
+        }),
+    token: (id: string, patch: TokenPatch, clientMutationId = commandId()) => {
         const fields: Record<string, unknown> = {};
         const keys: Record<string, string> = {
             maxHp: 'max_hp',
@@ -88,9 +121,10 @@ export const api = {
             if (key === 'image') fields.token_image_asset_id = patch.image?.id ?? null;
             else fields[keys[key] ?? key] = value;
         });
-        return request<Mutation>(`/tokens/${id}`, 'PATCH', fields);
+        return request<Mutation>(`/tokens/${id}`, 'PATCH', { ...fields, clientMutationId });
     },
-    deleteToken: (id: string) => request<Mutation>(`/tokens/${id}`, 'DELETE'),
+    deleteToken: (id: string) =>
+        request<Mutation>(`/tokens/${id}`, 'DELETE', { clientMutationId: commandId() }),
     upload: (campaign: string, file: File, kind: 'map' | 'token') => {
         const form = new FormData();
         form.set('file', file);

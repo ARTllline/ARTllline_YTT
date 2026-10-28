@@ -6,6 +6,7 @@ use App\Models\Asset;
 use App\Models\Campaign;
 use App\Models\Scene;
 use App\Models\User;
+use App\Realtime\ScenePublisher;
 use App\Services\SceneSnapshotBuilder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -21,7 +22,10 @@ class SceneActions
             $campaign = Campaign::whereKey($campaign->id)->lockForUpdate()->firstOrFail();
             Gate::forUser($user)->authorize('update', $campaign);
 
-            return $campaign->scenes()->create(['name' => $name, 'sort_order' => ($campaign->scenes()->max('sort_order') ?? -1) + 1]);
+            $scene = $campaign->scenes()->create(['name' => $name, 'sort_order' => ($campaign->scenes()->max('sort_order') ?? -1) + 1]);
+            app(ScenePublisher::class)->campaign($campaign);
+
+            return $scene;
         });
     }
 
@@ -30,6 +34,7 @@ class SceneActions
         return $this->transaction->run($scene, function ($scene) use ($user, $data) {
             Gate::forUser($user)->authorize('update', $scene);
             $scene->update($data);
+            app(ScenePublisher::class)->campaign($scene->campaign);
 
             return ['scene' => ['id' => (string) $scene->id, 'name' => $scene->name, 'width' => $scene->width, 'height' => $scene->height]];
         });
@@ -44,7 +49,7 @@ class SceneActions
             $scene->refresh();
 
             return ['grid' => $this->snapshots->grid($scene)];
-        });
+        }, 'grid.updated');
     }
 
     public function map(User $user, Scene $scene, array $data): array
@@ -59,7 +64,7 @@ class SceneActions
             $scene->refresh();
 
             return ['map' => $this->snapshots->map($scene)];
-        });
+        }, 'map.updated');
     }
 
     public function activate(User $user, Campaign $campaign, ?int $sceneId): void
@@ -71,7 +76,9 @@ class SceneActions
                 throw ValidationException::withMessages(['sceneId' => 'Choose a scene belonging to this campaign.']);
             }
             $campaign->active_scene_id = $sceneId;
+            $campaign->live_revision++;
             $campaign->save();
+            app(ScenePublisher::class)->campaign($campaign, 'scene.activated');
         });
     }
 
@@ -86,6 +93,7 @@ class SceneActions
                 throw ValidationException::withMessages(['scene' => 'Deactivate this scene or activate another scene before deleting it.']);
             }
             $scene->delete();
+            app(ScenePublisher::class)->campaign($campaign);
         });
     }
 }

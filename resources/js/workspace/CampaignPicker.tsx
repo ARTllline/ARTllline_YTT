@@ -94,7 +94,11 @@ export function CampaignPicker({ user }: { user: User }) {
                         {campaigns.map((c) => (
                             <a
                                 className="project-card"
-                                href={c.role === 'gm' ? `/campaigns/${c.id}` : undefined}
+                                href={
+                                    c.role === 'gm'
+                                        ? `/campaigns/${c.id}`
+                                        : `/campaigns/${c.id}/play`
+                                }
                                 key={c.id}
                             >
                                 <div className="project-card-art">
@@ -102,15 +106,11 @@ export function CampaignPicker({ user }: { user: User }) {
                                     <ArrowUpRight size={17} />
                                 </div>
                                 <span className="eyebrow">
-                                    {c.role === 'gm'
-                                        ? 'GAME MASTER'
-                                        : 'PLAYER · TABLETOP COMING LATER'}
+                                    {c.role === 'gm' ? 'GAME MASTER' : 'PLAYER'}
                                 </span>
                                 <h2>{c.name}</h2>
                                 <small>
-                                    {c.role === 'gm'
-                                        ? 'Open workspace'
-                                        : 'Player access is available through the API.'}
+                                    {c.role === 'gm' ? 'Open workspace' : 'Join the table'}
                                 </small>
                             </a>
                         ))}

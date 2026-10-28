@@ -66,7 +66,9 @@ export class PointerController {
             : this.space || this.tool === 'pan'
               ? 'grab'
               : this.hover
-                ? 'pointer'
+                ? this.store.canMove(this.hover)
+                    ? 'grab'
+                    : 'pointer'
                 : 'default';
     };
     private down = (e: PointerEvent) => {
@@ -84,7 +86,7 @@ export class PointerController {
             return;
         }
         const model = this.store.getSnapshot().scene.tokens.find((item) => item.id === token);
-        if (model?.isLocked) {
+        if (model && !this.store.canMove(model.id)) {
             this.refresh();
             return;
         }
@@ -96,6 +98,7 @@ export class PointerController {
             origin: model ? { x: model.x, y: model.y } : world,
             moved: false,
         };
+        if (token) this.store.dragSessionId = crypto.randomUUID();
         this.canvas.setPointerCapture(e.pointerId);
         this.refresh();
     };
@@ -167,13 +170,28 @@ export class PointerController {
     }
     cancel = () => {
         if (!this.gesture) return;
-        if (this.gesture.token) this.tokens.preview(this.gesture.token, this.gesture.origin);
+        if (this.gesture.token) {
+            const token = this.store
+                .getSnapshot()
+                .scene.tokens.find((t) => t.id === this.gesture!.token);
+            const position = token ?? this.gesture.origin;
+            this.store.onPreview?.(this.gesture.token, position, true);
+            this.tokens.preview(this.gesture.token, position);
+        }
+        this.store.dragSessionId = undefined;
         this.finish();
     };
     reapplyPreview() {
         const gesture = this.gesture;
+        if (gesture?.token && !this.store.canMove(gesture.token)) {
+            this.cancel();
+            return;
+        }
         if (gesture?.token && gesture.moved)
             this.tokens.preview(gesture.token, this.dragPosition(gesture.last, gesture));
+    }
+    get draggingToken() {
+        return this.gesture?.token;
     }
     private blur = () => {
         this.space = false;

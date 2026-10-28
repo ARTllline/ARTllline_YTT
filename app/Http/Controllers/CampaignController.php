@@ -22,6 +22,7 @@ class CampaignController extends Controller
         Gate::authorize('view', $campaign);
         $gm = $campaign->roleFor($request->user()) === 'gm';
         $data = ['id' => (string) $campaign->id, 'name' => $campaign->name, 'role' => $gm ? 'gm' : 'player',
+            'liveRevision' => $campaign->live_revision,
             'activeSceneId' => $campaign->active_scene_id ? (string) $campaign->active_scene_id : null];
         $data['scenes'] = $campaign->scenes()->when(! $gm, fn ($q) => $q->whereKey($campaign->active_scene_id ?? 0))->orderBy('sort_order')->orderBy('id')->get(['id', 'name'])->map(fn ($s) => ['id' => (string) $s->id, 'name' => $s->name])->all();
         if ($gm) {

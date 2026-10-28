@@ -3,44 +3,62 @@
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CampaignController;
+use App\Http\Controllers\InviteController;
+use App\Http\Controllers\MovePreviewController;
 use App\Http\Controllers\SceneController;
 use App\Http\Controllers\TokenController;
 use App\Http\Controllers\WorkspaceController;
+use App\Http\Middleware\IdempotentMutation;
 use App\Http\Middleware\PrivateResponse;
+use App\Models\Scene;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/login', 'workspace')->name('login');
 Route::view('/register', 'workspace');
+Route::view('/join/{inviteToken}', 'workspace')->where('inviteToken', '[a-f0-9]{64}');
 Route::middleware('auth')->group(function () {
     Route::view('/', 'workspace');
     Route::get('/campaigns/{campaign}', [WorkspaceController::class, 'campaign']);
+    Route::get('/campaigns/{campaign}/play', [WorkspaceController::class, 'play']);
     Route::get('/campaigns/{campaign}/scenes/{scene}', [WorkspaceController::class, 'scene']);
 });
 
 // Same-origin HTTP API intentionally stays in the web middleware group: sessions + CSRF.
 Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
     Route::get('/session', [AuthController::class, 'session']);
+    Route::get('/invites/{inviteToken}', [InviteController::class, 'show'])->middleware('throttle:30,1');
     Route::middleware(['guest', 'throttle:10,1'])->group(function () {
         Route::post('/register', [AuthController::class, 'register']);
         Route::post('/login', [AuthController::class, 'login']);
     });
     Route::middleware('auth')->group(function () {
+        Route::get('/campaigns/{campaign}/invites', [InviteController::class, 'index']);
+        Route::post('/campaigns/{campaign}/invites', [InviteController::class, 'store'])->middleware('throttle:20,1');
+        Route::delete('/invites/{invite}', [InviteController::class, 'revoke']);
+        Route::post('/invites/{inviteToken}/join', [InviteController::class, 'join'])->middleware('throttle:20,1');
+        Route::post('/tokens/{token}/preview', MovePreviewController::class)->middleware('throttle:preview');
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/campaigns', [CampaignController::class, 'index']);
         Route::post('/campaigns', [CampaignController::class, 'store']);
         Route::get('/campaigns/{campaign}', [CampaignController::class, 'show']);
         Route::patch('/campaigns/{campaign}', [CampaignController::class, 'update']);
-        Route::post('/campaigns/{campaign}/activate', [CampaignController::class, 'activate']);
-        Route::post('/campaigns/{campaign}/scenes', [SceneController::class, 'store']);
+        Route::post('/campaigns/{campaign}/activate', [CampaignController::class, 'activate'])->name('scene.activate')->middleware(IdempotentMutation::class);
+        Route::post('/campaigns/{campaign}/scenes', [SceneController::class, 'store'])->name('scene.create')->middleware(IdempotentMutation::class);
         Route::get('/scenes/{scene}/snapshot', [SceneController::class, 'snapshot']);
-        Route::patch('/scenes/{scene}', [SceneController::class, 'update']);
-        Route::put('/scenes/{scene}/grid', [SceneController::class, 'grid']);
-        Route::put('/scenes/{scene}/map', [SceneController::class, 'map']);
-        Route::delete('/scenes/{scene}', [SceneController::class, 'destroy']);
-        Route::post('/scenes/{scene}/tokens', [TokenController::class, 'store']);
-        Route::post('/tokens/{token}/move', [TokenController::class, 'move']);
-        Route::patch('/tokens/{token}', [TokenController::class, 'update']);
-        Route::delete('/tokens/{token}', [TokenController::class, 'destroy']);
+        Route::get('/scenes/{scene}/revision', function (Scene $scene) {
+            Gate::authorize('view', $scene);
+
+            return ['revision' => $scene->revision];
+        });
+        Route::patch('/scenes/{scene}', [SceneController::class, 'update'])->name('scene.update')->middleware(IdempotentMutation::class);
+        Route::put('/scenes/{scene}/grid', [SceneController::class, 'grid'])->name('scene.grid')->middleware(IdempotentMutation::class);
+        Route::put('/scenes/{scene}/map', [SceneController::class, 'map'])->name('scene.map')->middleware(IdempotentMutation::class);
+        Route::delete('/scenes/{scene}', [SceneController::class, 'destroy'])->name('scene.delete')->middleware(IdempotentMutation::class);
+        Route::post('/scenes/{scene}/tokens', [TokenController::class, 'store'])->name('scene.tokens')->middleware(IdempotentMutation::class);
+        Route::post('/tokens/{token}/move', [TokenController::class, 'move'])->name('token.move')->middleware(IdempotentMutation::class);
+        Route::patch('/tokens/{token}', [TokenController::class, 'update'])->name('token.update')->middleware(IdempotentMutation::class);
+        Route::delete('/tokens/{token}', [TokenController::class, 'destroy'])->name('token.delete')->middleware(IdempotentMutation::class);
         Route::post('/campaigns/{campaign}/assets', [AssetController::class, 'store'])->middleware('throttle:30,1');
         Route::get('/assets/{asset}', [AssetController::class, 'show']);
     });
