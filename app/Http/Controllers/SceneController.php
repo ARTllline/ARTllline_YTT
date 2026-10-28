@@ -35,7 +35,7 @@ class SceneController extends Controller
     {
         Gate::authorize('update', $scene);
 
-        return $actions->grid($request->user(), $scene, $request->validate(['size' => 'required|numeric|between:20,160', 'offset' => 'required|array:x,y', 'offset.x' => 'required|numeric|between:-1000000,1000000', 'offset.y' => 'required|numeric|between:-1000000,1000000', 'visible' => 'required|boolean', 'snap' => 'required|boolean']));
+        return $actions->grid($request->user(), $scene, $request->validate(['distancePerCell' => 'sometimes|numeric|between:0.1,1000', 'distanceUnit' => 'sometimes|in:ft,m,squares', 'size' => 'required|numeric|between:20,160', 'offset' => 'required|array:x,y', 'offset.x' => 'required|numeric|between:-1000000,1000000', 'offset.y' => 'required|numeric|between:-1000000,1000000', 'visible' => 'required|boolean', 'snap' => 'required|boolean']));
     }
 
     public function map(Request $request, Scene $scene, SceneActions $actions): array

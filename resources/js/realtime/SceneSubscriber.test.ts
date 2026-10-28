@@ -7,6 +7,7 @@ import { createDemoScene } from '../tabletop/state/demoScene';
 import { api } from '../api/workspace';
 import type { Scene } from '../tabletop/types/scene';
 import type { SceneEvent } from './protocol';
+import type { SpatialEvent } from '../tabletop/types/spatial';
 afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -14,7 +15,7 @@ afterEach(() => {
 });
 function setup() {
     vi.useFakeTimers();
-    let receive!: (event: SceneEvent) => void;
+    let receive!: (event: SceneEvent | SpatialEvent) => void;
     let subscribed!: () => void;
     const channel = {
         listen: (_: string, fn: typeof receive) => {
@@ -52,7 +53,7 @@ function setup() {
         echo,
         scene,
         event,
-        receive: (e: SceneEvent) => receive(e),
+        receive: (e: SceneEvent | SpatialEvent) => receive(e),
         subscribed: () => subscribed(),
     };
 }
@@ -161,4 +162,31 @@ describe('scene subscription recovery', () => {
         expect(s.store.getSnapshot().scene.revision).toBe(11);
         s.subscriber.destroy();
     });
+});
+
+it('ignores other spatial epochs and clears ephemeral projections on disposal', () => {
+    const s = setup();
+    s.store.spatial.configure({ id: '1', name: 'GM' }, true, 2);
+    s.store.spatial.setConnected(true);
+    const event: SpatialEvent = {
+        type: 'spatial',
+        sceneId: '1',
+        epoch: 1,
+        participant: { id: '2', name: 'Rowan' },
+        kind: 'ruler',
+        sessionId: 'a',
+        startedAt: 1,
+        sequence: 1,
+        phase: 'update',
+        start: { x: 0, y: 0 },
+        end: { x: 60, y: 0 },
+    };
+    s.receive(event);
+    expect(s.store.spatial.overlays.size).toBe(0);
+    s.receive({ ...event, epoch: 2 });
+    expect(s.store.spatial.overlays.size).toBe(1);
+    expect(s.store.getSnapshot().scene.revision).toBe(10);
+    s.subscriber.destroy();
+    s.receive({ ...event, epoch: 2, sequence: 2 });
+    expect(s.store.spatial.overlays.size).toBe(0);
 });

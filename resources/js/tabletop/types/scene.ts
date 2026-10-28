@@ -1,3 +1,4 @@
+import type { FogState } from './spatial';
 export interface Point {
     x: number;
     y: number;
@@ -6,6 +7,8 @@ export interface CameraState extends Point {
     zoom: number;
 }
 export interface GridSettings {
+    distancePerCell?: number;
+    distanceUnit?: string;
     visible: boolean;
     snap: boolean;
     size: number;
@@ -41,6 +44,7 @@ export interface SceneMap extends Point {
     height: number;
 }
 export interface Scene {
+    fog?: FogState;
     id?: string;
     campaignId?: string;
     name?: string;
@@ -71,4 +75,4 @@ export type TokenPatch = Partial<
         | 'image'
     >
 >;
-export type Tool = 'select' | 'pan';
+export type Tool = 'select' | 'pan' | 'fog' | 'ruler' | 'circle' | 'cone' | 'rectangle' | 'ping';

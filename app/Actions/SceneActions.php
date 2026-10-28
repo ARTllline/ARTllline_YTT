@@ -44,7 +44,7 @@ class SceneActions
     {
         return $this->transaction->run($scene, function ($scene) use ($user, $data) {
             Gate::forUser($user)->authorize('update', $scene);
-            $scene->update(['grid_size' => $data['size'], 'grid_offset_x' => $data['offset']['x'],
+            $scene->update(['distance_per_cell' => $data['distancePerCell'] ?? $scene->distance_per_cell, 'distance_unit' => $data['distanceUnit'] ?? $scene->distance_unit, 'grid_size' => $data['size'], 'grid_offset_x' => $data['offset']['x'],
                 'grid_offset_y' => $data['offset']['y'], 'grid_visible' => $data['visible'], 'grid_snap' => $data['snap']]);
             $scene->refresh();
 

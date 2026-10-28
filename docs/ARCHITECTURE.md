@@ -201,7 +201,7 @@ loads. Failed image loads have a recovery state. Texture resources are owned and
 destroyed by the renderer on teardown.
 
 Current layer order: viewport background → BattleMapLayer → GridLayer → TokenLayer
-→ InteractionLayer. TokenView contains selection/hover rings, optional cropped
+→ FogLayer → SpatialLayer → InteractionLayer. TokenView contains selection/hover rings, optional cropped
 image, upright nameplate and HP bar. Hidden GM tokens are dimmed; locked tokens
 remain selectable but do not drag. Task 01 vector map/prop classes and demo data
 are retained as development/test material, never loaded into a real workspace.
@@ -369,9 +369,139 @@ the final move still uses normal policy validation rather than optimistic lockin
 
 ## Remaining boundaries
 
-No fog, initiative, LOS, audio, cue system, rules engine, Story integration,
+No initiative, LOS, audio, cue system, rules engine, Story integration,
 generic plugin platform or event-sourcing framework was introduced. Before adding
 member eviction/role management, design immediate channel revocation, not merely
-HTTP denial. Durable offline work, upload deduplication, receipt retention, asset
-cleanup, load testing, reverse-proxy production deployment and richer concurrent
+HTTP denial. Durable offline work, upload deduplication, asset
+cleanup, reverse-proxy production deployment and richer concurrent
 editing are future work. Already delivered media cannot be revoked from memory.
+
+## Task 04 — persistent fog and spatial overlays
+
+### Persistent state and transactions
+
+`scenes.fog_base` is `clear` (default) or `covered`. `fog_actions` contains the
+scene FK, globally unique ID, scene revision as ordered sequence, operation
+`reveal|cover`, shape `brush|rectangle`, world-coordinate JSON geometry, creator
+and timestamps. The scene/sequence pair is unique; scene deletion cascades history.
+The safe DTO contains only `{id,sequence,operation,shape,geometry}`. Neither creator
+nor any scene entity is copied into fog messages. Shared fog is identical for all
+Players; GM-only information continues through the existing visibility resolver.
+
+Brush geometry is `{points:[{x,y},...],radius}`; rectangle geometry is two corners.
+Validation bounds a stroke to 512 points, radius 5–600 and coordinates -20000–40000.
+The UI samples by brush radius and reduces intermediate points on very long strokes;
+it never silently splits one pointer gesture into multiple persisted operations.
+Rectangles normalize at rendering; the original world corners remain portable.
+
+`POST /api/scenes/{id}/fog/actions` and `/fog/reset` use the existing idempotency
+middleware and `FogActions` → `SceneTransaction`. GM authorization is checked before
+validation and again under campaign/scene locks. Reset accepts `{base}` and deletes
+old actions inside the same transaction. Each accepted command increments revision
+once. Idempotent retry returns its receipt without another row, revision or event.
+Grid persistence adds `distancePerCell` (0.1–1000) and `distanceUnit` (ft/m/squares);
+older clients omitting them preserve the current values.
+
+```text
+GM world gesture → local fog draft → pointer up → SceneStore optimistic action
+ → ScenePersistence / SaveQueue (one UUID) → authenticated fog action
+ → campaign + scene lock → fog row/reset + revision + receipt → commit
+ → fog.action / fog.reset → authorized scene channels → revision reducer → FogLayer
+```
+
+HTTP returns `fogAction` or compact `fog:{base,actions:[]}`. The reducer appends/reset
+only at current+1, ignores old/duplicate events, and requests a snapshot on a gap.
+Own acknowledgements replace only the matching temporary action ID, preserving
+later optimistic strokes/resets. Failed writes retain visible edits in SaveQueue;
+Retry keeps the UUID. No queue coalescing drops fog strokes. Remote changes during
+pending local work defer to the existing post-drain snapshot reconciliation.
+Inactive scene edits are never sent to Player channels, including old subscriptions.
+
+### GPU composition and lifecycle
+
+`FogLayer` uses two owned Pixi RenderTextures: saved mask and live preview. Maximum
+texture side is 2048; world dimensions/geometry remain full precision. Larger worlds
+therefore trade edge detail for bounded GPU memory (two RGBA surfaces at most about
+32 MiB, excluding driver overhead). At 4096 world px, one mask texel spans 2 px.
+Saved history rebuilds only on hydration/reset/resizing or divergent projection;
+ordinary appends paint only new actions. Acknowledgement ID changes preserve geometry
+references and do not replay history. Preview copies the saved mask then paints the
+current draft. Reveal uses erase blending on a Graphics **child** of a paint container;
+rendering Graphics itself as the root would discard that inherited blend mode.
+
+Layer order is map → grid → tokens → fog → spatial overlays → interaction markers.
+Fog is opaque for Players and 0.48 alpha for GM; tools/pings stay visible above it.
+Textures, off-stage Graphics/Sprites and overlay containers are explicitly destroyed.
+Resize/teardown cancels gestures; the single PointerController owns all DOM listeners.
+`SpatialLayer` caches Graphics/Text per participant, redraws changed geometry and
+keeps label sizes constant on screen. Concurrent badges receive vertical collision
+avoidance. Expiry destroys the participant's view; reduced-motion mode removes ping
+pulsing. Camera changes never alter world geometry or persist anything.
+
+History grows until explicit Cover all / Reveal all. There is no automatic compaction,
+bitmap persistence, LOS, token vision, wall model or per-player fog. Future compaction
+must preserve ordered erase/cover semantics and avoid turning visual fog into a
+security promise. Very long histories still increase snapshot and hydration cost.
+
+### Input and ephemeral transport
+
+`PointerController` dispatches Select/Pan itself and delegates Fog/Ruler/Area/Ping
+to `SpatialGesture`. Tool selection lives in `SpatialState`, observable by the compact
+React toolbar. Down/move/up/cancel/deactivate run through the same pointer capture;
+Space/middle mouse choose temporary Pan before dispatch. Tool changes, Escape,
+resize, blur and lost capture cancel drafts. No tool registers another pointer listener.
+Player gestures require current connection/movement capability; server authorization
+remains independent of this affordance.
+
+```text
+world gesture → SpatialState local overlay → sampled/coalesced HTTP command
+ → membership + active scene + epoch + geometry validation → server attribution
+ → Reverb private channels → SpatialState ordering/TTL → SpatialLayer
+```
+
+`POST /api/scenes/{id}/spatial` accepts `{kind,sessionId,startedAt,sequence,phase,
+epoch,start,end}`. Kind is ruler/circle/cone/rectangle/ping; phase update/end/cancel.
+The server supplies participant ID/name from the session. It uses shared locks to
+prevent activation races and rejects inactive scenes, outsiders and stale epochs.
+No domain row, receipt or scene revision is written. Cache-based rate limiting is
+20 requests/second/user for measurements and 4/second/user for pings, allowing a
+quick double ping. No client whispers or arbitrary entity mutation is accepted.
+
+All recipients of spatial and movement-preview messages have identical safe payloads,
+so one Reverb publication targets the explicit authorized channel list. Persistent
+token messages still use recipient-specific projections (`canMove`, GM fields).
+The controller/ScenePublisher, not the client, decides the channel list.
+
+`SceneSubscriber` coalesces at 80 ms and allows one spatial request in flight;
+terminal updates survive normal backpressure. It drops pending sends after loss of
+connection/activation. Received events must match scene and epoch. `SpatialState`
+orders by per-participant gesture start time and per-session sequence, rejects
+late/duplicate/terminal updates, keeps one overlay per participant, and bounds order
+tracking to 256 participants. Session start times are monotonic within the client.
+Multiple tabs of one user intentionally share one participant slot; clock skew across
+those tabs remains a limitation, not an authoritative scene-state conflict.
+
+A held stationary gesture renews once per second.
+Unfinished overlays expire after 1.8 s without updates; finished ruler/AoE after 5 s;
+pings after 2.2 s. Cancel removes immediately when delivered. Disconnect/scene change
+clears all projections; reconnect restores persistent fog only. Ephemeral loss is
+repaired by expiry/new gestures, never replay. No offline queue stores overlays.
+
+### Geometry and future combat boundary
+
+Pure helpers implement Euclidean distance, `(pixels/grid.size)*distancePerCell`,
+cell-center snap with offsets, rectangle normalization, radius, cone direction,
+length and a fixed 60-degree aperture. Labels round to one decimal. Grid changes
+recompute labels; zoom only changes presentation. These helpers can support future
+combat measurements without importing a rules engine or embedding spell definitions
+inside the renderer. Persistent templates and movement-cost rules are separate future
+work, as are hex grids, individual vision, automated fog compaction and durable undo.
+
+### Receipt lifecycle
+
+`tabletop:prune-receipts` deletes completed rows older than configured days, minimum
+one/default seven, using indexed `created_at`. Dry run only counts. The daily Laravel
+scheduler entry has overlap protection; operators must run the scheduler. Receipt
+retention bounds retry guarantees, not campaign history. In-memory browser queues
+must be reconciled before retry after the retention window. No receipt archive or
+background queue infrastructure was introduced.

@@ -28,6 +28,7 @@ class SceneSnapshotBuilder
                 'name' => $scene->name, 'revision' => $scene->revision,
                 'liveRevision' => $campaign->live_revision,
                 'width' => $scene->width, 'height' => $scene->height,
+                'fog' => ['base' => $scene->fog_base, 'actions' => $scene->fogActions()->get()->map(fn ($action) => $action->projection())->all()],
                 'grid' => $this->grid($scene), 'map' => $this->map($scene),
                 'tokens' => $tokens->map(fn ($token) => $this->token($token, $gm, $user))->all(),
             ];
@@ -38,6 +39,7 @@ class SceneSnapshotBuilder
     {
         return ['type' => 'square', 'size' => (float) $scene->grid_size,
             'offset' => ['x' => (float) $scene->grid_offset_x, 'y' => (float) $scene->grid_offset_y],
+            'distancePerCell' => (float) $scene->distance_per_cell, 'distanceUnit' => $scene->distance_unit,
             'visible' => $scene->grid_visible, 'snap' => $scene->grid_snap];
     }
 

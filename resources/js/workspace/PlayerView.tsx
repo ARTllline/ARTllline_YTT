@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { ArrowLeft, Hand, Maximize, Minus, MousePointer2, Plus } from 'lucide-react';
+import { ArrowLeft, Maximize, Minus, Plus } from 'lucide-react';
 import { api, type Campaign, type User } from '../api/workspace';
 import { SceneStore } from '../tabletop/state/SceneStore';
 import { ScenePersistence } from '../tabletop/state/ScenePersistence';
@@ -8,6 +8,7 @@ import type { TabletopRenderer } from '../tabletop/renderer/TabletopRenderer';
 import { useCampaignLive, type LiveEcho, type ConnectionState } from '../realtime/useCampaignLive';
 import { useSceneLive } from '../realtime/useSceneLive';
 import { ConnectionBadge } from './PlayersPanel';
+import { Toolbar } from './Toolbar';
 import { Tabletop } from './Tabletop';
 export function PlayerView({ campaign: initial, user }: { campaign: Campaign; user: User }) {
     const [campaign, setCampaign] = useState(initial);
@@ -103,6 +104,9 @@ function PlayerTabletop({
     const [{ store, queue }] = useState(() => {
         const store = new SceneStore(initial, 'player');
         store.movementEnabled = false;
+        store.spatial.identity = { id: user.id, name: user.name };
+        store.spatial.shareActive = true;
+        store.spatial.epoch = initial.liveRevision ?? 0;
         return { store, queue: new ScenePersistence(store, initial.id!).queue };
     });
     const status = useSceneLive(
@@ -116,11 +120,11 @@ function PlayerTabletop({
     const save = useSyncExternalStore(queue.subscribe, queue.getSnapshot);
     const renderer = useRef<TabletopRenderer | null>(null);
     const [zoom, setZoom] = useState(100);
-    const [pan, setPan] = useState(false);
     const selected = snapshot.scene.tokens.find((t) => t.id === snapshot.selectedIds[0]);
     return (
         <main className="player-tabletop">
             <Tabletop store={store} rendererRef={renderer} onZoom={setZoom} />
+            <Toolbar store={store} onTool={(tool) => renderer.current?.setTool(tool)} />
             {(status || save.error) && (
                 <div className="player-notice" role="status">
                     <span>{save.error || status}</span>
@@ -150,17 +154,6 @@ function PlayerTabletop({
                 )}
             </div>
             <div className="player-controls">
-                <button
-                    aria-label={pan ? 'Select tool' : 'Pan tool'}
-                    title={pan ? 'Select tool' : 'Pan tool'}
-                    onClick={() => {
-                        renderer.current?.setTool(pan ? 'select' : 'pan');
-                        setPan(!pan);
-                    }}
-                >
-                    {pan ? <Hand size={17} /> : <MousePointer2 size={17} />}
-                </button>
-                <span className="control-divider" />
                 <button aria-label="Zoom out" onClick={() => renderer.current?.zoom(0.8)}>
                     <Minus size={16} />
                 </button>

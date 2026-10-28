@@ -1,4 +1,185 @@
-# Task 03 validation
+# Task 04 validation
+
+Validated locally on 2026-10-28 against committed Task 03 (`cba8b48`). Laravel 13.39,
+PHP 8.3.32, MySQL 8, Reverb 1.12.0, Node 20.20.2 and Chromium. `AGENTS.md` is unchanged.
+The two additive migrations were applied to the local YTT database. No production
+rollout, system PHP configuration change or unrelated database modification occurred.
+
+## Automated checks
+
+| Command                        | Result                               |
+| ------------------------------ | ------------------------------------ |
+| `composer test`                | **32 tests / 300 assertions passed** |
+| `npm run test`                 | **46 tests passed**                  |
+| `npm run typecheck`            | Passed                               |
+| `npm run lint`                 | Passed                               |
+| `npm run build`                | Passed; Pixi remains lazy-loaded     |
+| `php vendor/bin/pint --test`   | Passed                               |
+| `composer validate`            | Passed                               |
+| `composer check-platform-reqs` | Passed                               |
+| `git diff --check`             | Passed                               |
+
+New PHP tests use isolated SQLite with after-commit event fakes. They verify GM-only
+fog, Player/outsider denials, exact-once receipt replay, ordered persisted geometry,
+compact reset, filtered snapshots/events, no inactive Player publication, geometry
+limits, unit persistence, authenticated attribution, epoch checks, ping throttling,
+no domain writes for ephemeral tools, authorized multi-channel publication and receipt
+prune/dry-run retention. Prior authentication/private-assets/movement tests remain.
+
+New client tests cover Euclidean/world distance and unit labels, circle radius,
+cone aperture/direction/length, normalized rectangles, negative/offset cell-center
+snap, duplicate/out-of-order/terminal ephemeral events, expiry/cancellation, local-only
+prepared tools, fog reducer resets/gaps, pending stroke/reset ordering with the same
+UUID on retry, scene epoch rejection and subscriber-disposal cleanup.
+
+## Real GM / Player acceptance
+
+Separate Chromium contexts/cookies used the real HTTP server, MySQL and Reverb.
+The dedicated fixture is **QA04 · Mist & Distance**, with **Mistwater Crossing**
+and **Prepared Watchtower**. An existing QA GM and Player joined through a new
+invitation; four additional explicitly named QA04 accounts were registered and
+joined through the API. No application demo seed was introduced.
+
+- Cover all used the confirmation dialog. Player saw an opaque dark cover; GM
+  retained a reduced-opacity view. A Pixi blend-root issue found visually was fixed
+  before acceptance: the brush now renders as a child of the paint container.
+- A real brush drag kept revision **34 while held**, then saved once. A rectangle
+  reveal advanced it to **36**. Captured Player frames contained two `fog.action`
+  messages and no secret token text. Player snapshot omitted QA04_SECRET_DRAGON.
+- Cover brush and cover rectangle restored concealment. Player reload returned
+  exactly the same saved fog. Reset compaction/idempotency is also covered in PHP.
+- Both GM → Player and Player → GM rulers displayed **30 ft** for 360 world pixels
+  at grid 60 / 5 ft. Captured coordinates were `(630,570)` → `(990,570)`; camera sizes
+  differed. Scene revision remained **37** across measurements. Pan/zoom retained
+  geometry while screen-space labels stayed readable. A final 2.5-second stationary
+  hold produced four update samples and one end, keeping the remote ruler visible.
+- Circle, 60° cone and rectangle were dragged from both contexts. Captured update/end
+  kinds matched the chosen shape. Inspected circle/cone/rectangle screenshots.
+  Simultaneous overlays use different local/remote color treatment and label
+  collision avoidance. No combat/spell/movement-rule interpretation was added.
+- Pings were delivered in both directions, including quick repeated clicks, then
+  expired. They did not move cameras or change scene revisions. Spam rejection is
+  covered by the real rate limiter in the PHP test (first four accepted, fifth 429).
+- A committed cover rectangle's HTTP response was deliberately aborted. Save failed
+  retained the local projection; Retry reused UUID `01353c35-6cc1-43e4-bca7-a82c01cc5d6e`.
+  Revision was **263 → 264 → 264**, with one added action, not two.
+- The verified local Reverb process was stopped. GM fog painting still saved. On a
+  repeated instrumented outage, the Player showed Reconnecting and a GM command
+  advanced **265 → 266**. After restarting Reverb, the Player actually received a
+  fresh snapshot **r266 / 225 actions**, without reloading its tab.
+- Activating Prepared Watchtower cleared prior overlays/canvas state. GM continued
+  editing Crossing; the Player received **zero old-scene events**, and Watchtower's
+  clear fog/revision were unchanged. GM ruler in the prepared scene stayed local.
+  Returning to Crossing restored its saved fog.
+- Fog + Space pan and Ruler + Space pan caused no writes. Escape during an area
+  gesture cancelled it and selected Select. A real Player token drag moved Rowan
+  `(330,330)` → `(450,450)` with revision **266 → 267**, after spatial tools had been
+  used. A ping followed by wheel zoom and immediate activation also transitioned
+  cleanly to the new scene. UI shortcut fields and contextual toolbar selection
+  were checked. Wheel zoom remained independent of overlays.
+
+Expected browser network errors occurred only for deliberate broker outages and the
+aborted HTTP response. Normal interaction and the six-client load run produced no
+JavaScript page exceptions. No public or third-party data was sent anywhere.
+
+## Renderer, visual and lifecycle checks
+
+A generated original PNG **4096 × 3072** was uploaded through the actual map input,
+rendered in a world of the same size with **30 tokens**, **224 saved fog actions**,
+four simultaneous ruler/AoE overlays and pan/zoom. A 180-frame requestAnimationFrame
+sample measured **p50 8.3 ms / p95 8.4 ms / max 8.5 ms** in that local browser run.
+An earlier scaled-map pass measured max 25 ms. These are browser frame intervals,
+not GPU profiler results or guarantees for every device.
+
+Fog uses two surfaces capped at 2048 per side; its raw RGBA surface allocation is
+bounded around 32 MiB. Saved appends do not replay old geometry; acknowledgements
+replace IDs without changing geometry references. No full-scene JSON is sent per
+spatial gesture. Source review checked explicit owned-texture/Graphics destruction.
+
+Ten active-scene transitions with an explicit GC sample kept **one canvas**, DOM
+nodes **122 → 122**, and event listeners **196 → 196**. JS heap was approximately
+**8.36 → 9.42 MB**; this short run does not prove zero heap/GPU growth over hours.
+No page exceptions occurred. The Player's old store/subscriber/render tree is disposed
+by scene/epoch key, and late scene fetches/events are guarded by existing tests.
+
+Visual inspection covered opaque Player fog, GM x-ray treatment, brush/rectangle
+edges, ruler badges, translucent shapes, ping pulse/fade and compact tool settings.
+Player widths **1440, 1024 (reported CSS innerWidth 1025), 768 and 390** retained one
+canvas with no horizontal document overflow. The narrow player overlay remains usable.
+GM was checked at 1440 with the existing dense workspace; Task 03's broader shell
+breakpoint record remains historical, not a new all-breakpoint claim.
+
+Local ignored evidence includes `artifacts/task04-fog-fixed.png`,
+`task04-gm-tools.png`, `task04-ruler-both.png`, `task04-verified-cone.png`,
+`task04-verified-rectangle.png`, `task04-ping-debug.png`, `task04-ping-expired.png`,
+`task04-large-final.png`, and `task04-player-{1024,768,390}.png`.
+
+## Practical multiplayer load check
+
+**One GM + five independently authenticated Player contexts**, six real Reverb
+connections, 30 tokens and 203–221 fog-history actions. Six rounds sent **81 HTTP
+commands**: 30 spatial measurements, 30 authorized token movement previews, 15 pings
+and six persistent fog mutations. HTTP commands were issued concurrently between
+players; within each player the calls respected completion/backpressure. This is a
+practical burst check, not a sustained 20 Hz/user saturation benchmark.
+
+Every client received **45 spatial events + 30 previews + 6 fog events**: **486
+expected deliveries**, no missing or duplicate-count discrepancies. All six final
+snapshots agreed on **r261**, with no HTTP failures or JS exceptions. Latency samples
+matched the spatial session/sequence or persistent mutation UUID from request start
+to received WebSocket frame; the 306 samples exclude move-preview latency.
+
+| Local configuration                                                   | Run time  | p50 delivery | p95 delivery | Max        |
+| --------------------------------------------------------------------- | --------- | ------------ | ------------ | ---------- |
+| PHP built-in server, no OPcache, original per-recipient preview sends | 34.7 s    | 1016 ms      | 2333 ms      | 2588 ms    |
+| Same uncached server, batched safe preview publication                | 53.5 s    | 1006 ms      | 16652 ms     | 17488 ms   |
+| Process-local OPcache enabled, batched preview publication            | **6.8 s** | **165 ms**   | **361 ms**   | **368 ms** |
+
+The slow second run is retained rather than discarded. Batching alone did not fix
+this environment's latency. Baseline session reads were about 180–220 ms each
+before OPcache; serialized PHP request/bootstrap overhead is a strong contributing
+factor. This does not establish a complete cause for the 17-second outlier.
+OPcache was enabled with per-process flags and timestamp validation; no system
+`php.ini`, existing application key or credentials were changed.
+
+Across the earlier load interval, Reverb CPU time increased **1.734 → 2.109 s**
+and working set remained about **31.3 MB** (private memory ~40 MB). After the warm
+OPcache run, cumulative CPU was **2.297 s**, working set **31.318 MB** and private
+memory **39.985 MB**. These process samples span setup/idle time as well as commands;
+they are not peak CPU utilization or an isolated throughput profile. Reverb remained
+stable. Preview requests are intentionally expendable under backpressure; final
+persistent events and authoritative resync remain the correctness mechanism.
+
+Use PHP-FPM/another appropriate multi-worker web setup with OPcache for a hosted
+session. This Windows single-worker development test is not a VPS/WAN benchmark,
+production reverse-proxy test, Redis scaling test or 8-player capacity guarantee.
+README's proxy guidance was checked against the official Reverb 13 documentation;
+no proxy was deployed. The local HTTP and Reverb services were left running.
+
+## Repeat and remaining boundaries
+
+1. Follow README, migrate, build, start HTTP + Reverb; run the scheduler if unattended
+   receipt cleanup is desired. Check `tabletop:prune-receipts --dry-run` first.
+2. Use independent profiles for GM/Player; invite, activate, assign tokens.
+3. Cover all, reveal brush/rectangle, cover again, reload Player and compare snapshots.
+4. Drag ruler and each area both ways, change camera, cancel and let overlays expire.
+5. Abort a committed fog response, Retry, verify same UUID/one revision.
+6. Stop Reverb, paint fog, restart, observe resubscription snapshot and correct fog.
+7. Edit an inactive scene and change active scenes repeatedly; watch private frames,
+   canvas count, browser errors and resource counters.
+8. For load, use 4–8 Player contexts, hundreds of fog actions, concurrent overlays,
+   previews/pings and persistent events; record delivery counts and timestamps.
+
+History compaction beyond an explicit full reset, long-session GPU profiling,
+physical touch devices, Safari/Firefox, individual visibility/LOS, initiative/combat,
+persistent templates, hex grids, audio, asset-library expansion, handouts, encounters,
+prefabs, cues/triggers, camera direction and Story integration remain deferred.
+Prepared work still uses the existing memory-only retry queue, not durable offline
+storage. Fog conceals pixels only; **Hidden** remains the secret-information boundary.
+
+---
+
+# Task 03 validation — historical baseline
 
 Validated locally on 2026-10-28 with PHP 8.3.32, Node 20.20.2, Laravel 13.39,
 Reverb 1.12.0, Echo 2.6.3, MySQL 8 and Chromium. Task 02's committed baseline

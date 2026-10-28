@@ -1,6 +1,11 @@
 import { Graphics } from 'pixi.js';
 import type { GridSettings, Point } from '../types/scene';
 export class InteractionLayer extends Graphics {
+    showBrush(point: Point, radius: number, zoom: number, cover: boolean) {
+        this.clear()
+            .circle(point.x, point.y, radius)
+            .stroke({ color: cover ? 0xd9ac97 : 0xb6e3cf, width: 1.5 / zoom, alpha: 0.9 });
+    }
     showSnap(point: Point | null, grid: GridSettings) {
         this.clear();
         if (!point || !grid.snap) return;

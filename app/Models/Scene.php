@@ -25,6 +25,11 @@ class Scene extends Model
         return $this->belongsTo(Asset::class, 'map_asset_id');
     }
 
+    public function fogActions(): HasMany
+    {
+        return $this->hasMany(FogAction::class)->orderBy('sequence');
+    }
+
     public function tokens(): HasMany
     {
         return $this->hasMany(Token::class);

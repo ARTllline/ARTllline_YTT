@@ -1,3 +1,4 @@
+import type { FogAction, FogState, FogStroke, FogBase } from '../tabletop/types/spatial';
 import { request, setCsrf } from './client';
 import type {
     Scene,
@@ -25,6 +26,8 @@ export interface Campaign extends CampaignSummary {
     members?: { id: string; name: string; role: string }[];
 }
 export interface Mutation {
+    fog?: FogState;
+    fogAction?: FogAction;
     mutationId?: string;
     revision: number;
     token?: Token;
@@ -80,6 +83,10 @@ export const api = {
         }),
     snapshot: (id: string, signal?: AbortSignal) =>
         request<Scene>(`/scenes/${id}/snapshot`, 'GET', undefined, signal),
+    fog: (scene: string, stroke: FogStroke, clientMutationId: string) =>
+        request<Mutation>(`/scenes/${scene}/fog/actions`, 'POST', { ...stroke, clientMutationId }),
+    resetFog: (scene: string, base: FogBase, clientMutationId: string) =>
+        request<Mutation>(`/scenes/${scene}/fog/reset`, 'POST', { base, clientMutationId }),
     grid: (scene: string, grid: GridSettings, clientMutationId = commandId()) =>
         request<Mutation>(`/scenes/${scene}/grid`, 'PUT', { ...grid, clientMutationId }),
     map: (scene: string, map: SceneMap | null, clientMutationId = commandId()) =>

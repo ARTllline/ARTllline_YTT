@@ -1,5 +1,7 @@
 import type { GridSettings, Point, Scene, SceneMap, Token, TokenPatch } from '../types/scene';
 import type { Mutation } from '../../api/workspace';
+import { SpatialState } from './SpatialState';
+import type { FogStroke, FogBase } from '../types/spatial';
 import { clamp } from '../utils/coordinates';
 
 export interface WorkspaceSnapshot {
@@ -10,10 +12,13 @@ export interface WorkspaceSnapshot {
 export type SceneCommand =
     | { type: 'move'; id: string; position: Point; dragSessionId?: string }
     | { type: 'token'; id: string; patch: TokenPatch }
+    | { type: 'fog'; stroke: FogStroke; localId: string }
+    | { type: 'fogReset'; base: FogBase }
     | { type: 'grid'; grid: GridSettings }
     | { type: 'map'; map: SceneMap | null };
 /** Observable domain projection. Network requests are delegated to the persistence adapter. */
 export class SceneStore {
+    readonly spatial = new SpatialState();
     movementEnabled = true;
     onRevisionGap?: () => void;
     readonly localMutations = new Set<string>();
@@ -115,6 +120,54 @@ export class SceneStore {
         this.updateToken(id, position, false);
         this.command?.({ type: 'move', id, position, dragSessionId: this.dragSessionId });
         this.dragSessionId = undefined;
+    }
+    applyFog(stroke: FogStroke) {
+        if (this.role !== 'gm') return;
+        const localId = crypto.randomUUID();
+        const fog = this.snapshot.scene.fog ?? { base: 'clear' as const, actions: [] };
+        this.emit({
+            ...this.snapshot,
+            scene: {
+                ...this.snapshot.scene,
+                fog: {
+                    ...fog,
+                    actions: [...fog.actions, { ...stroke, id: localId, sequence: -1 }],
+                },
+            },
+        });
+        this.command?.({ type: 'fog', stroke, localId });
+    }
+    resetFog(base: FogBase) {
+        if (this.role !== 'gm') return;
+        this.emit({
+            ...this.snapshot,
+            scene: { ...this.snapshot.scene, fog: { base, actions: [] } },
+        });
+        this.command?.({ type: 'fogReset', base });
+    }
+    acceptFog(result: Mutation, localId?: string) {
+        // Replace only this optimistic stroke. Later strokes/resets remain visible.
+        const fog = this.snapshot.scene.fog;
+        if (fog && localId && result.fogAction)
+            this.emit({
+                ...this.snapshot,
+                scene: {
+                    ...this.snapshot.scene,
+                    fog: {
+                        ...fog,
+                        actions: fog.actions.map((a) =>
+                            a.id === localId
+                                ? {
+                                      ...a,
+                                      id: result.fogAction!.id,
+                                      sequence: result.fogAction!.sequence,
+                                  }
+                                : a,
+                        ),
+                    },
+                },
+            });
+        this.accept(result, false);
     }
     setMap(map: SceneMap | null) {
         this.emit({ ...this.snapshot, scene: { ...this.snapshot.scene, map } });

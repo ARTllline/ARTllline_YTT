@@ -58,6 +58,20 @@ export function Workspace({
             : new SaveQueue();
         return { store, queue };
     });
+    useEffect(() => {
+        store.spatial.configure(
+            { id: user.id, name: user.name },
+            campaign.activeSceneId === initialScene?.id,
+            campaign.liveRevision,
+        );
+    }, [
+        store,
+        user.id,
+        user.name,
+        campaign.activeSceneId,
+        campaign.liveRevision,
+        initialScene?.id,
+    ]);
     const save = useSyncExternalStore(queue.subscribe, queue.getSnapshot);
     const syncStatus = useSceneLive(
         live.echo,
@@ -124,7 +138,6 @@ export function Workspace({
     };
     const renderer = useRef<TabletopRenderer | null>(null);
     const [zoom, setZoom] = useState(100);
-    const [tool, setTool] = useState<Tool>('select');
     const [left, setLeft] = useState(() => window.innerWidth >= 900);
     const [right, setRight] = useState(() => window.innerWidth >= 1180);
     const help = useRef<HTMLDialogElement>(null);
@@ -167,7 +180,6 @@ export function Workspace({
         setRight(!right);
     };
     const changeTool = (next: Tool) => {
-        setTool(next);
         renderer.current?.setTool(next);
     };
     return (
@@ -349,7 +361,7 @@ export function Workspace({
                     </div>
                     {scene.id && (
                         <>
-                            <Toolbar store={store} tool={tool} onTool={changeTool} />
+                            <Toolbar store={store} onTool={changeTool} />
                             <div className="scene-quick-actions">
                                 <button
                                     className="secondary-button"
@@ -562,6 +574,10 @@ export function Workspace({
                 </div>
                 <p>Click the tabletop to focus its controls.</p>
                 <dl>
+                    <dt>Select / Pan / Fog / Ruler / Ping</dt>
+                    <dd>V / H / F / R / P</dd>
+                    <dt>Area templates</dt>
+                    <dd>Circle toolbar then choose shape</dd>
                     <dt>Select / move token</dt>
                     <dd>Click / drag</dd>
                     <dt>Pan</dt>

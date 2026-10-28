@@ -56,7 +56,7 @@ class ScenePublisher
                     $payload = ['deletedId' => $result['deletedId']];
                 }
             } else {
-                foreach (['grid', 'map', 'scene'] as $key) {
+                foreach (['grid', 'map', 'scene', 'fog', 'fogAction'] as $key) {
                     if (array_key_exists($key, $result)) {
                         $payload[$key] = $result[$key];
                     }
@@ -77,17 +77,28 @@ class ScenePublisher
     {
         $event = ['type' => 'token.move-preview', 'sceneId' => (string) $scene->id,
             'tokenId' => (string) $token->id, 'baseRevision' => $scene->revision] + $data;
-        $this->schedule(ChannelAccess::gm($scene->campaign_id, $scene->id), $event);
+        $channels = [];
         if ($scene->campaign->active_scene_id === $scene->id && ! $token->is_hidden) {
             foreach ($scene->campaign->members()->wherePivot('role', 'player')->get() as $member) {
-                $this->schedule(ChannelAccess::player($scene->campaign_id, $scene->id, $scene->campaign->live_revision, $member->id), $event);
+                $channels[] = ChannelAccess::player($scene->campaign_id, $scene->id, $scene->campaign->live_revision, $member->id);
             }
         }
+        $this->schedule(ChannelAccess::gm($scene->campaign_id, $scene->id), $event, true, $channels);
     }
 
-    private function schedule(string $channel, array $event, bool $excludeOrigin = true): void
+    public function spatial(Scene $scene, array $data): void
     {
-        $message = new TabletopEvent($channel, $event, $excludeOrigin ? $this->context->socketId : null);
+        $event = ['type' => 'spatial', 'sceneId' => (string) $scene->id] + $data;
+        $channels = [];
+        foreach ($scene->campaign->members()->wherePivot('role', 'player')->get() as $member) {
+            $channels[] = ChannelAccess::player($scene->campaign_id, $scene->id, $scene->campaign->live_revision, $member->id);
+        }
+        $this->schedule(ChannelAccess::gm($scene->campaign_id, $scene->id), $event, true, $channels);
+    }
+
+    private function schedule(string $channel, array $event, bool $excludeOrigin = true, array $additionalChannels = []): void
+    {
+        $message = new TabletopEvent($channel, $event, $excludeOrigin ? $this->context->socketId : null, $additionalChannels);
         DB::afterCommit(fn () => $this->broadcast->send($message));
     }
 }

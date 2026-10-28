@@ -22,6 +22,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('spatial', fn ($request) => Limit::perSecond($request->input('kind') === 'ping' ? 4 : 20)->by($request->user()->id.($request->input('kind') === 'ping' ? ':ping' : ':spatial')));
         RateLimiter::for('preview', fn ($request) => Limit::perSecond(20)->by($request->user()->id));
     }
 }

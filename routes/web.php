@@ -3,9 +3,11 @@
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CampaignController;
+use App\Http\Controllers\FogController;
 use App\Http\Controllers\InviteController;
 use App\Http\Controllers\MovePreviewController;
 use App\Http\Controllers\SceneController;
+use App\Http\Controllers\SpatialController;
 use App\Http\Controllers\TokenController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Middleware\IdempotentMutation;
@@ -45,6 +47,9 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::patch('/campaigns/{campaign}', [CampaignController::class, 'update']);
         Route::post('/campaigns/{campaign}/activate', [CampaignController::class, 'activate'])->name('scene.activate')->middleware(IdempotentMutation::class);
         Route::post('/campaigns/{campaign}/scenes', [SceneController::class, 'store'])->name('scene.create')->middleware(IdempotentMutation::class);
+        Route::post('/scenes/{scene}/fog/actions', [FogController::class, 'store'])->name('scene.fog.action')->middleware(IdempotentMutation::class);
+        Route::post('/scenes/{scene}/fog/reset', [FogController::class, 'reset'])->name('scene.fog.reset')->middleware(IdempotentMutation::class);
+        Route::post('/scenes/{scene}/spatial', SpatialController::class)->middleware('throttle:spatial');
         Route::get('/scenes/{scene}/snapshot', [SceneController::class, 'snapshot']);
         Route::get('/scenes/{scene}/revision', function (Scene $scene) {
             Gate::authorize('view', $scene);

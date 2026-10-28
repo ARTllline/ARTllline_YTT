@@ -1,3 +1,4 @@
+import type { SpatialEvent } from '../tabletop/types/spatial';
 import { api } from '../api/workspace';
 import { request } from '../api/client';
 import type { SceneStore } from '../tabletop/state/SceneStore';
@@ -7,6 +8,9 @@ import { reduceEvent, PreviewOrder, type SceneEvent, type MovePreview } from './
 
 /** One scene subscription. A disposed subscriber can never hydrate its successor. */
 export class SceneSubscriber {
+    private spatialPending?: SpatialEvent;
+    private spatialBusy = false;
+    private spatialTimer: ReturnType<typeof setInterval>;
     private alive = true;
     private loading = false;
     private deferred = false;
@@ -25,6 +29,28 @@ export class SceneSubscriber {
         private queue: SaveQueue,
         private status: (message: string) => void,
     ) {
+        store.spatial.onSend = (event) => {
+            this.spatialPending = event;
+        };
+        this.spatialTimer = setInterval(() => {
+            if (this.spatialBusy || !this.spatialPending || !this.alive) return;
+            const event = this.spatialPending;
+            this.spatialPending = undefined;
+            if (
+                !store.spatial.connected ||
+                !store.spatial.shareActive ||
+                event.epoch !== store.spatial.epoch
+            )
+                return;
+            this.spatialBusy = true;
+            void request(`/scenes/${event.sceneId}/spatial`, 'POST', event)
+                .catch(() => {
+                    /* Expendable overlay expires; saved state is unaffected. */
+                })
+                .finally(() => {
+                    this.spatialBusy = false;
+                });
+        }, 80);
         echo.private(channel)
             .listen('.tabletop', this.receive)
             .subscribed(() => void this.resync())
@@ -84,10 +110,20 @@ export class SceneSubscriber {
                 });
         }, 15000);
     }
-    private receive = (event: SceneEvent | MovePreview) => {
+    private receive = (event: SceneEvent | MovePreview | SpatialEvent) => {
         if (!this.alive) return;
         const scene = this.store.getSnapshot().scene;
         if (event.sceneId !== scene.id) return;
+        if (event.type === 'spatial') {
+            const spatial = event as SpatialEvent;
+            if (
+                spatial.epoch === this.store.spatial.epoch &&
+                this.store.spatial.shareActive &&
+                this.store.spatial.connected
+            )
+                this.store.spatial.accept(spatial);
+            return;
+        }
         if (event.type === 'token.move-preview') {
             const preview = event as MovePreview;
             if (this.previews.accept(scene, preview)) {
@@ -180,6 +216,9 @@ export class SceneSubscriber {
         this.controller?.abort();
         this.unsubscribe();
         clearInterval(this.timer);
+        clearInterval(this.spatialTimer);
+        this.store.spatial.onSend = undefined;
+        this.store.spatial.clear();
         this.store.onPreview = undefined;
         this.store.onRevisionGap = undefined;
         this.store.remotePreviews.clear();

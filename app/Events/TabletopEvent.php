@@ -10,14 +10,14 @@ class TabletopEvent implements ShouldBroadcastNow
 {
     use InteractsWithSockets;
 
-    public function __construct(public readonly string $channel, public readonly array $envelope, ?string $socketId = null)
+    public function __construct(public readonly string $channel, public readonly array $envelope, ?string $socketId = null, public readonly array $additionalChannels = [])
     {
         $this->socket = $socketId;
     }
 
     public function broadcastOn(): array
     {
-        return [new PrivateChannel($this->channel)];
+        return array_map(fn ($channel) => new PrivateChannel($channel), [$this->channel, ...$this->additionalChannels]);
     }
 
     public function broadcastAs(): string

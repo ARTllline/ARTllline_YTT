@@ -17,6 +17,7 @@ export function useSceneLive(
         return () => subscriber.destroy();
     }, [echo, channel, store, queue]);
     useEffect(() => {
+        store.spatial.setConnected(connection === 'connected');
         const update = () => {
             if (store.role === 'player')
                 store.setMovementEnabled(

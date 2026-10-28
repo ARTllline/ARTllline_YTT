@@ -6,14 +6,11 @@ state. The product contract is `AGENTS.md`.
 
 ## Current status
 
-**Task 03: realtime multiplayer and a dedicated Player View.** Prepare a campaign,
-invite your party, activate a scene and move assigned tokens together. Reverb
-delivers authorized incremental changes and temporary movement previews; Laravel
-and MySQL remain authoritative. Reload/reconnect restores the current scene.
-The existing GM workspace, private images and persistence remain intact.
-
-Fog, measurements, initiative, audio and cues are deferred. There is no automatic
-demo data or seeded account.
+**Task 04: spatial play tools on the persistent multiplayer foundation.**
+Prepare scenes, invite players, move assigned tokens, paint shared manual fog,
+measure distances, sketch temporary areas and ping the table. Laravel/MySQL remain
+authoritative; Reverb delivers authorized changes. No demo data is automatically seeded.
+Initiative, dynamic vision, audio, cues and the larger asset library remain deferred.
 
 ## Requirements
 
@@ -130,7 +127,72 @@ Reverse-proxy Reverb's `/app` and `/apps` paths with WebSocket upgrade support;
 keep the internal listener on an appropriate private interface and supervise both
 PHP and Reverb. Clear cached config and restart Reverb after changing its settings.
 The PHP publisher must also be able to reach the configured Reverb endpoint.
-Client-originated Reverb events are disabled; movement previews use authorized HTTP.
+Client-originated Reverb events are disabled; movement and spatial previews use authorized HTTP.
+
+`REVERB_SERVER_HOST`/`REVERB_SERVER_PORT` configure the listener;
+`REVERB_HOST`/`REVERB_PORT` configure the endpoint used by PHP and, in this app,
+the browser. Preserve `/app` (WebSockets) and `/apps` (signed HTTP publication)
+when proxying; do not rewrite both to Laravel's front controller. Forward HTTP/1.1,
+Host, Upgrade and Connection headers for WebSocket connections. Use a loopback
+upstream such as `127.0.0.1:8080`, rather than `0.0.0.0` as a destination.
+These recommendations were reviewed against [Laravel Reverb's hosting guide](https://laravel.com/framework/docs/13.x/reverb#web-server).
+No production proxy was deployed or tested.
+
+For live groups use a properly configured PHP web server with OPcache. The Windows
+single-process development server without OPcache showed substantial HTTP latency
+in the local load check. See Validation for measured limits; Redis alone does not
+fix PHP command latency. To enable an installed OPcache extension for a local
+process only, add `-d zend_extension=/absolute/path/to/opcache -d opcache.enable_cli=1
+-d opcache.validate_timestamps=1 -d opcache.revalidate_freq=0` to the PHP command.
+Use the platform's actual extension path; this is optional, not an install dependency.
+
+## Spatial tools
+
+The compact toolbar is shared by GM and Player, with Fog and Grid settings available
+only to the GM. Keyboard shortcuts: **V** Select, **H** Pan, **F** Fog (GM), **R** Ruler,
+**P** Ping. **Space + drag** temporarily pans; **Escape** cancels the gesture/own
+measurement and returns to Select. Shortcuts do not run while editing fields.
+Choose Circle / Cone / Rectangle from the area tool's contextual selector.
+
+- **Fog:** Reveal or Cover with a brush (diameter 30–600 world px) or a rectangle.
+  The brush outline previews its size. Cover all / Reveal all require confirmation
+  and replace the old history. New scenes start clear. A stroke previews locally
+  and saves once on release; cancellation saves nothing. GM sees covered areas at
+  reduced opacity; Player sees an opaque cover. Reload and reconnect restore it.
+- **Ruler:** drag from start to end. Distances use Euclidean world geometry and the
+  scene grid's distance per cell (default **5 ft**, also **m** and **squares**).
+  Measurement snap uses cell centers, including grid offsets; turn it off for exact
+  positions. It is independent of token drop snap and camera zoom.
+- **Areas:** circle radius, 60° cone length, or rectangle width × height. These are
+  temporary spatial aids, with no spell, movement-cost or combat rules.
+- **Sharing:** one current measurement/area/ping per participant. Drag updates are
+  sampled at 12.5 Hz with HTTP backpressure. Finished measurements/areas last five
+  seconds; pings pulse for 2.2 seconds. Escape clears your own overlay. Pings never
+  move anyone's camera. Replacing an overlay replaces only that participant's aid.
+  Prepared-scene GM measurements stay local; only the active scene is shared.
+
+**Fog is visual concealment, not an authorization boundary.** Visible tokens under
+fog still exist in the Player snapshot and can be inspected by a determined client.
+Use **Hidden** for secrets: hidden tokens remain absent from Player snapshots,
+private image access and broadcasts, regardless of the fog geometry.
+
+## Receipt retention
+
+Scene command receipts default to **7 days** (`TABLETOP_RECEIPT_RETENTION_DAYS`,
+minimum one day). This is far longer than the memory-only browser retry window.
+After pruning, a very old UUID is no longer deduplicated: reload saved state before
+retrying commands kept open beyond that window. No scene/token/fog data is pruned.
+
+```sh
+php artisan tabletop:prune-receipts --dry-run
+php artisan tabletop:prune-receipts
+```
+
+The command is scheduled daily with overlap protection. For unattended cleanup,
+configure the normal Laravel scheduler (`php artisan schedule:run` every minute),
+or use `php artisan schedule:work` locally. The scheduler does not start itself.
+The command deletes only completed receipts older than the configured cutoff;
+`created_at` is indexed. It is safe to run repeatedly. This is not archival storage.
 
 ## Controls and saving
 

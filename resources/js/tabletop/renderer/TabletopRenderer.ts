@@ -1,4 +1,6 @@
 import { Application, Container, Texture } from 'pixi.js';
+import { FogLayer } from '../layers/FogLayer';
+import { SpatialLayer } from '../layers/SpatialLayer';
 import { Camera } from './camera/Camera';
 import { PointerController } from './interaction/PointerController';
 import { BattleMapLayer } from '../layers/BattleMapLayer';
@@ -17,6 +19,8 @@ export class TabletopRenderer {
     private map = new BattleMapLayer();
     private textures = new Map<string, Texture>();
     private tokens = new TokenLayer();
+    private fog = new FogLayer();
+    private spatial = new SpatialLayer();
     private overlay = new InteractionLayer();
     private input?: PointerController;
     private observer?: ResizeObserver;
@@ -59,7 +63,7 @@ export class TabletopRenderer {
         canvas.addEventListener('webglcontextlost', this.contextLost);
         this.host.appendChild(canvas);
         this.world.eventMode = 'none';
-        this.world.addChild(this.map, this.grid, this.tokens, this.overlay);
+        this.world.addChild(this.map, this.grid, this.tokens, this.fog, this.spatial, this.overlay);
         this.app.stage.addChild(this.world);
         this.input = new PointerController(
             canvas,
@@ -71,7 +75,11 @@ export class TabletopRenderer {
         let previousScene = this.store.getSnapshot().scene;
         const sync = () => {
             const { scene } = this.store.getSnapshot();
-            if (scene.grid !== previousScene.grid)
+            if (
+                scene.grid !== previousScene.grid ||
+                scene.width !== previousScene.width ||
+                scene.height !== previousScene.height
+            )
                 this.grid.update(scene.grid, scene.width, scene.height);
             this.tokens.sync(scene.tokens, this.store.role === 'player');
             if (scene !== previousScene) this.syncImages();
@@ -109,6 +117,21 @@ export class TabletopRenderer {
             }
             this.camera.tick(ticker.deltaMS);
             const camera = this.camera.state;
+            const scene = this.store.getSnapshot().scene;
+            this.fog.update(
+                this.app.renderer,
+                scene.fog,
+                this.store.spatial.draft,
+                scene.width,
+                scene.height,
+                this.store.role === 'gm',
+            );
+            this.spatial.update(
+                this.store.spatial,
+                scene.grid,
+                camera.zoom,
+                this.reducedMotion.matches,
+            );
             this.world.position.set(camera.x, camera.y);
             this.world.scale.set(camera.zoom);
             const percentage = Math.round(camera.zoom * 100);

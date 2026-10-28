@@ -6,7 +6,9 @@ export interface SceneEvent {
     revision: number;
     mutationId: string;
     dragSessionId?: string;
-    payload: Pick<Mutation, 'token' | 'grid' | 'map' | 'deletedId'> & { scene?: Partial<Scene> };
+    payload: Pick<Mutation, 'token' | 'grid' | 'map' | 'deletedId' | 'fog' | 'fogAction'> & {
+        scene?: Partial<Scene>;
+    };
 }
 export interface MovePreview extends Point {
     type: 'token.move-preview';
@@ -33,6 +35,16 @@ export function reduceEvent(scene: Scene, event: SceneEvent): Scene | 'gap' {
         ...scene,
         ...payload.scene,
         tokens,
+        ...(payload.fog
+            ? { fog: payload.fog }
+            : payload.fogAction
+              ? {
+                    fog: {
+                        base: scene.fog?.base ?? 'clear',
+                        actions: [...(scene.fog?.actions ?? []), payload.fogAction],
+                    },
+                }
+              : {}),
         revision: event.revision,
         ...(payload.grid ? { grid: payload.grid } : {}),
         ...('map' in payload ? { map: payload.map } : {}),

@@ -26,6 +26,17 @@ export class ScenePersistence {
             async () => {
                 try {
                     let result: Mutation;
+                    if (command.type === 'fog' || command.type === 'fogReset') {
+                        result =
+                            command.type === 'fog'
+                                ? await api.fog(this.sceneId, command.stroke, mutationId)
+                                : await api.resetFog(this.sceneId, command.base, mutationId);
+                        this.store.acceptFog(
+                            result,
+                            command.type === 'fog' ? command.localId : undefined,
+                        );
+                        return;
+                    }
                     if (command.type === 'token')
                         result = await api.token(command.id, command.patch, mutationId);
                     else if (command.type === 'move')
