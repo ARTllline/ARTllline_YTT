@@ -1,7 +1,7 @@
 import { request } from './client';
 import { commandId } from './workspace';
 import type { ImageAsset } from '../tabletop/types/scene';
-export type AssetKind = 'map' | 'token' | 'handout';
+export type AssetKind = 'map' | 'token' | 'handout' | 'prop' | 'music' | 'ambient' | 'sfx';
 export interface Label {
     id: string;
     name: string;
@@ -9,6 +9,7 @@ export interface Label {
 export interface LibraryAsset extends ImageAsset {
     name: string;
     originalName: string;
+    duration?: number | null;
     kind: AssetKind;
     thumbnailUrl: string;
     fileSize: number;

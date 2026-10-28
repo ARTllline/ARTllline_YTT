@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useEffect, useState } from 'react';
 import { request } from '../api/client';
 import type { User } from '../api/workspace';
@@ -38,13 +39,16 @@ export function JoinScreen({ user }: { user: User | null }) {
     return (
         <main className="join-screen">
             <div className="join-card">
-                <span className="eyebrow">YTT / AN INVITATION TO ADVENTURE</span>
+                <span className="eyebrow"> {t('YTT / AN INVITATION TO ADVENTURE')} </span>
                 <h1>
-                    {name || (error ? 'This invitation is unavailable.' : 'Finding your table…')}
+                    {name ||
+                        (error ? t('This invitation is unavailable.') : t('Finding your table…'))}
                 </h1>
                 <p>
-                    A place at the table is waiting for you. Join as a player and follow your Game
-                    Master into the story.
+                    {' '}
+                    {t(
+                        'A place at the table is waiting for you. Join as a player and follow your Game Master into the story.',
+                    )}{' '}
                 </p>
                 {error && (
                     <p role="alert" className="form-error">
@@ -58,18 +62,20 @@ export function JoinScreen({ user }: { user: User | null }) {
                             disabled={busy}
                             onClick={() => void join()}
                         >
-                            {busy ? 'Joining…' : `Join as ${user.name}`}
+                            {busy ? t('Joining…') : t('joinAs', { name: user.name })}
                         </button>
                     ) : (
                         <a
                             className="primary-button"
                             href={`/login?returnTo=${encodeURIComponent(location.pathname)}`}
                         >
-                            Sign in to join
+                            {' '}
+                            {t('Sign in to join')}{' '}
                         </a>
                     ))}
                 <a className="muted" href="/">
-                    Your campaigns
+                    {' '}
+                    {t('Your campaigns')}{' '}
                 </a>
             </div>
         </main>

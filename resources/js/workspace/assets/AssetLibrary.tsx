@@ -1,3 +1,7 @@
+import { t } from '../../i18n';
+import { isAudio, durationLabel } from '../../media/model';
+import { AudioPreview } from '../../media/AudioPreview';
+import { audioEngine } from '../../media/AudioEngine';
 import { useEffect, useState } from 'react';
 import { Images, Search, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
@@ -27,6 +31,7 @@ export function AssetLibrary({
     pickerKind?: AssetKind;
 }) {
     const [filters, setFilters] = useState({ ...initial, kind: pickerKind ?? '' });
+    useEffect(() => () => audioEngine.stopPreview(), []);
     const [data, setData] = useState<LibraryPage>();
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
@@ -79,7 +84,7 @@ export function AssetLibrary({
     return (
         <section
             className="asset-library"
-            aria-label="Asset library"
+            aria-label={t('Asset library')}
             onDragOver={(e) => {
                 if (e.dataTransfer.types.includes('Files')) e.preventDefault();
             }}
@@ -95,10 +100,14 @@ export function AssetLibrary({
                 {!pickerKind && (
                     <div className="asset-kinds">
                         {[
-                            ['', 'All'],
-                            ['map', 'Maps'],
-                            ['token', 'Tokens'],
-                            ['handout', 'Handouts'],
+                            ['', t('All')],
+                            ['map', t('Maps')],
+                            ['token', t('Tokens')],
+                            ['prop', t('Objects')],
+                            ['handout', t('Handouts')],
+                            ['music', 'Музыка'],
+                            ['ambient', 'Атмосфера'],
+                            ['sfx', 'Звуки'],
                         ].map(([value, label]) => (
                             <button
                                 key={value}
@@ -116,19 +125,19 @@ export function AssetLibrary({
                 <label className="asset-search">
                     <Search size={14} />
                     <input
-                        aria-label="Search assets"
-                        placeholder="Search names or tags…"
+                        aria-label={t('Search assets')}
+                        placeholder={t('Search names or tags…')}
                         value={filters.search}
                         onChange={(e) => update({ search: e.target.value })}
                     />
                 </label>
                 <div className="asset-filter-row">
                     <select
-                        aria-label="Filter collection"
+                        aria-label={t('Filter collection')}
                         value={filters.collection}
                         onChange={(e) => update({ collection: e.target.value })}
                     >
-                        <option value="">All collections</option>
+                        <option value=""> {t('All collections')} </option>
                         {data?.collections.map((c) => (
                             <option key={c.id} value={c.id}>
                                 {c.name}
@@ -136,11 +145,11 @@ export function AssetLibrary({
                         ))}
                     </select>
                     <select
-                        aria-label="Filter tag"
+                        aria-label={t('Filter tag')}
                         value={filters.tag}
                         onChange={(e) => update({ tag: e.target.value })}
                     >
-                        <option value="">All tags</option>
+                        <option value=""> {t('All tags')} </option>
                         {data?.tags.map((t) => (
                             <option key={t.id} value={t.id}>
                                 {t.name}
@@ -150,33 +159,41 @@ export function AssetLibrary({
                 </div>
                 <div className="asset-filter-row">
                     <select
-                        aria-label="Asset order"
+                        aria-label={t('Asset order')}
                         value={filters.sort}
                         onChange={(e) => update({ sort: e.target.value })}
                     >
-                        <option value="newest">Recent uploads</option>
-                        <option value="name">Name</option>
+                        <option value="newest"> {t('Recent uploads')} </option>
+                        <option value="name"> {t('Name')} </option>
                     </select>
-                    <small>{data?.total ?? 0} assets</small>
+                    <small>
+                        {data?.total ?? 0} {t('assets')}{' '}
+                    </small>
                 </div>
                 <div className="asset-filter-row">
                     <select
-                        aria-label="Upload asset type"
+                        aria-label={t('Upload asset type')}
                         value={kind}
                         onChange={(e) => setKind(e.target.value as AssetKind)}
                     >
-                        <option value="map">Maps</option>
-                        <option value="token">Tokens</option>
-                        <option value="handout">Handouts</option>
+                        <option value="map"> {t('Maps')} </option>
+                        <option value="token"> {t('Tokens')} </option>
+                        <option value="prop"> {t('Objects')} </option>
+                        <option value="handout"> {t('Handouts')} </option>
+                        <option value="music">Музыка</option>
+                        <option value="ambient">Атмосфера</option>
+                        <option value="sfx">Звуки</option>
                     </select>
                     <label className="upload-button">
                         <Upload size={14} />
-                        {uploading ? 'Uploading…' : 'Upload'}
+                        {uploading ? t('Uploading…') : t('Upload')}
                         <input
                             type="file"
                             multiple
-                            aria-label="Upload assets"
-                            accept="image/png,image/jpeg,image/webp"
+                            aria-label={t('Upload assets')}
+                            accept={
+                                isAudio(kind) ? '.mp3,.ogg,.wav' : 'image/png,image/jpeg,image/webp'
+                            }
                             disabled={uploading}
                             onChange={(e) => {
                                 void upload([...(e.target.files ?? [])]);
@@ -191,65 +208,103 @@ export function AssetLibrary({
                     {uploads.map((u, i) => (
                         <div key={i} className={u.state}>
                             <span>{u.name}</span>
-                            <small>{u.error ?? u.state}</small>
+                            <small>
+                                {u.error ??
+                                    t(`upload.${u.state}` as import('../../i18n').TranslationKey)}
+                            </small>
                         </div>
                     ))}
                     {!uploading && (
-                        <button onClick={() => setUploads([])}>Clear upload results</button>
+                        <button onClick={() => setUploads([])}>
+                            {' '}
+                            {t('Clear upload results')}{' '}
+                        </button>
                     )}
                 </div>
             )}
             {error && (
                 <p role="alert" className="form-error">
-                    {error} <button onClick={() => setRefresh((r) => r + 1)}>Retry</button>
+                    {error} <button onClick={() => setRefresh((r) => r + 1)}> {t('Retry')} </button>
                 </p>
             )}
-            {loading && <p className="hint">Loading collection…</p>}
+            {loading && <p className="hint"> {t('Loading collection…')} </p>}
             <div className={`asset-grid ${loading ? 'loading' : ''}`} aria-busy={loading}>
-                {data?.assets.map((asset) => (
-                    <button
-                        key={asset.id}
-                        className="asset-card"
-                        draggable={!pickerKind}
-                        title={`${asset.name} · ${asset.kind}. Drag onto the table or click for details.`}
-                        onDragStart={(e) => {
-                            e.dataTransfer.setData(ASSET_MIME, JSON.stringify(asset));
-                            e.dataTransfer.setData(`application/x-ytt-${asset.kind}`, '1');
-                            e.dataTransfer.effectAllowed = 'copy';
-                        }}
-                        onClick={() => (pickerKind && onUse ? onUse(asset) : setSelected(asset))}
-                    >
-                        <img src={asset.thumbnailUrl} loading="lazy" decoding="async" alt="" />
-                        <strong>{asset.name}</strong>
-                        <small>
-                            {asset.kind} · {asset.width} × {asset.height}
-                        </small>
-                    </button>
-                ))}
+                {data?.assets.map((asset) =>
+                    isAudio(asset.kind) ? (
+                        <div className="audio-card" key={asset.id}>
+                            <button
+                                title={
+                                    pickerKind ? `Выбрать ${asset.name}` : `Свойства ${asset.name}`
+                                }
+                                onClick={() =>
+                                    pickerKind && onUse ? onUse(asset) : setSelected(asset)
+                                }
+                            >
+                                <span className="audio-glyph" aria-hidden="true">
+                                    ♫
+                                </span>
+                                <strong>{asset.name}</strong>
+                                <small>
+                                    {t(`kind.${asset.kind}`)} · {durationLabel(asset.duration ?? 0)}
+                                </small>
+                            </button>
+                            <AudioPreview asset={asset} />
+                        </div>
+                    ) : (
+                        <button
+                            key={asset.id}
+                            className="asset-card"
+                            draggable={!pickerKind}
+                            title={t('assetCardHint', {
+                                name: asset.name,
+                                kind: t(`kind.${asset.kind}`),
+                            })}
+                            onDragStart={(e) => {
+                                e.dataTransfer.setData(ASSET_MIME, JSON.stringify(asset));
+                                e.dataTransfer.setData(`application/x-ytt-${asset.kind}`, '1');
+                                e.dataTransfer.effectAllowed = 'copy';
+                            }}
+                            onClick={() =>
+                                pickerKind && onUse ? onUse(asset) : setSelected(asset)
+                            }
+                        >
+                            <img src={asset.thumbnailUrl} loading="lazy" decoding="async" alt="" />
+                            <strong>{asset.name}</strong>
+                            <small>
+                                {t(`kind.${asset.kind}`)} · {asset.width} × {asset.height}
+                            </small>
+                        </button>
+                    ),
+                )}
             </div>
             {!loading && !data?.assets.length && (
                 <div className="asset-empty">
                     <Images size={28} />
                     <h3>
                         {filters.search || filters.tag || filters.collection
-                            ? 'No matching assets'
-                            : 'Make room for your world'}
+                            ? t('No matching assets')
+                            : t('Make room for your world')}
                     </h3>
-                    <p>Drop images here or upload your first map, token or handout.</p>
+                    <p>
+                        {isAudio(filters.kind)
+                            ? 'Перетащите MP3, OGG или WAV сюда. До 64 МБ, стерео или моно, до 2 часов.'
+                            : t('Drop images here or upload your first map, token or handout.')}
+                    </p>
                     <button
                         onClick={() => {
                             setLoading(true);
                             setFilters({ ...initial, kind: pickerKind ?? '' });
                         }}
                     >
-                        Clear filters
+                        {' '}
+                        {t('Clear filters')}{' '}
                     </button>
                 </div>
             )}
             {data && data.pages > 1 && (
                 <div className="asset-pagination">
                     <button
-                        aria-label="Previous asset page"
+                        aria-label={t('Previous asset page')}
                         disabled={loading || data.page === 1}
                         onClick={() => update({ page: data.page - 1 })}
                     >
@@ -259,7 +314,7 @@ export function AssetLibrary({
                         {data.page} / {data.pages}
                     </span>
                     <button
-                        aria-label="Next asset page"
+                        aria-label={t('Next asset page')}
                         disabled={loading || data.page === data.pages}
                         onClick={() => update({ page: data.page + 1 })}
                     >

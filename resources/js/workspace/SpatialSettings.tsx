@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useState } from 'react';
 import type { SceneStore } from '../tabletop/state/SceneStore';
 import type { Tool } from '../tabletop/types/scene';
@@ -22,52 +23,57 @@ export function SpatialSettings({
     if (tool === 'select' || tool === 'pan') return null;
     if (tool === 'note')
         return (
-            <div className="spatial-settings" aria-label="Active tool settings">
-                <strong>Private GM note</strong>
+            <div className="spatial-settings" aria-label={t('Active tool settings')}>
+                <strong> {t('Private GM note')} </strong>
                 <p>
-                    Click the map to place a marker. Escape cancels. Only Game Masters receive these
-                    notes.
+                    {' '}
+                    {t(
+                        'Click the map to place a marker. Escape cancels. Only Game Masters receive these notes.',
+                    )}{' '}
                 </p>
             </div>
         );
     return (
         <>
-            <div className="spatial-settings" aria-label="Active tool settings">
+            <div className="spatial-settings" aria-label={t('Active tool settings')}>
                 {tool === 'fog' ? (
                     <>
                         <div className="spatial-row">
-                            <strong>Fog of war</strong>
-                            <span>GM view</span>
+                            <strong> {t('Fog of war')} </strong>
+                            <span> {t('GM view')} </span>
                         </div>
                         <div className="spatial-row">
                             <button
                                 className={settings.operation === 'reveal' ? 'active' : ''}
                                 onClick={() => update({ operation: 'reveal' })}
                             >
-                                Reveal
+                                {' '}
+                                {t('Reveal')}{' '}
                             </button>
                             <button
                                 className={settings.operation === 'cover' ? 'active' : ''}
                                 onClick={() => update({ operation: 'cover' })}
                             >
-                                Cover
+                                {' '}
+                                {t('Cover')}{' '}
                             </button>
                             <select
-                                aria-label="Fog shape"
+                                aria-label={t('Fog shape')}
                                 value={settings.shape}
                                 onChange={(e) =>
                                     update({ shape: e.target.value as 'brush' | 'rectangle' })
                                 }
                             >
-                                <option value="brush">Brush</option>
-                                <option value="rectangle">Rectangle</option>
+                                <option value="brush"> {t('Brush')} </option>
+                                <option value="rectangle"> {t('Rectangle')} </option>
                             </select>
                         </div>
                         {settings.shape === 'brush' && (
                             <label className="spatial-row">
-                                Brush size{' '}
+                                {' '}
+                                {t('Brush size')}{' '}
                                 <input
-                                    aria-label="Fog brush size"
+                                    aria-label={t('Fog brush size')}
                                     type="range"
                                     min="15"
                                     max="300"
@@ -79,30 +85,37 @@ export function SpatialSettings({
                             </label>
                         )}
                         <div className="spatial-row">
-                            <button onClick={() => setReset('covered')}>Cover all…</button>
-                            <button onClick={() => setReset('clear')}>Reveal all…</button>
+                            <button onClick={() => setReset('covered')}> {t('Cover all…')} </button>
+                            <button onClick={() => setReset('clear')}> {t('Reveal all…')} </button>
                         </div>
-                        <p>Drag to {settings.operation}. Space + drag to pan.</p>
+                        <p>
+                            {' '}
+                            {t(
+                                settings.operation === 'reveal' ? 'fogDragReveal' : 'fogDragCover',
+                            )}{' '}
+                        </p>
                     </>
                 ) : (
                     <>
                         {['circle', 'cone', 'rectangle'].includes(tool) && (
                             <label className="spatial-row">
-                                Area shape{' '}
+                                {' '}
+                                {t('Area shape')}{' '}
                                 <select
-                                    aria-label="Area shape"
+                                    aria-label={t('Area shape')}
                                     value={tool}
                                     onChange={(e) => onTool(e.target.value as Tool)}
                                 >
-                                    <option value="circle">Circle</option>
-                                    <option value="cone">Cone · 60°</option>
-                                    <option value="rectangle">Rectangle</option>
+                                    <option value="circle"> {t('Circle')} </option>
+                                    <option value="cone"> {t('Cone · 60°')} </option>
+                                    <option value="rectangle"> {t('Rectangle')} </option>
                                 </select>
                             </label>
                         )}
                         {tool !== 'ping' && (
                             <label className="spatial-row">
-                                Snap to cell centers{' '}
+                                {' '}
+                                {t('Snap to cell centers')}{' '}
                                 <input
                                     type="checkbox"
                                     checked={settings.snap}
@@ -112,13 +125,13 @@ export function SpatialSettings({
                         )}
                         <p>
                             {tool === 'ping'
-                                ? 'Click to ping · visible for 2 seconds'
-                                : 'Drag to measure · stays for 5 seconds'}
+                                ? t('Click to ping · visible for 2 seconds')
+                                : t('Drag to measure · stays for 5 seconds')}
                             <br />
                             {store.spatial.shareActive
-                                ? 'Shared with the table'
-                                : 'Local preview · prepared scene'}
-                            . Esc to clear.
+                                ? t('Shared with the table')
+                                : t('Local preview · prepared scene')}
+                            {t('. Esc to clear.')}{' '}
                         </p>
                     </>
                 )}
@@ -126,10 +139,12 @@ export function SpatialSettings({
             {reset && (
                 <ConfirmDialog
                     title={
-                        reset === 'covered' ? 'Cover the entire scene?' : 'Reveal the entire scene?'
+                        reset === 'covered'
+                            ? t('Cover the entire scene?')
+                            : t('Reveal the entire scene?')
                     }
-                    description="This replaces the current fog and clears its brush history."
-                    buttonLabel={reset === 'covered' ? 'Cover all' : 'Reveal all'}
+                    description={t('This replaces the current fog and clears its brush history.')}
+                    buttonLabel={reset === 'covered' ? t('Cover all') : t('Reveal all')}
                     onClose={() => setReset(null)}
                     submit={async () => store.resetFog(reset)}
                 />

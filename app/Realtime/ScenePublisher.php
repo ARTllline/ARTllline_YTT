@@ -5,6 +5,7 @@ namespace App\Realtime;
 use App\Events\TabletopEvent;
 use App\Models\Campaign;
 use App\Models\Scene;
+use App\Models\SceneProp;
 use App\Models\Token;
 use App\Services\CombatView;
 use App\Services\SceneSnapshotBuilder;
@@ -15,7 +16,7 @@ class ScenePublisher
     public function __construct(private SceneSnapshotBuilder $snapshots, private SafeBroadcast $broadcast, private CommandContext $context) {}
 
     /** Materialize recipient-safe payloads while campaign + scene locks are held. */
-    public function changed(Scene $scene, string $type, array $result, bool $wasVisible): void
+    public function changed(Scene $scene, string $type, array $result, bool $wasVisible, array $previousVisibility = ['tokens' => [], 'props' => []]): void
     {
         $members = $scene->campaign->members()->get();
         $token = isset($result['token']) ? $scene->tokens()->with(['imageAsset', 'conditions'])->find($result['token']['id']) : null;
@@ -36,6 +37,8 @@ class ScenePublisher
             return;
         }
         $playerCombat = array_key_exists('combat', $result) ? app(CombatView::class)->build($scene, false) : null;
+        $batchTokens = $type === 'objects.changed' ? $scene->tokens()->with(['imageAsset', 'conditions'])->whereIn('id', array_column($result['tokens'] ?? [], 'id'))->where('is_hidden', false)->get() : collect();
+        $batchProps = $type === 'objects.changed' ? SceneProp::with('asset')->where('scene_id', $scene->id)->whereIn('id', array_column($result['props'] ?? [], 'id'))->where('is_hidden', false)->get() : collect();
         foreach ($members as $member) {
             if ($member->pivot->role !== 'player') {
                 continue;
@@ -71,6 +74,18 @@ class ScenePublisher
                 $payload['combat'] = $playerCombat;
                 if ($payload['combat'] === null && str_starts_with($type, 'combat.')) {
                     $event['type'] = 'scene.revision';
+                }
+            }
+            if ($type === 'objects.changed') {
+                $visibleTokens = $batchTokens->pluck('id')->map(strval(...))->all();
+                $visibleProps = $batchProps->pluck('id')->map(strval(...))->all();
+                $payload += ['tokens' => $batchTokens->map(fn ($t) => $this->snapshots->token($t, false, $member))->all(),
+                    'props' => $batchProps->map(fn ($p) => $p->projection(false))->all(),
+                    'deletedIds' => array_values(array_diff($previousVisibility['tokens'], $visibleTokens)),
+                    'deletedPropIds' => array_values(array_diff($previousVisibility['props'], $visibleProps))];
+                if (! $payload['tokens'] && ! $payload['props'] && ! $payload['deletedIds'] && ! $payload['deletedPropIds']) {
+                    $event['type'] = 'scene.revision';
+                    $payload = array_key_exists('combat', $result) ? ['combat' => $playerCombat] : [];
                 }
             }
             $this->schedule(ChannelAccess::player($scene->campaign_id, $scene->id, $scene->campaign->live_revision, $member->id), $event + ['payload' => $payload]);

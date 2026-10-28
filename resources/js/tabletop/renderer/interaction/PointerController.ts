@@ -1,3 +1,5 @@
+import { ObjectGesture } from './ObjectGesture';
+import type { ScenePropLayer } from '../../layers/ScenePropLayer';
 import { SpatialGesture } from './SpatialGesture';
 import type { Point, Tool } from '../../types/scene';
 import type { SceneStore } from '../../state/SceneStore';
@@ -8,6 +10,7 @@ import type { GMLayer } from '../../layers/GMLayer';
 import { screenToWorld, snapPoint } from '../../utils/coordinates';
 
 type Gesture = {
+    objects?: boolean;
     note?: string;
     spatial?: boolean;
     pointer: number;
@@ -23,6 +26,7 @@ const isEditing = (target: EventTarget | null) =>
 
 export class PointerController {
     private spatial: SpatialGesture;
+    private objects?: ObjectGesture;
     get tool(): Tool {
         return this.store.spatial.tool;
     }
@@ -32,6 +36,7 @@ export class PointerController {
     private gesture: Gesture | null = null;
     private space = false;
     private hover: string | null = null;
+    private propHover: string | null = null;
     private lastPreview = 0;
     private previewTimer: ReturnType<typeof setTimeout> | undefined;
     private abort = new AbortController();
@@ -42,8 +47,10 @@ export class PointerController {
         private tokens: TokenLayer,
         private overlay: InteractionLayer,
         private notes?: GMLayer,
+        private props?: ScenePropLayer,
     ) {
         this.spatial = new SpatialGesture(store);
+        if (props) this.objects = new ObjectGesture(store, tokens, props);
         const signal = this.abort.signal;
         canvas.addEventListener('pointerdown', this.down, { signal });
         canvas.addEventListener('pointermove', this.move, { signal });
@@ -55,6 +62,7 @@ export class PointerController {
             () => {
                 if (!this.gesture) {
                     this.hover = null;
+                    this.propHover = null;
                     this.overlay.clear();
                     this.refresh();
                 }
@@ -74,6 +82,10 @@ export class PointerController {
     };
     refresh = () => {
         this.tokens.selection(this.store.getSnapshot().selectedIds, this.hover);
+        this.props?.selection(
+            this.store.role === 'gm' ? (this.store.getSnapshot().selectedPropIds ?? []) : [],
+            this.store.role === 'gm' ? this.propHover : null,
+        );
         this.canvas.style.cursor =
             !this.space && !['select', 'pan'].includes(this.tool)
                 ? 'crosshair'
@@ -85,9 +97,12 @@ export class PointerController {
                       ? this.store.canMove(this.hover)
                           ? 'grab'
                           : 'pointer'
-                      : 'default';
+                      : this.propHover && this.store.role === 'gm'
+                        ? 'grab'
+                        : 'default';
     };
     private down = (e: PointerEvent) => {
+        if (this.camera.directed) return;
         if (this.gesture || !e.isPrimary || (e.button !== 0 && e.button !== 1)) return;
         e.preventDefault();
         this.canvas.focus({ preventScroll: true });
@@ -137,6 +152,20 @@ export class PointerController {
             this.refresh();
             return;
         }
+        if (!panning && this.objects?.down(world, e.shiftKey, this.camera.state.zoom)) {
+            this.gesture = {
+                pointer: e.pointerId,
+                start: point,
+                last: point,
+                token: null,
+                origin: world,
+                moved: false,
+                objects: true,
+            };
+            this.canvas.setPointerCapture(e.pointerId);
+            this.refresh();
+            return;
+        }
         const token = panning ? null : this.tokens.hit(world);
         if (!panning) this.store.select(token);
         if (!panning && !token) {
@@ -166,6 +195,7 @@ export class PointerController {
         if (!gesture) {
             const world = screenToWorld(point, this.camera.state);
             this.hover = this.tokens.hit(world);
+            this.propHover = this.hover ? null : (this.props?.hit(world) ?? null);
             if (this.tool === 'fog' && this.store.spatial.settings.shape === 'brush' && !this.space)
                 this.overlay.showBrush(
                     world,
@@ -178,6 +208,10 @@ export class PointerController {
             return;
         }
         if (e.pointerId !== gesture.pointer) return;
+        if (gesture.objects) {
+            this.objects?.move(screenToWorld(point, this.camera.state));
+            return;
+        }
         if (gesture.spatial) {
             this.spatial.move(screenToWorld(point, this.camera.state));
             gesture.last = point;
@@ -224,6 +258,11 @@ export class PointerController {
     private up = (e: PointerEvent) => {
         const gesture = this.gesture;
         if (!gesture || gesture.pointer !== e.pointerId) return;
+        if (gesture.objects) {
+            this.objects?.up(screenToWorld(this.local(e), this.camera.state));
+            this.finish();
+            return;
+        }
         if (gesture.spatial) {
             this.spatial.up(screenToWorld(this.local(e), this.camera.state));
             this.finish();
@@ -258,6 +297,7 @@ export class PointerController {
     }
     cancel = () => {
         this.spatial.cancel();
+        this.objects?.cancel();
         if (!this.gesture) return;
         if (this.gesture.note) {
             const note = this.store
@@ -278,6 +318,7 @@ export class PointerController {
     };
     reapplyPreview() {
         this.spatial.tick();
+        this.objects?.preview();
         const gesture = this.gesture;
         if (gesture?.note && gesture.moved)
             this.notes?.preview(gesture.note, this.dragPosition(gesture.last, gesture));
@@ -292,6 +333,9 @@ export class PointerController {
         if (gesture?.token && gesture.moved)
             this.tokens.preview(gesture.token, this.dragPosition(gesture.last, gesture));
     }
+    get draggingObjectTokens() {
+        return this.objects?.tokenIds ?? [];
+    }
     get draggingToken() {
         return this.gesture?.token;
     }
@@ -301,6 +345,10 @@ export class PointerController {
         this.refresh();
     };
     private wheel = (e: WheelEvent) => {
+        if (this.camera.directed) {
+            e.preventDefault();
+            return;
+        }
         e.preventDefault();
         if (this.gesture) return;
         const delta =
@@ -309,14 +357,26 @@ export class PointerController {
     };
     private keyDown = (e: KeyboardEvent) => {
         if (isEditing(e.target) || document.querySelector('dialog[open]')) return;
+        if (
+            this.store.role === 'gm' &&
+            !e.repeat &&
+            (e.key === 'Delete' || ((e.ctrlKey || e.metaKey) && e.code === 'KeyD'))
+        ) {
+            e.preventDefault();
+            this.store.onSelectionAction?.(e.key === 'Delete' ? 'delete' : 'duplicate');
+            return;
+        }
         if (e.code === 'Space' && document.activeElement === this.canvas) {
             e.preventDefault();
             this.space = true;
             this.refresh();
         }
         const shortcut = (
-            { v: 'select', h: 'pan', f: 'fog', r: 'ruler', p: 'ping' } as Record<string, Tool>
-        )[e.key.toLowerCase()];
+            { KeyV: 'select', KeyH: 'pan', KeyF: 'fog', KeyR: 'ruler', KeyP: 'ping' } as Record<
+                string,
+                Tool
+            >
+        )[e.code];
         if (
             shortcut &&
             !e.ctrlKey &&

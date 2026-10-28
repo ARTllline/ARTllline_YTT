@@ -16,7 +16,7 @@ class StoreImage
     public function execute(User $user, Campaign $campaign, UploadedFile $file, string $kind): Asset
     {
         Gate::forUser($user)->authorize('update', $campaign);
-        abort_unless(in_array($kind, ['map', 'token', 'handout'], true), 422);
+        abort_unless(in_array($kind, ['map', 'token', 'handout', 'prop'], true), 422);
         $dimensions = @getimagesize($file->getRealPath());
         $formats = [IMAGETYPE_PNG => ['image/png', 'png'], IMAGETYPE_JPEG => ['image/jpeg', 'jpg'], IMAGETYPE_WEBP => ['image/webp', 'webp']];
         $format = $dimensions ? ($formats[$dimensions[2]] ?? null) : null;
@@ -30,7 +30,7 @@ class StoreImage
             $original = basename(str_replace('\\', '/', $file->getClientOriginalName()));
 
             return Asset::create(['campaign_id' => $campaign->id, 'uploaded_by' => $user->id, 'kind' => $kind,
-                'name' => mb_substr(trim(preg_replace('/[_-]+/u', ' ', pathinfo($original, PATHINFO_FILENAME))) ?: 'Untitled asset', 0, 255),
+                'name' => mb_substr(trim(preg_replace('/[_-]+/u', ' ', pathinfo($original, PATHINFO_FILENAME))) ?: __('ui.untitled_asset'), 0, 255),
                 'original_name' => mb_substr(basename(str_replace('\\', '/', $file->getClientOriginalName())), 0, 255),
                 'storage_path' => $path, 'mime_type' => $format[0], 'file_size' => $file->getSize(),
                 'width' => $dimensions[0], 'height' => $dimensions[1]]);

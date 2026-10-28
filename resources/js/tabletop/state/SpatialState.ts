@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import type { FogStroke, SpatialEvent } from '../types/spatial';
 import type { Tool } from '../types/scene';
 
@@ -11,7 +12,7 @@ export class SpatialState {
         snap: true,
     };
     draft: FogStroke | null = null;
-    identity = { id: 'local', name: 'You' };
+    identity = { id: 'local', name: t('You') };
     shareActive = false;
     connected = false;
     epoch = 0;

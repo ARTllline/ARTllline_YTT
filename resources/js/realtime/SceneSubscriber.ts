@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import type { SpatialEvent } from '../tabletop/types/spatial';
 import { api } from '../api/workspace';
 import { request } from '../api/client';
@@ -55,7 +56,7 @@ export class SceneSubscriber {
             .listen('.tabletop', this.receive)
             .subscribed(() => void this.resync())
             .error(() => {
-                if (this.alive) status('Scene access changed. Reconnecting…');
+                if (this.alive) status(t('Scene access changed. Reconnecting…'));
             });
         let previous = queue.getSnapshot().status;
         this.unsubscribe = queue.subscribe(() => {
@@ -105,7 +106,7 @@ export class SceneSubscriber {
                 .catch(() => {
                     if (this.alive) {
                         this.deferred = true;
-                        status('Cannot reach the scene. Retrying…');
+                        status(t('Cannot reach the scene. Retrying…'));
                     }
                 });
         }, 15000);
@@ -137,6 +138,7 @@ export class SceneSubscriber {
             }
             return;
         }
+        if (!('revision' in event)) return;
         const change = event as SceneEvent;
         if (change.revision <= (scene.revision ?? 0)) return;
         this.previews.finish(change.dragSessionId);
@@ -179,7 +181,7 @@ export class SceneSubscriber {
         }
         this.loading = true;
         this.deferred = false;
-        this.status('Syncing scene…');
+        this.status(t('Syncing scene…'));
         this.controller = new AbortController();
         let staleSnapshot = false;
         try {

@@ -1,0 +1,420 @@
+.cue-library {
+    min-height: 0;
+    overflow-y: auto;
+    flex: 1;
+    padding-bottom: 16px;
+}
+.cue-intro {
+    margin: 0 16px 16px;
+    line-height: 1.7;
+}
+.cue-inactive,
+.cue-error {
+    margin: 12px;
+    padding: 12px;
+    border: 1px solid #6e5841;
+    border-radius: 8px;
+    background: #30271f;
+    color: #e6c89f;
+    overflow-wrap: anywhere;
+}
+.cue-error {
+    border-color: #865457;
+    color: #f0b9bc;
+    background: #352426;
+}
+.cue-card-list {
+    display: grid;
+    gap: 12px;
+    padding: 0 12px;
+}
+.cue-card,
+.cue-running {
+    border: 1px solid var(--border);
+    background: linear-gradient(140deg, #222d2e, #192223);
+    border-radius: 10px;
+    padding: 13px;
+}
+.cue-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.cue-card h3 {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    flex: 1;
+    overflow-wrap: anywhere;
+}
+.cue-card p {
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.cue-card-meta,
+.cue-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 12px;
+}
+.cue-card-meta {
+    font-size: 10px;
+    color: var(--muted);
+    flex-wrap: wrap;
+}
+.cue-card-actions .primary-button {
+    flex: 1;
+    justify-content: center;
+}
+.cue-running {
+    display: grid;
+    gap: 10px;
+    margin: 12px;
+    border-color: #8caa94;
+    background: #24352f;
+}
+.cue-running.failed {
+    border-color: #b67c77;
+}
+.cue-running strong {
+    overflow-wrap: anywhere;
+}
+.cue-running small {
+    font-size: 10px;
+    line-height: 1.6;
+    color: var(--muted);
+}
+.cue-running progress {
+    width: 100%;
+    height: 4px;
+    accent-color: #c8d6a4;
+}
+.cue-editor {
+    color: var(--text);
+    background: #172020;
+    border: 1px solid #455452;
+    border-radius: 14px;
+    width: min(920px, calc(100vw - 32px));
+    max-width: none;
+    max-height: calc(100dvh - 32px);
+    padding: 0;
+    box-shadow: 0 30px 100px #000a;
+}
+.cue-editor::backdrop {
+    background: #060d11c9;
+    backdrop-filter: blur(5px);
+}
+.cue-editor form {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - 36px);
+}
+.cue-editor header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+}
+.cue-editor .eyebrow {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    color: #b9c99d;
+    font-size: 9px;
+}
+.cue-editor h2 {
+    margin: 8px 0 0;
+    font-size: 21px;
+    font-weight: 500;
+}
+.cue-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 16px 24px;
+    align-items: start;
+}
+.cue-editor label {
+    display: grid;
+    gap: 6px;
+    font-size: 11px;
+    color: #bdcac8;
+}
+.cue-editor input:not([type='checkbox']),
+.cue-editor textarea,
+.cue-editor select {
+    color: var(--text);
+    width: 100%;
+    min-width: 0;
+    border: 1px solid #3b4b49;
+    border-radius: 6px;
+    padding: 9px 10px;
+    background: #111a1b;
+    font: inherit;
+}
+.cue-editor textarea {
+    resize: vertical;
+}
+.cue-composer {
+    display: grid;
+    grid-template-columns: 42% 58%;
+    min-height: 260px;
+    overflow-y: auto;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+.cue-timeline {
+    padding: 16px;
+    background: #121b1b;
+    min-width: 0;
+}
+.cue-timeline-heading {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin: 0 4px 14px;
+}
+.cue-step {
+    display: flex;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    margin-bottom: 7px;
+    background: #202b2c;
+}
+.cue-step.selected {
+    border-color: #9aaf91;
+    background: #2c3c35;
+}
+.cue-grip {
+    cursor: grab;
+    color: #7e918c;
+    padding: 5px;
+}
+.cue-step-select {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    text-align: left;
+    padding: 13px 8px 13px 2px;
+    flex: 1;
+}
+.cue-step-select strong {
+    font-size: 11px;
+    font-weight: 500;
+    flex: 1;
+}
+.cue-step-select span,
+.cue-step-select small {
+    font-size: 10px;
+    color: #a6b4a6;
+}
+.cue-add {
+    display: grid;
+    gap: 8px;
+    margin-top: 15px;
+}
+.cue-add button {
+    justify-content: center;
+}
+.cue-step-details {
+    padding: 20px;
+    min-width: 0;
+}
+.cue-step-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+.cue-step-heading h3 {
+    font-size: 14px;
+    margin: 0;
+}
+.cue-step-heading > div {
+    display: flex;
+    gap: 3px;
+}
+.cue-fields {
+    display: grid;
+    gap: 16px;
+}
+.cue-field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.cue-targets {
+    margin: 0;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px;
+    max-height: 230px;
+    overflow-y: auto;
+}
+.cue-targets legend {
+    font-size: 10px;
+    color: var(--muted);
+}
+.cue-targets label,
+.cue-fields .cue-check {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px;
+}
+.cue-targets span {
+    overflow-wrap: anywhere;
+}
+.cue-resource > div {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 8px;
+}
+.cue-empty-detail {
+    display: grid;
+    justify-items: center;
+    padding: 30px 18px;
+    text-align: center;
+    color: var(--muted);
+    gap: 12px;
+    line-height: 1.7;
+}
+.cue-editor footer {
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+.cue-editor footer .hint {
+    flex: 1;
+    min-width: 180px;
+    font-size: 10px;
+    line-height: 1.7;
+    margin: 0;
+}
+.cue-editor footer .cue-error {
+    flex-basis: 100%;
+    margin: 0;
+}
+.director-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 30;
+    overflow: hidden;
+}
+.player-tabletop:has(.director-layer.active)
+    > :is(.combat-panel, .toolbar-wrap, .player-help, .player-controls) {
+    visibility: hidden;
+    pointer-events: none;
+}
+.director-fade {
+    position: absolute;
+    inset: 0;
+    background: #030607;
+    transition-property: opacity;
+    transition-timing-function: ease-in-out;
+}
+.director-message {
+    position: absolute;
+    bottom: 18%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(680px, calc(100% - 36px));
+    padding: 24px 30px;
+    border-top: 1px solid #c4cfa766;
+    background: linear-gradient(90deg, #101a1beb, #192625f5, #101a1beb);
+    text-align: center;
+    box-shadow: 0 20px 80px #0007;
+    border-radius: 6px;
+    max-height: 55%;
+    overflow: auto;
+    pointer-events: auto;
+}
+.director-message h2 {
+    color: #d6dfb9;
+    font-size: clamp(20px, 3vw, 30px);
+    font-weight: 500;
+    margin: 0 0 14px;
+}
+.director-message p {
+    margin: 0;
+    font-size: clamp(14px, 2vw, 19px);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.director-release {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    pointer-events: auto;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    border: 1px solid #7d9289;
+    background: #182320;
+    border-radius: 20px;
+    padding: 9px 14px;
+    font-size: 11px;
+}
+@media (max-width: 640px) {
+    .cue-editor {
+        width: calc(100vw - 12px);
+        max-height: calc(100dvh - 12px);
+        border-radius: 10px;
+    }
+    .cue-editor form {
+        max-height: calc(100dvh - 16px);
+    }
+    .cue-editor header,
+    .cue-meta,
+    .cue-editor footer {
+        padding: 12px;
+    }
+    .cue-meta {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    .cue-meta textarea {
+        max-height: 60px;
+    }
+    .cue-composer {
+        display: block;
+    }
+    .cue-timeline {
+        padding: 12px;
+    }
+    .cue-step-details {
+        padding: 16px 12px;
+        border-top: 1px solid var(--border);
+    }
+    .cue-editor h2 {
+        font-size: 18px;
+    }
+    .cue-editor footer .primary-button {
+        width: 100%;
+        justify-content: center;
+    }
+    .director-message {
+        padding: 18px;
+        bottom: 22%;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .director-fade {
+        transition-duration: 0ms !important;
+    }
+}

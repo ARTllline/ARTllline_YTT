@@ -1,3 +1,4 @@
+import { conditionLabel } from '../../i18n';
 import { Container, Graphics, Text, Sprite, type Texture } from 'pixi.js';
 import type { Token } from '../types/scene';
 export class TokenView extends Container {
@@ -114,7 +115,7 @@ export class TokenView extends Container {
         this.badges.text =
             conditions
                 .slice(0, 3)
-                .map((c) => `◇${c.label.slice(0, 2).toUpperCase()}`)
+                .map((c) => `◇${conditionLabel(c).slice(0, 2).toUpperCase()}`)
                 .join(' ') + (conditions.length > 3 ? ` +${conditions.length - 3}` : '');
         this.badges.position.set(0, -r - 12);
         if (token.hp === 0)

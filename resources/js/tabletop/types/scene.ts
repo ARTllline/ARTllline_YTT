@@ -47,6 +47,7 @@ export interface SceneMap extends Point {
     height: number;
 }
 export interface Scene {
+    props?: readonly SceneProp[];
     notes?: readonly SceneNote[];
     combat?: Combat | null;
     fog?: FogState;
@@ -86,6 +87,57 @@ export interface SceneNote extends Point {
     body: string;
     icon: 'note' | 'warning' | 'secret' | 'encounter' | 'clue';
 }
+export interface SceneProp extends Point {
+    id: string;
+    name: string | null;
+    image: ImageAsset;
+    rotation: number;
+    scaleX: number;
+    scaleY: number;
+    zIndex: number;
+    isHidden?: boolean;
+    isLocked?: boolean;
+}
+export interface ObjectSelection {
+    tokenIds: string[];
+    propIds: string[];
+}
+export type ObjectCommand =
+    | {
+          endpoint: 'props';
+          data:
+              | { action: 'create'; assetId: string; x: number; y: number }
+              | {
+                    action: 'update';
+                    id: string;
+                    patch?: Partial<{
+                        name: string;
+                        x: number;
+                        y: number;
+                        rotation: number;
+                        scale_x: number;
+                        scale_y: number;
+                        is_hidden: boolean;
+                        is_locked: boolean;
+                    }>;
+                    order?: 'front' | 'back' | 'forward' | 'backward';
+                };
+      }
+    | {
+          endpoint: 'selection';
+          data: ObjectSelection &
+              (
+                  | { action: 'duplicate' | 'delete' }
+                  | {
+                        action: 'move';
+                        anchorKind: 'token' | 'prop';
+                        anchorId: string;
+                        x: number;
+                        y: number;
+                    }
+              );
+      }
+    | { endpoint: 'spawn'; data: { templateId: string; x: number; y: number }; encounter?: string };
 export type NoteCommand =
     | { action: 'create'; x: number; y: number }
     | { action: 'update'; id: string; patch: Partial<Omit<SceneNote, 'id'>> }

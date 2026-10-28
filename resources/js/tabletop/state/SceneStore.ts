@@ -1,3 +1,5 @@
+import { applyObjectPatch } from './objectPatch';
+import type { ObjectCommand, ObjectSelection } from '../types/scene';
 import type {
     GridSettings,
     Point,
@@ -15,6 +17,8 @@ import { clamp } from '../utils/coordinates';
 import type { CombatCommand, TokenCombatCommand } from '../types/combat';
 
 export interface WorkspaceSnapshot {
+    selectedPropIds?: readonly string[];
+    spawnedEncounter?: { name: string; tokenIds: string[] };
     selectedNoteId?: string;
     showNotes?: boolean;
     combatNotice?: string;
@@ -23,6 +27,7 @@ export interface WorkspaceSnapshot {
     preview: { id: string; position: Point } | null;
 }
 export type SceneCommand =
+    | { type: 'objects'; command: ObjectCommand }
     | { type: 'note'; command: NoteCommand; debounce?: boolean }
     | { type: 'combat'; command: CombatCommand }
     | { type: 'tokenCombat'; id: string; command: TokenCombatCommand }
@@ -36,7 +41,12 @@ export type SceneCommand =
 export class SceneStore {
     readonly spatial = new SpatialState();
     movementEnabled = true;
+    objectEditingEnabled = true;
     onRevisionGap?: () => void;
+    onSelectionAction?: (action: 'duplicate' | 'delete') => void;
+    bindSelectionActions(handler?: (action: 'duplicate' | 'delete') => void) {
+        this.onSelectionAction = handler;
+    }
     readonly localMutations = new Set<string>();
     trackMutation(id: string) {
         this.localMutations.add(id);
@@ -68,6 +78,9 @@ export class SceneStore {
             selectedNoteId: scene.notes?.some((n) => n.id === this.snapshot.selectedNoteId)
                 ? this.snapshot.selectedNoteId
                 : undefined,
+            selectedPropIds: this.snapshot.selectedPropIds?.filter((id) =>
+                scene.props?.some((p) => p.id === id),
+            ),
             selectedIds: this.snapshot.selectedIds.filter((id) =>
                 scene.tokens.some((t) => t.id === id),
             ),
@@ -105,13 +118,100 @@ export class SceneStore {
         this.emit({
             ...this.snapshot,
             selectedIds: id ? [id] : [],
+            selectedPropIds: [],
             selectedNoteId: undefined,
             preview: null,
         });
     }
+    selection(): ObjectSelection {
+        return {
+            tokenIds: [...this.snapshot.selectedIds],
+            propIds: [...(this.snapshot.selectedPropIds ?? [])],
+        };
+    }
+    selectObject(kind: 'token' | 'prop', id: string, toggle = false) {
+        if (this.role !== 'gm') {
+            if (kind === 'token') this.select(id);
+            return;
+        }
+        const selection = toggle
+            ? this.selection()
+            : ({ tokenIds: [], propIds: [] } as ObjectSelection);
+        const key = kind === 'token' ? 'tokenIds' : 'propIds';
+        selection[key] =
+            toggle && selection[key].includes(id)
+                ? selection[key].filter((v) => v !== id)
+                : [...selection[key], id];
+        this.selectObjects(selection);
+    }
+    selectObjects(selection: ObjectSelection) {
+        if (this.role !== 'gm') return;
+        this.emit({
+            ...this.snapshot,
+            selectedIds: selection.tokenIds,
+            selectedPropIds: selection.propIds,
+            selectedNoteId: undefined,
+            preview: null,
+        });
+    }
+    objectCommand(command: ObjectCommand) {
+        if (this.role !== 'gm') return;
+        let scene = this.snapshot.scene;
+        if (
+            command.endpoint === 'props' &&
+            command.data.action === 'update' &&
+            command.data.patch
+        ) {
+            const { id, patch } = command.data;
+            scene = {
+                ...scene,
+                props: scene.props?.map((p) =>
+                    p.id === id
+                        ? {
+                              ...p,
+                              ...('name' in patch ? { name: patch.name! } : {}),
+                              ...('x' in patch ? { x: patch.x! } : {}),
+                              ...('y' in patch ? { y: patch.y! } : {}),
+                              ...('rotation' in patch ? { rotation: patch.rotation! } : {}),
+                              ...('scale_x' in patch ? { scaleX: patch.scale_x! } : {}),
+                              ...('scale_y' in patch ? { scaleY: patch.scale_y! } : {}),
+                              ...('is_hidden' in patch ? { isHidden: patch.is_hidden! } : {}),
+                              ...('is_locked' in patch ? { isLocked: patch.is_locked! } : {}),
+                          }
+                        : p,
+                ),
+            };
+        }
+        if (command.endpoint === 'selection' && command.data.action === 'move') {
+            const d = command.data;
+            const anchor = (d.anchorKind === 'token' ? scene.tokens : (scene.props ?? [])).find(
+                (o) => o.id === d.anchorId,
+            );
+            if (!anchor) return;
+            const dx = d.x - anchor.x,
+                dy = d.y - anchor.y;
+            scene = {
+                ...scene,
+                tokens: scene.tokens.map((t) =>
+                    d.tokenIds.includes(t.id) ? { ...t, x: t.x + dx, y: t.y + dy } : t,
+                ),
+                props: scene.props?.map((p) =>
+                    d.propIds.includes(p.id) ? { ...p, x: p.x + dx, y: p.y + dy } : p,
+                ),
+            };
+        }
+        this.emit({ ...this.snapshot, scene });
+        this.command?.({ type: 'objects', command });
+    }
+    encounterPlaced(name: string, tokenIds: string[]) {
+        this.emit({ ...this.snapshot, spawnedEncounter: { name, tokenIds } });
+    }
+    clearEncounterNotice() {
+        this.emit({ ...this.snapshot, spawnedEncounter: undefined });
+    }
     selectNote(id?: string) {
         if (this.role !== 'gm') return;
-        this.emit({ ...this.snapshot, selectedIds: [], selectedNoteId: id });
+        this.emit({ ...this.snapshot, selectedIds: [], selectedPropIds: [], selectedNoteId: id });
     }
     toggleNotes() {
         this.emit({
@@ -254,6 +354,8 @@ export class SceneStore {
                 tokens: [...this.snapshot.scene.tokens.filter((t) => t.id !== token.id), token],
             },
             selectedIds: [token.id],
+            selectedPropIds: [],
+            selectedNoteId: undefined,
         });
     }
     removeToken(id: string, revision: number) {
@@ -278,6 +380,7 @@ export class SceneStore {
             revision: Math.max(this.snapshot.scene.revision ?? 0, result.revision),
         };
         if (apply && !stale) {
+            scene = { ...applyObjectPatch(scene, result), revision: scene.revision };
             if (this.role === 'gm' && result.note)
                 scene = {
                     ...scene,
@@ -307,6 +410,9 @@ export class SceneStore {
         this.emit({
             ...this.snapshot,
             scene,
+            selectedPropIds: this.snapshot.selectedPropIds?.filter((id) =>
+                scene.props?.some((p) => p.id === id),
+            ),
             selectedIds: this.snapshot.selectedIds.filter((id) =>
                 scene.tokens.some((t) => t.id === id),
             ),

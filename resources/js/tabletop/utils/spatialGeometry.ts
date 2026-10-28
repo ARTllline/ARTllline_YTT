@@ -1,10 +1,11 @@
+import { t } from '../../i18n';
 import type { GridSettings, Point } from '../types/scene';
 import { snapPoint } from './coordinates';
 export const distance = (a: Point, b: Point) => Math.hypot(b.x - a.x, b.y - a.y);
 export const measured = (pixels: number, grid: GridSettings) =>
     (pixels / grid.size) * (grid.distancePerCell ?? 5);
 export const measureLabel = (pixels: number, grid: GridSettings) =>
-    `${Number(measured(pixels, grid).toFixed(1))} ${grid.distanceUnit ?? 'ft'}`;
+    `${Number(measured(pixels, grid).toFixed(1))} ${t(`unit.${grid.distanceUnit ?? 'ft'}` as import('../../i18n').TranslationKey)}`;
 export const spatialSnap = (point: Point, grid: GridSettings, snap: boolean) =>
     snapPoint(point, { ...grid, snap });
 export const rectangle = (a: Point, b: Point) => ({

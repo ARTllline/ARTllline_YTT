@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { Component, type ReactNode } from 'react';
 export class ErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
     state = { failed: false };
@@ -11,12 +12,14 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { failed: 
         if (this.state.failed)
             return (
                 <div className="boot">
-                    <h1>The workspace could not open.</h1>
+                    <h1> {t('The workspace could not open.')} </h1>
                     <p>
-                        Reload to restore the demo. Diagnostic details are available in the browser
-                        console.
+                        {' '}
+                        {t(
+                            'Reload to restore the demo. Diagnostic details are available in the browser console.',
+                        )}{' '}
                     </p>
-                    <button onClick={() => location.reload()}>Reload workspace</button>
+                    <button onClick={() => location.reload()}> {t('Reload workspace')} </button>
                 </div>
             );
         return this.props.children;

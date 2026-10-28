@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import { useState, useSyncExternalStore } from 'react';
 import { EyeOff, Trash2, X } from 'lucide-react';
 import type { SceneStore } from '../../tabletop/state/SceneStore';
@@ -9,15 +10,14 @@ export function NoteInspector({ store }: { store: SceneStore }) {
     const note = scene.notes?.find((n) => n.id === selectedNoteId);
     if (!note) return null;
     return (
-        <aside className="note-inspector panel" aria-label="GM note editor">
+        <aside className="note-inspector panel" aria-label={t('GM note editor')}>
             <div className="panel-heading">
                 <span>
-                    <EyeOff size={14} />
-                    GM only
+                    <EyeOff size={14} /> {t('GM only')}{' '}
                 </span>
                 <button
                     className="icon-button"
-                    aria-label="Close note"
+                    aria-label={t('Close note')}
                     onClick={() => store.selectNote()}
                 >
                     <X size={16} />
@@ -25,7 +25,8 @@ export function NoteInspector({ store }: { store: SceneStore }) {
             </div>
             <div className="note-fields">
                 <label className="field">
-                    Title
+                    {' '}
+                    {t('Title')}{' '}
                     <input
                         key={note.id + note.title}
                         defaultValue={note.title}
@@ -40,7 +41,8 @@ export function NoteInspector({ store }: { store: SceneStore }) {
                     />
                 </label>
                 <label className="field">
-                    Marker
+                    {' '}
+                    {t('Marker')}{' '}
                     <select
                         value={note.icon}
                         onChange={(e) =>
@@ -48,16 +50,19 @@ export function NoteInspector({ store }: { store: SceneStore }) {
                         }
                     >
                         {['note', 'warning', 'secret', 'encounter', 'clue'].map((icon) => (
-                            <option key={icon}>{icon}</option>
+                            <option key={icon} value={icon}>
+                                {t(`marker.${icon}` as import('../../i18n').TranslationKey)}
+                            </option>
                         ))}
                     </select>
                 </label>
                 <label className="field">
-                    Private notes
+                    {' '}
+                    {t('Private notes')}{' '}
                     <textarea
                         value={note.body}
                         maxLength={20000}
-                        placeholder="A reminder, a secret, a clue…"
+                        placeholder={t('A reminder, a secret, a clue…')}
                         onChange={(e) => store.updateNote(note.id, { body: e.target.value }, true)}
                         onKeyDown={(e) => {
                             if (e.key === 'Escape') {
@@ -68,17 +73,18 @@ export function NoteInspector({ store }: { store: SceneStore }) {
                     />
                 </label>
                 <p className="hint">
-                    Plain text. Saves as you write. Drag the marker to move it; players never
-                    receive it.
+                    {' '}
+                    {t(
+                        'Plain text. Saves as you write. Drag the marker to move it; players never receive it.',
+                    )}{' '}
                 </p>
                 <button className="danger-button" onClick={() => setConfirm(true)}>
-                    <Trash2 size={13} />
-                    Delete note
+                    <Trash2 size={13} /> {t('Delete note')}{' '}
                 </button>
                 {confirm && (
                     <ConfirmDialog
-                        title="Delete GM note?"
-                        description={`Remove “${note.title}” from this scene?`}
+                        title={t('Delete GM note?')}
+                        description={t('deleteNote', { name: note.title })}
                         onClose={() => setConfirm(false)}
                         submit={async () => {
                             store.noteCommand({ action: 'delete', id: note.id });

@@ -11,8 +11,8 @@ const grid = {
 it('measures Euclidean world distances independent of camera and labels units', () => {
     expect(distance({ x: 0, y: 0 }, { x: 180, y: 240 })).toBe(300);
     expect(measured(360, grid)).toBe(30);
-    expect(measureLabel(360, grid)).toBe('30 ft');
-    expect(measureLabel(120, { ...grid, distancePerCell: 1.5, distanceUnit: 'm' })).toBe('3 m');
+    expect(measureLabel(360, grid)).toBe('30 фт');
+    expect(measureLabel(120, { ...grid, distancePerCell: 1.5, distanceUnit: 'm' })).toBe('3 м');
 });
 it('normalizes rectangle corners and cone direction/length/aperture', () => {
     expect(rectangle({ x: 100, y: 200 }, { x: -20, y: 10 })).toEqual({

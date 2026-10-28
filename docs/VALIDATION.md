@@ -1,3 +1,444 @@
+# Task 09 validation
+
+Validated locally on 2026-10-28 over the existing uncommitted Task 07/08 work,
+preserving campaign data, APP_KEY and environment. PHP 8.3.32, Laravel 13.39,
+MySQL, Reverb, the real Cue database worker, Chromium and the production build.
+Applied only additive `2026_10_28_000800_create_live_media`. No Composer/npm
+dependency changes, commit/push or deployment. FFprobe is now a documented runtime
+requirement for audio uploads; the installed executable was exercised, not mocked.
+
+## Automated coverage
+
+- Backend: **67 tests / 848 assertions**. Eight new Media tests cover actual WAV
+  probing/upload, duration, private media, Range/206, thumbnail denial, Player list/
+  write denial, cross-campaign assets and recipient-scoped channel authorization.
+  They also cover replacement/crossfade grants and expiry, pause/resume elapsed time,
+  four-ambient bound and independent removal, weather start/stop, stale scene commands,
+  activation cleanup with retained music, shared volumes, non-loop expiry, HTTP UUID
+  replay/conflict, single SFX publication without replay state, and Cue step duplicate
+  delivery/cancellation retaining already applied continuous state. Existing tests pass.
+- Client: **90 tests**. Ten new engine tests cover autoplay gating, discarded locked
+  SFX, approximate reconnect position, looping/non-looping offsets, crossfade cleanup,
+  independent ambient, bounded/duplicate/expired/wrong-epoch SFX, local gain persistence,
+  pause/resume, complete teardown, scene activation before missed media repair, an
+  atmosphere update not shortening an existing fade, and stale SFX crossing reconnect.
+- Typecheck, ESLint, production build, Pint, strict Composer validation, platform
+  requirements and whitespace checks run for the final implementation. The audio
+  panel is a separate lazy chunk. Vite reports its 500 kB warning for
+  the main bundle (about 506 kB uncompressed after this stage); renderer remains lazy.
+
+PHP tests use isolated SQLite and fake private storage; generated probe input is a
+real mono PCM WAV. They do not migrate/replace working campaign tables.
+
+## GM + two independent Players
+
+Dedicated **QA09 · Звук и атмосфера** campaign 9, active scene 27 and transition
+scene 28. GM plus two independently authenticated browser contexts and separate
+local preferences. Generated local test media: MP3 music/impact, OGG Vorbis music/
+wind, WAV rain. These are test tones/noise, not a bundled media library.
+
+- Uploaded batches through the actual Asset Library. Cards reported 40-second music,
+  15-second ambient and 1.5-second SFX, with independent results. Uploaded a further
+  **18,240,078-byte / 190-second WAV** successfully after restarting only the local
+  HTTP process with `upload_max_filesize=64M`, `post_max_size=68M`. Existing `.env`
+  and system PHP configuration stayed unchanged. Search/tags/collections/rename use
+  the same existing library path; audio detail/delete usage has explicit coverage.
+- GM preview created no Player audio elements and the secret audio GET returned 403.
+  Starting music while Players were locked still created zero Player elements.
+  Actual **Включить звук** clicks enabled both contexts. Instrumented real Web Audio
+  analyser outputs had nonzero waveform peaks, elements were playing/readyState 4,
+  and sampled positions were 8.369/8.370 seconds. This verifies browser audio output
+  processing, not a claim of physically listening to the user's speakers.
+- Replaced MP3 Track A with OGG Track B through the panel; outgoing elements were
+  released and both Players played B. Reloading one Player required Unlock again,
+  then restored B near the other Player's position (sample 23.907/23.898 seconds).
+  Rain + wind played together; Stop Rain removed only rain, with wind continuing.
+- Player 1 offline during Impact: Player 2 created the one-shot, Player 1 did not.
+  Reconnect/reload hydrates only continuous state. A final engine boundary also rejects
+  unexpired packets whose start predates reconnect, rather than relying only on the
+  five-second expiry. Local master 20% on Player 1 left Player 2's defaults and the
+  shared 70%/60%/80% mix unchanged; the local preference survived reload.
+- Final production-bundle reconnect check repeated the exact same SFX command UUID
+  after Player 1 returned online: **0 SFX requests on Player 1, exactly 1 on Player 2**.
+  Both retained restored rain (75 shapes) and music, with sampled positions
+  28.591/28.590 seconds and nonzero output signals. No application page errors.
+- Music pause stopped the current elements; resume continued from saved elapsed time.
+  Scene 28 replaced scene 27 with **zero particles**, empty ambient/effects and the
+  same continuing music element on each Player. Returning to 27 did not resurrect
+  its old weather. Campaign 9 was returned to scene 27 after this check.
+
+## Prepared cinematic and cancellation
+
+Saved **Появление босса** (12 actions): blackout, stop ambient, impact, reveal hidden
+boss, focus, shake, restore image, music with 2-second fade, strong embers, add combatants,
+begin combat, message. Actual Run button executed the sequence on the queue worker;
+both Players received audio/state and the Player message displayed over the table.
+Music/embers remain after completion. Opened the saved music action in the visual
+editor, verified campaign asset choices/fade/volume/loop and saved through the UI.
+
+A second cue applied music + rain, flash + vignette, then a long Wait before removing
+rain. Actual Stop cancelled future actions while music/rain remained. Flash's CSS
+animation was observed at one second, and a second run with reduced-motion emulation
+rendered the pulse `display:none`. Director cancellation cleared presentation without
+resetting the independent audio service. Fresh application contexts recorded zero
+JavaScript page errors.
+
+One initial cinematic wait exceeded the test's 20-second timeout: the first worker
+job took ~14 seconds and the run nevertheless completed all 12 steps. A repeat
+reached the message normally in the bounded check. This stage does not promise hard
+realtime Cue deadlines. Earlier browser automation retries involved a collapsed
+sidebar, asynchronous server-confirmed checkbox state, exact-label matching and a
+QA helper assuming private notes existed in Player snapshots; these were harness
+issues, not evidence of app success before the corrected checks.
+
+## Visuals and interaction
+
+GM panel, Player sound controls and Cue audio editor inspected at **1440 / 768 / 390 px**.
+No document or panel horizontal overflow in final captures. The GM's local sliders
+collapse under **Моя громкость**, leaving frequent live controls visible. Mobile
+panel was ~374 × 714 px within 390 × 844; Player controls ~374 × 316 px. Cue dialog
+remained inside the viewport with independent scrolling and an accessible Save button.
+All new controls, validation messages and autoplay states are Russian.
+
+An initial screenshot exposed inherited topbar `white-space:nowrap` and padded range
+inputs; explicit panel wrapping and compact range sizing fixed it. An initial engine
+pass exposed subsequent weather updates restarting an unchanged gain ramp; target
+deduplication now preserves the configured fade. Both have repeated checks/tests.
+
+Ignored screenshots: `task09-audio-final-{1440,768,390}.png`,
+`task09-player-audio-390.png`, `task09-cue-music-{1440,768,390}.png`,
+`task09-boss-player.png`, `task09-heavy-final.png`.
+
+## Heavy scene measurement
+
+Used the existing QA scene 24: **4096×3072 map, 200 props, 30 tokens, 208 fog actions,
+15 combatants, 20 notes**. Two 360-frame rAF samples with focused-canvas Space-pan,
+zoom, ruler and ping, one without media and one with playing music plus strong rain,
+embers and haze (**150 Pixi particle shapes**):
+
+| Sample                 | p50    | p95    | Maximum |
+| ---------------------- | ------ | ------ | ------- |
+| Final current baseline | 8.3 ms | 8.4 ms | 8.5 ms  |
+| Audio + three effects  | 8.3 ms | 8.4 ms | 8.5 ms  |
+
+Screenshots were taken after timing. Final before/after scene revision was **248**
+and token/prop arrays were identical. The first unfocused QA gesture moved one QA
+prop instead of panning; its original fixture position was restored through the
+normal API, preserving revisions/receipts, and both samples were repeated with
+explicit canvas focus. A prior stage's different moved prop was left unchanged.
+QA campaign 7's original active scene 21 was restored and test music stopped.
+These are local browser frame intervals, not GPU timings, WAN guarantees or a soak.
+
+## Remaining boundaries
+
+No Safari/Firefox/physical-touch/audio-device matrix, production proxy or eight-player
+load claim. Tested OGG Vorbis; Opus is accepted by the validator but was not separately
+browser-auditioned. Audio should be encoded in one supported pure-audio stream; embedded
+cover art is currently rejected. HTTP Range delivery targets the existing local disk;
+remote storage needs its own equivalent adapter. FFprobe and PHP/proxy upload limits
+must be configured on another host. Reconnect is approximate, outgoing grants expire,
+and downloaded bytes cannot be revoked. Cue/HTTP idempotency inherits existing receipt
+retention; SFX deliberately has no recovery replay. Triggers, spatial audio, waveform
+editing, microphone, streaming integrations, dynamic LOS and Session Mode remain deferred.
+
+---
+
+# Task 08 validation
+
+Validated locally on 2026-10-28 over the existing Task 07 working tree, preserving
+its uncommitted changes. PHP 8.3.32, Laravel 13.39, MySQL 8, Reverb 1.12, Node
+20.20.2 and Chromium. Applied only the additive Cue migration. Existing campaigns,
+private assets, APP_KEY and environment were preserved. No dependency changes,
+automatic commit/push or production deployment.
+
+## Automated checks
+
+| Command                        | Result                               |
+| ------------------------------ | ------------------------------------ |
+| `composer test`                | **59 tests / 757 assertions passed** |
+| `npm test`                     | **80 tests passed**                  |
+| `npm run typecheck`            | Passed                               |
+| `npm run lint`                 | Passed                               |
+| `npm run build`                | Passed; editor/library lazy loaded   |
+| `php vendor/bin/pint --test`   | Passed                               |
+| `composer validate --strict`   | Passed                               |
+| `composer check-platform-reqs` | Passed                               |
+| `git diff --check`             | Passed                               |
+
+Eight new PHP tests cover ordered CRUD, immutable execution snapshots (including
+definition deletion), GM/Player and cross-scene boundaries, unsupported executable
+types, sequential Wait/early delivery, combat integration, cancellation during Wait,
+activation cancellation/inactive-start rejection, hidden-focus denial and retry,
+start HTTP receipt replay, duplicate encounter/prefab/handout deliveries, stale-run
+recovery, actual database job insertion, and rollback after an injected failure
+between spawn and combat. Retry then commits exactly once. Tests use isolated
+SQLite/fake storage, not working campaign tables.
+
+Seven new client tests cover event deduplication/order/epoch, automatic terminal
+release, old-run terminal messages arriving after a newer run, lease/message expiry,
+failed-step retry, Escape/reconnect cleanup, ticker camera interpolation/reduced
+motion and immutable editor reorder/defaults. Prior scene/props/combat/fog tests
+remain green. Run position, not the seven-day HTTP receipt retention, provides
+durable step idempotency.
+
+## Real GM + Player acceptance
+
+Dedicated **QA08 · Режиссёрская мастерская** campaign 8, active scene 25 and prepared
+scene 26. Separate authenticated GM and Player browser contexts, production bundle,
+real MySQL/Reverb and an actual `queue:work tabletop --queue=cues --sleep=0.1`
+process. QA media copied through authorized upload from earlier generated QA images.
+
+- Built **Засада гоблинов** through the visual editor: reveal two hidden enemies,
+  Wait 400 ms, message, medium shake, add to combat, begin. One Run click revealed
+  the enemies, displayed the Player message/shake and produced active round 1 with
+  two combatants. Before reveal, Player had only the owned scout, no secret props,
+  and GET definitions returned 403. Captured frames contained no hidden boss name.
+  The completed run cleared all Director UI and freed the camera.
+- **Появление демона** executed fade → Wait 700 ms → reveal boss/prop → object focus
+  → zoom → restore image → shake → message → release. Exercised editor duplicate,
+  delete and real drag reorder; saved nine-step order matched the intended sequence.
+  Focus carried only x/y/duration, no target ID/name. Camera ended at zoom 1.4; only
+  the two persistent reveals changed revision (r16→18). Measured event spacing was
+  about 1.254 s for 500 ms fade + 700 ms Wait, 1.215 s for a 1200 ms focus, 1.510 s
+  for a 1500 ms zoom, and 5.009 s for a five-second message. No old effects replayed.
+- Refreshed GM during a focus/60-second Wait/move/message run. GM reopened Events
+  and saw its running card. Set Player offline, verified immediate local cleanup,
+  stopped the verified queue worker during the Wait, reconnected/reloaded Player:
+  run remained at position 2 and prop X remained 800. Restarting the worker completed
+  the saved plan, yielding X=900 and completed position 4. No GM browser timer was
+  needed. The earlier shorter interruption attempt completed before the stop and
+  is not counted as the worker-restart acceptance.
+- Spawned a mixed prefab and encounter, added the latter to combat, and showed a
+  handout through one run. After completion, the guarded ignored PHP QA script
+  delivered each of those three jobs three more times. Before/after remained exactly
+  **7 tokens, 2 props, 1 handout reveal, revision 24**. The client initially opened
+  the handout normally; automated event tests also verify one presentation only.
+- Started move X=1000 → focus → Wait 60 seconds → move X=1100. Clicked the actual
+  **Остановить** button during the displayed Wait. Run became cancelled, Player
+  camera/overlays cleared and X stayed 1000. The future move did not execute.
+- Hid the boss, ran focus on it and saw the Russian failed-step explanation with
+  **Повторить шаг / Остановить**. Player frames contained no boss identity or
+  coordinates. Revealed it, pressed Retry, observed focus and automatic completion.
+- Created/saved an event on inactive scene 26. Run button was disabled with a reason;
+  direct start returned 409. GM editing did not change Player's active scene.
+- Final mobile cinematic check verified combat/tools/help/zoom HUD hidden during
+  direction, visible after Esc, and empty Director presentation after release.
+  Fresh acceptance contexts recorded no JavaScript page errors.
+
+An early offline pass exposed dependence on WebSocket heartbeat timeout; an explicit
+browser offline reset now clears immediately, and the repeated pass above confirmed
+it. An old QA browser context retained prior fault-injection instrumentation and
+reported navigation-context errors; final recovery/visual checks used a fresh Player
+context. Expected HTTP 403/409 and the deliberately failed hidden-focus step are not
+normal-flow failures. The first ignored replay script used a nonexistent relation;
+it was corrected before the successful before/after measurement above.
+
+## Visuals and responsive behavior
+
+Inspected the timeline, action settings, cinematic message and completion/retry/stop
+states. All new user-facing terminology is Russian; technical action keys remain
+internal. The editor was checked at **1440, 768 and 390 px**, with dialog bounds
+inside the viewport and no horizontal document overflow; one canvas remained.
+Player messages at those widths were bounded (at 390 px, about 354 px wide), with
+plain text wrapping and a visible local release button. The final Player screenshot
+uses 390×844. No physical touch/Safari/Firefox claim.
+
+Resizing initially unmounted the open editor through the workspace's automatic
+library collapse. The breakpoint handler now preserves a library with an open modal;
+the repeated width sequence retained the editor. User close/unload still warns for
+unsaved drafts. Mobile sequence/settings scroll inside the bounded dialog, while
+Save remains available. The editor is a separate ~19 kB uncompressed lazy chunk;
+the main app bundle stays below Vite's 500 kB warning threshold.
+
+The final dirty-draft check also resized an edited title to **390×844**, retained
+the exact draft, and measured a roughly **378×831** dialog inside that viewport.
+After restoring/saving the original title, the final production bundle completed
+the cinematic again on the restarted worker with no page exceptions.
+
+Ignored local screenshots: `task08-editor-{1440,768,390}.png`,
+`task08-ambush-message.png`, `task08-cinematic-{1440,768,390}.png`,
+`task08-final-cinematic-mobile.png`, `task08-final-cinematic-desktop.png`,
+`task08-heavy.png`. Earlier cinematic images
+predate the final HUD suppression; the final mobile image reflects it.
+
+## Heavy scene regression
+
+Reused the Task 07 fixture without changing its domain data: **4096×3072 map,
+30 tokens, 200 props, 208 fog actions, 15 combatants, 20 notes**, three cached images.
+A 360-frame rAF sample during Space-pan, wheel zoom, ruler and ping measured
+**p50 8.3 / p95 8.4 / max 16.7 ms**. Task 07's same-style sample was 8.3/8.4/8.5 ms.
+Screenshot was taken after timing. A separate 360-frame direct-renderer camera zoom
+sample measured **8.8 / 16.9 / 25.0 ms**, with **zero React onZoom callbacks during
+the directed animation**. It used the production renderer transition directly;
+server-to-Player execution was verified separately above. No >20 ms p95 regression.
+
+These are local browser frame intervals, not GPU timings or hosted performance
+guarantees. No long soak, WAN/load benchmark or eight-player cinematic capacity claim.
+Existing synchronous broadcast, fog-history growth and large-image GPU constraints
+remain. Many-object reveal/hide currently delegates successive canonical mutations
+inside one atomic step; very large groups can take longer than one batched spawn.
+
+## Operations and remaining boundaries
+
+`tabletop:recover-cues` completed successfully with zero overdue runs after acceptance;
+`schedule:list` includes the every-minute recovery and existing daily receipt cleanup.
+Local HTTP, Reverb, the refreshed Cue worker and `schedule:work` were left running.
+README documents the explicit database connection, worker, scheduler, restart and
+cancellation semantics. Delays are minimums and may increase under load; the
+subsecond tail is handled server-side without holding locks. A broker outage can
+drop ephemeral effects; reconnect restores persistent state only, and terminal-loss
+safety expiry releases cameras. There is no cinematic replay/outbox guarantee.
+
+Run retention/history browsing, live collaboration on a definition, bulk visibility
+optimization, undo of completed actions and production supervision remain next work.
+Triggers, regions, automation conditions/loops/variables, scripts/macros, audio/music,
+weather/particles, dynamic LOS and Story integration are deferred. Future Triggers
+can invoke the existing validated CueRunner/action boundary without a new state
+synchronization or mutation implementation.
+
+---
+
+# Task 07 validation
+
+Validated locally on 2026-10-28 against clean committed Task 06 (`bc4b243`).
+Laravel 13.39, PHP 8.3.32/GD/WebP, MySQL 8, Reverb 1.12, Node 20.20.2 and Chromium.
+Applied only the additive reusable-content migration to local MySQL. Existing
+campaigns, assets, environment and APP_KEY were preserved. No automatic seed,
+dependency change, commit, push or production deployment.
+
+## Automated checks
+
+| Command                        | Result                               |
+| ------------------------------ | ------------------------------------ |
+| `composer test`                | **51 tests / 682 assertions passed** |
+| `npm test`                     | **73 tests passed**                  |
+| `npm run typecheck`            | Passed                               |
+| `npm run lint`                 | Passed                               |
+| `npm run build`                | Passed                               |
+| `php vendor/bin/pint --test`   | Passed                               |
+| `composer validate --strict`   | Passed                               |
+| `composer check-platform-reqs` | Passed                               |
+| `git diff --check`             | Passed                               |
+
+Seven new backend tests (112 assertions) cover visible/hidden prop transitions,
+private image denial, mixed batch move/duplicate/delete, one revision and receipt
+replay, relative prefab transforms in another scene, asset reference protection,
+independent instances after definition deletion, fresh encounter HP/ownership/conditions,
+existing combat integration, cross-campaign IDs, locked-group rollback, stack gaps/ties,
+hidden neighbours, empty hidden-only Player frames and inactive-scene isolation.
+Prior combat/preparation/multiplayer/security tests remain green. Tests use isolated
+SQLite and fake storage; browser acceptance uses the configured local MySQL.
+
+Eleven new client cases cover Russian fallback/interpolation/error mapping, preset
+condition labels versus custom content, mixed selection and resync cleanup, a coherent
+token+prop realtime patch with deletion and revision gaps, lost-response UUID reuse
+for prefab/encounter/duplicate, mixed drag preview versus one snapped commit, rotated
+resize cancellation, Shift toggle and locked-group movement denial. A regression in
+the first batch reducer (legacy token array overwriting batch tokens) was fixed and
+is covered. The shell test now asserts Russian title/boot text and `lang="ru"`.
+
+## Browser workflows and security
+
+Separate **QA07 · Мастерская игровых сцен** campaign (7), scene 21 (tavern),
+22 (ambush) and 24 (heavy fixture). Earlier QA campaigns were left intact. Existing
+GM and Player accounts joined through a new invitation. QA fixture images are
+generated local graphics; no external copyrighted assets were downloaded.
+
+- Uploaded a transparent 400×240 PNG as **Объекты**, then used a real native card
+  drag to create prop 1. Named it, set 30° rotation and 200-pixel width in Inspector.
+  Saved values and Player projection agreed. Hiding removed it entirely from Player
+  snapshot and made its original image return 403; revealing restored it.
+- Real Shift-click selected token 122 plus prop 1. One release sent exactly one
+  `/selection` request containing both IDs and one UUID. Scene r9→r10 moved token
+  to (570,630) and prop to (510,570), preserving their offset. Player's live store
+  showed both accepted positions at r10.
+- Ctrl+D with the committed HTTP response deliberately aborted showed Russian Retry.
+  Retrying produced exactly one new token/prop pair (two of each total). Saved that
+  mixed selection as **Лагерь у дороги — стол и часовой** through the name dialog.
+- Switched to scene 22 and dragged the prefab card onto the table. Aborted its
+  committed response, then clicked Retry. Both requests used UUID
+  `773b9c4e-6a2b-49a8-9241-ac2e0fe587af`; scene remained r1 with one token and one prop.
+  Relative offset (60,60), rotation 30° and scales 0.5/0.3 survived the spawn.
+- Selected four tokens in the scene outline and saved **Патруль гоблинов**. The
+  source archer had 2/20 HP, a Player owner and Poisoned; the boss was hidden.
+  Deleted the source selection through the confirmation. Spawn response loss and
+  Retry used UUID `018f1ad7-abc7-4c8d-9476-78ac99174530` twice and produced exactly
+  four tokens. Archer started 20/20, all owners null, all conditions empty. Player
+  received three tokens and no hidden boss. **Добавить в бой → Начать бой → Следующий
+  ход** used the existing tracker; GM had four combatants, Player three.
+- Rotated corner-handle resize changed prop scales to 0.8222/0.3928 while retaining
+  30°. Lock → attempted drag left revision 22 and position (570,390) unchanged;
+  unlock restored editing. Asset detail usage included both scene props and prefab.
+- Created/edited a GM note with Russian default title, changed marker to stable key
+  `secret`, saved Russian title/body and closed with Escape. Player snapshot omitted
+  notes. Captured Player WS frames for a hidden prop edit and note body edit were
+  empty `scene.revision` payloads at r18/r19, with no names or private fields.
+  Direct Player definition-list request returned 403.
+- Stopped the verified local Reverb process, changed prop visibility via HTTP while
+  it was down, then restarted it. Player displayed **Нет связи · повторная попытка**,
+  returned to **На связи** without reload and resynchronized to r17 with no hidden
+  prop, note or definition payload. HTTP and Reverb were left running afterward.
+- Prepared an image handout, entered Russian description, Preview → Show to Players.
+  Player's Russian overlay opened at 390 px with bounds approximately 378×833 inside
+  390×844. Existing image privacy and handout behavior remained functional.
+
+Deliberate failed requests, private 403s, missing-page 404 and broker interruption
+generated expected console/network errors. No normal-workflow JS exception was found.
+Selector retries during QA are not counted as application failures. The heavy fixture
+initially used a wrong combat field and rolled back; it was corrected to `position`.
+Its copied fog history also received the source revision before new strokes were tested.
+
+## Russian UI and layout
+
+Audited login/register, campaign/scene shell, library/filter/upload/details, template
+cards, inspectors, grid/fog/ruler/AoE/ping, combat/conditions, notes, handouts, keyboard
+help, confirmation/error/empty states and Player/wait/connection surfaces. New display
+labels are centralized in `ru.ts`; Laravel validation/boot/defaults/error HTML use
+`lang/ru`. No automatic translation of historical names or user text. English fixture
+names, filenames and content remain intentional, as do HP/AC, X/Y, formats and key names.
+
+Browser audit caught and fixed technical-value localization in drag MIME and note
+option values, a raw tag placeholder, and overflow from the longer Russian asset tabs.
+The library now wraps category buttons without horizontal scrolling (222/222 client/
+scroll width in the narrow sidebar). Inspected GM at 1440, 768 and 390 px; Player at
+the same widths had exactly one canvas and document scrollWidth equal to viewport.
+Inspected login at 390 and a Russian 404 page in a separate unauthenticated context.
+
+Local ignored screenshots: `task07-prop-desktop.png`, `task07-encounter-combat.png`,
+`task07-library-mobile.png`, `task07-gm-tablet.png`, `task07-gm-mobile.png`,
+`task07-player-{1440,768,390}.png`, `task07-handout-mobile.png`,
+`task07-login-mobile.png`, `task07-stress.png`. Early prop screenshot predates the
+library wrap and rectangular prop preview fixes; later library/tablet images show them.
+
+## Heavy scene regression
+
+Actual 4096×3072 map, **30 tokens, 200 props, 207 fog actions, 15 active combatants,
+20 notes**. After all images loaded, a 360-frame requestAnimationFrame sample during
+Space-pan, wheel zoom, ruler and ping measured **p50 8.3 ms / p95 8.4 ms / max 8.5 ms**.
+Task 06's interaction+screenshot sample was p95 16.7 ms. Current screenshot was taken
+after timing, so these are useful local regressions rather than identical benchmarks.
+No >20 ms p95 regression warranted profiling. Renderer inspection found 200 prop views
+sharing **one Texture**, with **three cached images total** (map, token, prop).
+An additional real fog stroke advanced r244→245 and history 207→208; circle AoE also
+remained functional. Snapshot secrets and existing combat/spatial tests remained green.
+
+These are browser frame intervals, not GPU timings or a hosted/hardware guarantee.
+No hours-long memory soak, physical tablet touch, Safari/Firefox or VPS latency claim.
+Manual fog's 2048-side mask/history growth and synchronous broadcast deployment
+considerations remain earlier-stage debt.
+
+## Deferred / next stage
+
+Marquee selection, group rotation/scaling, undo/redo, editable template definitions,
+optional preset initiative and configurable reduced starting HP remain deferred.
+Current reusable tokens start at max HP, explicitly described by the save dialog.
+No audio/music, Cue/Director execution, triggers, cinematic camera, weather/particles,
+animated-media overhaul, walls/lighting/LOS or Story coupling was added. The explicit
+server actions provide the next Cue/Director entry points; multi-step orchestration,
+cancellation and recovery need their own design and acceptance.
+
+---
+
 # Task 06 validation
 
 Validated locally on 2026-10-28 against committed Task 05 (`1ce037f`). Laravel 13.39,

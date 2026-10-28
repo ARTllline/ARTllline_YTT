@@ -1,3 +1,4 @@
+import { t, errorMessage } from '../i18n';
 export class ApiError extends Error {
     constructor(
         message: string,
@@ -61,7 +62,9 @@ export async function request<T>(
         if (error instanceof DOMException && error.name === 'AbortError') throw error;
         retain();
         throw new ApiError(
-            'Connection lost. Your changes have not been confirmed. Check the connection and retry.',
+            t(
+                'Connection lost. Your changes have not been confirmed. Check the connection and retry.',
+            ),
             0,
         );
     }
@@ -72,19 +75,30 @@ export async function request<T>(
         const fields = data.errors as Record<string, string[]> | undefined;
         const message =
             response.status === 419
-                ? 'Your session expired. Reload and sign in again.'
+                ? t('Your session expired. Reload and sign in again.')
                 : response.status === 401
-                  ? 'Please sign in again.'
+                  ? t('Please sign in again.')
                   : response.status === 403
-                    ? 'You do not have permission to do that.'
+                    ? t('You do not have permission to do that.')
                     : response.status === 413
-                      ? 'This image is too large for the server upload limit.'
+                      ? t('This image is too large for the server upload limit.')
                       : response.status >= 500
-                        ? 'The server could not save this change. Please retry.'
+                        ? t('The server could not save this change. Please retry.')
                         : fields
                           ? Object.values(fields).flat().join(' ')
                           : (data.message ?? 'The request could not be completed.');
-        throw new ApiError(message, response.status, fields);
+        throw new ApiError(
+            errorMessage(message, response.status),
+            response.status,
+            fields
+                ? Object.fromEntries(
+                      Object.entries(fields).map(([key, values]) => [
+                          key,
+                          values.map((value) => errorMessage(value, response.status)),
+                      ]),
+                  )
+                : {},
+        );
     }
     return data as T;
 }

@@ -1,3 +1,7 @@
+import { t } from '../../i18n';
+import { isAudio, durationLabel } from '../../media/model';
+import { AudioPreview } from '../../media/AudioPreview';
+import { audioEngine } from '../../media/AudioEngine';
 import { useEffect, useState } from 'react';
 import { Eye, Trash2 } from 'lucide-react';
 import { preparation, type LibraryAsset, type Handout } from '../../api/preparation';
@@ -28,6 +32,7 @@ export function AssetDetails({
     const [name, setName] = useState(asset.name),
         [tags, setTags] = useState(asset.tags.map((t) => t.name).join(', ')),
         [collections, setCollections] = useState(asset.collections.map((t) => t.name).join(', '));
+    useEffect(() => () => audioEngine.stopPreview(), []);
     const [usage, setUsage] = useState<string[]>(),
         [error, setError] = useState(''),
         [busy, setBusy] = useState(false),
@@ -77,47 +82,65 @@ export function AssetDetails({
     };
     return (
         <Dialog
-            title="Asset details"
+            title={t('Asset details')}
             onClose={() => {
                 if (!busy) onClose();
             }}
         >
             <div className="asset-detail">
-                <img className="asset-detail-preview" src={asset.thumbnailUrl} alt={asset.name} />
+                {isAudio(asset.kind) ? (
+                    <AudioPreview asset={asset} />
+                ) : (
+                    <img
+                        className="asset-detail-preview"
+                        src={asset.thumbnailUrl}
+                        alt={asset.name}
+                    />
+                )}
                 <p className="hint">
-                    {asset.kind} · {asset.width} × {asset.height} ·{' '}
-                    {(asset.fileSize / 1048576).toFixed(2)} MiB
+                    {t(`kind.${asset.kind}`)} ·{' '}
+                    {isAudio(asset.kind)
+                        ? durationLabel(asset.duration ?? 0)
+                        : `${asset.width} × ${asset.height}`}{' '}
+                    · {(asset.fileSize / 1048576).toFixed(2)} MiB
                     <br />
                     {asset.originalName}
                     <br />
                     {new Date(asset.createdAt).toLocaleDateString()}
                 </p>
                 <label className="field">
-                    Display name
+                    {' '}
+                    {t('Display name')}{' '}
                     <input value={name} maxLength={255} onChange={(e) => setName(e.target.value)} />
                 </label>
                 <label className="field">
-                    Tags · comma separated
+                    {' '}
+                    {t('Tags · comma separated')}{' '}
                     <input
                         value={tags}
-                        placeholder="forest, ambush, night"
+                        placeholder={t('forest, ambush, night')}
                         onChange={(e) => setTags(e.target.value)}
                     />
                 </label>
                 <label className="field">
-                    Collections · comma separated
+                    {' '}
+                    {t('Collections · comma separated')}{' '}
                     <input
                         value={collections}
-                        placeholder="Session 12, The old road"
+                        placeholder={t('Session 12, The old road')}
                         onChange={(e) => setCollections(e.target.value)}
                     />
                 </label>
                 <p className="hint">
-                    Type a new tag or collection to create it. Remove a name to detach it.
+                    {' '}
+                    {t(
+                        'Type a new tag or collection to create it. Remove a name to detach it.',
+                    )}{' '}
                 </p>
                 {asset.kind === 'handout' && (
                     <label className="field">
-                        Handout description
+                        {' '}
+                        {t('Handout description')}{' '}
                         <textarea
                             disabled={usage === undefined || busy}
                             value={description}
@@ -142,9 +165,10 @@ export function AssetDetails({
                             })
                         }
                     >
-                        Save details
+                        {' '}
+                        {t('Save details')}{' '}
                     </button>
-                    {asset.kind !== 'handout' && onUse && (
+                    {asset.kind !== 'handout' && !isAudio(asset.kind) && onUse && (
                         <button
                             className="secondary-button"
                             disabled={busy}
@@ -155,7 +179,8 @@ export function AssetDetails({
                                 })
                             }
                         >
-                            Use on scene
+                            {' '}
+                            {t('Use on scene')}{' '}
                         </button>
                     )}
                     {asset.kind === 'handout' && (
@@ -178,15 +203,14 @@ export function AssetDetails({
                                 })
                             }
                         >
-                            <Eye size={14} />
-                            Prepare / Preview
+                            <Eye size={14} /> {t('Prepare / Preview')}{' '}
                         </button>
                     )}
                 </div>
                 <div className="asset-usage">
-                    <strong>Used in</strong>
+                    <strong> {t('Used in')} </strong>
                     {usage === undefined ? (
-                        <p>Checking references…</p>
+                        <p> {t('Checking references…')} </p>
                     ) : usage.length ? (
                         <ul>
                             {usage.map((u, i) => (
@@ -194,21 +218,20 @@ export function AssetDetails({
                             ))}
                         </ul>
                     ) : (
-                        <p>No scene or handout references. Safe to delete.</p>
+                        <p> {t('No scene or handout references. Safe to delete.')} </p>
                     )}
                     <button
                         className="danger-button"
                         disabled={busy || usage === undefined || usage.length > 0}
                         onClick={() => setConfirm(true)}
                     >
-                        <Trash2 size={13} />
-                        Delete unused asset
+                        <Trash2 size={13} /> {t('Delete unused asset')}{' '}
                     </button>
                 </div>
                 {confirm && (
                     <ConfirmDialog
-                        title="Delete unused asset?"
-                        description={`Permanently delete “${asset.name}” and its private image and thumbnail?`}
+                        title={t('Delete unused asset?')}
+                        description={t('deleteAsset', { name: asset.name })}
                         onClose={() => setConfirm(false)}
                         submit={async () => {
                             await preparation.remove(asset.id);

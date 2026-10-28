@@ -1,4 +1,9 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { t } from '../i18n';
+import { useLiveMedia } from '../media/useLiveMedia';
+import { SelectionControls } from './objects/SelectionControls';
+import { TEMPLATE_MIME, readTemplateDrag } from './objects/TemplateLibrary';
+import type { ContentTemplate } from '../api/objects';
+import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
     Box,
     ChevronRight,
@@ -41,6 +46,9 @@ import { Toolbar } from './Toolbar';
 import { PlayersPanel } from './PlayersPanel';
 import { useCampaignLive } from '../realtime/useCampaignLive';
 import { useSceneLive } from '../realtime/useSceneLive';
+const MediaPanel = lazy(() =>
+    import('../media/MediaPanel').then((m) => ({ default: m.MediaPanel })),
+);
 export function Workspace({
     user,
     campaign: initialCampaign,
@@ -52,6 +60,14 @@ export function Workspace({
 }) {
     const [campaign, setCampaign] = useState(initialCampaign);
     const live = useCampaignLive(campaign.id, setCampaign);
+    const media = useLiveMedia(
+        campaign.id,
+        user.id,
+        live.echo,
+        live.connection,
+        campaign.activeSceneId,
+        campaign.liveRevision,
+    );
     // Construct the bound pair together: StrictMode may evaluate this twice,
     // and a discarded adapter must never replace the live store's command sink.
     const [{ store, queue }] = useState(() => {
@@ -102,8 +118,20 @@ export function Workspace({
     >(null);
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
+    const [templateRefresh, setTemplateRefresh] = useState(0);
+    const placeTemplate = (
+        template: Pick<ContentTemplate, 'id' | 'kind' | 'name'>,
+        point = renderer.current?.center() ?? { x: scene.width / 2, y: scene.height / 2 },
+    ) => {
+        if (scene.id)
+            store.objectCommand({
+                endpoint: 'spawn',
+                data: { templateId: template.id, ...snapPoint(point, scene.grid) },
+                ...(template.kind === 'encounter' ? { encounter: template.name } : {}),
+            });
+    };
     const [dropping, setDropping] = useState(false);
-    const [dropHint, setDropHint] = useState('Drop to choose how to use this image');
+    const [dropHint, setDropHint] = useState(t('Drop to choose how to use this image'));
     const [replaceMap, setReplaceMap] = useState<LibraryAsset | null>(null);
     const [fileDrop, setFileDrop] = useState<{
         file: File;
@@ -166,12 +194,23 @@ export function Workspace({
             tokenId: null as string | null,
         },
     ) => {
+        if (asset.kind === 'prop' && scene.id) {
+            store.objectCommand({
+                endpoint: 'props',
+                data: {
+                    action: 'create',
+                    assetId: asset.id,
+                    ...snapPoint(target.point, scene.grid),
+                },
+            });
+            return;
+        }
         if (asset.kind === 'handout') {
             setHandoutAsset(asset);
             return;
         }
         if (!scene.id) {
-            setError('Create a scene before placing an asset.');
+            setError(t('Create a scene before placing an asset.'));
             return;
         }
         if (asset.kind === 'map' && scene.map) {
@@ -219,7 +258,8 @@ export function Workspace({
             if (compact.matches) setRight(false);
         };
         const collapseLibrary = () => {
-            if (narrow.matches) setLeft(false);
+            // A modal may own an unsaved preparation draft inside the library.
+            if (narrow.matches && !document.querySelector('dialog[open]')) setLeft(false);
         };
         compact.addEventListener('change', collapseInspector);
         narrow.addEventListener('change', collapseLibrary);
@@ -249,7 +289,7 @@ export function Workspace({
                         event.preventDefault();
                         navigate('/');
                     }}
-                    aria-label="YTT home"
+                    aria-label={t('YTT home')}
                 >
                     <Box size={25} />
                     <strong>
@@ -259,28 +299,33 @@ export function Workspace({
                 <div className="breadcrumb">
                     <span>{campaign.name}</span>
                     <ChevronRight size={13} />
-                    <strong>{scene.name ?? 'New workspace'}</strong>
+                    <strong>{scene.name ?? t('New workspace')}</strong>
                 </div>
                 <div className="topbar-actions">
                     <HandoutShelf campaignId={campaign.id} userId={user.id} echo={live.echo} gm />
+                    <Suspense fallback={null}>
+                        <MediaPanel campaignId={campaign.id} gm syncError={media.syncError} />
+                    </Suspense>
                     <PlayersPanel
                         campaign={campaign}
                         members={live.members}
                         connection={live.connection}
                     />
                     <span className="local-badge">
-                        <i /> {activeName ? `Active: ${activeName}` : 'No active scene'}
+                        <i />{' '}
+                        {activeName ? t('activeScene', { name: activeName }) : t('No active scene')}
                     </span>
                     <span title={user.name} className="gm-avatar">
-                        GM
+                        {' '}
+                        {t('GM')}{' '}
                     </span>
                     <button
                         className="present-button"
                         disabled={!scene.id || busy}
                         title={
                             campaign.activeSceneId === scene.id
-                                ? 'Deactivate this scene'
-                                : 'Set the active scene independently from editing'
+                                ? t('Deactivate this scene')
+                                : t('Set the active scene independently from editing')
                         }
                         onClick={() =>
                             void run(async () => {
@@ -295,12 +340,12 @@ export function Workspace({
                         }
                     >
                         <Play size={13} fill="currentColor" />{' '}
-                        {campaign.activeSceneId === scene.id ? 'Deactivate' : 'Activate'}
+                        {campaign.activeSceneId === scene.id ? t('Deactivate') : t('Activate')}
                     </button>
                     <button
                         className="icon-button"
-                        aria-label="Sign out"
-                        title="Sign out"
+                        aria-label={t('Sign out')}
+                        title={t('Sign out')}
                         onClick={() =>
                             void run(async () => {
                                 await queue.flush();
@@ -327,31 +372,45 @@ export function Workspace({
                         onDelete={() => setModal('deleteScene')}
                         onCampaignRename={() => setModal('renameCampaign')}
                         onUseAsset={placeAsset}
+                        onUseTemplate={placeTemplate}
+                        templateRefresh={templateRefresh}
                     />
                 )}
                 <main
                     className="tabletop"
-                    aria-label="Tabletop workspace"
+                    aria-label={t('Tabletop workspace')}
                     onDragOver={(event) => {
                         if (
                             !event.dataTransfer.types.includes('Files') &&
-                            !event.dataTransfer.types.includes(ASSET_MIME)
+                            !event.dataTransfer.types.includes(ASSET_MIME) &&
+                            !event.dataTransfer.types.includes(TEMPLATE_MIME)
                         )
                             return;
                         event.preventDefault();
                         const target = renderer.current?.dropTarget(event.clientX, event.clientY);
                         setDropHint(
-                            event.dataTransfer.types.includes('Files')
-                                ? 'Drop to choose: map, token or library'
-                                : event.dataTransfer.types.includes('application/x-ytt-map')
-                                  ? scene.map
-                                      ? 'Drop to replace the map — confirmation follows'
-                                      : 'Drop to place the scene map'
-                                  : event.dataTransfer.types.includes('application/x-ytt-handout')
-                                    ? 'Drop to prepare and preview handout'
-                                    : target?.tokenId
-                                      ? `Replace image: ${scene.tokens.find((t) => t.id === target.tokenId)?.name ?? 'selected token'}`
-                                      : 'Create a token here',
+                            event.dataTransfer.types.includes(TEMPLATE_MIME)
+                                ? t('Place the saved group here')
+                                : event.dataTransfer.types.includes('application/x-ytt-prop')
+                                  ? t('Place an object here')
+                                  : event.dataTransfer.types.includes('Files')
+                                    ? t('Drop to choose: map, token or library')
+                                    : event.dataTransfer.types.includes('application/x-ytt-map')
+                                      ? scene.map
+                                          ? t('Drop to replace the map — confirmation follows')
+                                          : t('Drop to place the scene map')
+                                      : event.dataTransfer.types.includes(
+                                              'application/x-ytt-handout',
+                                          )
+                                        ? t('Drop to prepare and preview handout')
+                                        : target?.tokenId
+                                          ? t('replaceImage', {
+                                                name:
+                                                    scene.tokens.find(
+                                                        (token) => token.id === target.tokenId,
+                                                    )?.name ?? t('selected token'),
+                                            })
+                                          : t('Create a token here'),
                         );
                         if (scene.id && !busy) setDropping(true);
                     }}
@@ -369,6 +428,13 @@ export function Workspace({
                             setFileDrop({ file, point: target.point });
                             return;
                         }
+                        const template = readTemplateDrag(
+                            event.dataTransfer.getData(TEMPLATE_MIME),
+                        );
+                        if (template) {
+                            placeTemplate(template, target.point);
+                            return;
+                        }
                         const asset = readAssetDrag(event.dataTransfer.getData(ASSET_MIME));
                         if (asset) placeAsset(asset, target);
                     }}
@@ -376,35 +442,50 @@ export function Workspace({
                     {scene.id && <Tabletop store={store} rendererRef={renderer} onZoom={setZoom} />}
                     {scene.id && <CombatPanel store={store} queue={queue} />}
                     {scene.id && <NoteInspector store={store} />}
+                    {scene.id && (
+                        <SelectionControls
+                            store={store}
+                            queue={queue}
+                            campaignId={campaign.id}
+                            onSaved={() => setTemplateRefresh((n) => n + 1)}
+                        />
+                    )}
                     {!scene.id ? (
                         <div className="canvas-empty">
-                            <span className="eyebrow">YOUR FIRST SCENE</span>
-                            <h2>A world begins with a place.</h2>
-                            <p>Create a scene, bring in a map, and make room for your cast.</p>
+                            <span className="eyebrow"> {t('YOUR FIRST SCENE')} </span>
+                            <h2> {t('A world begins with a place.')} </h2>
+                            <p>
+                                {' '}
+                                {t(
+                                    'Create a scene, bring in a map, and make room for your cast.',
+                                )}{' '}
+                            </p>
                             <button
                                 className="primary-button"
                                 onClick={() => setModal('createScene')}
                             >
-                                <Plus size={16} /> Create scene
+                                <Plus size={16} /> {t('Create scene')}{' '}
                             </button>
                         </div>
                     ) : (
                         !scene.map &&
-                        scene.tokens.length === 0 && (
+                        scene.tokens.length === 0 &&
+                        !scene.props?.length &&
+                        !scene.notes?.length && (
                             <div className="canvas-empty map-empty">
                                 <ImagePlus size={27} />
-                                <h2>Set the scene.</h2>
+                                <h2> {t('Set the scene.')} </h2>
                                 <p>
-                                    Drop a battle map here or upload an image.
-                                    <br />
-                                    You can also start with tokens on the grid.
+                                    {' '}
+                                    {t('Drop a battle map here or upload an image.')} <br />{' '}
+                                    {t('You can also start with tokens on the grid.')}{' '}
                                 </p>
                                 <label className="upload-button">
                                     <ImagePlus size={15} />
-                                    {busy ? 'Uploading…' : 'Upload battle map'}
+                                    {busy ? t('Uploading…') : t('Upload battle map')}
                                     <input
                                         type="file"
-                                        aria-label="Upload first battle map"
+                                        aria-label={t('Upload first battle map')}
                                         accept="image/png,image/jpeg,image/webp"
                                         disabled={busy}
                                         onChange={(event) => {
@@ -422,22 +503,23 @@ export function Workspace({
                         <button
                             className="icon-button surface"
                             onClick={toggleLibrary}
-                            title={left ? 'Hide library' : 'Show library'}
-                            aria-label={left ? 'Hide library' : 'Show library'}
+                            title={left ? t('Hide library') : t('Show library')}
+                            aria-label={left ? t('Hide library') : t('Show library')}
                         >
                             {left ? <PanelLeftClose size={17} /> : <PanelLeftOpen size={17} />}
                         </button>
                         <div className="canvas-heading">
                             <span className="eyebrow">
-                                {scene.id ? 'EDITING SCENE' : 'CAMPAIGN'} <span>/</span> PREPARATION
+                                {scene.id ? t('EDITING SCENE') : t('CAMPAIGN')} <span>/</span>{' '}
+                                {t('PREPARATION')}{' '}
                             </span>
                             <h1>{scene.name ?? campaign.name}</h1>
                         </div>
                         <button
                             className="icon-button surface inspector-toggle"
                             onClick={toggleInspector}
-                            title={right ? 'Hide inspector' : 'Show inspector'}
-                            aria-label={right ? 'Hide inspector' : 'Show inspector'}
+                            title={right ? t('Hide inspector') : t('Show inspector')}
+                            aria-label={right ? t('Hide inspector') : t('Show inspector')}
                         >
                             {right ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}
                         </button>
@@ -448,19 +530,18 @@ export function Workspace({
                             <div className="scene-quick-actions">
                                 <button
                                     className="secondary-button"
-                                    title="Place a private GM note"
+                                    title={t('Place a private GM note')}
                                     onClick={() => {
                                         store.select(null);
                                         changeTool('note');
                                     }}
                                 >
-                                    <StickyNote size={14} />
-                                    Note
+                                    <StickyNote size={14} /> {t('Note')}{' '}
                                 </button>
                                 <button
                                     className="icon-button surface"
-                                    title="Show / hide GM notes"
-                                    aria-label="Show GM Notes"
+                                    title={t('Show / hide GM notes')}
+                                    aria-label={t('Show GM Notes')}
                                     aria-pressed={store.getSnapshot().showNotes !== false}
                                     onClick={() => store.toggleNotes()}
                                 >
@@ -488,7 +569,7 @@ export function Workspace({
                                         })
                                     }
                                 >
-                                    <Plus size={14} /> Add token
+                                    <Plus size={14} /> {t('Add token')}{' '}
                                 </button>
                                 <button
                                     className="secondary-button"
@@ -498,35 +579,37 @@ export function Workspace({
                                         if (window.innerWidth < 900) setLeft(false);
                                     }}
                                 >
-                                    Scene setup
+                                    {' '}
+                                    {t('Scene setup')}{' '}
                                 </button>
                             </div>
                         </>
                     )}
                     <div className="canvas-bottomline">
                         <span className="canvas-tip">
-                            <kbd>Space</kbd> + drag to pan <span>·</span> Scroll to zoom
+                            <kbd>Space</kbd> {t('+ drag to pan')} <span>·</span>{' '}
+                            {t('Scroll to zoom')}{' '}
                         </span>
                         <div className="zoom-control">
                             <button
-                                aria-label="Zoom out"
-                                title="Zoom out"
+                                aria-label={t('Zoom out')}
+                                title={t('Zoom out')}
                                 onClick={() => renderer.current?.zoom(1 / 1.2)}
                             >
                                 <Minus size={14} />
                             </button>
-                            <output aria-label="Zoom level">{zoom}%</output>
+                            <output aria-label={t('Zoom level')}>{zoom}%</output>
                             <button
-                                aria-label="Zoom in"
-                                title="Zoom in"
+                                aria-label={t('Zoom in')}
+                                title={t('Zoom in')}
                                 onClick={() => renderer.current?.zoom(1.2)}
                             >
                                 <Plus size={14} />
                             </button>
                             <i />
                             <button
-                                aria-label="Fit scene"
-                                title="Fit scene to viewport"
+                                aria-label={t('Fit scene')}
+                                title={t('Fit scene to viewport')}
                                 onClick={() => renderer.current?.fit()}
                             >
                                 <Maximize size={14} />
@@ -550,39 +633,41 @@ export function Workspace({
             </div>
             <footer className="statusbar">
                 <span>
-                    <i className="status-dot" /> GM WORKSPACE{' '}
+                    <i className="status-dot" /> {t('GM WORKSPACE')}{' '}
                     {scene.id && <b>r{scene.revision ?? 0}</b>}
                 </span>
                 <span className={`session-note save-${save.status}`} role="status">
                     {busy
-                        ? 'Working…'
+                        ? t('Working…')
                         : save.status === 'saved'
                           ? scene.id && syncStatus
                               ? syncStatus
-                              : 'Saved'
+                              : t('Saved')
                           : save.status === 'saving'
-                            ? 'Saving…'
-                            : 'Save failed'}
+                            ? t('Saving…')
+                            : t('Save failed')}
                 </span>
-                {save.status === 'failed' && <button onClick={queue.retry}>Retry save</button>}
+                {save.status === 'failed' && (
+                    <button onClick={queue.retry}> {t('Retry save')} </button>
+                )}
                 <button onClick={() => help.current?.showModal()}>
-                    <Keyboard size={14} /> Shortcuts
+                    <Keyboard size={14} /> {t('Shortcuts')}{' '}
                 </button>
             </footer>
             {replaceMap && (
                 <ConfirmDialog
-                    title="Replace scene map?"
-                    description={`Use “${replaceMap.name}” as this scene’s map? The previous image stays in your library.`}
-                    buttonLabel="Replace map"
+                    title={t('Replace scene map?')}
+                    description={t('replaceMap', { name: replaceMap.name })}
+                    buttonLabel={t('Replace map')}
                     onClose={() => setReplaceMap(null)}
                     submit={() => placeMap(replaceMap)}
                 />
             )}
             {fileDrop && (
-                <Dialog title="Use dropped image" onClose={() => !busy && setFileDrop(null)}>
+                <Dialog title={t('Use dropped image')} onClose={() => !busy && setFileDrop(null)}>
                     <p>{fileDrop.file.name}</p>
                     <div className="dialog-actions">
-                        {(['map', 'token', 'handout'] as const).map((kind) => (
+                        {(['map', 'token', 'prop', 'handout'] as const).map((kind) => (
                             <button
                                 key={kind}
                                 className="secondary-button"
@@ -601,10 +686,12 @@ export function Workspace({
                                 }
                             >
                                 {kind === 'map'
-                                    ? 'Place map'
-                                    : kind === 'token'
-                                      ? 'Create token'
-                                      : 'Add handout to library'}
+                                    ? t('Place map')
+                                    : kind === 'prop'
+                                      ? t('Place object')
+                                      : kind === 'token'
+                                        ? t('Create token')
+                                        : t('Add handout to library')}
                             </button>
                         ))}
                     </div>
@@ -612,7 +699,7 @@ export function Workspace({
             )}
             {picker && (
                 <Dialog
-                    title={picker.kind === 'token' ? 'Choose token image' : 'Choose map'}
+                    title={picker.kind === 'token' ? t('Choose token image') : t('Choose map')}
                     onClose={() => setPicker(null)}
                 >
                     <AssetLibrary
@@ -641,11 +728,14 @@ export function Workspace({
                     <span>{error || save.error}</span>
                     {save.error ? (
                         <>
-                            <button onClick={queue.retry}>Retry</button>
-                            <button onClick={() => setModal('reloadSaved')}>Reload saved</button>
+                            <button onClick={queue.retry}> {t('Retry')} </button>
+                            <button onClick={() => setModal('reloadSaved')}>
+                                {' '}
+                                {t('Reload saved')}{' '}
+                            </button>
                         </>
                     ) : (
-                        <button aria-label="Dismiss error" onClick={() => setError('')}>
+                        <button aria-label={t('Dismiss error')} onClick={() => setError('')}>
                             <X size={16} />
                         </button>
                     )}
@@ -653,9 +743,11 @@ export function Workspace({
             )}
             {modal === 'reloadSaved' && (
                 <ConfirmDialog
-                    title="Reload saved scene?"
-                    description="Local changes that the server has not confirmed will be discarded. You can retry saving instead to keep them."
-                    buttonLabel="Reload saved scene"
+                    title={t('Reload saved scene?')}
+                    description={t(
+                        'Local changes that the server has not confirmed will be discarded. You can retry saving instead to keep them.',
+                    )}
+                    buttonLabel={t('Reload saved scene')}
                     onClose={() => setModal(null)}
                     submit={async () => {
                         allowExit.current = true;
@@ -665,8 +757,8 @@ export function Workspace({
             )}
             {modal === 'createScene' && (
                 <NameDialog
-                    title="Create a scene"
-                    label="Scene name"
+                    title={t('Create a scene')}
+                    label={t('Scene name')}
                     onClose={() => setModal(null)}
                     submit={async (name) => {
                         await queue.flush();
@@ -677,8 +769,8 @@ export function Workspace({
             )}
             {modal === 'renameScene' && (
                 <NameDialog
-                    title="Rename scene"
-                    label="Scene name"
+                    title={t('Rename scene')}
+                    label={t('Scene name')}
                     initial={scene.name}
                     onClose={() => setModal(null)}
                     submit={async (name) => {
@@ -690,8 +782,8 @@ export function Workspace({
             )}
             {modal === 'renameCampaign' && (
                 <NameDialog
-                    title="Rename campaign"
-                    label="Campaign name"
+                    title={t('Rename campaign')}
+                    label={t('Campaign name')}
                     initial={campaign.name}
                     onClose={() => setModal(null)}
                     submit={async (name) => {
@@ -702,8 +794,8 @@ export function Workspace({
             )}
             {modal === 'deleteScene' && (
                 <ConfirmDialog
-                    title="Delete scene?"
-                    description={`Delete “${scene.name}” and its tokens? This cannot be undone. Images remain in private storage. An active scene must be deactivated first.`}
+                    title={t('Delete scene?')}
+                    description={t('deleteScene', { name: scene.name ?? '' })}
                     onClose={() => setModal(null)}
                     submit={async () => {
                         await queue.flush();
@@ -714,8 +806,10 @@ export function Workspace({
             )}
             {modal === 'deleteToken' && (
                 <ConfirmDialog
-                    title="Delete token?"
-                    description="This removes the selected token from the scene. It cannot be undone. Its image stays in private storage."
+                    title={t('Delete token?')}
+                    description={t(
+                        'This removes the selected token from the scene. It cannot be undone. Its image stays in private storage.',
+                    )}
                     onClose={() => setModal(null)}
                     submit={async () => {
                         await queue.flush();
@@ -735,43 +829,53 @@ export function Workspace({
                 }}
             >
                 <div className="panel-heading">
-                    <strong>At your fingertips</strong>
+                    <strong> {t('At your fingertips')} </strong>
                     <button
                         className="icon-button"
-                        aria-label="Close shortcuts"
+                        aria-label={t('Close shortcuts')}
                         onClick={() => help.current?.close()}
                     >
                         <X size={16} />
                     </button>
                 </div>
-                <p>Click the tabletop to focus its controls.</p>
+                <p> {t('Click the tabletop to focus its controls.')} </p>
                 <dl>
-                    <dt>Select / Pan / Fog / Ruler / Ping</dt>
+                    <dt> {t('Select / Pan / Fog / Ruler / Ping')} </dt>
                     <dd>V / H / F / R / P</dd>
-                    <dt>Area templates</dt>
-                    <dd>Circle toolbar then choose shape</dd>
-                    <dt>Select / move token</dt>
-                    <dd>Click / drag</dd>
-                    <dt>Pan</dt>
+                    <dt> {t('Area templates')} </dt>
+                    <dd> {t('Circle toolbar then choose shape')} </dd>
+                    <dt> {t('Select / move token')} </dt>
+                    <dd> {t('Click / drag')} </dd>
+                    <dt>{t('Mixed selection')}</dt>
+                    <dd>{t('Shift + click')}</dd>
+                    <dt>{t('Duplicate selection')}</dt>
+                    <dd>Ctrl / Cmd + D</dd>
+                    <dt>{t('Delete selection')}</dt>
+                    <dd>Delete</dd>
+                    <dt>{t('Resize prop')}</dt>
+                    <dd>{t('Drag corner handle')}</dd>
+                    <dt> {t('Pan')} </dt>
                     <dd>
-                        <kbd>Space</kbd> + drag
+                        <kbd>Space</kbd> {t('+ drag')}{' '}
                     </dd>
-                    <dt>Pan anywhere on canvas</dt>
-                    <dd>Middle mouse drag</dd>
-                    <dt>Zoom to cursor</dt>
-                    <dd>Mouse wheel</dd>
-                    <dt>Cancel drag / clear selection</dt>
+                    <dt> {t('Pan anywhere on canvas')} </dt>
+                    <dd> {t('Middle mouse drag')} </dd>
+                    <dt> {t('Zoom to cursor')} </dt>
+                    <dd> {t('Mouse wheel')} </dd>
+                    <dt> {t('Cancel drag / clear selection')} </dt>
                     <dd>
                         <kbd>Esc</kbd>
                     </dd>
-                    <dt>Apply Inspector field</dt>
+                    <dt> {t('Apply Inspector field')} </dt>
                     <dd>
-                        <kbd>Enter</kbd> or blur
+                        <kbd>Enter</kbd> {t('or blur')}{' '}
                     </dd>
                 </dl>
                 <p className="hint">
-                    The Pan toolbar tool also works with a touch or pen drag. Pinch zoom is not part
-                    of this preview.
+                    {' '}
+                    {t(
+                        'The Pan toolbar tool also works with a touch or pen drag. Pinch zoom is not part of this preview.',
+                    )}{' '}
                 </p>
             </dialog>
         </div>

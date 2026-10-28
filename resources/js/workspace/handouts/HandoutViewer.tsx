@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Maximize, Minus, Plus, X, Eye } from 'lucide-react';
 import type { Handout } from '../../api/preparation';
@@ -41,10 +42,12 @@ export function HandoutViewer({
         >
             <header>
                 <div>
-                    <span className="eyebrow">{onShow ? 'GM PREVIEW' : 'DISCOVERED HANDOUT'}</span>
+                    <span className="eyebrow">
+                        {onShow ? t('GM PREVIEW') : t('DISCOVERED HANDOUT')}
+                    </span>
                     <h2>{handout.title}</h2>
                 </div>
-                <button className="icon-button" aria-label="Close handout" onClick={onClose}>
+                <button className="icon-button" aria-label={t('Close handout')} onClick={onClose}>
                     <X size={20} />
                 </button>
             </header>
@@ -76,25 +79,27 @@ export function HandoutViewer({
                     alt={handout.title}
                     style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})` }}
                     onError={() =>
-                        setError('The handout image could not load. Close and reopen it to retry.')
+                        setError(
+                            t('The handout image could not load. Close and reopen it to retry.'),
+                        )
                     }
                 />
             </div>
             {handout.description && <p className="handout-description">{handout.description}</p>}
             <footer>
                 <div className="handout-zoom">
-                    <button aria-label="Zoom handout out" onClick={() => zoom(0.8)}>
+                    <button aria-label={t('Zoom handout out')} onClick={() => zoom(0.8)}>
                         <Minus size={17} />
                     </button>
                     <span>{Math.round(scale * 100)}%</span>
-                    <button aria-label="Zoom handout in" onClick={() => zoom(1.25)}>
+                    <button aria-label={t('Zoom handout in')} onClick={() => zoom(1.25)}>
                         <Plus size={17} />
                     </button>
-                    <button aria-label="Fit handout" onClick={fit}>
+                    <button aria-label={t('Fit handout')} onClick={fit}>
                         <Maximize size={17} />
                     </button>
                 </div>
-                <small>Scroll to zoom · drag to pan · Esc to close</small>
+                <small> {t('Scroll to zoom · drag to pan · Esc to close')} </small>
                 {onShow && (
                     <button
                         className="primary-button"
@@ -109,13 +114,20 @@ export function HandoutViewer({
                         }}
                     >
                         <Eye size={15} />
-                        {busy ? 'Sharing…' : shown ? 'Show again to Players' : 'Show to Players'}
+                        {busy
+                            ? t('Sharing…')
+                            : shown
+                              ? t('Show again to Players')
+                              : t('Show to Players')}
                     </button>
                 )}
             </footer>
             {shown && (
                 <p role="status" className="hint">
-                    Shared with current campaign players. They can reopen it from Handouts.
+                    {' '}
+                    {t(
+                        'Shared with current campaign players. They can reopen it from Handouts.',
+                    )}{' '}
                 </p>
             )}
             {error && (

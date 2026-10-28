@@ -1,3 +1,4 @@
+import { applyObjectPatch } from '../tabletop/state/objectPatch';
 import type { Scene, Token, Point } from '../tabletop/types/scene';
 import type { Mutation } from '../api/workspace';
 export interface SceneEvent {
@@ -8,6 +9,10 @@ export interface SceneEvent {
     dragSessionId?: string;
     payload: Pick<
         Mutation,
+        | 'tokens'
+        | 'props'
+        | 'deletedIds'
+        | 'deletedPropIds'
         | 'token'
         | 'grid'
         | 'map'
@@ -34,7 +39,8 @@ export function reduceEvent(scene: Scene, event: SceneEvent): Scene | 'gap' {
     if (event.sceneId !== scene.id || event.revision <= (scene.revision ?? 0)) return scene;
     if (event.revision !== (scene.revision ?? 0) + 1) return 'gap';
     const payload = event.payload;
-    let tokens = scene.tokens;
+    const patched = applyObjectPatch(scene, payload);
+    let tokens = patched.tokens;
     if (payload.token) {
         const token: Token = payload.token;
         tokens = tokens.some((t) => t.id === token.id)
@@ -43,7 +49,7 @@ export function reduceEvent(scene: Scene, event: SceneEvent): Scene | 'gap' {
     }
     if (payload.deletedId) tokens = tokens.filter((t) => t.id !== payload.deletedId);
     return {
-        ...scene,
+        ...patched,
         ...payload.scene,
         tokens,
         ...(payload.note

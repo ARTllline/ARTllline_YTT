@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Box, Plus, ArrowUpRight, LogOut } from 'lucide-react';
 import { api, type CampaignSummary, type User } from '../api/workspace';
@@ -42,13 +43,13 @@ export function CampaignPicker({ user }: { user: User }) {
                     <Box size={25} />
                     <strong>YTT /</strong>
                 </a>
-                <span className="muted">Your workspaces</span>
+                <span className="muted"> {t('Your workspaces')} </span>
                 <div className="topbar-actions">
                     <span className="muted">{user.name}</span>
                     <button
                         className="icon-button"
-                        aria-label="Sign out"
-                        title="Sign out"
+                        aria-label={t('Sign out')}
+                        title={t('Sign out')}
                         onClick={() =>
                             void api
                                 .logout()
@@ -61,15 +62,16 @@ export function CampaignPicker({ user }: { user: User }) {
                 </div>
             </header>
             <main className="project-main">
-                <span className="eyebrow">MAKE ROOM FOR ADVENTURE</span>
+                <span className="eyebrow"> {t('MAKE ROOM FOR ADVENTURE')} </span>
                 <div className="project-title">
-                    <h1>Your campaigns</h1>
+                    <h1> {t('Your campaigns')} </h1>
                     <button className="primary-button" onClick={() => setCreate(true)}>
-                        <Plus size={16} /> New campaign
+                        <Plus size={16} /> {t('New campaign')}{' '}
                     </button>
                 </div>
                 <p className="muted">
-                    A home for the places, characters and stories you’re preparing.
+                    {' '}
+                    {t('A home for the places, characters and stories you’re preparing.')}{' '}
                 </p>
                 {error && !create && (
                     <p role="alert" className="form-error">
@@ -77,16 +79,16 @@ export function CampaignPicker({ user }: { user: User }) {
                     </p>
                 )}
                 {campaigns === null ? (
-                    <div className="project-empty">Loading your campaigns…</div>
+                    <div className="project-empty"> {t('Loading your campaigns…')} </div>
                 ) : campaigns.length === 0 ? (
                     <div className="project-empty">
                         <div className="empty-symbol">
                             <Box size={28} />
                         </div>
-                        <h2>Create your first campaign</h2>
-                        <p>Start with a name. Your world can grow from there.</p>
+                        <h2> {t('Create your first campaign')} </h2>
+                        <p> {t('Start with a name. Your world can grow from there.')} </p>
                         <button className="primary-button" onClick={() => setCreate(true)}>
-                            <Plus size={16} /> Create campaign
+                            <Plus size={16} /> {t('Create campaign')}{' '}
                         </button>
                     </div>
                 ) : (
@@ -106,11 +108,11 @@ export function CampaignPicker({ user }: { user: User }) {
                                     <ArrowUpRight size={17} />
                                 </div>
                                 <span className="eyebrow">
-                                    {c.role === 'gm' ? 'GAME MASTER' : 'PLAYER'}
+                                    {c.role === 'gm' ? t('GAME MASTER') : t('PLAYER')}
                                 </span>
                                 <h2>{c.name}</h2>
                                 <small>
-                                    {c.role === 'gm' ? 'Open workspace' : 'Join the table'}
+                                    {c.role === 'gm' ? t('Open workspace') : t('Join the table')}
                                 </small>
                             </a>
                         ))}
@@ -118,17 +120,17 @@ export function CampaignPicker({ user }: { user: User }) {
                 )}
             </main>
             {create && (
-                <Dialog title="A new campaign" onClose={() => !busy && setCreate(false)}>
+                <Dialog title={t('A new campaign')} onClose={() => !busy && setCreate(false)}>
                     <form onSubmit={submit}>
-                        <p>Give your next adventure a home.</p>
+                        <p> {t('Give your next adventure a home.')} </p>
                         <label className="field">
-                            <span>Campaign name</span>
+                            <span> {t('Campaign name')} </span>
                             <input
                                 name="name"
                                 required
                                 maxLength={120}
                                 autoFocus
-                                placeholder="The Hollow Marches"
+                                placeholder={t('The Hollow Marches')}
                             />
                         </label>
                         {error && (
@@ -137,7 +139,7 @@ export function CampaignPicker({ user }: { user: User }) {
                             </p>
                         )}
                         <button className="primary-button" disabled={busy}>
-                            {busy ? 'Creating…' : 'Create campaign'}
+                            {busy ? t('Creating…') : t('Create campaign')}
                         </button>
                     </form>
                 </Dialog>

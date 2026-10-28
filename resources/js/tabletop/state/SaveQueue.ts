@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 export type SaveState = { status: 'saved' | 'saving' | 'failed'; error: string | null };
 type Job = { key: string; run: () => Promise<void> };
 /** Serial, explicit commands only. A failed head blocks later writes until retry. */
@@ -41,7 +42,7 @@ export class SaveQueue {
                 this.running = false;
                 this.publish({
                     status: 'failed',
-                    error: error instanceof Error ? error.message : 'Save failed. Please retry.',
+                    error: error instanceof Error ? error.message : t('Save failed. Please retry.'),
                 });
                 return;
             }

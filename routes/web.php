@@ -4,13 +4,17 @@ use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CombatController;
+use App\Http\Controllers\CueController;
 use App\Http\Controllers\FogController;
 use App\Http\Controllers\HandoutController;
 use App\Http\Controllers\InviteController;
+use App\Http\Controllers\MediaController;
 use App\Http\Controllers\MovePreviewController;
 use App\Http\Controllers\NoteController;
+use App\Http\Controllers\ObjectController;
 use App\Http\Controllers\SceneController;
 use App\Http\Controllers\SpatialController;
+use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\TokenController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Middleware\IdempotentMutation;
@@ -38,6 +42,19 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
     });
     Route::middleware('auth')->group(function () {
+        Route::get('/campaigns/{campaign}/media', [MediaController::class, 'show']);
+        Route::post('/campaigns/{campaign}/media', [MediaController::class, 'command'])->name('campaign.media')->middleware([IdempotentMutation::class, 'throttle:120,1']);
+        Route::get('/scenes/{scene}/cues', [CueController::class, 'index']);
+        foreach (['save', 'delete', 'start', 'cancel', 'retry'] as $command) {
+            Route::post('/scenes/{scene}/cues/'.$command, [CueController::class, 'command'])
+                ->defaults('command', $command)->name('scene.cue.'.$command)->middleware(IdempotentMutation::class);
+        }
+        Route::post('/scenes/{scene}/props', [ObjectController::class, 'prop'])->name('scene.props')->middleware(IdempotentMutation::class);
+        Route::post('/scenes/{scene}/selection', [ObjectController::class, 'selection'])->name('scene.selection')->middleware(IdempotentMutation::class);
+        Route::post('/scenes/{scene}/spawn', [ObjectController::class, 'spawn'])->name('scene.spawn')->middleware(IdempotentMutation::class);
+        Route::get('/campaigns/{campaign}/templates', [TemplateController::class, 'index']);
+        Route::post('/campaigns/{campaign}/templates', [TemplateController::class, 'store'])->name('campaign.template.save')->middleware(IdempotentMutation::class);
+        Route::post('/campaigns/{campaign}/templates/delete', [TemplateController::class, 'destroy'])->name('campaign.template.delete')->middleware(IdempotentMutation::class);
         Route::get('/campaigns/{campaign}/assets', [AssetController::class, 'index']);
         Route::get('/assets/{asset}/detail', [AssetController::class, 'detail']);
         Route::get('/assets/{asset}/thumbnail', [AssetController::class, 'thumbnail']);

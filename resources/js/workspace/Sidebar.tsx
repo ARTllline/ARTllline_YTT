@@ -1,8 +1,10 @@
-import { useState, useSyncExternalStore } from 'react';
+import { t } from '../i18n';
+import { TemplateLibrary } from './objects/TemplateLibrary';
+import type { ContentTemplate } from '../api/objects';
+import { lazy, Suspense, useState, useSyncExternalStore } from 'react';
 import {
     Layers,
     Images,
-    Clapperboard,
     ChevronDown,
     Plus,
     Shield,
@@ -12,11 +14,15 @@ import {
     Pencil,
     Trash2,
     FolderOpen,
+    Film,
 } from 'lucide-react';
 import type { SceneStore } from '../tabletop/state/SceneStore';
 import type { Campaign } from '../api/workspace';
 import type { LibraryAsset } from '../api/preparation';
 import { AssetLibrary } from './assets/AssetLibrary';
+const CueLibrary = lazy(() =>
+    import('./cues/CueLibrary').then((module) => ({ default: module.CueLibrary })),
+);
 export function Sidebar({
     store,
     campaign,
@@ -27,7 +33,11 @@ export function Sidebar({
     onDelete,
     onCampaignRename,
     onUseAsset,
+    onUseTemplate,
+    templateRefresh,
 }: {
+    onUseTemplate: (template: Pick<ContentTemplate, 'id' | 'kind' | 'name'>) => void;
+    templateRefresh: number;
     store: SceneStore;
     campaign: Campaign;
     onClose: () => void;
@@ -38,41 +48,45 @@ export function Sidebar({
     onCampaignRename: () => void;
     onUseAsset: (asset: LibraryAsset) => void;
 }) {
-    const [tab, setTab] = useState<'Scenes' | 'Assets' | 'Cues'>('Scenes');
+    const [tab, setTab] = useState<'Scenes' | 'Assets' | 'Prefabs' | 'Encounters' | 'Events'>(
+        'Scenes',
+    );
     const { scene, selectedIds } = useSyncExternalStore(store.subscribe, store.getSnapshot);
     return (
-        <aside className="sidebar panel" aria-label="Scene browser">
+        <aside className="sidebar panel" aria-label={t('Scene browser')}>
             <div className="campaign-card">
                 <button
                     className="icon-button sidebar-close"
                     onClick={onClose}
-                    title="Close library"
-                    aria-label="Close library"
+                    title={t('Close library')}
+                    aria-label={t('Close library')}
                 >
                     <X size={15} />
                 </button>
-                <div className="eyebrow">CAMPAIGN WORKSPACE</div>
+                <div className="eyebrow"> {t('CAMPAIGN WORKSPACE')} </div>
                 <strong>{campaign.name}</strong>
                 <div className="campaign-links">
                     <button onClick={() => onNavigate('/')}>
-                        <FolderOpen size={12} /> Switch campaign
+                        <FolderOpen size={12} /> {t('Switch campaign')}{' '}
                     </button>
                     <button
                         className="icon-button"
-                        aria-label="Rename campaign"
-                        title="Rename campaign"
+                        aria-label={t('Rename campaign')}
+                        title={t('Rename campaign')}
                         onClick={onCampaignRename}
                     >
                         <Pencil size={12} />
                     </button>
                 </div>
             </div>
-            <nav className="library-tabs" aria-label="Workspace library">
+            <nav className="library-tabs" aria-label={t('Workspace library')}>
                 {(
                     [
                         [Layers, 'Scenes'],
                         [Images, 'Assets'],
-                        [Clapperboard, 'Cues'],
+                        [Layers, 'Prefabs'],
+                        [Shield, 'Encounters'],
+                        [Film, 'Events'],
                     ] as const
                 ).map(([Icon, name]) => (
                     <button
@@ -82,7 +96,7 @@ export function Sidebar({
                         onClick={() => setTab(name)}
                     >
                         <Icon size={17} />
-                        <span>{name}</span>
+                        <span>{t(name)}</span>
                     </button>
                 ))}
             </nav>
@@ -90,12 +104,14 @@ export function Sidebar({
                 <>
                     <div className="section-heading">
                         <span>
-                            SCENES <b>{campaign.scenes.length.toString().padStart(2, '0')}</b>
+                            {' '}
+                            {t('SCENES')}{' '}
+                            <b>{campaign.scenes.length.toString().padStart(2, '0')}</b>
                         </span>
                         <button
                             className="icon-button"
-                            title="Create scene"
-                            aria-label="Create scene"
+                            title={t('Create scene')}
+                            aria-label={t('Create scene')}
                             onClick={onCreate}
                         >
                             <Plus size={15} />
@@ -117,10 +133,10 @@ export function Sidebar({
                                     <strong>{item.name}</strong>
                                     <small>
                                         {campaign.activeSceneId === item.id
-                                            ? 'Active for players'
+                                            ? t('Active for players')
                                             : scene.id === item.id
-                                              ? 'Editing'
-                                              : 'Prepared'}
+                                              ? t('Editing')
+                                              : t('Prepared')}
                                     </small>
                                 </span>
                                 {campaign.activeSceneId === item.id && <i className="status-dot" />}
@@ -130,17 +146,17 @@ export function Sidebar({
                     {scene.id && (
                         <div className="scene-actions">
                             <button onClick={onRename}>
-                                <Pencil size={12} /> Rename
+                                <Pencil size={12} /> {t('Rename')}{' '}
                             </button>
                             <button onClick={onDelete}>
-                                <Trash2 size={12} /> Delete
+                                <Trash2 size={12} /> {t('Delete')}{' '}
                             </button>
                         </div>
                     )}
                     <div className="outline-title">
                         <ChevronDown size={14} />
-                        <span>SCENE OUTLINE</span>
-                        <b>{scene.tokens.length}</b>
+                        <span> {t('SCENE OUTLINE')} </span>
+                        <b>{scene.tokens.length + (scene.props?.length ?? 0)}</b>
                     </div>
                     <div className="outline">
                         {scene.tokens.map((token) => (
@@ -148,7 +164,7 @@ export function Sidebar({
                                 key={token.id}
                                 aria-pressed={selectedIds.includes(token.id)}
                                 className={selectedIds.includes(token.id) ? 'selected' : ''}
-                                onClick={() => store.select(token.id)}
+                                onClick={(e) => store.selectObject('token', token.id, e.shiftKey)}
                             >
                                 <span
                                     className={`object-icon ${token.isHidden ? 'gm-only' : 'hero'}`}
@@ -163,36 +179,59 @@ export function Sidebar({
                                 ) : null}
                             </button>
                         ))}
-                        {!scene.tokens.length && (
+                        {(scene.props ?? []).map((prop) => (
+                            <button
+                                key={'prop' + prop.id}
+                                aria-pressed={
+                                    store.getSnapshot().selectedPropIds?.includes(prop.id) ?? false
+                                }
+                                onClick={(e) => store.selectObject('prop', prop.id, e.shiftKey)}
+                            >
+                                <Layers size={14} />
+                                <span>{prop.name}</span>
+                                {prop.isHidden ? (
+                                    <EyeOff size={12} />
+                                ) : prop.isLocked ? (
+                                    <Lock size={12} />
+                                ) : null}
+                            </button>
+                        ))}
+                        {!scene.tokens.length && !scene.props?.length && (
                             <p className="hint outline-empty">
-                                Your cast starts here.
-                                <br />
-                                Add a token to the tabletop.
+                                {' '}
+                                {t('Your cast starts here.')} <br />{' '}
+                                {t('Add a token to the tabletop.')}{' '}
                             </p>
                         )}
                     </div>
                 </>
+            ) : tab === 'Events' ? (
+                <Suspense fallback={<p className="hint">Загрузка событий…</p>}>
+                    <CueLibrary
+                        key={scene.id}
+                        scene={scene}
+                        active={campaign.activeSceneId === scene.id}
+                    />
+                </Suspense>
             ) : tab === 'Assets' ? (
                 <AssetLibrary campaignId={campaign.id} onUse={onUseAsset} />
             ) : (
-                <div className="library-empty">
-                    <Clapperboard size={26} />
-                    <h2>Set the scene</h2>
-                    <p>
-                        Prepared reveals and cinematic sequences will live here in a future stage.
-                    </p>
-                    <span className="pill">Full library · coming later</span>
-                </div>
+                <TemplateLibrary
+                    key={tab}
+                    campaignId={campaign.id}
+                    kind={tab === 'Prefabs' ? 'prefab' : 'encounter'}
+                    refresh={templateRefresh}
+                    onUse={onUseTemplate}
+                />
             )}
-            {tab !== 'Assets' && (
+            {tab === 'Scenes' && (
                 <div className="sidebar-note">
-                    <span className="eyebrow">YOUR WORLD, AT YOUR PACE</span>
+                    <span className="eyebrow"> {t('YOUR WORLD, AT YOUR PACE')} </span>
                     <p>
-                        Set the stage.
-                        <br />
-                        Make it your story.
+                        {' '}
+                        {t('Set the stage.')} <br /> {t('Make it your story.')}{' '}
                     </p>
-                    <small>Changes save as you work.</small>
+                    <small> {t('Changes save as you work.')} </small>
                 </div>
             )}
         </aside>

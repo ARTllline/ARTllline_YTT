@@ -6,6 +6,7 @@ use App\Models\Asset;
 use App\Models\Campaign;
 use App\Models\Scene;
 use App\Models\SceneNote;
+use App\Models\SceneProp;
 use App\Models\Token;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +33,7 @@ class SceneSnapshotBuilder
                 'fog' => ['base' => $scene->fog_base, 'actions' => $scene->fogActions()->get()->map(fn ($action) => $action->projection())->all()],
                 'grid' => $this->grid($scene), 'map' => $this->map($scene),
                 'tokens' => $tokens->map(fn ($token) => $this->token($token, $gm, $user))->all(),
+                'props' => SceneProp::with('asset')->where('scene_id', $scene->id)->when(! $gm, fn ($q) => $q->where('is_hidden', false))->orderBy('z_index')->orderBy('id')->get()->map(fn ($p) => $p->projection($gm))->all(),
                 'combat' => app(CombatView::class)->build($scene, $gm),
                 ...($gm ? ['notes' => SceneNote::where('scene_id', $scene->id)->orderBy('id')->get()->map(fn ($n) => $n->projection())->all()] : []),
             ];

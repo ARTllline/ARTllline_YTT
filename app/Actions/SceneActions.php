@@ -7,6 +7,7 @@ use App\Models\Campaign;
 use App\Models\Scene;
 use App\Models\User;
 use App\Realtime\ScenePublisher;
+use App\Services\LiveMedia;
 use App\Services\SceneSnapshotBuilder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -75,9 +76,11 @@ class SceneActions
             if ($sceneId && ! $campaign->scenes()->whereKey($sceneId)->exists()) {
                 throw ValidationException::withMessages(['sceneId' => 'Choose a scene belonging to this campaign.']);
             }
+            app(CueRunner::class)->cancelCampaign($campaign);
             $campaign->active_scene_id = $sceneId;
             $campaign->live_revision++;
             $campaign->save();
+            app(LiveMedia::class)->sceneChanged($campaign);
             app(ScenePublisher::class)->campaign($campaign, 'scene.activated');
         });
     }

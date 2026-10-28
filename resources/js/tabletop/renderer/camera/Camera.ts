@@ -1,6 +1,7 @@
 import type { CameraState, Point } from '../../types/scene';
 import { clamp, MAX_ZOOM, MIN_ZOOM, zoomAt } from '../../utils/coordinates';
 export class Camera {
+    directed = false;
     state: CameraState = { x: 0, y: 0, zoom: 1 };
     private target = 1;
     private anchor: Point = { x: 0, y: 0 };

@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useState, useSyncExternalStore } from 'react';
 import { MousePointer2, Hand, Grid2X2, CloudFog, Ruler, MapPin, X, Circle } from 'lucide-react';
 import type { Tool } from '../tabletop/types/scene';
@@ -16,12 +17,12 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
     };
     return (
         <div className="toolbar-wrap">
-            <div className="tabletop-toolbar" role="toolbar" aria-label="Tabletop tools">
+            <div className="tabletop-toolbar" role="toolbar" aria-label={t('Tabletop tools')}>
                 <button
                     className={tool === 'select' ? 'active' : ''}
                     aria-pressed={tool === 'select'}
-                    aria-label="Select tool"
-                    title="Select and drag tokens"
+                    aria-label={t('Select tool')}
+                    title={t('Select and drag tokens')}
                     onClick={() => choose('select')}
                 >
                     <MousePointer2 size={18} />
@@ -29,8 +30,8 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
                 <button
                     className={tool === 'pan' ? 'active' : ''}
                     aria-pressed={tool === 'pan'}
-                    aria-label="Pan tool"
-                    title="Pan · Space + drag or middle mouse"
+                    aria-label={t('Pan tool')}
+                    title={t('Pan · Space + drag or middle mouse')}
                     onClick={() => choose('pan')}
                 >
                     <Hand size={18} />
@@ -40,8 +41,8 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
                     <button
                         className={gridOpen ? 'active' : ''}
                         aria-expanded={gridOpen}
-                        aria-label="Grid settings"
-                        title="Grid settings"
+                        aria-label={t('Grid settings')}
+                        title={t('Grid settings')}
                         onClick={() => setGridOpen(!gridOpen)}
                     >
                         <Grid2X2 size={18} />
@@ -51,8 +52,8 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
                 {store.role === 'gm' && (
                     <button
                         className={tool === 'fog' ? 'active' : ''}
-                        aria-label="Fog tool"
-                        title="Fog · F"
+                        aria-label={t('Fog tool')}
+                        title={t('Fog · F')}
                         aria-pressed={tool === 'fog'}
                         onClick={() => choose('fog')}
                     >
@@ -61,8 +62,8 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
                 )}
                 <button
                     className={tool === 'ruler' ? 'active' : ''}
-                    aria-label="Ruler tool"
-                    title="Ruler · R"
+                    aria-label={t('Ruler tool')}
+                    title={t('Ruler · R')}
                     aria-pressed={tool === 'ruler'}
                     onClick={() => choose('ruler')}
                 >
@@ -70,8 +71,8 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
                 </button>
                 <button
                     className={['circle', 'cone', 'rectangle'].includes(tool) ? 'active' : ''}
-                    aria-label="Area template tool"
-                    title="Area templates"
+                    aria-label={t('Area template tool')}
+                    title={t('Area templates')}
                     aria-pressed={['circle', 'cone', 'rectangle'].includes(tool)}
                     onClick={() => choose('circle')}
                 >
@@ -79,8 +80,8 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
                 </button>
                 <button
                     className={tool === 'ping' ? 'active' : ''}
-                    aria-label="Ping tool"
-                    title="Ping · P"
+                    aria-label={t('Ping tool')}
+                    title={t('Ping · P')}
                     aria-pressed={tool === 'ping'}
                     onClick={() => choose('ping')}
                 >
@@ -92,7 +93,7 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
                 <div
                     className="grid-popover"
                     role="region"
-                    aria-label="Grid settings panel"
+                    aria-label={t('Grid settings panel')}
                     onKeyDown={(event) => {
                         if (event.key === 'Escape') {
                             event.stopPropagation();
@@ -101,9 +102,9 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
                     }}
                 >
                     <div className="panel-heading">
-                        <strong>Grid & snapping</strong>
+                        <strong> {t('Grid & snapping')} </strong>
                         <button
-                            aria-label="Close grid settings"
+                            aria-label={t('Close grid settings')}
                             className="icon-button"
                             onClick={() => setGridOpen(false)}
                         >
@@ -111,7 +112,8 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
                         </button>
                     </div>
                     <label className="toggle-row">
-                        Show grid
+                        {' '}
+                        {t('Show grid')}{' '}
                         <input
                             type="checkbox"
                             checked={grid.visible}
@@ -119,7 +121,8 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
                         />
                     </label>
                     <label className="toggle-row">
-                        Snap on drop
+                        {' '}
+                        {t('Snap on drop')}{' '}
                         <input
                             type="checkbox"
                             checked={grid.snap}
@@ -127,45 +130,49 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
                         />
                     </label>
                     <NumberField
-                        label="Cell size (px)"
+                        label={t('Cell size (px)')}
                         value={grid.size}
                         min={20}
                         max={160}
                         onChange={(size) => store.updateGrid({ size })}
                     />
                     <NumberField
-                        label="Distance per cell"
+                        label={t('Distance per cell')}
                         value={grid.distancePerCell ?? 5}
                         min={0.1}
                         max={1000}
                         onChange={(distancePerCell) => store.updateGrid({ distancePerCell })}
                     />
                     <label className="toggle-row">
-                        Distance unit{' '}
+                        {' '}
+                        {t('Distance unit')}{' '}
                         <select
-                            aria-label="Distance unit"
+                            aria-label={t('Distance unit')}
                             value={grid.distanceUnit ?? 'ft'}
                             onChange={(e) => store.updateGrid({ distanceUnit: e.target.value })}
                         >
-                            <option value="ft">ft</option>
-                            <option value="m">m</option>
-                            <option value="squares">squares</option>
+                            <option value="ft">{t('unit.ft')}</option>
+                            <option value="m">{t('unit.m')}</option>
+                            <option value="squares">{t('unit.squares')}</option>
                         </select>
                     </label>
                     <div className="field-row">
                         <NumberField
-                            label="Offset X"
+                            label={t('Offset X')}
                             value={grid.offset.x}
                             onChange={(x) => store.updateGrid({ offset: { ...grid.offset, x } })}
                         />
                         <NumberField
-                            label="Offset Y"
+                            label={t('Offset Y')}
                             value={grid.offset.y}
                             onChange={(y) => store.updateGrid({ offset: { ...grid.offset, y } })}
                         />
                     </div>
                     <p className="hint">
-                        Token centers align to cell centers. The outline previews the landing cell.
+                        {' '}
+                        {t(
+                            'Token centers align to cell centers. The outline previews the landing cell.',
+                        )}{' '}
                     </p>
                 </div>
             )}

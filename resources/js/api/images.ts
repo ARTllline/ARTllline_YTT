@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import type { ImageAsset } from '../tabletop/types/scene';
 export async function loadImages(
     assets: ImageAsset[],
@@ -13,7 +14,7 @@ export async function loadImages(
             });
             if (!response.ok)
                 throw new Error(
-                    'An image could not be loaded. Check your connection and campaign access.',
+                    t('An image could not be loaded. Check your connection and campaign access.'),
                 );
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);

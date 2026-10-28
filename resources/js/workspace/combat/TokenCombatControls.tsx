@@ -1,3 +1,4 @@
+import { t, conditionLabel } from '../../i18n';
 import { useState } from 'react';
 import { Eye, EyeOff, Minus, Plus, X } from 'lucide-react';
 import type { Token } from '../../tabletop/types/scene';
@@ -21,17 +22,19 @@ export function ConditionList({
                     key={condition.id}
                 >
                     <ConditionIcon name={condition.key} />
-                    <span>{condition.label}</span>
+                    <span>{conditionLabel(condition)}</span>
                     {store && (
                         <>
                             <button
                                 disabled={disabled}
                                 title={
                                     condition.visibility === 'gm_only'
-                                        ? 'GM only · make public'
-                                        : 'Public · make GM only'
+                                        ? t('GM only · make public')
+                                        : t('Public · make GM only')
                                 }
-                                aria-label={`Change visibility of ${condition.label}`}
+                                aria-label={t('conditionVisibility', {
+                                    name: conditionLabel(condition),
+                                })}
                                 onClick={() =>
                                     store.tokenCombat(token.id, {
                                         action: 'condition-visibility',
@@ -51,7 +54,9 @@ export function ConditionList({
                             </button>
                             <button
                                 disabled={disabled}
-                                aria-label={`Remove ${condition.label}`}
+                                aria-label={t('conditionRemove', {
+                                    name: conditionLabel(condition),
+                                })}
                                 onClick={() =>
                                     store.tokenCombat(token.id, {
                                         action: 'condition-remove',
@@ -100,31 +105,32 @@ export function TokenCombatControls({
                     type="button"
                     disabled={disabled || !valid}
                     onClick={() => adjust(-Math.abs(value))}
-                    title="Damage"
-                    aria-label={`Damage ${token.name}`}
+                    title={t('Damage')}
+                    aria-label={t('damageToken', { name: token.name })}
                 >
-                    <Minus size={13} /> Damage
+                    <Minus size={13} /> {t('Damage')}{' '}
                 </button>
                 <input
-                    aria-label={`HP adjustment for ${token.name}`}
+                    aria-label={t('adjustHP', { name: token.name })}
                     type="number"
                     min={-9999}
                     max={9999}
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    title="Signed change: Enter applies + / −"
+                    title={t('Signed change: Enter applies + / −')}
                 />
                 <button
                     type="button"
                     disabled={disabled || !valid}
                     onClick={() => adjust(Math.abs(value))}
-                    title="Heal"
-                    aria-label={`Heal ${token.name}`}
+                    title={t('Heal')}
+                    aria-label={t('healToken', { name: token.name })}
                 >
-                    <Plus size={13} /> Heal
+                    <Plus size={13} /> {t('Heal')}{' '}
                 </button>
                 <button className="sr-only" type="submit" disabled={disabled || !valid}>
-                    Apply signed HP change
+                    {' '}
+                    {t('Apply signed HP change')}{' '}
                 </button>
             </form>
             <ConditionList token={token} store={store} disabled={disabled} />
@@ -140,28 +146,28 @@ export function TokenCombatControls({
                 }}
             >
                 <select
-                    aria-label={`Condition for ${token.name}`}
+                    aria-label={t('tokenCondition', { name: token.name })}
                     value={condition}
                     onChange={(e) => setCondition(e.target.value)}
                 >
                     {conditionKeys.map((key) => (
                         <option key={key} value={key}>
-                            {key[0].toUpperCase() + key.slice(1)}
+                            {conditionLabel({ key, label: key })}
                         </option>
                     ))}
-                    <option value="custom">Custom condition…</option>
+                    <option value="custom"> {t('Custom condition…')} </option>
                 </select>
                 <button
                     disabled={disabled || (condition === 'custom' && !label.trim())}
                     type="submit"
-                    aria-label={`Add condition to ${token.name}`}
+                    aria-label={t('addCondition', { name: token.name })}
                 >
-                    <Plus size={14} /> Add
+                    <Plus size={14} /> {t('Add')}{' '}
                 </button>
                 {condition === 'custom' && (
                     <input
-                        placeholder="Condition name"
-                        aria-label="Custom condition name"
+                        placeholder={t('Condition name')}
+                        aria-label={t('Custom condition name')}
                         maxLength={40}
                         value={label}
                         onChange={(e) => setLabel(e.target.value)}
@@ -173,7 +179,7 @@ export function TokenCombatControls({
                         checked={secret}
                         onChange={(e) => setSecret(e.target.checked)}
                     />
-                    <EyeOff size={12} /> GM only
+                    <EyeOff size={12} /> {t('GM only')}{' '}
                 </label>
             </form>
         </div>

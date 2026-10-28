@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { audioEngine } from '../media/AudioEngine';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { TabletopRenderer } from '../tabletop/renderer/TabletopRenderer';
 import type { SceneStore } from '../tabletop/state/SceneStore';
@@ -33,6 +35,7 @@ export function Tabletop({
             const scene = store.getSnapshot().scene;
             const assets = [
                 ...(scene.map ? [scene.map.asset] : []),
+                ...(scene.props ?? []).map((p) => p.image),
                 ...scene.tokens.flatMap((t) => (t.image ? [t.image] : [])),
             ];
             const unique = [...new Map(assets.map((asset) => [asset.id, asset])).values()];
@@ -65,6 +68,13 @@ export function Tabletop({
                 });
         };
         const unsubscribe = store.subscribe(syncMedia);
+        const syncAtmosphere = () => {
+            const state = audioEngine.getSnapshot().state;
+            instance?.atmosphere(
+                state && state.sceneId === store.getSnapshot().scene.id ? state.effects : {},
+            );
+        };
+        const unsubscribeAtmosphere = audioEngine.subscribe(syncAtmosphere);
         void import('../tabletop/renderer/TabletopRenderer')
             .then(async ({ TabletopRenderer }) => {
                 if (!active) return;
@@ -75,6 +85,7 @@ export function Tabletop({
                     instanceReady = true;
                     setStatus('ready');
                     syncMedia();
+                    syncAtmosphere();
                 }
             })
             .catch(fail);
@@ -83,6 +94,7 @@ export function Tabletop({
             rendererRef.current = null;
             instance?.destroy();
             unsubscribe();
+            unsubscribeAtmosphere();
             mediaAbort?.abort();
         };
     }, [store, rendererRef, onZoom]);
@@ -91,26 +103,30 @@ export function Tabletop({
             <div className="canvas-host" ref={host} />
             {status !== 'ready' && (
                 <div className="canvas-message" role="status">
-                    <span className="eyebrow">YTT / TABLETOP</span>
+                    <span className="eyebrow"> {t('YTT / TABLETOP')} </span>
                     <h2>
                         {status === 'loading'
-                            ? 'Setting the stage…'
-                            : 'The tabletop could not start.'}
+                            ? t('Setting the stage…')
+                            : t('The tabletop could not start.')}
                     </h2>
                     <p>
                         {status === 'loading'
-                            ? 'Preparing your scene.'
-                            : 'Check that WebGL is enabled, then reload. Details are in the browser console.'}
+                            ? t('Preparing your scene.')
+                            : t(
+                                  'Check that WebGL is enabled, then reload. Details are in the browser console.',
+                              )}
                     </p>
                     {status === 'error' && (
-                        <button onClick={() => location.reload()}>Reload workspace</button>
+                        <button onClick={() => location.reload()}> {t('Reload workspace')} </button>
                     )}
                 </div>
             )}
             {status === 'ready' && (media.loading || media.error) && (
                 <div className="media-state" role="status">
-                    {media.error ?? 'Loading scene images…'}
-                    {media.error && <button onClick={() => location.reload()}>Reload scene</button>}
+                    {media.error ?? t('Loading scene images…')}
+                    {media.error && (
+                        <button onClick={() => location.reload()}> {t('Reload scene')} </button>
+                    )}
                 </div>
             )}
         </>

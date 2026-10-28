@@ -26,10 +26,12 @@ class SceneTransaction
             unset($result['_combatChanged']);
             $wasVisible = $result['_wasVisible'] ?? false;
             unset($result['_wasVisible']);
+            $previousVisibility = $result['_previousVisibility'] ?? ['tokens' => [], 'props' => []];
+            unset($result['_previousVisibility']);
             $locked->increment('revision');
             $result = ['revision' => $locked->revision, 'mutationId' => app(CommandContext::class)->id()] + $result;
             $locked->setRelation('campaign', $campaign);
-            app(ScenePublisher::class)->changed($locked, $type, $result, $wasVisible);
+            app(ScenePublisher::class)->changed($locked, $type, $result, $wasVisible, $previousVisibility);
 
             return $result;
         }, 3);

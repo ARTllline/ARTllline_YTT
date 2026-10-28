@@ -65,10 +65,10 @@ it('keeps validation and permission failures actionable at the API boundary', as
     );
     await expect(api.token('42', { ownerUserId: '99' })).rejects.toMatchObject({
         status: 422,
-        message: 'Choose a campaign member.',
+        message: 'Выберите участника кампании.',
     });
     await expect(api.snapshot('9')).rejects.toMatchObject({
         status: 403,
-        message: 'You do not have permission to do that.',
+        message: 'У вас нет доступа к этому действию.',
     });
 });

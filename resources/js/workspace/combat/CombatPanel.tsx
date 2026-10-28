@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import { useState, useSyncExternalStore } from 'react';
 import {
     Swords,
@@ -36,8 +37,8 @@ function Initiative({
     return (
         <input
             className="initiative-input"
-            aria-label={`Initiative ${entry.id}`}
-            title="Initiative · Enter to save"
+            aria-label={t('initiativeEntry', { id: entry.id })}
+            title={t('Initiative · Enter to save')}
             type="number"
             step="0.01"
             min={-9999}
@@ -82,13 +83,17 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
     const current = currentTokenId(combat);
     const currentToken = scene.tokens.find((t) => t.id === current);
     const title =
-        combat?.status === 'active' ? `Round ${combat.round}` : combat ? 'Combat prep' : 'Combat';
+        combat?.status === 'active'
+            ? t('round', { round: combat.round })
+            : combat
+              ? t('Combat prep')
+              : t('Combat');
     const turnName =
         combat?.currentTurn && 'gmHiddenTurn' in combat.currentTurn
-            ? 'GM Turn'
+            ? t('GM Turn')
             : currentToken?.isOwner
-              ? `Your Turn · ${currentToken.name}`
-              : (currentToken?.name ?? 'Choose the first move');
+              ? t('yourTurn') + ' · ' + currentToken.name
+              : (currentToken?.name ?? t('Choose the first move'));
     if (!gm && !combat) return null;
     const reorder = (id: string, target: string) => {
         if (!combat || id === target || disabled) return;
@@ -112,7 +117,7 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
     return (
         <aside
             className={`combat-panel ${gm ? 'gm-combat' : 'player-combat'} ${collapsed ? 'collapsed' : ''}`}
-            aria-label="Combat tracker"
+            aria-label={t('Combat tracker')}
         >
             <button
                 className="combat-heading"
@@ -130,16 +135,19 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
                 <>
                     {!combat ? (
                         <div className="combat-empty">
-                            <strong>No active combat</strong>
+                            <strong> {t('No active combat')} </strong>
                             <p>
-                                Track initiative, rounds, HP and conditions right here at the table.
+                                {' '}
+                                {t(
+                                    'Track initiative, rounds, HP and conditions right here at the table.',
+                                )}{' '}
                             </p>
                             <button
                                 className="primary-button"
                                 disabled={disabled}
                                 onClick={() => store.combatCommand({ action: 'prepare' })}
                             >
-                                <Plus size={14} /> Prepare Combat
+                                <Plus size={14} /> {t('Prepare Combat')}{' '}
                             </button>
                         </div>
                     ) : (
@@ -147,12 +155,12 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
                             {gm && (
                                 <div className="combat-toolbar">
                                     <button disabled={disabled} onClick={() => setPicker(true)}>
-                                        <Plus size={13} /> Add combatants
+                                        <Plus size={13} /> {t('Add combatants')}{' '}
                                     </button>
                                     <button
                                         disabled={disabled || !combat.combatants.length}
-                                        title="Re-sort by Initiative"
-                                        aria-label="Re-sort by Initiative"
+                                        title={t('Re-sort by Initiative')}
+                                        aria-label={t('Re-sort by Initiative')}
                                         onClick={() =>
                                             store.combatCommand({
                                                 action: 'sort',
@@ -168,8 +176,8 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
                                 {!combat.combatants.length && (
                                     <p className="combat-empty">
                                         {gm
-                                            ? 'Add tokens from this scene to set the order.'
-                                            : 'The GM is taking the turn.'}
+                                            ? t('Add tokens from this scene to set the order.')
+                                            : t('The GM is taking the turn.')}
                                     </p>
                                 )}
                                 {combat.combatants.map((entry, index) => {
@@ -200,8 +208,12 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
                                                     <button
                                                         className="drag-grip"
                                                         draggable={!disabled}
-                                                        aria-label={`Reorder ${token.name}`}
-                                                        title="Drag to reorder; arrow keys move in order"
+                                                        aria-label={t('reorderToken', {
+                                                            name: token.name,
+                                                        })}
+                                                        title={t(
+                                                            'Drag to reorder; arrow keys move in order',
+                                                        )}
                                                         disabled={disabled}
                                                         onDragStart={(e) => {
                                                             setDragging(entry.id);
@@ -249,7 +261,7 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
                                                 <button
                                                     className="combat-identity"
                                                     onClick={() => store.select(token.id)}
-                                                    title={`Select ${token.name}`}
+                                                    title={t('selectToken', { name: token.name })}
                                                 >
                                                     <span className="combat-portrait">
                                                         {token.image ? (
@@ -284,8 +296,8 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
                                                         ) : (
                                                             <small>
                                                                 {active
-                                                                    ? 'Current turn'
-                                                                    : 'Combatant'}
+                                                                    ? t('Current turn')
+                                                                    : t('Combatant')}
                                                             </small>
                                                         )}
                                                     </span>
@@ -306,7 +318,7 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
                                                 ) : (
                                                     <span
                                                         className="initiative-value"
-                                                        title="Initiative"
+                                                        title={t('Initiative')}
                                                     >
                                                         {entry.initiative ?? '—'}
                                                     </span>
@@ -326,7 +338,8 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
                                                                     })
                                                                 }
                                                             >
-                                                                <Crosshair size={12} /> Make current
+                                                                <Crosshair size={12} />{' '}
+                                                                {t('Make current')}{' '}
                                                             </button>
                                                         )}
                                                         <button
@@ -339,7 +352,7 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
                                                                 })
                                                             }
                                                         >
-                                                            <X size={12} /> Remove
+                                                            <X size={12} /> {t('Remove')}{' '}
                                                         </button>
                                                     </div>
                                                     <TokenCombatControls
@@ -368,13 +381,13 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
                                                 })
                                             }
                                         >
-                                            <Play size={13} /> Begin Combat
+                                            <Play size={13} /> {t('Begin Combat')}{' '}
                                         </button>
                                     ) : (
                                         <div className="turn-actions">
                                             <button
                                                 disabled={disabled || !combat.combatants.length}
-                                                aria-label="Previous turn"
+                                                aria-label={t('Previous turn')}
                                                 onClick={() => advance('previous')}
                                             >
                                                 <ChevronLeft size={17} />
@@ -384,7 +397,8 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
                                                 disabled={disabled || !combat.combatants.length}
                                                 onClick={() => advance('next')}
                                             >
-                                                Next Turn <ChevronRight size={16} />
+                                                {' '}
+                                                {t('Next Turn')} <ChevronRight size={16} />
                                             </button>
                                         </div>
                                     )}
@@ -393,7 +407,8 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
                                         disabled={disabled}
                                         onClick={() => setEnding(true)}
                                     >
-                                        End Combat
+                                        {' '}
+                                        {t('End Combat')}{' '}
                                     </button>
                                 </div>
                             )}
@@ -416,9 +431,11 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
             )}
             {ending && combat && (
                 <ConfirmDialog
-                    title="End combat?"
-                    description="Turn tracking will stop. HP, conditions and combat history are kept."
-                    buttonLabel="End Combat"
+                    title={t('End combat?')}
+                    description={t(
+                        'Turn tracking will stop. HP, conditions and combat history are kept.',
+                    )}
+                    buttonLabel={t('End Combat')}
                     onClose={() => setEnding(false)}
                     submit={async () => {
                         store.combatCommand({ action: 'end', combatId: combat.id });
@@ -449,16 +466,17 @@ function CombatPicker({
     );
     const visible = available.filter((t) => t.name.toLowerCase().includes(query.toLowerCase()));
     return (
-        <Dialog title="Add combatants" onClose={close}>
+        <Dialog title={t('Add combatants')} onClose={close}>
             <input
                 className="combat-search"
-                aria-label="Search scene tokens"
-                placeholder="Search scene tokens…"
+                aria-label={t('Search scene tokens')}
+                placeholder={t('Search scene tokens…')}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
             />
             <button className="text-button" onClick={() => setSelected(visible.map((t) => t.id))}>
-                Select all shown
+                {' '}
+                {t('Select all shown')}{' '}
             </button>
             <div className="combat-picker">
                 {visible.map((token) => (
@@ -479,11 +497,12 @@ function CombatPicker({
                         {token.isHidden && <EyeOff size={13} />}
                     </label>
                 ))}
-                {!visible.length && <p>No more matching tokens in this scene.</p>}
+                {!visible.length && <p> {t('No more matching tokens in this scene.')} </p>}
             </div>
             <div className="dialog-actions">
                 <button className="secondary-button" onClick={close}>
-                    Cancel
+                    {' '}
+                    {t('Cancel')}{' '}
                 </button>
                 <button
                     className="primary-button"
@@ -497,7 +516,8 @@ function CombatPicker({
                         close();
                     }}
                 >
-                    Add {selected.length || ''} combatants
+                    {' '}
+                    {t('Add')} {selected.length || ''} {t('combatants')}{' '}
                 </button>
             </div>
         </Dialog>

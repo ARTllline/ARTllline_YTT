@@ -1,3 +1,9 @@
+import { t } from '../../i18n';
+import { AtmosphereLayer } from '../layers/AtmosphereLayer';
+import type { Effect, Intensity } from '../../media/model';
+import { DirectorCamera } from '../../director/DirectorCamera';
+import type { DirectorEvent } from '../../director/DirectorState';
+import { ScenePropLayer } from '../layers/ScenePropLayer';
 import { Application, Container, Texture } from 'pixi.js';
 import { FogLayer } from '../layers/FogLayer';
 import { SpatialLayer } from '../layers/SpatialLayer';
@@ -16,11 +22,18 @@ import { screenToWorld } from '../utils/coordinates';
 export class TabletopRenderer {
     private app = new Application();
     private world = new Container();
+    private weather = new AtmosphereLayer();
+    private effects: Partial<Record<Effect, Intensity>> = {};
+    atmosphere(effects: Partial<Record<Effect, Intensity>>) {
+        this.effects = effects;
+    }
     private camera = new Camera();
+    private director = new DirectorCamera(this.camera);
     private grid = new GridLayer();
     private map = new BattleMapLayer();
     private textures = new Map<string, Texture>();
     private tokens = new TokenLayer();
+    private props = new ScenePropLayer();
     private fog = new FogLayer();
     private spatial = new SpatialLayer();
     private notes?: GMLayer;
@@ -36,7 +49,7 @@ export class TabletopRenderer {
     private reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     private contextLost = (event: Event) => {
         event.preventDefault();
-        this.onError(new Error('WebGL context lost. Reload to restore the tabletop.'));
+        this.onError(new Error(t('WebGL context lost. Reload to restore the tabletop.')));
     };
     constructor(
         private host: HTMLElement,
@@ -61,17 +74,26 @@ export class TabletopRenderer {
         canvas.tabIndex = 0;
         canvas.setAttribute(
             'aria-label',
-            'Tabletop. Select and drag tokens; hold Space and drag to pan.',
+            t('Tabletop. Select and drag tokens; hold Space and drag to pan.'),
         );
         canvas.addEventListener('webglcontextlost', this.contextLost);
         this.host.appendChild(canvas);
         this.world.eventMode = 'none';
-        this.world.addChild(this.map, this.grid, this.tokens, this.fog, this.spatial, this.overlay);
+        this.world.addChild(
+            this.map,
+            this.grid,
+            this.props,
+            this.tokens,
+            this.fog,
+            this.spatial,
+            this.overlay,
+        );
         if (this.store.role === 'gm') {
             this.notes = new GMLayer();
             this.world.addChildAt(this.notes, this.world.children.length - 1);
         }
         this.app.stage.addChild(this.world);
+        this.app.stage.addChild(this.weather);
         this.input = new PointerController(
             canvas,
             this.camera,
@@ -79,6 +101,7 @@ export class TabletopRenderer {
             this.tokens,
             this.overlay,
             this.notes,
+            this.props,
         );
         let previousScene = this.store.getSnapshot().scene;
         const sync = () => {
@@ -94,6 +117,7 @@ export class TabletopRenderer {
                 scene.height !== previousScene.height
             )
                 this.grid.update(scene.grid, scene.width, scene.height);
+            this.props.sync(scene.props ?? [], this.textures);
             this.tokens.sync(
                 scene.tokens,
                 this.store.role === 'player',
@@ -119,7 +143,11 @@ export class TabletopRenderer {
                 if (preview.expires < now) this.store.remotePreviews.delete(id);
             }
             for (const [id, view] of this.tokens.views) {
-                if (this.input?.draggingToken === id) continue;
+                if (
+                    this.input?.draggingToken === id ||
+                    this.input?.draggingObjectTokens.includes(id)
+                )
+                    continue;
                 const target = this.store.remotePreviews.get(id);
                 if (target || Math.hypot(view.x - view.model.x, view.y - view.model.y) > 0.1) {
                     const point = target ?? view.model;
@@ -133,6 +161,9 @@ export class TabletopRenderer {
                 }
             }
             this.camera.tick(ticker.deltaMS);
+            this.weather.configure(this.effects, this.reducedMotion.matches);
+            this.weather.tick(ticker.deltaMS, this.width, this.height, this.reducedMotion.matches);
+            this.director.tick(ticker.deltaMS);
             const camera = this.camera.state;
             this.notes?.zoom(camera.zoom);
             const scene = this.store.getSnapshot().scene;
@@ -150,10 +181,13 @@ export class TabletopRenderer {
                 camera.zoom,
                 this.reducedMotion.matches,
             );
-            this.world.position.set(camera.x, camera.y);
+            this.world.position.set(
+                camera.x + this.director.offset.x,
+                camera.y + this.director.offset.y,
+            );
             this.world.scale.set(camera.zoom);
             const percentage = Math.round(camera.zoom * 100);
-            if (percentage !== this.lastZoom) {
+            if (percentage !== this.lastZoom && !this.camera.directed) {
                 this.lastZoom = percentage;
                 this.onZoom(percentage);
             }
@@ -170,12 +204,18 @@ export class TabletopRenderer {
         this.app.renderer.resize(width, height);
     }
     fit() {
+        if (this.camera.directed) return;
         this.input?.cancel();
         const scene = this.store.getSnapshot().scene;
         this.camera.fit(this.width, this.height, scene.width, scene.height);
     }
     center() {
         return screenToWorld({ x: this.width / 2, y: this.height / 2 }, this.camera.state);
+    }
+    direct(event: DirectorEvent | null) {
+        this.input?.cancel();
+        if (event) this.director.apply(event, this.width, this.height, this.reducedMotion.matches);
+        else this.director.release();
     }
     dropTarget(clientX: number, clientY: number) {
         const bounds = this.app.canvas.getBoundingClientRect();
@@ -197,7 +237,12 @@ export class TabletopRenderer {
         this.tokens.views.forEach((view) =>
             view.setImage(view.model.image ? this.textures.get(view.model.image.id) : undefined),
         );
-        const used = new Set([scene.map?.asset.id, ...scene.tokens.map((t) => t.image?.id)]);
+        this.props.sync(scene.props ?? [], this.textures);
+        const used = new Set([
+            scene.map?.asset.id,
+            ...scene.tokens.map((t) => t.image?.id),
+            ...(scene.props ?? []).map((p) => p.image.id),
+        ]);
         for (const [id, texture] of this.textures)
             if (!used.has(id)) {
                 texture.destroy(true);
@@ -205,6 +250,7 @@ export class TabletopRenderer {
             }
     }
     zoom(factor: number) {
+        if (this.camera.directed) return;
         this.camera.zoomBy(factor, { x: this.width / 2, y: this.height / 2 });
     }
     setTool(tool: Tool) {

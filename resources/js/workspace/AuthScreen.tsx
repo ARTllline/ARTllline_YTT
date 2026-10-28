@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useState, type FormEvent } from 'react';
 import { Box, ArrowRight } from 'lucide-react';
 import { api } from '../api/workspace';
@@ -32,41 +33,43 @@ export function AuthScreen() {
             <a href="/" className="entry-brand brand">
                 <Box size={28} />
                 <strong>YTT /</strong>
-                <span>YOUR TABLETOP</span>
+                <span> {t('YOUR TABLETOP')} </span>
             </a>
             <div className="entry-layout">
                 <div className="entry-intro">
-                    <span className="eyebrow">THE GAME MASTER’S WORKSPACE</span>
+                    <span className="eyebrow"> {t('THE GAME MASTER’S WORKSPACE')} </span>
                     <h1>
-                        Every great story
-                        <br />
-                        starts at your table.
+                        {' '}
+                        {t('Every great story')} <br /> {t('starts at your table.')}{' '}
                     </h1>
                     <p>
-                        Build a world. Set the scene.
-                        <br />
-                        Keep your next adventure close.
+                        {' '}
+                        {t('Build a world. Set the scene.')} <br />{' '}
+                        {t('Keep your next adventure close.')}{' '}
                     </p>
                     <span className="entry-caption">
-                        PREPARE WITH INTENTION. PLAY WITH POSSIBILITY.
+                        {' '}
+                        {t('PREPARE WITH INTENTION. PLAY WITH POSSIBILITY.')}{' '}
                     </span>
                 </div>
                 <form className="entry-form" onSubmit={submit}>
-                    <span className="eyebrow">{register ? 'A NEW CHAPTER' : 'WELCOME BACK'}</span>
-                    <h2>{register ? 'Make yourself at home.' : 'Your table is waiting.'}</h2>
+                    <span className="eyebrow">
+                        {register ? t('A NEW CHAPTER') : t('WELCOME BACK')}
+                    </span>
+                    <h2>{register ? t('Make yourself at home.') : t('Your table is waiting.')}</h2>
                     <p>
                         {register
-                            ? 'Create your account to start preparing.'
-                            : 'Sign in to continue your adventures.'}
+                            ? t('Create your account to start preparing.')
+                            : t('Sign in to continue your adventures.')}
                     </p>
                     {register && (
                         <label className="field">
-                            <span>Your name</span>
+                            <span> {t('Your name')} </span>
                             <input name="name" autoComplete="name" required maxLength={80} />
                         </label>
                     )}
                     <label className="field">
-                        <span>Email</span>
+                        <span> {t('Email')} </span>
                         <input
                             name="email"
                             type="email"
@@ -76,7 +79,10 @@ export function AuthScreen() {
                         />
                     </label>
                     <label className="field">
-                        <span>Password{register ? ' · at least 10 characters' : ''}</span>
+                        <span>
+                            {' '}
+                            {t('Password')} {register ? t(' · at least 10 characters') : ''}
+                        </span>
                         <input
                             name="password"
                             type="password"
@@ -88,7 +94,7 @@ export function AuthScreen() {
                     </label>
                     {register && (
                         <label className="field">
-                            <span>Confirm password</span>
+                            <span> {t('Confirm password')} </span>
                             <input
                                 name="password_confirmation"
                                 type="password"
@@ -104,20 +110,24 @@ export function AuthScreen() {
                         </p>
                     )}
                     <button className="primary-button" disabled={busy}>
-                        {busy ? 'Opening your workspace…' : register ? 'Create account' : 'Sign in'}
+                        {busy
+                            ? t('Opening your workspace…')
+                            : register
+                              ? t('Create account')
+                              : t('Sign in')}
                         <ArrowRight size={17} />
                     </button>
                     <div className="entry-switch">
-                        {register ? 'Already have an account?' : 'New to YTT?'}{' '}
+                        {register ? t('Already have an account?') : t('New to YTT?')}{' '}
                         <a
                             href={`${register ? '/login' : '/register'}?returnTo=${encodeURIComponent(authReturn())}`}
                         >
-                            {register ? 'Sign in' : 'Create an account'}
+                            {register ? t('Sign in') : t('Create an account')}
                         </a>
                     </div>
                 </form>
             </div>
-            <footer className="entry-footer">YOUR WORLD. YOUR PACE. YOUR TABLE.</footer>
+            <footer className="entry-footer"> {t('YOUR WORLD. YOUR PACE. YOUR TABLE.')} </footer>
         </main>
     );
 }

@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 export function Dialog({
@@ -17,7 +18,7 @@ export function Dialog({
         <dialog ref={ref} className="shortcuts-dialog editor-dialog" onCancel={onClose}>
             <div className="panel-heading">
                 <strong>{title}</strong>
-                <button className="icon-button" aria-label="Close dialog" onClick={onClose}>
+                <button className="icon-button" aria-label={t('Close dialog')} onClick={onClose}>
                     <X size={16} />
                 </button>
             </div>

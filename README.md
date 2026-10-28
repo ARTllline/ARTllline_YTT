@@ -6,13 +6,143 @@ state. The product contract is `AGENTS.md`.
 
 ## Current status
 
-**Task 06: prepare, place, remember and reveal inside the GM workspace.**
+**Task 09: audio, atmosphere and cinematic events.**
 Prepare scenes, invite players, move assigned tokens, paint shared manual fog,
 measure distances, sketch temporary areas and ping the table. Laravel/MySQL remain
 authoritative; Reverb delivers authorized changes. No demo data is automatically seeded.
 Prepare combat, enter initiative, advance turns, adjust HP and manage conditions.
 Browse reusable private assets, prepare image handouts and place private GM notes.
-Dynamic vision, dice, encounters, audio and cues remain deferred.
+Place image props, select mixed token/prop groups, and save reusable prefabs and
+encounters. Russian is the default UI language; user content and protocol keys
+are preserved. Prepare **События** and run server-controlled sequences of object,
+encounter, combat, handout, sound and cinematic actions. Dynamic vision, dice and
+automatic triggers remain deferred.
+
+### Sound and atmosphere
+
+In **Материалы**, upload **Музыка / Атмосфера / Звуки**. Audio shares the existing
+search, tags, collections, rename and batch-upload workflow. Cards show duration;
+**Прослушать** is local to the GM and never broadcasts. Audio is not placed on the map.
+Open **Звук** in the top bar to select music, add ambient loops or play a one-shot.
+Music supports pause/resume, stop, looping and replacement with crossfade. Choose
+0 / 0.5 / 1 / 2 / 5 seconds for transitions, and the new playback's relative volume.
+Up to four ambient tracks can coexist; stop each independently. Clients cap overlapping
+SFX at eight, replacing the oldest if necessary. SFX recordings are limited to two minutes.
+
+**Включить звук** is a real browser gesture that resumes the shared AudioContext.
+Until then the current playlist is visible but silent; old SFX are discarded.
+Each participant has personal master/music/ambient/SFX sliders stored in browser
+storage. These never change anyone else's volume. The GM's **Громкость для стола**
+sets the shared mix. The GM can monitor sound or keep their own master at zero.
+Browsers may ask for another gesture after reload or audio-device interruption.
+
+Music belongs to the campaign and continues across scene activation/deactivation.
+Ambient and visual effects belong to the **current active scene's live session**:
+switching or reactivating a scene clears them. They do not automatically return when
+going back; use a prepared event to establish that scene's atmosphere. A GM editing
+an inactive scene still hears campaign music, but does not see the active scene's weather.
+Current music, ambient and weather survive reload/late join/reconnect. Playback seeks
+approximately to the server's elapsed time (wrapping loops); this is not sample sync.
+SFX have no replay history, including delayed packets crossing a reconnect boundary.
+
+Weather controls provide **Дождь / Снег / Угли / Дымка**, each with three strengths.
+They are bounded Pixi decorations, independent of fog, tokens and combat. Reduced
+motion uses fewer stationary particles and disables screen flashes. The cue editor
+uses the same live-state actions for music, ambient, SFX and weather, plus temporary
+colored flash/vignette pulses. Audio fades run concurrently; add **Ожидание** when
+the next cue action should wait for a fade to finish. Stopping a cue cancels future
+steps; already applied music and weather remain until explicitly changed.
+
+Existing installations need additive migration `2026_10_28_000800_create_live_media`,
+a frontend rebuild and the existing Cue worker/scheduler. **FFprobe** must be available
+to PHP for audio uploads (`ffprobe` on PATH, or optional `FFPROBE_PATH` pointing to its
+executable). No new Composer/npm dependency is required. The server checks detected
+MIME, container, codec, channel count and duration: MP3, OGG Vorbis/Opus, WAV PCM
+16/24-bit, mono/stereo, up to 64 MiB and two hours. Video/cover-art streams, playlists,
+remote URLs and other codecs are rejected. Browser codec support still applies.
+Keep FFprobe updated; the application runs it with a fixed argument list, local-file
+protocol only and a ten-second timeout. The test suite also exercises FFprobe.
+
+Files stay on the private campaign disk. Players receive only current playback
+metadata and authorized media bytes, never an audio library listing or filesystem
+path. Range requests support seeking. Continuous tracks grant current access;
+SFX/fading-out tracks have short expiring delivery grants. Stopping cannot erase
+bytes already buffered by a browser. See Architecture for exact expiry semantics.
+
+### Direct a prepared moment
+
+Open **События → Создать событие**. Name the moment, add actions, select scene
+objects or prepared content, then drag the grips to reorder (the Up/Down buttons
+also work). Duplicate/delete actions and edit their settings alongside the timeline.
+Save the sequence, activate its scene, then press **Запустить**. A running card
+shows progress, the current action, **Остановить**, and a visible failed-step retry.
+Definitions can be edited on any scene; running always requires the active scene.
+Editing or deleting a definition leaves an already started run's snapshot intact.
+
+Supported actions: show/hide tokens and props, move one object, spawn a prefab or
+encounter (optionally add/start combat), add tokens to combat, begin/end/next turn,
+show a prepared image handout, plaintext message, Wait, camera focus/pan/zoom/shake,
+blackout/restore and release. Object coordinates are world coordinates. Camera
+focus on an object requires it to be visible; reveal a secret before focusing it.
+Messages and camera effects are temporary and never change the scene revision.
+
+**Остановить cancels future actions; it does not undo completed changes.** Scene
+activation/deactivation also cancels the campaign's current run. Only one unfinished
+run per campaign is allowed, including a failed run awaiting Retry/Stop. Players
+can use **Вернуть управление · Esc** to leave the current cinematic locally.
+Completion, cancellation, connection loss and scene changes clear presentation.
+Reconnect restores scene state, without replaying old cinematic effects.
+
+### Start the event worker
+
+Existing installations need the additive `2026_10_28_000700_create_cues` migration,
+rebuilt frontend, and a supervised queue worker. Preserve existing environment and
+APP_KEY. This stage uses an explicit **tabletop database queue** on the same database
+as scene writes; it works even when the application's default queue is `sync`.
+
+```sh
+php artisan migrate
+npm run build
+php artisan queue:work tabletop --queue=cues --sleep=0.1 --tries=3 --timeout=60
+php artisan schedule:work
+```
+
+Run the last two commands in separate terminals alongside HTTP/Reverb. Production
+may use the usual `schedule:run` every minute instead of `schedule:work`. The
+scheduler calls `tabletop:recover-cues` to requeue runs overdue by 90 seconds; the
+same command can be run manually after an interruption. Duplicate jobs are harmless.
+Restart long-lived workers with `php artisan queue:restart` after code updates and
+let the process supervisor start them again. Without a worker, runs remain queued.
+
+Waits persist a due time and enqueue the next step with a delay. Laravel's database
+queue uses second timestamps, so a job waits only the final subsecond remainder
+(under one second, without database locks) to preserve 250/400/700 ms pauses.
+Long pauses leave the worker available. Durations are minimum delays, not hard
+realtime deadlines; broker, database and worker load may add latency. Limits:
+100 definitions per scene, 50 steps per definition, 60 seconds per Wait and ten
+minutes of configured durations per sequence. Run records currently remain until
+scene deletion; automatic archival is not implemented.
+
+### Compose and reuse
+
+In **Материалы → Объекты**, upload PNG/JPEG/WebP and drag onto the table. The
+Inspector controls position, size, rotation, visibility, locking and stack order.
+The corner handle resizes the selected prop; tokens always render above props.
+Shift-click on the table or in the scene outline selects several tokens/props.
+Drag the group, press Ctrl/Cmd+D to duplicate, or Delete to remove with confirmation.
+
+**Сохранить как заготовку** stores the selection relative to its origin. Drag a
+card from **Заготовки** into any scene in that campaign, or click to place at the
+viewport center. Spawned objects are independent copies using existing assets.
+Select tokens only to **Сохранить как столкновение**. A spawned encounter starts
+with full HP and no owners, conditions or combat state; its compact **Добавить в бой**
+action uses the existing combat tracker. Definitions remain GM-only. A batch is
+limited to 200 objects and commits as one mutation/revision, including safe Retry.
+
+Existing installations need the additive `2026_10_28_000600_create_reusable_content`
+migration and a rebuilt frontend. No seed, APP_KEY change or environment replacement
+is needed. The backend locale is explicitly Russian, including older `.env` files
+that still contain `APP_LOCALE=en`.
 
 ## Requirements
 
@@ -21,8 +151,9 @@ Dynamic vision, dice, encounters, audio and cues remain deferred.
   PDO SQLite and GD for generated upload fixtures.
 - A dedicated **MySQL** database and **Laravel Reverb** process. File sessions/cache
   and synchronous broadcasts suffice for one application instance. Redis is optional
-  until deploying multiple Reverb instances; no queue worker is required here.
+  until deploying multiple Reverb instances. Events require the database queue worker.
 - Node **20.19+** or a supported newer LTS; npm.
+- FFprobe on PHP's PATH (or `FFPROBE_PATH`) for validated audio uploads and audio tests.
 - A WebGL-capable browser. Desktop/laptop is the primary GM target.
 
 ## Install and run
@@ -64,8 +195,9 @@ only the public key/host/port/scheme reach the browser.
 ### Upload limits
 
 The application accepts PNG/JPEG/WebP up to **16 MiB**, **8192 px per side** and
-**32 million pixels**. PHP and the web server must permit that request size:
-`upload_max_filesize=16M`, `post_max_size=20M`, and an equivalent proxy body limit.
+**32 million pixels**, and supported audio up to **64 MiB**. PHP and the web server
+must permit that request size: `upload_max_filesize=64M`, `post_max_size=68M`, and
+an equivalent proxy body limit. Image limits remain 16 MiB at the application layer.
 The stock PHP configuration on some machines allows only 2 MiB.
 
 For a local session without changing system PHP configuration, stop the other
@@ -74,7 +206,7 @@ must be `public`, because Laravel's built-in router uses it:
 
 ```sh
 cd public
-php -d upload_max_filesize=16M -d post_max_size=20M -S 127.0.0.1:8000 ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php
+php -d upload_max_filesize=64M -d post_max_size=68M -S 127.0.0.1:8000 ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php
 ```
 
 This is a development server, not a public deployment configuration. For hosting,
@@ -83,23 +215,27 @@ application-specific database credentials and writable `storage`/`bootstrap/cach
 
 ### Private files and backups
 
-Images live under `storage/app/campaigns-private/campaigns/{campaign}/{kind}/`.
+Images and audio live under `storage/app/campaigns-private/campaigns/{campaign}/{kind}/`.
 They are served only through authorized `/api/assets/{id}` requests. Do **not**
 expose this directory through a public alias or storage symlink. `storage:link`
 is not needed. Detached images remain in the library until explicitly deleted.
-Only unused images can be deleted; the server checks map, token and handout references.
+Only unused assets can be deleted; the server checks scene/content references,
+current audio grants and cue audio definitions. Removing a definition does not edit
+an existing run; deleting a future run's detached audio can make that step fail visibly.
 Cached `.thumb.webp` files and their generation locks stay in the same private disk.
 
-Back up the database, private image directory and existing application key
+Back up the database, private media directory and existing application key
 together. Session files are not the canonical scene state.
 
 ## Development
 
-Run **three processes** in separate terminals:
+Run these processes in separate terminals:
 
 1. `php artisan serve` (or the upload-limit command above).
 2. `npm run dev`.
 3. `php artisan reverb:start --host=127.0.0.1 --port=8080`.
+4. `php artisan queue:work tabletop --queue=cues --sleep=0.1 --tries=3 --timeout=60`.
+5. `php artisan schedule:work` (recovery and receipt cleanup).
 
 Open the Laravel URL, not the Vite URL. Stop Vite and run `npm run build` to use
 the production bundle. Remove a stale `public/hot` only if a terminated Vite
@@ -299,13 +435,13 @@ The command deletes only completed receipts older than the configured cutoff;
 | Switch campaign/scene              | Campaign picker / Scenes sidebar                          |
 | Set live scene                     | Separate Activate/Deactivate button                       |
 
-The status bar shows **Saved**, **Saving…**, or **Save failed**. Failed writes
-retain local edits and stop the queue. Use **Retry**, or explicitly discard
-unconfirmed edits with **Reload saved**. In-app navigation waits for saving;
+The status bar shows **Сохранено**, **Сохранение…**, or a Russian save failure.
+Failed writes retain local edits and stop the queue. Use **Повторить**, or explicitly
+discard unconfirmed edits by reloading the saved state. In-app navigation waits for saving;
 closing/reloading a dirty tab asks for confirmation. Pending edits are memory-only
 and do not survive a forced close. This is not an offline editor.
 
-**Live / Reconnecting / Offline** reports transport status separately from saving.
+**На связи / Переподключение / Нет связи** reports transport status separately from saving.
 HTTP saves can succeed while Reverb is unavailable. Recovery subscribes again and
 loads an authoritative snapshot; a lightweight 15-second revision check repairs
 an otherwise missed final broadcast. Player movement pauses while disconnected

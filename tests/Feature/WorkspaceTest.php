@@ -14,8 +14,9 @@ class WorkspaceTest extends TestCase
         $this->get('/login')
             ->assertOk()
             ->assertViewIs('workspace')
-            ->assertSee('YTT · Your Tabletop')
-            ->assertSee('Preparing your workspace')
+            ->assertSee('YTT · Ваш игровой стол')
+            ->assertSee('Подготовка рабочего пространства')
+            ->assertSee('lang="ru"', false)
             ->assertSee('id="root"', false);
     }
 

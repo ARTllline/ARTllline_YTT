@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { PropInspector } from './objects/PropInspector';
 import { useSyncExternalStore } from 'react';
 import { Crosshair, SlidersHorizontal, Shield, X, Trash2, ImagePlus } from 'lucide-react';
 import type { SceneStore } from '../tabletop/state/SceneStore';
@@ -30,19 +32,23 @@ export function Inspector({
         store.subscribe,
         store.getSnapshot,
     );
+    const selectedPropIds = store.getSnapshot().selectedPropIds ?? [];
+    const prop = scene.props?.find((p) => p.id === selectedPropIds[0]);
+    if (prop)
+        return <PropInspector prop={prop} store={store} onClose={onClose} busy={combatBusy} />;
     const token = scene.tokens.find((item) => item.id === selectedIds[0]);
     const position = preview?.id === token?.id ? preview?.position : token;
     return (
-        <aside className="inspector panel" aria-label="Inspector">
+        <aside className="inspector panel" aria-label={t('Inspector')}>
             <div className="panel-heading">
                 <span>
-                    <SlidersHorizontal size={14} /> Inspector
+                    <SlidersHorizontal size={14} /> {t('Inspector')}{' '}
                 </span>
                 <button
                     className="icon-button"
                     onClick={onClose}
-                    aria-label="Close inspector"
-                    title="Close inspector"
+                    aria-label={t('Close inspector')}
+                    title={t('Close inspector')}
                 >
                     <X size={15} />
                 </button>
@@ -54,34 +60,36 @@ export function Inspector({
                             <Shield size={30} />
                         </div>
                         <span className="eyebrow">
-                            TOKEN · {token.kind === 'hero' ? 'ADVENTURER' : 'CREATURE'}
+                            {' '}
+                            {t('TOKEN ·')} {token.kind === 'hero' ? t('ADVENTURER') : t('CREATURE')}
                         </span>
                         <h2>{token.name}</h2>
                         <span className="muted">
                             {token.isHidden
-                                ? 'GM only · hidden from players'
-                                : 'Visible in the scene'}
+                                ? t('GM only · hidden from players')
+                                : t('Visible in the scene')}
                         </span>
                     </div>
                     <section>
-                        <h3>Identity</h3>
+                        <h3> {t('Identity')} </h3>
                         {token.image && (
                             <img
                                 className="token-image-preview"
                                 src={token.image.url}
-                                alt="Current token image"
+                                alt={t('Current token image')}
                             />
                         )}
                         <button
                             className="secondary-button"
                             onClick={() => chooseImage('token', token.id)}
                         >
-                            Choose image from library
+                            {' '}
+                            {t('Choose image from library')}{' '}
                         </button>
                         <label className="field">
-                            <span>Name</span>
+                            <span> {t('Name')} </span>
                             <input
-                                aria-label="Token name"
+                                aria-label={t('Token name')}
                                 key={token.name}
                                 defaultValue={token.name}
                                 maxLength={80}
@@ -100,7 +108,8 @@ export function Inspector({
                     </section>
                     <section>
                         <h3>
-                            Position <span>WORLD</span>
+                            {' '}
+                            {t('Position')} <span> {t('WORLD')} </span>
                         </h3>
                         <div className="field-row">
                             <NumberField
@@ -118,15 +127,15 @@ export function Inspector({
                         </div>
                     </section>
                     <section>
-                        <h3>Transform</h3>
+                        <h3> {t('Transform')} </h3>
                         <div className="field-row">
                             <NumberField
-                                label="Rotation °"
+                                label={t('Rotation °')}
                                 value={token.rotation}
                                 onChange={(rotation) => store.updateToken(token.id, { rotation })}
                             />
                             <NumberField
-                                label="Scale"
+                                label={t('Scale')}
                                 value={token.scale}
                                 min={0.4}
                                 max={3}
@@ -137,19 +146,23 @@ export function Inspector({
                     </section>
                     <section>
                         <NumberField
-                            label="Base size"
+                            label={t('Base size')}
                             value={token.size}
                             min={20}
                             max={300}
                             onChange={(size) => store.updateToken(token.id, { size })}
                         />
-                        <h3>Token image</h3>
+                        <h3> {t('Token image')} </h3>
                         <label className="upload-button">
                             <ImagePlus size={14} />
-                            {busy ? 'Uploading…' : token.image ? 'Replace image' : 'Upload image'}
+                            {busy
+                                ? t('Uploading…')
+                                : token.image
+                                  ? t('Replace image')
+                                  : t('Upload image')}
                             <input
                                 type="file"
-                                aria-label="Upload token image"
+                                aria-label={t('Upload token image')}
                                 accept="image/png,image/jpeg,image/webp"
                                 disabled={busy}
                                 onChange={(event) => {
@@ -164,12 +177,13 @@ export function Inspector({
                                 className="text-button"
                                 onClick={() => store.updateToken(token.id, { image: null })}
                             >
-                                Use placeholder
+                                {' '}
+                                {t('Use placeholder')}{' '}
                             </button>
                         )}
                     </section>
                     <section>
-                        <h3>Vitals</h3>
+                        <h3> {t('Vitals')} </h3>
                         <div className="token-combat-context">
                             {scene.combat ? (
                                 (() => {
@@ -197,7 +211,7 @@ export function Inspector({
                                                 )
                                             }
                                         >
-                                            {entry ? 'Remove from Combat' : 'Add to Combat'}
+                                            {entry ? t('Remove from Combat') : t('Add to Combat')}
                                         </button>
                                     );
                                 })()
@@ -207,7 +221,8 @@ export function Inspector({
                                     disabled={combatBusy}
                                     onClick={() => store.combatCommand({ action: 'prepare' })}
                                 >
-                                    Prepare Combat
+                                    {' '}
+                                    {t('Prepare Combat')}{' '}
                                 </button>
                             )}
                         </div>
@@ -220,7 +235,7 @@ export function Inspector({
                                 onChange={(hp) => store.updateToken(token.id, { hp })}
                             />
                             <NumberField
-                                label="Max HP"
+                                label={t('Max HP')}
                                 value={token.maxHp ?? 1}
                                 min={1}
                                 max={9999}
@@ -244,7 +259,7 @@ export function Inspector({
                                 onChange={(ac) => store.updateToken(token.id, { ac })}
                             />
                             <NumberField
-                                label="Speed"
+                                label={t('Speed')}
                                 value={token.speed ?? 0}
                                 min={0}
                                 max={999}
@@ -253,9 +268,10 @@ export function Inspector({
                         </div>
                     </section>
                     <section>
-                        <h3>Access & visibility</h3>
+                        <h3> {t('Access & visibility')} </h3>
                         <label className="toggle-row">
-                            Hidden from players
+                            {' '}
+                            {t('Hidden from players')}{' '}
                             <input
                                 type="checkbox"
                                 checked={token.isHidden ?? false}
@@ -265,7 +281,8 @@ export function Inspector({
                             />
                         </label>
                         <label className="toggle-row">
-                            Lock position
+                            {' '}
+                            {t('Lock position')}{' '}
                             <input
                                 type="checkbox"
                                 checked={token.isLocked ?? false}
@@ -275,7 +292,7 @@ export function Inspector({
                             />
                         </label>
                         <label className="field">
-                            <span>Controlled by</span>
+                            <span> {t('Controlled by')} </span>
                             <select
                                 value={token.ownerUserId ?? ''}
                                 onChange={(event) =>
@@ -284,7 +301,7 @@ export function Inspector({
                                     })
                                 }
                             >
-                                <option value="">Unassigned</option>
+                                <option value=""> {t('Unassigned')} </option>
                                 {campaign.members?.map((member) => (
                                     <option key={member.id} value={member.id}>
                                         {member.name} · {member.role.toUpperCase()}
@@ -294,10 +311,12 @@ export function Inspector({
                         </label>
                     </section>
                     <section>
-                        <h3>Placement</h3>
+                        <h3> {t('Placement')} </h3>
                         <label className="toggle-row">
                             <span>
-                                Snap to grid<small>Scene-wide · cell centers</small>
+                                {' '}
+                                {t('Snap to grid')}{' '}
+                                <small> {t('Scene-wide · cell centers')} </small>
                             </span>
                             <input
                                 type="checkbox"
@@ -308,22 +327,24 @@ export function Inspector({
                             />
                         </label>
                         <p className="hint">
-                            Snaps when dropped. Inspector coordinates stay exact.
+                            {' '}
+                            {t('Snaps when dropped. Inspector coordinates stay exact.')}{' '}
                         </p>
                     </section>
                     <div className="inspector-foot">
-                        <Crosshair size={13} /> World coordinates · px
+                        <Crosshair size={13} /> {t('World coordinates · px')}{' '}
                     </div>
                     <section>
                         <button className="danger-button" onClick={deleteToken}>
-                            <Trash2 size={14} /> Delete token
+                            <Trash2 size={14} /> {t('Delete token')}{' '}
                         </button>
                     </section>
                 </div>
             ) : (
                 <div className="map-library-choice">
                     <button className="secondary-button" onClick={() => chooseImage('map')}>
-                        Choose map from library
+                        {' '}
+                        {t('Choose map from library')}{' '}
                     </button>
                     <MapInspector store={store} upload={uploadMap} busy={busy} />
                 </div>

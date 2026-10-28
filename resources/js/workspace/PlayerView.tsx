@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { t } from '../i18n';
+import { useLiveMedia } from '../media/useLiveMedia';
+import { DirectorLayer } from '../director/DirectorLayer';
+import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ArrowLeft, Maximize, Minus, Plus } from 'lucide-react';
 import { api, type Campaign, type User } from '../api/workspace';
 import { SceneStore } from '../tabletop/state/SceneStore';
@@ -13,9 +16,20 @@ import { Tabletop } from './Tabletop';
 import { CombatPanel } from './combat/CombatPanel';
 import { ConditionList } from './combat/TokenCombatControls';
 import { HandoutShelf } from './handouts/HandoutShelf';
+const MediaPanel = lazy(() =>
+    import('../media/MediaPanel').then((m) => ({ default: m.MediaPanel })),
+);
 export function PlayerView({ campaign: initial, user }: { campaign: Campaign; user: User }) {
     const [campaign, setCampaign] = useState(initial);
     const { echo, connection } = useCampaignLive(campaign.id, setCampaign);
+    const media = useLiveMedia(
+        campaign.id,
+        user.id,
+        echo,
+        connection,
+        campaign.activeSceneId,
+        campaign.liveRevision,
+    );
     const [loaded, setLoaded] = useState<{ scene: Scene; epoch: number } | null>(null);
     const [failure, setFailure] = useState<{ epoch: number; message: string } | null>(null);
     const error = failure?.epoch === campaign.liveRevision ? failure.message : '';
@@ -46,15 +60,18 @@ export function PlayerView({ campaign: initial, user }: { campaign: Campaign; us
     return (
         <div className="player-view">
             <header className="player-topbar">
-                <a href="/" title="Your campaigns" aria-label="Your campaigns">
+                <a href="/" title={t('Your campaigns')} aria-label={t('Your campaigns')}>
                     <ArrowLeft size={17} />
                 </a>
                 <div>
                     <span className="eyebrow">{campaign.name}</span>
-                    <strong>{current?.scene.name ?? 'Your table'}</strong>
+                    <strong>{current?.scene.name ?? t('Your table')}</strong>
                 </div>
                 <ConnectionBadge state={connection} />
                 <HandoutShelf campaignId={campaign.id} userId={user.id} echo={echo} />
+                <Suspense fallback={null}>
+                    <MediaPanel campaignId={campaign.id} syncError={media.syncError} />
+                </Suspense>
                 <span className="player-name">{user.name}</span>
             </header>
             {current ? (
@@ -70,23 +87,26 @@ export function PlayerView({ campaign: initial, user }: { campaign: Campaign; us
                     <div className="waiting-orbit" aria-hidden="true">
                         ✦
                     </div>
-                    <span className="eyebrow">THE NEXT CHAPTER</span>
+                    <span className="eyebrow"> {t('THE NEXT CHAPTER')} </span>
                     <h1>
                         {error
-                            ? 'The scene could not open.'
+                            ? t('The scene could not open.')
                             : campaign.activeSceneId
-                              ? 'Entering the scene…'
-                              : 'Your Game Master is setting the scene.'}
+                              ? t('Entering the scene…')
+                              : t('Your Game Master is setting the scene.')}
                     </h1>
                     <p>
                         {error ||
                             (campaign.activeSceneId
-                                ? 'Preparing your view of the world.'
-                                : 'Stay here. Your adventure will appear when the table is ready.')}
+                                ? t('Preparing your view of the world.')
+                                : t(
+                                      'Stay here. Your adventure will appear when the table is ready.',
+                                  ))}
                     </p>
                     {error && (
                         <button className="secondary-button" onClick={() => setRetry((n) => n + 1)}>
-                            Try again
+                            {' '}
+                            {t('Try again')}{' '}
                         </button>
                     )}
                 </main>
@@ -128,6 +148,14 @@ function PlayerTabletop({
     return (
         <main className="player-tabletop">
             <Tabletop store={store} rendererRef={renderer} onZoom={setZoom} />
+            <DirectorLayer
+                sceneId={initial.id!}
+                epoch={initial.liveRevision ?? 0}
+                channel={`campaign.${initial.campaignId}.scene.${initial.id}.epoch.${initial.liveRevision}.user.${user.id}`}
+                echo={echo}
+                connection={connection}
+                renderer={renderer}
+            />
             <CombatPanel store={store} queue={queue} />
             <Toolbar store={store} onTool={(tool) => renderer.current?.setTool(tool)} />
             {(status || save.error) && (
@@ -135,8 +163,11 @@ function PlayerTabletop({
                     <span>{save.error || status}</span>
                     {save.error && (
                         <>
-                            <button onClick={queue.retry}>Retry move</button>
-                            <button onClick={() => location.reload()}>Reload saved scene</button>
+                            <button onClick={queue.retry}> {t('Retry move')} </button>
+                            <button onClick={() => location.reload()}>
+                                {' '}
+                                {t('Reload saved scene')}{' '}
+                            </button>
                         </>
                     )}
                 </div>
@@ -153,26 +184,31 @@ function PlayerTabletop({
                         <ConditionList token={selected} />
                         <span>
                             {selected.canMove
-                                ? 'Your token · drag to move'
-                                : 'View only · controlled by the GM or another player'}
+                                ? t('Your token · drag to move')
+                                : t('View only · controlled by the GM or another player')}
                         </span>
                     </>
                 ) : (
                     <>
-                        <strong>Your seat at the table</strong>
-                        <span>Select your token to move. Space + drag to pan. Scroll to zoom.</span>
+                        <strong> {t('Your seat at the table')} </strong>
+                        <span>
+                            {' '}
+                            {t(
+                                'Select your token to move. Space + drag to pan. Scroll to zoom.',
+                            )}{' '}
+                        </span>
                     </>
                 )}
             </div>
             <div className="player-controls">
-                <button aria-label="Zoom out" onClick={() => renderer.current?.zoom(0.8)}>
+                <button aria-label={t('Zoom out')} onClick={() => renderer.current?.zoom(0.8)}>
                     <Minus size={16} />
                 </button>
                 <span>{zoom}%</span>
-                <button aria-label="Zoom in" onClick={() => renderer.current?.zoom(1.25)}>
+                <button aria-label={t('Zoom in')} onClick={() => renderer.current?.zoom(1.25)}>
                     <Plus size={16} />
                 </button>
-                <button aria-label="Fit scene" onClick={() => renderer.current?.fit()}>
+                <button aria-label={t('Fit scene')} onClick={() => renderer.current?.fit()}>
                     <Maximize size={16} />
                 </button>
             </div>

@@ -1,5 +1,251 @@
 # Architecture — persistent multiplayer tabletop
 
+## Task 09 — live audio and atmosphere
+
+`StoreAudio` extends the existing private Asset Library with `music`, `ambient` and
+`sfx`; `assets.duration_ms` is nullable for historical images. Audio has zero image
+dimensions and no thumbnail request. Metadata, labels, collections, pagination,
+batch upload and rename use the existing endpoints. `AudioProbe` invokes FFprobe
+through Symfony Process with an argument array (no shell), file protocol only and
+a ten-second deadline. Detected MIME/container/codec must agree. Only one audio
+stream, mono/stereo, positive duration <= 2 hours, <= 64 MiB: MP3, OGG Vorbis/Opus,
+WAV PCM16/24. No transcode, remote URL ingestion, playlists, video or attached art.
+`config/media.php` supports an optional deployment-specific `FFPROBE_PATH`.
+
+### Authoritative current state
+
+`live_media` is one row per campaign with its own monotonic revision and bounded JSON:
+one music playback, up to four ambient playbacks, four possible weather presets and
+three relative channel volumes. A playback carries a command UUID, authorized asset
+ID/URL/name/duration, start timestamp, volume, loop and pause/position state. There is
+no filesystem path, future cue content or library metadata in this projection.
+`LiveMedia::read` filters ended non-looping tracks without needing a timer job.
+
+`GET /api/campaigns/{campaign}/media` authorizes current membership and reads under
+the campaign shared lock. `POST` is GM-only and uses the existing campaign writer
+lock, `IdempotentMutation` receipt and `CommandContext`. `MediaConfig` is the closed
+validation vocabulary shared by HTTP and Cue adapters. Scene-scoped commands carry
+the active scene ID and activation epoch; stale commands fail rather than affecting
+a new scene. Media writes never increment scene revision or change SceneStore.
+
+`media.state` publishes the small complete current media projection after commit via
+existing TabletopEvent/SafeBroadcast/Reverb, to explicit recipient channels
+`campaign.{id}.media.user.{user}`. Subscription requires both membership and matching
+user identity. A persistent small projection is appropriate here (max five tracks),
+unlike full-scene synchronization. Clients reject older revisions/epochs. Initial
+subscription, reconnect, browser online and a 15-second repair probe fetch current
+state. A campaign activation notification immediately clears old scene audio/effects
+even if the media broadcast was lost, then fetches the new authoritative state.
+
+Music is campaign/session-level. Ambient and weather are current-active-scene live
+state, cleared on every activation/deactivation, including reactivation. This stage
+does not store separate inactive-scene atmosphere presets; reusable setup belongs in
+Cues. Scene switching leaves music playing without recreating its element. GM views
+of inactive scenes render no active-scene weather. Local navigation/unmount/logout
+destroys all audio nodes/elements/timers and closes the AudioContext; reload hydrates
+the saved current state after explicit audio permission.
+
+### Ephemeral delivery and private bytes
+
+`media.sfx` contains a stable event UUID, current scene/epoch, concrete audio playback
+and a five-second acceptance deadline. It is broadcast once after the transaction,
+never added to live state or a replay log. HTTP receipts and durable Cue step receipts
+prevent duplicate publication. Client dedupe is bounded to 256 events; events from
+before the latest connection/online boundary are rejected even if their short expiry
+has not elapsed. SFX received while audio is locked are discarded, never deferred to
+Unlock. A broadcast outage can lose SFX by design; there is no outbox replay.
+
+AssetPolicy first checks membership. Players can read audio only when it is current
+music/ambient or has an unexpired `audio_grants` entry. Grants are campaign+asset
+expiry rows, not playback history: SFX duration + 15 seconds, or outgoing transition
+duration + 15 seconds. Scene activation revokes old grants. An expired row never
+authorizes access; daily scheduler cleanup bounds storage. Current continuous tracks
+remain authorized regardless of grant expiry. Current grants/cue definitions protect
+asset deletion. Library list/detail/write remain GM-only. Asset bytes use an authorized
+BinaryFileResponse with Range/206, nosniff and private/no-store headers; storage stays
+behind the existing private local disk. A future remote adapter needs equivalent
+authorized range delivery. Already delivered bytes cannot be revoked from a browser.
+
+### Central client engine and presentation
+
+One `AudioEngine` owns all HTMLAudioElements, MediaElementSource/Gain nodes and fade
+timers. Components and cue handlers never construct their own audio. Explicit
+**Включить звук** resumes the AudioContext from a user gesture; its state is visible.
+Local master and per-channel preferences are clamped and stored in browser storage.
+Effective continuous gain is local master × local channel × GM channel × playback.
+Preview uses the same engine but never an HTTP playback command. Preview is released
+when its library/detail/picker closes. At most eight SFX and six retiring transition
+voices are retained; oldest excess voices are disposed. Ordinary use has one music,
+four ambient, bounded SFX and at most one preview.
+
+Music replacement creates the incoming voice while the outgoing gain fades to zero.
+AudioParam ramps run in Web Audio, not React intervals; unchanged gain targets do not
+restart a fade when a subsequent weather/Cue action arrives. Pause preserves elapsed
+position on the server. Late join/reconnect seeks using serverNow/start time, modulo
+duration for loops; periodic repair corrects drift over two seconds rather than
+seeking on every probe. This is approximate synchronization, not a shared media clock.
+Already-buffered continuous audio can continue during a short disconnection; successful
+hydration reconciles it. SFX are not resumed. User-visible load/play errors support
+another unlock/retry gesture. OS/device-specific audio behavior remains browser-owned.
+
+`AtmosphereLayer` is a separate Pixi screen-space overlay above world layers, with
+`eventMode=none`, no domain objects or hit targets. Graphics are built only when the
+effect configuration changes and transformed in the existing ticker: maxima of
+100 rain streaks, 65 snowflakes, 45 embers, 5 haze forms. No filters, extra canvases,
+remote textures, React frame updates or scene serialization. Reduced-motion mode
+uses 20% of the configured population and freezes movement. It neither reveals
+hidden objects nor changes fog geometry. `Tabletop` binds current media projection
+to its renderer and unsubscribes on teardown.
+
+### Cue and Director integration
+
+CueDefinition/CueActionFields add music start/stop, ambient start/stop (one or all),
+SFX, atmosphere enable/disable, and colored flash/vignette pulses. Audio config uses
+existing campaign assets, volume, loop and fade duration; no executable URLs/scripts.
+CueStepActions delegates to MediaActions inside the existing step transaction. Stable
+step UUIDs and position receipts retain atomicity/idempotency. Fades are asynchronous;
+an explicit Wait is needed to postpone later steps. Cancel/complete Director cleanup
+does not roll back music/weather already applied. Flash/vignette use Director's
+ephemeral epoch/order/expiry semantics and CSS pulse presentation, with bounded
+200–2000 ms duration, validated hex colors, restrained opacity and reduced-motion
+suppression. No Trigger, region, waveform editor, positional audio or streaming service.
+
+## Task 08 — prepared events and Director Mode
+
+`Cue` belongs to a Scene and stores name, plaintext description and sort_order.
+`CueStep` has an explicit position, a closed action type and validated JSON config.
+`CueDefinition` accepts only the supported vocabulary and strips unrelated fields;
+it resolves object, template and handout references within the scene/campaign.
+There is no executable code, expression evaluator, condition graph or plugin hook.
+Definitions are capped at 100 per scene, 50 steps each and ten minutes of configured
+durations; one Wait is at most 60 seconds. References are revalidated on execution.
+
+GM-only `/api/scenes/{scene}/cues` reads definitions and the ten latest runs.
+POST `/cues/{save,delete,start,cancel,retry}` uses the existing command receipt
+middleware, including ambiguous start retry. `?runsOnly=1` returns compact progress
+without definition/config payloads. The mounted library polls that projection at
+1.5 seconds with one request in flight; definitions load on entry/explicit refresh.
+There is no Player definition endpoint. The editor is a lazy frontend chunk with
+a draggable timeline, keyboard-accessible reorder buttons and contextual fields.
+Drafts warn before close/unload; resizing an open modal cannot unmount the library.
+Definition saves do not advance scene revision, since they are private preparation.
+
+### Durable execution boundary
+
+Start locks campaign then scene, checks GM membership and active scene, and excludes
+another queued/running/failed run in that campaign. It creates a UUID `CueRun` with
+actor, scene, activation epoch, name, position, due_at and status. Ordered
+`CueRunStep` rows copy type/config and allocate stable UUID execution keys. Definition
+edits/deletion cannot rewrite this snapshot. Referenced objects remain canonical:
+removing a referenced object/template can cause a visible failed step, not implicit
+retargeting. Existing template definitions have no mutable live-instance linkage.
+
+```text
+GM Start + receipt
+  → campaign/scene lock → immutable Run + RunSteps + first database job → commit
+  → ExecuteCueStep(campaign, run UUID, expected position)
+  → campaign lock FIRST → run lock → scene lock → current GM/epoch checks
+  → existing application actions → completed RunStep + next position/due time
+  → next delayed database job, in the SAME database transaction → commit
+  → existing scene publications / safe ephemeral Director event
+```
+
+The explicit `tabletop` queue is Laravel's database driver using the application's
+same database/connection and jobs table, queue `cues`, retry_after 90 seconds.
+`beforeCommit` is intentional here: the job row and scene/step writes commit or roll
+back together. Moving this connection to another database/Redis or changing it to
+after-commit dispatch would break that atomic enqueue guarantee and needs an outbox.
+Worker timeout is 60 seconds, below retry_after. Request-scoped CommandContext is
+also scoped/reset by Laravel's queue lifecycle; each step explicitly sets transport
+metadata, with no originating browser socket exclusion.
+
+Run position under the campaign lock is the durable execution receipt. Old or
+duplicate jobs have the wrong expected position/status and do nothing. A crash
+before commit rolls back the whole step, including a composite spawn/add/start;
+a crash after commit cannot duplicate it. This guarantee does not expire when
+ordinary HTTP receipts are pruned. Nested canonical mutations have distinct mutation
+IDs so SceneStore does not discard subsequent revisions as an own duplicate.
+No external irreversible action is executed inside this transactional adapter.
+
+Wait completes its step and stores the next due time, then schedules a delayed job.
+Camera transitions and message durations similarly hold the next action so the
+sequence remains readable. Database queue timestamps have second precision: jobs
+wake in the final second and sleep only the remaining <1000 ms outside all locks.
+Long Waits never occupy a worker. `advance` independently checks due_at, so early
+delivery cannot advance the plan. A 100 ms idle polling interval is documented.
+Scheduling/broker load can add latency; these are minimum durations, not deadlines.
+
+### Persistent action adapters
+
+`CueStepActions` orchestrates existing TokenActions/PropActions, TemplateActions,
+CombatActions and HandoutActions. It does not write token/prop/combat/handout state
+itself. Show/hide delegates each selected object's existing canonical action;
+these produce successive revisions inside the atomic step. Template spawn remains
+one batched object mutation. Encounter spawn can prepare/add/begin through the
+existing combat service in the same outer transaction. Combat uses current IDs and
+turn preconditions resolved under the writer lock. No new rules adjudication.
+
+Persistent scene actions retain SceneTransaction, authorization, safe projections,
+revision increments and current+1/gap/reconnect handling. Handout discovery remains
+campaign-level and uses its existing unique reveal records and presentation ID;
+it does not gain an artificial scene revision. Step retry cannot rebroadcast a
+committed handout presentation or spawn another group.
+
+### Cancellation, failures and recovery
+
+Statuses are queued/running/completed/cancelled/failed. Action failure rolls back
+the step, records a bounded Russian GM error and clears Player presentation. Retry
+uses the same snapshot/execution key; Stop cancels pending steps. Previously
+completed persistent changes remain. Campaign activation/deactivation cancels
+unfinished runs under its existing writer lock, before increasing the epoch.
+Cancellation racing a step serializes on that lock; it stops subsequent steps and
+does not claim to interrupt/undo an already committing action.
+
+Normal reserved jobs become available after retry_after on worker death.
+`tabletop:recover-cues`, scheduled every minute, requeues queued/running runs whose
+due time is over 90 seconds overdue. Duplicate recoveries are safe. Operators must
+run/supervise the worker and Laravel scheduler; restarting the browser is irrelevant.
+Domain failures wait for the GM rather than retrying indefinitely. Run rows currently
+remain until scene deletion; retention/history browsing is future work.
+
+### Ephemeral, recipient-safe presentation
+
+`DirectorPublisher` emits a separate `director.action` family on the existing
+authorized Player scene/epoch/user channels, after commit. The envelope contains
+scene/epoch, run/event UUIDs, monotonic step position, concrete action, safe config,
+sentAt and expiry. It contains no definition/name/future steps or encounter config.
+Focus resolves a currently visible token/prop under the locks, removes its kind/ID
+and emits only world x/y and duration. A hidden target fails before publication.
+Other camera points are explicit GM-authored world points. Message strings render
+as React text, without HTML interpretation. No Director data enters Scene snapshots.
+
+`SceneSubscriber` ignores non-revision presentation envelopes. `DirectorLayer` has
+its own bounded deduplication/order state, separate from SceneStore. Duplicate IDs,
+older positions, wrong scene/epoch and expired events are rejected. Completion/
+cancellation tombstones prevent delayed events resurrecting a finished run; failure
+clear permits the later retry. There is no reconnect presentation fetch or replay.
+Disconnect/browser offline, scene unmount and completion/cancel reset effects. A
+70-second safety lease clears presentation if a terminal message is lost. A player
+can leave immediately with Esc; subsequent effects from that run are locally ignored.
+
+`DirectorCamera` is driven by the existing Pixi ticker. Focus/pan/zoom interpolate
+local camera state, shake adds a temporary screen offset without position drift,
+and release cancels transitions. Directed input is temporarily gated, never saved.
+React receives no per-frame zoom notifications during direction. Fade is a CSS
+opacity transition; message expiry is a low-rate presentation timer. Reduced-motion
+preferences remove camera motion/shake/fade transitions. Cinematic presentation
+temporarily hides map HUD controls while retaining a visible release action.
+
+### Future Trigger boundary
+
+A future authorized Trigger can request a run through CueRunner and the same
+validated action vocabulary. Trigger detection, regions/OnEnter/OnClick, branching,
+loops, variables, scripting, LOS and Story integration
+are deliberately absent. Task 09 adds audio and atmosphere through the same action
+boundary described above. Triggers must not bypass campaign locks, audience filtering,
+the immutable plan or execution receipts. This is a small linear director, not a
+general workflow engine. Earlier stage sections below describe their original scope.
+
 ## Boundaries and routing
 
 One Laravel 13 application serves a Blade entry document and the React/Vite
@@ -27,14 +273,14 @@ transition can reuse `SceneStore.hydrate`, but must retain these isolation rules
 
 ## Domain model
 
-| Entity         | Relationships and invariants                                                                                     |
-| -------------- | ---------------------------------------------------------------------------------------------------------------- |
-| User           | Laravel session identity; passwords hashed; explicit safe serialization                                          |
-| Campaign       | Has scenes and members; optional `active_scene_id`; creator becomes GM                                           |
-| CampaignMember | Unique `(campaign_id, user_id)`; role `gm` or `player`; multiple GMs supported                                   |
-| Scene          | Belongs to campaign; name/order, revision, dimensions, explicit square grid and one positioned map               |
-| Asset          | Campaign, uploader, kind `map`/`token`/`handout`, display name, safe stored path, MIME, byte size and dimensions |
-| Token          | Scene, optional image and controller; position, size/scale/rotation, vitals, hidden/locked, order                |
+| Entity         | Relationships and invariants                                                                                            |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| User           | Laravel session identity; passwords hashed; explicit safe serialization                                                 |
+| Campaign       | Has scenes and members; optional `active_scene_id`; creator becomes GM                                                  |
+| CampaignMember | Unique `(campaign_id, user_id)`; role `gm` or `player`; multiple GMs supported                                          |
+| Scene          | Belongs to campaign; name/order, revision, dimensions, explicit square grid and one positioned map                      |
+| Asset          | Campaign, uploader, kind `map`/`token`/`handout`/`prop`, display name, safe stored path, MIME, byte size and dimensions |
+| Token          | Scene, optional image and controller; position, size/scale/rotation, vitals, hidden/locked, order                       |
 
 There is no universal object JSON blob. Token positions and map placement use
 `DECIMAL(...,3)` logical world pixels. Tokens use centers; maps use top-left
@@ -773,3 +1019,112 @@ scene.revision at that revision, and inactive scene changes get no Player public
 GMLayer is instantiated only for GM, uses owned vector/Text children and keeps marker
 sizes readable through zoom. Show GM Notes is local presentation only, with no API
 write. No Note is a token, fog patch, handout or generic document page.
+
+## Task 07 — props and reusable composition
+
+`SceneProp` is a separate entity with a scene FK, restricted asset FK, optional name,
+world center x/y, rotation in degrees, independent positive scale_x/scale_y, z_index,
+is_hidden and is_locked. It has no ownership, HP, conditions or combat membership.
+The additive migration also creates campaign-scoped `ContentTemplate` (prefab or
+encounter) and `ContentTemplateItem` (token/prop, asset FK and curated configuration).
+Assets remain local private files; definitions never duplicate media files.
+
+`PropActions`, `SelectionActions` and `TemplateActions::spawn` use the existing
+IdempotentCommand → campaign lock → SceneTransaction scene lock path. Routes:
+
+- POST `/api/scenes/{scene}/props`: create or update, with optional stack action.
+- POST `/api/scenes/{scene}/selection`: move, duplicate or delete tokenIds/propIds.
+- POST `/api/scenes/{scene}/spawn`: templateId and target world x/y.
+- GET/POST `/api/campaigns/{campaign}/templates`: paged/searchable definitions or save.
+- POST `/api/campaigns/{campaign}/templates/delete`: remove only the definition.
+
+All are GM-only, including definition reads. Every selected ID is resolved within
+the locked scene; missing/foreign IDs abort the whole operation. A selection contains
+1–200 total objects. Movement converts an absolute canonical anchor target to a shared
+delta, preserving relative placement, and rejects any locked member. Coordinate
+bounds apply to every member. Duplicate copies are offset 30 world pixels. Unlike
+template spawn, ordinary duplication preserves current token state/conditions.
+Batch deletion repairs the current combat entry via existing CombatActions before
+deleting tokens, then returns combat and object removals in the same revision.
+Stack actions normalize `(z_index,id)` order and return all affected props together;
+one-step ordering works even when prior values have gaps or ties.
+
+The `objects.changed` envelope carries small upsert/removal arrays: tokens, props,
+deletedIds, deletedPropIds, and optional combat. One batch means one transaction,
+revision, mutation ID and envelope per recipient, not one event per spawned object.
+SaveQueue gives each batch its own key and retains that exact UUID after ambiguous
+failure. The shared `applyObjectPatch` reducer is used by HTTP acceptance and realtime;
+stale/gap handling and post-drain snapshot repair retain their prior contracts.
+
+### Visibility and private media
+
+GM receives all changed entities. While writer locks are held, ScenePublisher builds
+Player DTOs from the visible changed records and emits only previously visible IDs
+for removals. A hidden-only batch becomes empty `scene.revision`; an inactive scene
+never publishes Player events. Internal previous-visibility lists are stripped before
+HTTP, receipts and broadcast. Player snapshots contain visible props only, no hidden
+flags, definition library or GM notes. Visible active-scene prop usage grants media
+access; hiding/deleting its last authorized use revokes both original and thumbnail.
+Manual fog is visual masking, not a secrecy boundary.
+
+Asset usage checks include scene props and template-item references. Campaign locks
+serialize definition save/spawn/delete with asset deletion; restrictive FKs provide
+an additional guard. Existing campaign membership, epoch channels and role checks
+on receipt replay continue to apply. No generic ACL or second realtime layer was added.
+
+### Renderer and interaction
+
+`ScenePropLayer` sits after grid and before tokens/fog. Its sortable Sprite containers
+share the renderer's per-asset Texture cache; images are requested/decoded once per
+used asset. Rotated local hit tests, selection outlines, corner handles, dimmed hidden
+props and lock marks are Pixi responsibilities. React owns the compact selection bar,
+PropInspector and template library (20 cards per page, thumbnail previews and search).
+`ObjectGesture` shares PointerController capture, cancellation and pan/zoom listeners.
+Mixed dragging updates Pixi views only; releasing emits one snapped-anchor command.
+The preview is cleared before optimistic state emission, avoiding a stale unsnapped
+frame. Escape/cancellation restores the original visual state. Writes pause group
+gestures until the queue is saved. Shift-click works on canvas and outline; Delete
+asks confirmation and Ctrl/Cmd+D duplicates. Text inputs and modal dialogs suppress
+table shortcuts; physical key codes also work with the Russian keyboard layout.
+
+### Template semantics and combat boundary
+
+Saving reads canonical selected records after queued edits have drained. Origin is
+the minimum selected center x/y. Items store relative positions and curated transforms,
+image references, names, hidden/locked state and prop stacking. Token appearance and
+vitals are captured, but HP is reset to max HP; owner, conditions and combat references
+are omitted. The save dialog explains this starting-state policy. Encounters accept
+tokens only. Optional preset initiative and configurable reduced starting HP are not
+implemented; initiative is entered in the existing combat tracker after placement.
+
+Spawn adds the target origin, allocates new IDs and keeps relative transforms. There
+is no template-instance link or later propagation. Deleting a definition leaves its
+spawned objects intact. The nonmodal encounter notice offers Add to Combat; prepare
+and add use existing CombatActions/SaveQueue commands rather than introducing a
+second combat system. Spawn itself never starts a fight or changes a current round.
+
+## Russian localization
+
+`resources/js/i18n/ru.ts` is the typed source catalog; `t` supports named parameters
+and fallback to Russian for a future missing locale. Components localize labels,
+tooltips, empty/loading/error states, help, dialogs and controls at their boundaries.
+There is no DOM text replacement. Custom names, notes, handouts, tags and condition
+labels never pass through the dictionary. Built-in conditions use English stable keys
+with Russian presentation labels; drag MIME, option values, API/domain enums, IDs,
+URLs and CSS classes stay technical. HP/AC, format names, X/Y and keyboard notation
+remain intentional common abbreviations. Russian dates are explicit where displayed.
+
+API errors map known backend messages to the catalog, preserve Russian validation,
+and provide Russian status-specific fallback. Laravel has Russian validation strings,
+boot/noscript text, defaults for new notes/assets, and a shared Russian HTTP error page.
+The backend locale is fixed to `ru` so pre-existing environment defaults do not leave
+mixed-language screens. There is no language switch or translation of historical data.
+
+### Next boundary
+
+Future Cue/Director actions can call these explicit server actions with authorization
+and idempotency intact. This stage adds no cue runner, trigger engine, audio, camera
+director, animation/lighting/LOS system or integration with Story. Marquee selection,
+group rotation/scaling, undo/redo and a template-definition editor remain deferred.
+Hosted latency, physical-touch authoring and long GPU soak remain separate validation
+work; current acceptance is local Chromium with two authenticated clients.

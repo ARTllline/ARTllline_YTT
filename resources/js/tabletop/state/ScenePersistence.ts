@@ -1,3 +1,4 @@
+import { objects } from '../../api/objects';
 import { api, commandId, type Mutation } from '../../api/workspace';
 import type { SceneStore, SceneCommand } from './SceneStore';
 import { SaveQueue } from './SaveQueue';
@@ -11,6 +12,9 @@ export class ScenePersistence {
         private sceneId: string,
     ) {
         store.bindCommands((command) => this.submit(command));
+        this.queue.subscribe(() => {
+            store.objectEditingEnabled = this.queue.getSnapshot().status === 'saved';
+        });
     }
     private submit(command: SceneCommand) {
         const mutationId = commandId();
@@ -18,9 +22,11 @@ export class ScenePersistence {
         const key =
             command.type === 'token' || command.type === 'move' || command.type === 'tokenCombat'
                 ? `token:${command.id}`
-                : command.type === 'note'
-                  ? `note:${command.command.action === 'create' ? mutationId : command.command.id}`
-                  : command.type;
+                : command.type === 'objects'
+                  ? `objects:${mutationId}`
+                  : command.type === 'note'
+                    ? `note:${command.command.action === 'create' ? mutationId : command.command.id}`
+                    : command.type;
         const version = (this.versions.get(key) ?? 0) + 1;
         this.versions.set(key, version);
         this.queue.enqueue(
@@ -28,6 +34,25 @@ export class ScenePersistence {
             async () => {
                 try {
                     let result: Mutation;
+                    if (command.type === 'objects') {
+                        result = await objects.command(this.sceneId, command.command, mutationId);
+                        this.store.accept(result, true);
+                        const data = command.command.data;
+                        if (
+                            command.command.endpoint === 'spawn' ||
+                            ('action' in data && ['create', 'duplicate'].includes(data.action))
+                        )
+                            this.store.selectObjects({
+                                tokenIds: result.tokens?.map((t) => t.id) ?? [],
+                                propIds: result.props?.map((p) => p.id) ?? [],
+                            });
+                        if (command.command.endpoint === 'spawn' && command.command.encounter)
+                            this.store.encounterPlaced(
+                                command.command.encounter,
+                                result.tokens?.map((t) => t.id) ?? [],
+                            );
+                        return;
+                    }
                     if (command.type === 'note') {
                         result = await api.note(this.sceneId, command.command, mutationId);
                         this.store.accept(result, this.versions.get(key) === version);

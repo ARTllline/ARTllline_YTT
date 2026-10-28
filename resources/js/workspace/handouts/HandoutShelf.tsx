@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import { useState } from 'react';
 import { BookOpen, X } from 'lucide-react';
 import { preparation } from '../../api/preparation';
@@ -29,21 +30,21 @@ export function HandoutShelf({
             <button
                 className="secondary-button handout-launch"
                 onClick={() => setOpen(!open)}
-                title="Handouts"
+                title={t('Handouts')}
             >
                 <BookOpen size={15} />
-                <span>Handouts</span>
+                <span> {t('Handouts')} </span>
             </button>
             {open && (
                 <aside
                     className="handout-shelf panel"
-                    aria-label={gm ? 'Prepared handouts' : 'Discovered handouts'}
+                    aria-label={gm ? t('Prepared handouts') : t('Discovered handouts')}
                 >
                     <div className="panel-heading">
-                        <strong>{gm ? 'Prepared handouts' : 'Discovered handouts'}</strong>
+                        <strong>{gm ? t('Prepared handouts') : t('Discovered handouts')}</strong>
                         <button
                             className="icon-button"
-                            aria-label="Close handout shelf"
+                            aria-label={t('Close handout shelf')}
                             onClick={() => setOpen(false)}
                         >
                             <X size={16} />
@@ -65,20 +66,22 @@ export function HandoutShelf({
                     {!items.length && (
                         <p className="hint">
                             {gm
-                                ? 'Prepare a handout image from Assets to preview and share it.'
-                                : 'Handouts shared by your GM will stay here, across scenes.'}
+                                ? t('Prepare a handout image from Assets to preview and share it.')
+                                : t('Handouts shared by your GM will stay here, across scenes.')}
                         </p>
                     )}
                     {pages > 1 && (
                         <div className="asset-pagination">
                             <button disabled={page === 1} onClick={() => setPage(page - 1)}>
-                                Previous
+                                {' '}
+                                {t('Previous')}{' '}
                             </button>
                             <span>
                                 {page} / {pages}
                             </span>
                             <button disabled={page === pages} onClick={() => setPage(page + 1)}>
-                                Next
+                                {' '}
+                                {t('Next')}{' '}
                             </button>
                         </div>
                     )}

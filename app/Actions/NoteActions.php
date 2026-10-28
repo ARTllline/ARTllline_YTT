@@ -17,7 +17,7 @@ class NoteActions
             unset($data['action']);
             if ($action === 'create') {
                 unset($data['id']);
-                $note = SceneNote::create($data + ['scene_id' => $scene->id, 'created_by' => $user->id, 'title' => 'New note', 'body' => '', 'icon' => 'note']);
+                $note = SceneNote::create($data + ['scene_id' => $scene->id, 'created_by' => $user->id, 'title' => __('ui.new_note'), 'body' => '', 'icon' => 'note']);
             } else {
                 $note = SceneNote::where('scene_id', $scene->id)->findOrFail($data['id']);
                 unset($data['id']);

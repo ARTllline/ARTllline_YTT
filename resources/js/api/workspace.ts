@@ -1,5 +1,7 @@
+import { t } from '../i18n';
 import type { FogAction, FogState, FogStroke, FogBase } from '../tabletop/types/spatial';
 import type { Combat, CombatCommand, TokenCombatCommand } from '../tabletop/types/combat';
+import type { ObjectPatch as importObjectPatch } from '../tabletop/state/objectPatch';
 import { request, setCsrf } from './client';
 import type {
     Scene,
@@ -26,7 +28,7 @@ export interface Campaign extends CampaignSummary {
     scenes: { id: string; name: string }[];
     members?: { id: string; name: string; role: string }[];
 }
-export interface Mutation {
+export interface Mutation extends importObjectPatch {
     note?: import('../tabletop/types/scene').SceneNote;
     deletedNoteId?: string;
     combat?: Combat | null;
@@ -134,7 +136,7 @@ export const api = {
     createToken: (scene: string, point: Point, asset?: ImageAsset & { name: string }) =>
         request<Mutation>(`/scenes/${scene}/tokens`, 'POST', {
             ...point,
-            name: asset?.name.slice(0, 80) ?? 'New token',
+            name: asset?.name.slice(0, 80) ?? t('New token'),
             ...(asset ? { token_image_asset_id: asset.id } : {}),
             clientMutationId: commandId(),
         }),

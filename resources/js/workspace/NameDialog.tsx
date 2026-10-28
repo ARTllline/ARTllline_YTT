@@ -1,15 +1,18 @@
+import { t } from '../i18n';
 import { useState, type FormEvent } from 'react';
 import { Dialog } from './Dialog';
 export function NameDialog({
     title,
     label,
     initial = '',
+    description,
     submit,
     onClose,
 }: {
     title: string;
     label: string;
     initial?: string;
+    description?: string;
     submit: (name: string) => Promise<void>;
     onClose: () => void;
 }) {
@@ -30,6 +33,7 @@ export function NameDialog({
     return (
         <Dialog title={title} onClose={() => !busy && onClose()}>
             <form onSubmit={save}>
+                {description && <p className="hint">{description}</p>}
                 <label className="field">
                     <span>{label}</span>
                     <input autoFocus name="name" required maxLength={120} defaultValue={initial} />
@@ -46,10 +50,11 @@ export function NameDialog({
                         disabled={busy}
                         onClick={onClose}
                     >
-                        Cancel
+                        {' '}
+                        {t('Cancel')}{' '}
                     </button>
                     <button className="primary-button" disabled={busy}>
-                        {busy ? 'Saving…' : 'Save'}
+                        {busy ? t('Saving…') : t('Save')}
                     </button>
                 </div>
             </form>

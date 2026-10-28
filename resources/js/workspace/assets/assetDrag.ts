@@ -5,7 +5,7 @@ export function readAssetDrag(value: string): LibraryAsset | null {
         const asset = JSON.parse(value) as LibraryAsset;
         return typeof asset.id === 'string' &&
             /^\d+$/.test(asset.id) &&
-            ['map', 'token', 'handout'].includes(asset.kind) &&
+            ['map', 'token', 'handout', 'prop'].includes(asset.kind) &&
             typeof asset.name === 'string' &&
             Number.isFinite(asset.width) &&
             Number.isFinite(asset.height)

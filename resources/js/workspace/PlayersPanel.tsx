@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useCallback, useEffect, useState } from 'react';
 import { Users, Copy, Link, X } from 'lucide-react';
 import { request } from '../api/client';
@@ -16,12 +17,12 @@ export function ConnectionBadge({ state }: { state: ConnectionState }) {
         <span className={`connection-badge ${state}`} role="status">
             <i />
             {state === 'connected'
-                ? 'Live'
+                ? t('Live')
                 : state === 'offline'
-                  ? 'Offline · retrying'
+                  ? t('Offline · retrying')
                   : state === 'reconnecting'
-                    ? 'Reconnecting…'
-                    : 'Connecting…'}
+                    ? t('Reconnecting…')
+                    : t('Connecting…')}
         </span>
     );
 }
@@ -65,12 +66,12 @@ export function PlayersPanel({
         <>
             <ConnectionBadge state={connection} />
             <button className="secondary-button players-trigger" onClick={() => setOpen(true)}>
-                <Users size={15} /> Players <span>{members.length}</span>
+                <Users size={15} /> {t('Players')} <span>{members.length}</span>
             </button>
             {open && (
-                <Dialog title="Around the table" onClose={() => setOpen(false)}>
+                <Dialog title={t('Around the table')} onClose={() => setOpen(false)}>
                     <div className="players-panel">
-                        <p>Invite your party. Players see only the scene you activate.</p>
+                        <p> {t('Invite your party. Players see only the scene you activate.')} </p>
                         <div className="member-list">
                             {campaign.members?.map((member) => (
                                 <div className="member-row" key={member.id}>
@@ -80,7 +81,7 @@ export function PlayersPanel({
                                     <div>
                                         <strong>{member.name}</strong>
                                         <small>
-                                            {member.role === 'gm' ? 'Game Master' : 'Player'}
+                                            {member.role === 'gm' ? t('Game Master') : t('Player')}
                                         </small>
                                     </div>
                                     <span
@@ -91,8 +92,8 @@ export function PlayersPanel({
                                         }
                                     >
                                         {members.some((m) => m.id === member.id)
-                                            ? 'Online'
-                                            : 'Offline'}
+                                            ? t('Online')
+                                            : t('Offline')}
                                     </span>
                                 </div>
                             ))}
@@ -120,39 +121,39 @@ export function PlayersPanel({
                         >
                             <div className="invite-options">
                                 <label className="field">
-                                    <span>Expires in</span>
+                                    <span> {t('Expires in')} </span>
                                     <select name="days" defaultValue="7">
-                                        <option value="1">1 day</option>
-                                        <option value="7">7 days</option>
-                                        <option value="30">30 days</option>
+                                        <option value="1"> {t('1 day')} </option>
+                                        <option value="7"> {t('7 days')} </option>
+                                        <option value="30"> {t('30 days')} </option>
                                     </select>
                                 </label>
                                 <label className="field">
-                                    <span>New players limit</span>
+                                    <span> {t('New players limit')} </span>
                                     <input
                                         type="number"
                                         name="uses"
                                         min="1"
                                         max="100"
-                                        placeholder="Unlimited"
+                                        placeholder={t('Unlimited')}
                                     />
                                 </label>
                             </div>
                             <button className="primary-button" disabled={busy}>
-                                <Link size={14} /> Create invitation
+                                <Link size={14} /> {t('Create invitation')}{' '}
                             </button>
                         </form>
                         {url && (
                             <div className="invite-link">
                                 <input
-                                    aria-label="Invitation link"
+                                    aria-label={t('Invitation link')}
                                     readOnly
                                     value={url}
                                     onFocus={(e) => e.target.select()}
                                 />
                                 <button
                                     className="icon-button"
-                                    aria-label="Copy invitation"
+                                    aria-label={t('Copy invitation')}
                                     onClick={() =>
                                         void run(async () => {
                                             await navigator.clipboard.writeText(url);
@@ -164,8 +165,8 @@ export function PlayersPanel({
                                 </button>
                                 <small>
                                     {copied
-                                        ? 'Copied'
-                                        : 'Copy this link now; only its secure hash is stored.'}
+                                        ? t('Copied')
+                                        : t('Copy this link now; only its secure hash is stored.')}
                                 </small>
                             </div>
                         )}
@@ -178,20 +179,28 @@ export function PlayersPanel({
                             {invites.map((invite) => (
                                 <div className="invite-row" key={invite.id}>
                                     <div>
-                                        <strong>Invitation #{invite.id}</strong>
+                                        <strong>
+                                            {' '}
+                                            {t('Invitation #')} {invite.id}
+                                        </strong>
                                         <small>
                                             {invite.revokedAt
-                                                ? 'Revoked'
-                                                : `Expires ${new Date(invite.expiresAt!).toLocaleDateString()}`}{' '}
+                                                ? t('Revoked')
+                                                : t('expiresOn', {
+                                                      date: new Date(
+                                                          invite.expiresAt!,
+                                                      ).toLocaleDateString('ru-RU'),
+                                                  })}{' '}
                                             · {invite.usesCount}
-                                            {invite.maxUses ? ` / ${invite.maxUses}` : ''} joined
+                                            {invite.maxUses ? ` / ${invite.maxUses}` : ''}{' '}
+                                            {t('joined')}{' '}
                                         </small>
                                     </div>
                                     {!invite.revokedAt && (
                                         <button
                                             className="icon-button"
-                                            title="Revoke invitation"
-                                            aria-label={`Revoke invitation ${invite.id}`}
+                                            title={t('Revoke invitation')}
+                                            aria-label={t('revokeInvite', { id: invite.id })}
                                             disabled={busy}
                                             onClick={() =>
                                                 void run(async () => {

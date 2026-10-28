@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useEffect, useState } from 'react';
 import type { SceneStore } from '../tabletop/state/SceneStore';
 import type { SaveQueue } from '../tabletop/state/SaveQueue';
@@ -10,7 +11,7 @@ export function useSceneLive(
     queue: SaveQueue,
     connection: ConnectionState,
 ) {
-    const [status, setStatus] = useState('Syncing scene…');
+    const [status, setStatus] = useState(t('Syncing scene…'));
     useEffect(() => {
         if (!echo || !channel) return;
         const subscriber = new SceneSubscriber(echo, channel, store, queue, setStatus);

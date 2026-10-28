@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useState } from 'react';
 import { Dialog } from './Dialog';
 export function ConfirmDialog({
@@ -5,7 +6,7 @@ export function ConfirmDialog({
     description,
     submit,
     onClose,
-    buttonLabel = 'Delete',
+    buttonLabel = t('Delete'),
 }: {
     title: string;
     description: string;
@@ -25,7 +26,8 @@ export function ConfirmDialog({
             )}
             <div className="dialog-actions">
                 <button className="secondary-button" disabled={busy} onClick={onClose}>
-                    Cancel
+                    {' '}
+                    {t('Cancel')}{' '}
                 </button>
                 <button
                     className="danger-button"
@@ -40,7 +42,7 @@ export function ConfirmDialog({
                             });
                     }}
                 >
-                    {busy ? 'Working…' : buttonLabel}
+                    {busy ? t('Working…') : buttonLabel}
                 </button>
             </div>
         </Dialog>

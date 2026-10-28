@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useEffect, useState } from 'react';
 import { api, type User, type Campaign } from '../api/workspace';
 import { AuthScreen } from './AuthScreen';
@@ -43,7 +44,7 @@ export function App() {
             if (path[2]) {
                 scene = await api.snapshot(path[2], abort.signal);
                 if (scene.campaignId !== campaign.id)
-                    throw new Error('This scene does not belong to the campaign.');
+                    throw new Error(t('This scene does not belong to the campaign.'));
             } else if (campaign.scenes.length) {
                 location.replace(`/campaigns/${campaign.id}/scenes/${campaign.scenes[0].id}`);
                 return;
@@ -62,16 +63,16 @@ export function App() {
     if (error)
         return (
             <div className="boot">
-                <h1>The workspace could not open.</h1>
+                <h1> {t('The workspace could not open.')} </h1>
                 <p className="muted">{error}</p>
-                <a href="/">Return to campaigns</a>
+                <a href="/"> {t('Return to campaigns')} </a>
             </div>
         );
     if (!loaded)
         return (
             <div className="boot">
-                <strong>YTT / YOUR TABLETOP</strong>
-                <small>Opening your workspace…</small>
+                <strong> {t('YTT / YOUR TABLETOP')} </strong>
+                <small> {t('Opening your workspace…')} </small>
             </div>
         );
     return loaded.campaign ? (
