@@ -36,14 +36,14 @@ class HandoutActions
         }, 3);
     }
 
-    public function show(User $user, Campaign $campaign, string $id): array
+    public function show(User $user, Campaign $campaign, string $id, ?array $recipientIds = null): array
     {
-        return DB::transaction(function () use ($user, $campaign, $id) {
+        return DB::transaction(function () use ($user, $campaign, $id, $recipientIds) {
             $campaign = Campaign::whereKey($campaign->id)->lockForUpdate()->firstOrFail();
             Gate::forUser($user)->authorize('update', $campaign);
             $handout = Handout::where('campaign_id', $campaign->id)->findOrFail($id);
             $channels = [];
-            foreach ($campaign->members()->wherePivot('role', 'player')->get() as $player) {
+            foreach ($this->recipients($campaign, $recipientIds) as $player) {
                 $handout->reveals()->firstOrCreate(['user_id' => $player->id], ['revealed_at' => now()]);
                 $channels[] = 'campaign.'.$campaign->id.'.handouts.user.'.$player->id;
             }
@@ -56,5 +56,35 @@ class HandoutActions
 
             return ['handout' => $safe];
         }, 3);
+    }
+
+    public function revoke(User $user, Campaign $campaign, string $id, ?array $recipientIds): array
+    {
+        return DB::transaction(function () use ($user, $campaign, $id, $recipientIds) {
+            $campaign = Campaign::whereKey($campaign->id)->lockForUpdate()->firstOrFail();
+            Gate::forUser($user)->authorize('update', $campaign);
+            $handout = Handout::where('campaign_id', $campaign->id)->findOrFail($id);
+            $players = $this->recipients($campaign, $recipientIds);
+            $handout->reveals()->when($recipientIds !== null, fn ($query) => $query->whereIn('user_id', $players->modelKeys()))->delete();
+            foreach ($players as $player) {
+                $event = new TabletopEvent('campaign.'.$campaign->id.'.handouts.user.'.$player->id,
+                    ['type' => 'handout.revoked', 'campaignId' => (string) $campaign->id, 'handoutId' => (string) $handout->id]);
+                DB::afterCommit(fn () => app(SafeBroadcast::class)->send($event));
+            }
+
+            return ['revoked' => true];
+        }, 3);
+    }
+
+    private function recipients(Campaign $campaign, ?array $ids)
+    {
+        $players = $campaign->members()->wherePivot('role', 'player')->get();
+        if ($ids !== null) {
+            $ids = array_unique(array_map('strval', $ids));
+            abort_unless(count(array_intersect($ids, array_map('strval', $players->modelKeys()))) === count($ids), 422, 'Выберите игроков этой кампании.');
+            $players = $players->filter(fn ($p) => in_array((string) $p->id, $ids, true));
+        }
+
+        return $players;
     }
 }

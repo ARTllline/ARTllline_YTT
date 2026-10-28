@@ -1,4 +1,5 @@
 import type { Scene } from '../types/scene';
+// Test fixture only. Production scenes always hydrate from the authoritative snapshot.
 export const createDemoScene = (): Scene => ({
     width: 1440,
     height: 1080,

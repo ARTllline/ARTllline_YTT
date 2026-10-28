@@ -1,4 +1,151 @@
-# Task 11 validation
+# Task 12 — V1 stabilization validation
+
+Validated **2026-10-29 Europe/Kiev** from clean Task 11 commit `845c1c5`.
+No dependency/lockfile, `.env`, APP_KEY or schema changes; no commit/push or VPS
+deployment. Earlier milestone sections below are historical, not current limitations.
+All destructive/fixture writes used new QA campaign **12**, synthetic files or new
+restore databases. Existing campaigns were not reset. Screenshots/scripts/raw metrics
+are local ignored `artifacts/qa12-*`; retained test fixtures are clearly QA-labelled.
+
+## Acceptance disposition
+
+Candidate for a first supervised local Chromium/Firefox session. This is **not an
+unconditional production/Safari sign-off**. The actual Linux PHP-FPM/systemd reboot,
+Redis deployment, external WAN, real Safari/macOS/iPad and multi-hour evening soak
+remain release-environment gates in V1_RELEASE_CHECKLIST.md. No new major subsystem
+was implemented to work around those limits.
+
+## User workflows actually exercised
+
+- Three independent Chromium contexts, GM and two Players; campaign/scenes/map
+  upload/invite/join through UI, authored supporting content through authorized APIs.
+- Mixed marquee selected two tokens + prop. Group drag saved; toolbar Undo restored
+  both kinds, Ctrl+Shift+Z redid and Ctrl+Z undid. Pure selection/camera creates no write.
+  Shift marquee toggled only intersected objects without changing revision 31.
+  A live concurrent token move made Undo reject/resync rather than overwrite x=870.
+- Selective handout to Player 1: Player 2 list remained empty; authorized viewer
+  opened. Revoke selected closed it and its old asset URL returned 403. Show-all
+  opened both. Player 2 went offline during revoke-all and closed on reconnect.
+- Full **Последний маяк** plan: start Session; Player token crosses private region;
+  once trigger reveals a guard, starts music/rain, focuses camera and shows message;
+  letter shared; encounter placed/added to combat; four combatants advance through
+  three rounds; fog cover/reveal strokes, ruler and ping; preload next scene reports
+  both Players ready while the current scene stays active; activate second scene;
+  scene trigger starts embers/SFX/camera/boss combat; advance to private final note;
+  complete Session. Plan persists with completed status and timestamps. No client errors.
+  Follow-up Player circle AoE was received as a remote overlay by the second Player.
+- Under Chromium network emulation (350 ms latency, 200000 B/s download, 100000 B/s
+  upload), 21 real API requests completed: activation/snapshot, movement/inverse,
+  fog cover/reveal, damage/heal, condition add/remove, next turn, selective handout
+  show/revoke, music pause/resume, atmosphere, preload, Cue save/start. Individual
+  requests took 373–408 ms. Reload reconnected. This measures HTTP command recovery,
+  not arbitrary packet loss/jitter on a real WAN or every editor control under latency.
+- Deliberately dropped the HTTP response **after** an accepted UI token move. Visible
+  unsaved/error state offered Retry; Retry reused the exact UUID. Revision 9→10 only,
+  no second movement/revision. Queue unit tests also cover inverse response loss.
+- Terminated the actual Reverb process. Players showed disconnected state, then
+  rejoined after restart: both scene 39 revision 103, same token coordinate 300.
+- Stopped the actual database Cue worker; accepted run stayed queued through GM
+  reload. Restart completed all steps. A camera focus on a hidden target failed with
+  an actionable Russian error; reveal + Retry completed that same run/step identity.
+
+## Browsers and layout
+
+Actual Playwright engines, production build: Chromium **156.0.8078.74**, Firefox
+**153.0**, Windows WebKit **26.5**. GM 1440×1000 and 1024×768; Player 390×844 with
+touch capability. Canvas, private images, 1200-stroke fog, zoom/pan, resize, reload,
+connection and audio-unlock control exercised. All three hydrated one renderer with
+two unique image textures, 200 props and 36 tokens; zero page errors. The narrow
+header now wraps, keeping audio unlock reachable; role labels in the Inspector are
+translated. Large-map Fit no longer has the 20% floor that cropped a 4096px map.
+
+Important WebKit observation: initial render works, but viewport resize sometimes
+produces a blank composited canvas screenshot. Context is not lost, GL error is 0,
+ticker continues, and synchronous renderer readback produces the correct scene.
+Reload restores display. This unresolved Windows-harness observation prevents
+claiming real Safari acceptance. Its fractional display scale also reports a one-CSS-
+pixel scrollWidth rounding difference; visual header overflow itself was corrected.
+Audio unlock was clicked; this is not an audible hardware/codec test on Safari.
+
+## Performance and load
+
+Synthetic 4096×4096 map, 200 props sharing an image, 36 tokens, 30 private notes,
+1200 fog strokes; rain/snow/embers changes. **722.572 seconds**, GM + **six distinct
+Player users**, **266** accepted movements and **8** scene activation round-trips.
+Zero page errors and no observed private-note sentinel in Player WS frames. At end
+all seven renderers were ready, each with one canvas/two image textures and the full
+public scene. GM rAF interval p50 about 8.3 ms / p95 about 8.4 ms (120 Hz host); this
+is animation-frame scheduling, not a GPU timestamp or low-end device guarantee.
+JS heap samples 16.6–42.5 MB, repeatedly returning around 19–25 MB. Post-warm-up DOM
+stayed 2355–2357 nodes; listener counts varied 781–5383 and fell again with GC, rather
+than growing monotonically. This finite run found no obvious unbounded leak; it is
+not proof of multi-hour stability. The original synthetic cover enum was normalized
+from `hide` to the API's `cover` before follow-up checks (both render as cover).
+
+Follow-up on the final large-map zoom code: 80 GM editor scene transitions (40
+round-trips) with zoom and explicit GC samples. All checkpoints retained one canvas,
+two image textures, 2355–2357 DOM nodes and 494–781 listeners. CDP used JS heap was
+12.03 MB initially / 12.85 MB finally, peak sampled 13.39 MB; zero page errors.
+This exercises renderer teardown/recreation, separately from the multiplayer soak.
+
+Fog masks stayed 2048×2048 for the 4096-square scene. The two RGBA masks represent
+about 32 MiB; the uncompressed map about 64 MiB, excluding driver/framebuffer overhead.
+1200-action hydration succeeded in all engines. No history compaction was introduced
+without a measured need; payload/first-frame cost and precision remain documented.
+
+Production bundles: entry 282.67 kB / 88.97 kB gzip; shared live scene 173.00 / 52.24;
+GM workspace 47.16 / 13.82; renderer 325.46 / 101.17; CSS 60.03 / 13.15. Renderer and
+GM preparation panels remain lazy chunks. These are build sizes, not total network
+transfer including private assets.
+
+## Security, operations and restoration
+
+- New regressions cover GM-only inverse edits, atomic conflict, foreign-scene objects,
+  exclusion of HP, private notes/regions and no trigger replay; handout foreign
+  campaign/recipient denial, Player recipient-list privacy, revoke asset/thumbnail
+  denial, receipt replay and former-member grants. Existing cross-campaign, hidden
+  entity, private media, inactive channel, preload and trigger/Cue tests still pass.
+- Rate-limit audit retains login/register 10/min, invite lookup 30/min, join 20/min,
+  uploads 30/min, interaction 60/min, media/SFX 120/min, ping 4/sec and other spatial
+  previews 20/sec. No new throttle interferes with ordinary movement. Player asset
+  projections contain opaque authorized URLs/dimensions, not filesystem paths or
+  original filenames; private file endpoints recheck authorization on each request.
+- Bounded logging replaces raw Cue/probe exception reporting with identifiers and
+  exception classes. No new debug logs or hardcoded localhost application paths.
+  Removed the unreferenced Task 01 procedural MapLayer; demoScene remains test-only.
+- Nginx configuration syntax passed using isolated loopback ports 8088/8443 and PHP
+  FastCGI 9012 with a two-day QA self-signed certificate. Actual HTTPS login, Secure
+  session cookie and **five WSS subscriptions** succeeded. Browser discovery alone
+  was redirected to the QA WSS endpoint; the publisher retained local Reverb. Dotenv
+  403, arbitrary PHP 404, private storage path 403, unsigned publisher path rejected.
+  This does not validate a public trusted certificate or Linux FPM socket/systemd boot.
+- `bash -n scripts/backup.sh` passed in WSL. systemd unit verification found the
+  expected missing `/usr/bin/php` in this minimal WSL; no Linux services were installed.
+  Docker CLI exists but daemon is unavailable. No successful reboot test is claimed.
+- Doctor local exit 0: PHP/DB/storage/private disk/queue/Reverb/application and
+  scheduler heartbeat OK. Warnings: local Redis absent, FFprobe nightly version
+  outside stable-version recognition, stock CLI upload limits. Production mode
+  intentionally treats missing Redis/secure configuration as errors.
+- Execution pruning dry run: zero eligible, retention 90 days. Isolated tests verify
+  old completed runs are removed, failed/busy/recent runs and definitions preserved.
+- **Real MySQL restore rehearsal**: created new databases
+  `ytt_qa12_20261028_230430_source` and `ytt_qa12_20261028_230430_restored`; migrated
+  synthetic source; dumped with mysqldump; changed token/deleted source map reference
+  and file; imported into the second new DB and restored file into a new directory.
+  Authoritative scene snapshot compared exactly; map SHA-256 matched
+  `ae36099e87dffec9ec0cd7b96c20984b211bf5f70233ac2d7484ff034a965507`.
+  Restored counts: 1 campaign/scene/asset/token. Working database was never an import
+  target. This rehearses the DB+file restoration, not restoration of all real campaigns.
+
+## Automated checks
+
+`composer test`: **89 tests / 1169 assertions**. `npm run test`: **110 tests / 21 files**.
+Typecheck, ESLint, production build, full `pint --test`, Composer strict validation,
+platform requirements and `git diff --check` pass. Added coverage is limited to
+new inverse/history/marquee/access/doctor/pruning behavior, the note-queue regression
+and large-map camera fit. Deployment-host and real-device gates above remain open.
+
+# Task 11 validation (previous milestone)
 
 Validated locally on **2026-10-29 (Europe/Kiev)**, on top of the uncommitted Task 10
 work. PHP 8.3.32 / Laravel 13.39, MySQL, Reverb, database Cue queue and Chromium with

@@ -6,7 +6,36 @@ state. The product contract is `AGENTS.md`.
 
 ## Current status
 
-**Task 11: Regions and server-authoritative Triggers.**
+**Task 12: V1 stabilization candidate.**
+The feature set is frozen. GM editing now includes mixed token/prop marquee selection
+(Shift toggles intersections), bounded confirmed Undo/Redo, and selective handout
+sharing/revocation. Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z affect supported layout edits only;
+live combat, triggers, audio and presentation are not rewound.
+Large-map Fit now zooms below 20%; narrow Player headers wrap audio controls.
+
+Start with [deployment](docs/DEPLOYMENT.md), [backup/restore](docs/BACKUP_RESTORE.md),
+[release checklist](docs/V1_RELEASE_CHECKLIST.md), [limits](docs/V1_LIMITATIONS.md)
+and [validation evidence](docs/VALIDATION.md). Run `php artisan tabletop:doctor` locally
+or `--production` on the release host. A passing local run does not certify a VPS.
+There are no new migrations or dependencies in Task 12; rebuild assets and restart
+long-running workers. Keep existing `.env`, APP_KEY and campaign storage.
+
+### First session
+
+Create a campaign and scene, upload a map, add/assign tokens, invite players and
+activate the scene. Players click **Включить звук** once if audio is wanted. Use
+**Горячие клавиши** for tool/selection shortcuts. Prepare **События**, then a **Сессия**
+only when useful; the tabletop can be played without a linear plan. Before playing,
+check **На связи**, saved state and a test player move. In a handout preview,
+**Получатели и доступ** selects recipients or revokes access; **Показать всем** grants
+all current players. Downloaded files cannot be recalled.
+
+If a command fails, keep the tab open: **Повторить** reuses its pending command;
+**Загрузить сохранённое** explicitly replaces the local draft. Camera movement and
+selection themselves do not save or enter Undo history.
+
+### Existing tabletop workflows
+
 Prepare scenes, invite players, move assigned tokens, paint shared manual fog,
 measure distances, sketch temporary areas and ping the table. Laravel/MySQL remain
 authoritative; Reverb delivers authorized changes. No demo data is automatically seeded.

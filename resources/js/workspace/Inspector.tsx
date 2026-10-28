@@ -304,7 +304,8 @@ export function Inspector({
                                 <option value=""> {t('Unassigned')} </option>
                                 {campaign.members?.map((member) => (
                                     <option key={member.id} value={member.id}>
-                                        {member.name} · {member.role.toUpperCase()}
+                                        {member.name} ·{' '}
+                                        {member.role === 'gm' ? t('Game Master') : t('Player')}
                                     </option>
                                 ))}
                             </select>

@@ -3,6 +3,7 @@
 @import './media.css';
 @import './session.css';
 @import './automation.css';
+@import './stabilization.css';
 * {
     box-sizing: border-box;
 }

@@ -1,6 +1,6 @@
 import { t } from '../../i18n';
 export type SaveState = { status: 'saved' | 'saving' | 'failed'; error: string | null };
-type Job = { key: string; run: () => Promise<void> };
+type Job = { key: string; run: () => Promise<void>; coalescible: boolean };
 /** Serial, explicit commands only. A failed head blocks later writes until retry. */
 export class SaveQueue {
     private jobs: Job[] = [];
@@ -21,10 +21,10 @@ export class SaveQueue {
     }
     enqueue(key: string, run: () => Promise<void>, debounce = 0) {
         const existing = this.jobs.findIndex(
-            (job, index) => job.key === key && !(index === 0 && this.running),
+            (job, index) => job.key === key && job.coalescible && !(index === 0 && this.running),
         );
-        if (debounce && existing >= 0) this.jobs[existing] = { key, run };
-        else this.jobs.push({ key, run });
+        if (debounce && existing >= 0) this.jobs[existing] = { key, run, coalescible: true };
+        else this.jobs.push({ key, run, coalescible: !!debounce });
         if (this.state.status === 'failed') return;
         this.publish({ status: 'saving', error: null });
         clearTimeout(this.timer);

@@ -12,6 +12,7 @@ use App\Realtime\CommandContext;
 use App\Realtime\DirectorPublisher;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
@@ -118,7 +119,7 @@ class CueRunner
                 $this->enqueue($run);
             }, 3);
         } catch (Throwable $error) {
-            report($error);
+            Log::error('Cue step failed', ['campaign_id' => $campaignId, 'run_id' => $id, 'position' => $position, 'exception' => $error::class]);
             DB::transaction(function () use ($campaignId, $id, $position, $error) {
                 $campaign = Campaign::whereKey($campaignId)->lockForUpdate()->first();
                 $run = CueRun::where('campaign_id', $campaignId)->lockForUpdate()->find($id);

@@ -44,6 +44,7 @@ export type SceneCommand =
     | { type: 'map'; map: SceneMap | null };
 /** Observable domain projection. Network requests are delegated to the persistence adapter. */
 export class SceneStore {
+    history?: import('./SceneHistory').SceneHistory;
     readonly spatial = new SpatialState();
     movementEnabled = true;
     objectEditingEnabled = true;
@@ -97,11 +98,12 @@ export class SceneStore {
     }
     private snapshot: WorkspaceSnapshot;
     private listeners = new Set<() => void>();
-    private command?: (command: SceneCommand) => void;
-    bindCommands(handler: (command: SceneCommand) => void) {
+    private command?: (command: SceneCommand, before?: Scene) => void;
+    bindCommands(handler: (command: SceneCommand, before?: Scene) => void) {
         this.command = handler;
     }
     hydrate(scene: Scene) {
+        this.history?.clear();
         this.emit({ scene, selectedIds: [], preview: null });
     }
     constructor(
@@ -173,6 +175,7 @@ export class SceneStore {
     }
     objectCommand(command: ObjectCommand) {
         if (this.role !== 'gm') return;
+        const before = this.snapshot.scene;
         let scene = this.snapshot.scene;
         if (
             command.endpoint === 'props' &&
@@ -218,7 +221,7 @@ export class SceneStore {
             };
         }
         this.emit({ ...this.snapshot, scene });
-        this.command?.({ type: 'objects', command });
+        this.command?.({ type: 'objects', command }, before);
     }
     encounterPlaced(name: string, tokenIds: string[]) {
         this.emit({ ...this.snapshot, spawnedEncounter: { name, tokenIds } });
@@ -256,9 +259,10 @@ export class SceneStore {
     }
     regionCommand(command: RegionCommand) {
         if (this.role !== 'gm') return;
+        const before = this.snapshot.scene;
         const patch = command.action === 'update' ? { region: command as Region } : {};
         this.emit({ ...this.snapshot, scene: applyRegionPatch(this.snapshot.scene, patch) });
-        this.command?.({ type: 'region', command });
+        this.command?.({ type: 'region', command }, before);
     }
     toggleNotes() {
         this.emit({
@@ -269,6 +273,7 @@ export class SceneStore {
     }
     noteCommand(command: NoteCommand, debounce = false) {
         if (this.role !== 'gm') return;
+        const before = this.snapshot.scene;
         if (command.action === 'update') {
             const noteId = command.id;
             const note = this.snapshot.scene.notes?.find((n) => n.id === noteId);
@@ -285,7 +290,7 @@ export class SceneStore {
             const { id, ...patch } = updated;
             command = { action: 'update', id, patch };
         }
-        this.command?.({ type: 'note', command, debounce });
+        this.command?.({ type: 'note', command, debounce }, before);
     }
     updateNote(id: string, patch: Partial<Omit<SceneNote, 'id'>>, debounce = false) {
         this.noteCommand({ action: 'update', id, patch }, debounce);
@@ -310,6 +315,7 @@ export class SceneStore {
         this.emit({ ...this.snapshot, preview: null });
     }
     updateToken(id: string, patch: TokenPatch, persist = true) {
+        const before = this.snapshot.scene;
         const tokens = this.snapshot.scene.tokens.map((token) => {
             if (token.id !== id) return token;
             const next = { ...token, ...patch };
@@ -330,13 +336,14 @@ export class SceneStore {
                 const normalized: TokenPatch = {};
                 for (const key of Object.keys(patch) as (keyof TokenPatch)[])
                     Object.assign(normalized, { [key]: token[key] });
-                this.command?.({ type: 'token', id, patch: normalized });
+                this.command?.({ type: 'token', id, patch: normalized }, before);
             }
         }
     }
     moveToken(id: string, position: Point) {
+        const before = this.snapshot.scene;
         this.updateToken(id, position, false);
-        this.command?.({ type: 'move', id, position, dragSessionId: this.dragSessionId });
+        this.command?.({ type: 'move', id, position, dragSessionId: this.dragSessionId }, before);
         this.dragSessionId = undefined;
     }
     applyFog(stroke: FogStroke) {

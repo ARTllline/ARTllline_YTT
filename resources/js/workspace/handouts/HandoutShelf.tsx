@@ -91,6 +91,7 @@ export function HandoutShelf({
                 <HandoutViewer
                     key={selected.id}
                     handout={selected}
+                    campaignId={campaignId}
                     onClose={close}
                     onShow={
                         gm

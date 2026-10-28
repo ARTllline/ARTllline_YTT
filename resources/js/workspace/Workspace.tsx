@@ -911,6 +911,10 @@ export function Workspace({
                     <dd> {t('Click / drag')} </dd>
                     <dt>{t('Mixed selection')}</dt>
                     <dd>{t('Shift + click')}</dd>
+                    <dt>Выделить рамкой</dt>
+                    <dd>Тяните по пустому месту · Shift добавляет/убирает</dd>
+                    <dt>Отменить / повторить правку</dt>
+                    <dd>Ctrl/Cmd+Z / Ctrl/Cmd+Shift+Z · до 50 правок в этой сцене</dd>
                     <dt>{t('Duplicate selection')}</dt>
                     <dd>Ctrl / Cmd + D</dd>
                     <dt>{t('Delete selection')}</dt>

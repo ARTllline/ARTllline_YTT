@@ -1,5 +1,6 @@
 import type { CameraState, GridSettings, Point } from '../types/scene';
-export const MIN_ZOOM = 0.2;
+// Large maps must fit on a tablet; the old 20% floor cropped 4096px scenes.
+export const MIN_ZOOM = 0.01;
 export const MAX_ZOOM = 3;
 export const clamp = (value: number, min: number, max: number) =>
     Math.max(min, Math.min(max, value));

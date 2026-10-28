@@ -1,0 +1,9 @@
+[Unit]
+Description=Run YTT scheduler every minute
+[Timer]
+OnCalendar=*-*-* *:*:00
+Persistent=true
+AccuracySec=1s
+Unit=ytt-scheduler.service
+[Install]
+WantedBy=timers.target

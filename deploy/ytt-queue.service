@@ -1,0 +1,17 @@
+[Unit]
+Description=YTT cue execution worker
+After=network.target mysql.service redis-server.service
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/ytt/current
+ExecStart=/usr/bin/php artisan queue:work tabletop --queue=cues --sleep=0.1 --tries=3 --timeout=60 --max-time=3600
+Restart=always
+RestartSec=3
+TimeoutStopSec=75
+KillSignal=SIGTERM
+UMask=0027
+NoNewPrivileges=true
+[Install]
+WantedBy=multi-user.target

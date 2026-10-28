@@ -82,9 +82,20 @@ export const preparation = {
             description,
             clientMutationId: commandId(),
         }),
-    showHandout: (campaign: string, handoutId: string) =>
+    handout: (campaign: string, id: string) =>
+        request<Handout & { recipients?: { id: string; name: string; hasAccess: boolean }[] }>(
+            `/campaigns/${campaign}/handouts/${id}`,
+        ),
+    revokeHandout: (campaign: string, handoutId: string, recipientIds?: string[]) =>
+        request(`/campaigns/${campaign}/handouts/revoke`, 'POST', {
+            handoutId,
+            ...(recipientIds ? { recipientIds } : {}),
+            clientMutationId: commandId(),
+        }),
+    showHandout: (campaign: string, handoutId: string, recipientIds?: string[]) =>
         request(`/campaigns/${campaign}/handouts/show`, 'POST', {
             handoutId,
+            ...(recipientIds ? { recipientIds } : {}),
             clientMutationId: commandId(),
         }),
 };

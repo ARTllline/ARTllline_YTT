@@ -1,6 +1,12 @@
 import { Graphics } from 'pixi.js';
 import type { GridSettings, Point } from '../types/scene';
 export class InteractionLayer extends Graphics {
+    showMarquee(a: Point, b: Point, zoom: number) {
+        this.clear()
+            .rect(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(a.x - b.x), Math.abs(a.y - b.y))
+            .fill({ color: 0xa6d9c3, alpha: 0.12 })
+            .stroke({ color: 0xc0ecd4, width: 1 / zoom });
+    }
     showBrush(point: Point, radius: number, zoom: number, cover: boolean) {
         this.clear()
             .circle(point.x, point.y, radius)

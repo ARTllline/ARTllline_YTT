@@ -1,0 +1,69 @@
+.handout-access {
+    margin: 0 18px 12px;
+    max-height: 230px;
+    overflow: auto;
+    flex-shrink: 0;
+}
+.handout-access summary {
+    cursor: pointer;
+    padding: 8px 0;
+    color: var(--accent);
+}
+.handout-recipients {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+}
+.handout-recipients label {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.handout-recipients small {
+    color: var(--text-muted);
+}
+.handout-access-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+.handout-access-actions button {
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    border-radius: 6px;
+}
+.history-notice {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    max-width: 360px;
+    padding: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    white-space: normal;
+}
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+/* Audio unlock must remain reachable on narrow player screens, including WebKit. */
+@media (max-width: 600px) {
+    .player-view .player-topbar {
+        height: auto;
+        min-height: 65px;
+        flex-wrap: wrap;
+        padding: 8px 12px;
+    }
+    .player-topbar > div:first-of-type {
+        flex: 1 1 85px;
+    }
+    .player-topbar .audio-unlock {
+        white-space: nowrap;
+    }
+    .player-topbar > .media-control {
+        flex: 0 0 auto;
+    }
+}

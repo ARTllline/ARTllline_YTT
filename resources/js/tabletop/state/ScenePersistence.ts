@@ -4,6 +4,8 @@ import { api, commandId, type Mutation } from '../../api/workspace';
 import type { SceneStore, SceneCommand } from './SceneStore';
 import { SaveQueue } from './SaveQueue';
 import { ApiError } from '../../api/client';
+import { SceneHistory } from './SceneHistory';
+import type { Scene } from '../types/scene';
 
 export class ScenePersistence {
     readonly queue = new SaveQueue();
@@ -12,12 +14,13 @@ export class ScenePersistence {
         private store: SceneStore,
         private sceneId: string,
     ) {
-        store.bindCommands((command) => this.submit(command));
+        if (store.role === 'gm') store.history = new SceneHistory(store, this.queue, sceneId);
+        store.bindCommands((command, before) => this.submit(command, before));
         this.queue.subscribe(() => {
             store.objectEditingEnabled = this.queue.getSnapshot().status === 'saved';
         });
     }
-    private submit(command: SceneCommand) {
+    private submit(command: SceneCommand, before?: Scene) {
         const mutationId = commandId();
         this.store.trackMutation(mutationId);
         const key =
@@ -39,6 +42,7 @@ export class ScenePersistence {
                     let result: Mutation;
                     if (command.type === 'region') {
                         result = await automation.region(this.sceneId, command.command, mutationId);
+                        this.store.history?.record(command, before, result);
                         this.store.accept(result, this.versions.get(key) === version);
                         if (command.command.action === 'create' && result.region)
                             this.store.selectRegion(result.region.id);
@@ -46,6 +50,7 @@ export class ScenePersistence {
                     }
                     if (command.type === 'objects') {
                         result = await objects.command(this.sceneId, command.command, mutationId);
+                        this.store.history?.record(command, before, result);
                         this.store.accept(result, true);
                         const data = command.command.data;
                         if (
@@ -65,6 +70,7 @@ export class ScenePersistence {
                     }
                     if (command.type === 'note') {
                         result = await api.note(this.sceneId, command.command, mutationId);
+                        this.store.history?.record(command, before, result);
                         this.store.accept(result, this.versions.get(key) === version);
                         if (command.command.action === 'create' && result.note)
                             this.store.selectNote(result.note.id);
@@ -103,6 +109,7 @@ export class ScenePersistence {
                     else if (command.type === 'grid')
                         result = await api.grid(this.sceneId, command.grid, mutationId);
                     else result = await api.map(this.sceneId, command.map, mutationId);
+                    this.store.history?.record(command, before, result);
                     this.store.accept(result, this.versions.get(key) === version);
                 } catch (error) {
                     if (

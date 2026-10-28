@@ -1,4 +1,6 @@
 import { ObjectGesture } from './ObjectGesture';
+import { marqueeSelection } from '../../utils/marquee';
+import type { ObjectSelection } from '../../types/scene';
 import { RegionGesture } from './RegionGesture';
 import type { RegionLayer } from '../../layers/RegionLayer';
 import type { ScenePropLayer } from '../../layers/ScenePropLayer';
@@ -12,6 +14,7 @@ import type { GMLayer } from '../../layers/GMLayer';
 import { screenToWorld, snapPoint } from '../../utils/coordinates';
 
 type Gesture = {
+    marquee?: { previous?: ObjectSelection };
     region?: boolean;
     objects?: boolean;
     note?: string;
@@ -96,17 +99,19 @@ export class PointerController {
         this.canvas.style.cursor =
             !this.space && !['select', 'pan'].includes(this.tool)
                 ? 'crosshair'
-                : this.gesture
-                  ? 'grabbing'
-                  : this.space || this.tool === 'pan'
-                    ? 'grab'
-                    : this.hover
-                      ? this.store.canMove(this.hover)
+                : this.gesture?.marquee
+                  ? 'crosshair'
+                  : this.gesture
+                    ? 'grabbing'
+                    : this.space || this.tool === 'pan'
+                      ? 'grab'
+                      : this.hover
+                        ? this.store.canMove(this.hover)
+                            ? 'grab'
+                            : 'pointer'
+                        : this.propHover && this.store.role === 'gm'
                           ? 'grab'
-                          : 'pointer'
-                      : this.propHover && this.store.role === 'gm'
-                        ? 'grab'
-                        : 'default';
+                          : 'default';
     };
     private down = (e: PointerEvent) => {
         if (this.camera.directed) return;
@@ -196,11 +201,23 @@ export class PointerController {
             this.refresh();
             return;
         }
-        if (!panning) this.store.select(token);
         if (!panning && !token) {
+            if (this.store.role === 'gm') {
+                this.gesture = {
+                    pointer: e.pointerId,
+                    start: point,
+                    last: point,
+                    token: null,
+                    origin: world,
+                    moved: false,
+                    marquee: { previous: e.shiftKey ? this.store.selection() : undefined },
+                };
+                this.canvas.setPointerCapture(e.pointerId);
+            } else this.store.select(null);
             this.refresh();
             return;
         }
+        if (!panning) this.store.select(token);
         const model = this.store.getSnapshot().scene.tokens.find((item) => item.id === token);
         if (model && !this.store.canMove(model.id)) {
             this.refresh();
@@ -238,6 +255,16 @@ export class PointerController {
             return;
         }
         if (e.pointerId !== gesture.pointer) return;
+        if (gesture.marquee) {
+            gesture.moved ||= Math.hypot(point.x - gesture.start.x, point.y - gesture.start.y) > 3;
+            if (gesture.moved)
+                this.overlay.showMarquee(
+                    gesture.origin,
+                    screenToWorld(point, this.camera.state),
+                    this.camera.state.zoom,
+                );
+            return;
+        }
         if (gesture.region) {
             this.regionGesture?.move(screenToWorld(point, this.camera.state));
             return;
@@ -292,6 +319,20 @@ export class PointerController {
     private up = (e: PointerEvent) => {
         const gesture = this.gesture;
         if (!gesture || gesture.pointer !== e.pointerId) return;
+        if (gesture.marquee) {
+            if (gesture.moved)
+                this.store.selectObjects(
+                    marqueeSelection(
+                        this.store.getSnapshot().scene,
+                        gesture.origin,
+                        screenToWorld(this.local(e), this.camera.state),
+                        gesture.marquee.previous,
+                    ),
+                );
+            else if (!gesture.marquee.previous) this.store.select(null);
+            this.finish();
+            return;
+        }
         if (gesture.region) {
             this.regionGesture?.up(screenToWorld(this.local(e), this.camera.state));
             this.finish();
@@ -398,6 +439,16 @@ export class PointerController {
     };
     private keyDown = (e: KeyboardEvent) => {
         if (isEditing(e.target) || document.querySelector('dialog[open]')) return;
+        if (
+            this.store.role === 'gm' &&
+            (e.ctrlKey || e.metaKey) &&
+            e.code === 'KeyZ' &&
+            !e.altKey
+        ) {
+            e.preventDefault();
+            if (!e.repeat && !this.gesture) this.store.history?.run(e.shiftKey);
+            return;
+        }
         if (
             this.store.role === 'gm' &&
             !e.repeat &&

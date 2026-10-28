@@ -12,6 +12,38 @@ afterEach(() => {
 });
 
 describe('persistent scene commands', () => {
+    it('does not replace a queued movement with a debounced note draft sharing its key', async () => {
+        const queue = new SaveQueue();
+        let release!: () => void;
+        const calls: string[] = [];
+        queue.enqueue(
+            'block',
+            () =>
+                new Promise<void>((resolve) => {
+                    release = resolve;
+                }),
+        );
+        queue.enqueue('note:1', async () => {
+            calls.push('move');
+        });
+        queue.enqueue(
+            'note:1',
+            async () => {
+                calls.push('old text');
+            },
+            250,
+        );
+        queue.enqueue(
+            'note:1',
+            async () => {
+                calls.push('latest text');
+            },
+            250,
+        );
+        release();
+        await queue.flush();
+        expect(calls).toEqual(['move', 'latest text']);
+    });
     it('resynchronizes a rejected player movement and keeps an understandable error', async () => {
         const scene = { ...createDemoScene(), id: '1', revision: 5 };
         const store = new SceneStore(scene, 'player');

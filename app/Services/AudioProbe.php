@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\Process\Process;
 
@@ -20,7 +21,7 @@ class AudioProbe
         try {
             $process->mustRun();
         } catch (\Throwable $error) {
-            report($error);
+            Log::warning('Audio probe failed', ['exception' => $error::class]);
             throw ValidationException::withMessages(['file' => 'Не удалось проверить аудио. Проверьте файл и доступность FFprobe на сервере.']);
         }
         $info = json_decode($process->getOutput(), true);

@@ -2,21 +2,25 @@ import { t } from '../../i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Maximize, Minus, Plus, X, Eye } from 'lucide-react';
 import type { Handout } from '../../api/preparation';
+import { HandoutAccess } from './HandoutAccess';
 export function HandoutViewer({
     handout,
     onClose,
     onShow,
+    campaignId,
 }: {
     handout: Handout;
     onClose: () => void;
     onShow?: () => Promise<void>;
+    campaignId?: string;
 }) {
     const dialog = useRef<HTMLDialogElement>(null);
     const [scale, setScale] = useState(1),
         [pan, setPan] = useState({ x: 0, y: 0 }),
         [error, setError] = useState(''),
         [busy, setBusy] = useState(false),
-        [shown, setShown] = useState(false);
+        [shown, setShown] = useState(false),
+        [accessRevision, setAccessRevision] = useState(0);
     const drag = useRef<{ x: number; y: number; origin: typeof pan } | null>(null);
     const zoom = (factor: number) => setScale((s) => Math.max(0.5, Math.min(8, s * factor)));
     const fit = () => {
@@ -108,20 +112,27 @@ export function HandoutViewer({
                             setBusy(true);
                             setError('');
                             void onShow()
-                                .then(() => setShown(true))
+                                .then(() => {
+                                    setShown(true);
+                                    setAccessRevision((value) => value + 1);
+                                })
                                 .catch((e) => setError(e.message))
                                 .finally(() => setBusy(false));
                         }}
                     >
                         <Eye size={15} />
-                        {busy
-                            ? t('Sharing…')
-                            : shown
-                              ? t('Show again to Players')
-                              : t('Show to Players')}
+                        {busy ? t('Sharing…') : shown ? 'Показать всем снова' : 'Показать всем'}
                     </button>
                 )}
             </footer>
+            {campaignId && onShow && (
+                <HandoutAccess
+                    campaignId={campaignId}
+                    handoutId={handout.id}
+                    refreshKey={accessRevision}
+                    onAccessChange={() => setShown(false)}
+                />
+            )}
             {shown && (
                 <p role="status" className="hint">
                     {' '}

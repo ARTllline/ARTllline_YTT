@@ -12,12 +12,15 @@ export interface PresentationState {
 export type PresentationAction =
     | { type: 'open'; handout: Handout }
     | { type: 'close' }
+    | { type: 'revoke'; id: string }
     | { type: 'receive'; campaignId: string; event: HandoutPresentation };
 export function presentationReducer(
     state: PresentationState,
     action: PresentationAction,
 ): PresentationState {
     if (action.type === 'close') return { ...state, selected: null };
+    if (action.type === 'revoke')
+        return state.selected?.id === action.id ? { ...state, selected: null } : state;
     if (action.type === 'open') return { ...state, selected: action.handout };
     const event = action.event;
     if (

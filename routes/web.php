@@ -16,6 +16,7 @@ use App\Http\Controllers\NoteController;
 use App\Http\Controllers\ObjectController;
 use App\Http\Controllers\PreloadController;
 use App\Http\Controllers\SceneController;
+use App\Http\Controllers\SceneEditController;
 use App\Http\Controllers\SpatialController;
 use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\TokenController;
@@ -45,6 +46,7 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
     });
     Route::middleware('auth')->group(function () {
+        Route::post('/scenes/{scene}/edit-history', SceneEditController::class)->name('scene.edit-history')->middleware(IdempotentMutation::class);
         Route::get('/scenes/{scene}/triggers', [AutomationController::class, 'index']);
         Route::post('/scenes/{scene}/regions', [AutomationController::class, 'regions'])->name('scene.regions')->middleware(IdempotentMutation::class);
         Route::post('/scenes/{scene}/triggers', [AutomationController::class, 'triggers'])->name('scene.triggers')->middleware(IdempotentMutation::class);
@@ -79,6 +81,8 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::patch('/assets/{asset}', [AssetController::class, 'update']);
         Route::delete('/assets/{asset}', [AssetController::class, 'destroy']);
         Route::get('/campaigns/{campaign}/handouts', [HandoutController::class, 'index']);
+        Route::get('/campaigns/{campaign}/handouts/{handout}', [HandoutController::class, 'detail'])->whereNumber('handout');
+        Route::post('/campaigns/{campaign}/handouts/revoke', [HandoutController::class, 'revoke'])->name('campaign.handout.revoke')->middleware(IdempotentMutation::class);
         Route::post('/campaigns/{campaign}/handouts', [HandoutController::class, 'store'])->name('campaign.handout.save')->middleware(IdempotentMutation::class);
         Route::post('/campaigns/{campaign}/handouts/show', [HandoutController::class, 'show'])->name('campaign.handout.show')->middleware(IdempotentMutation::class);
         Route::post('/scenes/{scene}/notes', NoteController::class)->name('scene.notes')->middleware(IdempotentMutation::class);

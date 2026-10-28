@@ -15,6 +15,7 @@ import type { Tool } from '../tabletop/types/scene';
 import type { SceneStore } from '../tabletop/state/SceneStore';
 import { SpatialSettings } from './SpatialSettings';
 import { NumberField } from './NumberField';
+import { HistoryControls } from './HistoryControls';
 const RegionControls = lazy(() =>
     import('../automation/RegionControls').then((m) => ({ default: m.RegionControls })),
 );
@@ -31,6 +32,7 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
     return (
         <div className="toolbar-wrap">
             <div className="tabletop-toolbar" role="toolbar" aria-label={t('Tabletop tools')}>
+                {store.role === 'gm' && store.history && <HistoryControls store={store} />}
                 <button
                     className={tool === 'select' ? 'active' : ''}
                     aria-pressed={tool === 'select'}

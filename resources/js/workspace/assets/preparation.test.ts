@@ -45,6 +45,9 @@ it('keeps discovery presentation separate from closing, duplicate delivery and o
         }).selected,
     ).toEqual(handout);
     expect(presentationReducer(state, { type: 'open', handout }).selected).toEqual(handout);
+    const opened = presentationReducer(state, { type: 'open', handout });
+    expect(presentationReducer(opened, { type: 'revoke', id: 'other' })).toBe(opened);
+    expect(presentationReducer(opened, { type: 'revoke', id: handout.id }).selected).toBeNull();
 });
 it('combines server filters and escapes search text without losing page and sort', () => {
     const query = new URLSearchParams(

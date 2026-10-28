@@ -1,5 +1,37 @@
 # Architecture — persistent multiplayer tabletop
 
+## Task 12 — stabilization contracts
+
+`SceneHistory` records at most 50 acknowledged layout edits per scene/store. Before
+optimistic mutations, SceneStore captures the prior scene; ScenePersistence records
+only supported successful responses. A revision gap invalidates the prior value.
+Undo/redo uses the existing SaveQueue and stable command ID, sending affected-field
+expected/value pairs to `SceneEditHistory`. Campaign/scene locking, GM authorization,
+scene-constrained lookup, allowed field validation and atomic compare-and-swap prevent
+overwriting later changes. Normal recipient-filtered `objects.changed` publication
+updates peers. No inverse creates/deletes entities or invokes trigger detection.
+Terminal conflicts resync and clear history; ambiguous transport failures retain it.
+Only debounced jobs can replace other debounced jobs, so note autosave cannot erase
+a pending movement command. Marquee is local world-coordinate geometry, including
+token discs and rotated prop rectangles, and never creates a mutation.
+
+Handout show/revoke accepts optional explicit campaign-player IDs; omitted means all.
+Only the GM detail projection includes recipient names/access status. Revocation
+deletes grants and publishes per-recipient `handout.revoked`; every asset request
+still checks authorization. Revoke-all also removes former-member grants. Reconnect
+and 15-second reconciliation close a revoked selected handout independently of shelf
+pagination. An asynchronous shown event rechecks the grant; presentation generations
+prevent a stale response reopening a later-revoked presentation.
+
+`tabletop:doctor` is read-only dependency/configuration diagnosis, not a substitute
+for an external WSS/worker test. Scheduler writes a short-lived heartbeat. Daily
+execution pruning defaults to 90 days (minimum 30), locks campaign first and skips
+campaigns with queued/running/failed runs. It removes completed/cancelled runs, steps
+and linked fire details, preserving definitions, trigger counters and game history.
+Receipt retention remains seven days. Cue/probe logs include bounded identifiers and
+exception classes, not raw exception SQL/private content. Deployment is still one
+standalone application; Task 12 adds no dependencies, migrations or cloud services.
+
 ## Task 11 — Regions and Triggers
 
 ### Persistent boundaries
@@ -75,8 +107,8 @@ CueRun persists `trigger_chain` and `correlation_id`; CueRunner installs/restore
 around existing CueStepActions in scoped CommandContext. Maximum trigger depth is
 eight. A trigger may fire at most once per root correlation, including sibling
 branches, regardless of its repeat/cooldown setting. This permits A → B but suppresses
-A → B → A and branching repeat storms. History is retained until trigger/scene
-deletion; there is no analytics or automatic history purge in V1.
+A → B → A and branching repeat storms. Task 12 bounds old completed execution/fire
+details with the retention policy described below; definitions and once counters remain.
 
 ### Privacy, renderer and Player interaction
 
@@ -442,8 +474,8 @@ Normal reserved jobs become available after retry_after on worker death.
 `tabletop:recover-cues`, scheduled every minute, requeues queued/running runs whose
 due time is over 90 seconds overdue. Duplicate recoveries are safe. Operators must
 run/supervise the worker and Laravel scheduler; restarting the browser is irrelevant.
-Domain failures wait for the GM rather than retrying indefinitely. Run rows currently
-remain until scene deletion; retention/history browsing is future work.
+Domain failures wait for the GM rather than retrying indefinitely. Task 12 prunes old
+completed/cancelled technical runs; failed/unfinished campaigns remain protected.
 
 ### Ephemeral, recipient-safe presentation
 

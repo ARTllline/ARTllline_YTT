@@ -242,6 +242,7 @@ export function AssetDetails({
                 )}
                 {preview && (
                     <HandoutViewer
+                        campaignId={campaignId}
                         handout={preview}
                         onClose={() => setPreview(null)}
                         onShow={() =>
