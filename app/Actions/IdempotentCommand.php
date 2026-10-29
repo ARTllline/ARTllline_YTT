@@ -57,6 +57,8 @@ class IdempotentCommand
                         $result['token'] = array_intersect_key($result['token'], $safe);
                         $result['token']['canMove'] = $safe['canMove'];
                         $result['token']['conditions'] = array_values(array_filter($result['token']['conditions'] ?? [], fn ($condition) => in_array($condition['id'], array_column($safe['conditions'], 'id'), true)));
+                    } elseif (in_array($operation, ['scene.ability', 'campaign.resource'])) {
+                        app(AbilityActions::class)->authorize($user, $campaign, $payload['characterId']);
                     } elseif ($operation === 'scene.interact') {
                         $scene = Scene::findOrFail($resource);
                         $scene->setRelation('campaign', $campaign);

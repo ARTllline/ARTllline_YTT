@@ -9,7 +9,7 @@ use App\Models\User;
 use App\Realtime\ChannelAccess;
 use App\Realtime\CommandContext;
 use App\Realtime\SafeBroadcast;
-use App\Services\D20Roller;
+use App\Services\CheckRoller;
 use App\Services\TokenCheckStats;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -55,14 +55,12 @@ class ObjectCheckActions
             $token = $owned->count() === 1 ? $owned->first() : null;
         }
         $provenance = app(TokenCheckStats::class)->resolve($token, $config);
-        $dice = [app(D20Roller::class)->roll()];
-        $mode = $context['rollMode'];
-        if ($mode !== 'normal') {
-            $dice[] = app(D20Roller::class)->roll();
-        }
-        $natural = $mode === 'advantage' ? max($dice) : min($dice);
-        $total = $natural + $provenance['finalModifier'];
-        $success = $total >= $config['dc'];
+        $roll = app(CheckRoller::class)->roll($provenance['finalModifier'], $config['dc'], $context['rollMode']);
+        $dice = $roll['rawDice'];
+        $mode = $roll['rollMode'];
+        $natural = $roll['natural'];
+        $total = $roll['total'];
+        $success = $roll['success'];
         $branch = $config[$success ? 'success' : 'failure'];
         $check = ObjectCheck::create(['id' => (string) Str::uuid(), 'scene_id' => $scene->id,
             'object_kind' => $data['kind'], 'object_id' => $data['id'], 'action_id' => $action['id'],

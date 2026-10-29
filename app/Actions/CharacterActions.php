@@ -8,6 +8,7 @@ use App\Models\CampaignMember;
 use App\Models\Character;
 use App\Models\Token;
 use App\Models\User;
+use App\Services\CharacterGameplay;
 use App\Services\SceneSnapshotBuilder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -36,6 +37,7 @@ class CharacterActions
             $character = isset($data['id']) ? $campaign->characters()->findOrFail($data['id']) : null;
             unset($data['id']);
             $this->validate($campaign, $data, $character);
+            app(CharacterGameplay::class)->validate($campaign, $data, $character);
             if ($character) {
                 $character->update($data);
             } else {
@@ -70,12 +72,15 @@ class CharacterActions
         }
     }
 
-    public function projection(Character $character): array
+    public function projection(Character $character, bool $gm = true): array
     {
         return ['id' => (string) $character->id, 'name' => $character->name,
             'portrait' => app(SceneSnapshotBuilder::class)->asset($character->portraitAsset),
             'ownerUserId' => $character->owner_user_id ? (string) $character->owner_user_id : null,
             'kind' => $character->kind, 'disposition' => $character->disposition,
+            'ac' => $character->ac, 'speed' => $character->speed,
+            'resources' => collect($character->resources ?? [])->sortBy('sort_order')->values()->all(),
+            'abilities' => app(CharacterGameplay::class)->abilities($character, $gm),
             'checkStats' => $character->check_stats ?? [], 'hp' => $character->hp, 'maxHp' => $character->max_hp];
     }
 
@@ -86,7 +91,7 @@ class CharacterActions
         $active = CampaignMember::where('campaign_id', $campaign->id)->where('user_id', $user->id)->value('active_character_id');
         $active = $active && $characters->contains('id', $active) ? (string) $active : null;
 
-        return ['characters' => $characters->map(fn ($c) => $this->projection($c))->all(), 'activeCharacterId' => $gm ? null : $active];
+        return ['characters' => $characters->map(fn ($c) => $this->projection($c, $gm))->all(), 'activeCharacterId' => $gm ? null : $active];
     }
 
     public function select(User $user, Campaign $campaign, ?int $id): array

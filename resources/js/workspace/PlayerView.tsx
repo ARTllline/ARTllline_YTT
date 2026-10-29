@@ -1,4 +1,4 @@
-import { ActorPicker } from './interactions/ActorPicker';
+import { PlayerGameplayHUD } from '../gameplay/PlayerGameplayHUD';
 import { charactersApi } from '../api/characters';
 import { actingToken, eligibleActors } from './interactions/actingToken';
 import { t } from '../i18n';
@@ -214,54 +214,17 @@ function PlayerTabletop({
     const selectedProp = snapshot.scene.props?.find((p) => p.id === snapshot.selectedPropIds?.[0]);
     return (
         <main className="player-tabletop">
-            <div className="player-actor">
-                {!!snapshot.scene.characters?.length && (
-                    <label className="character-picker">
-                        <span>ПЕРСОНАЖ</span>
-                        <select
-                            aria-label="Постоянный персонаж"
-                            value={
-                                snapshot.scene.activeCharacterId ??
-                                (snapshot.actingTokenId ? `token:${snapshot.actingTokenId}` : '')
-                            }
-                            disabled={actorBusy}
-                            onChange={(e) =>
-                                e.target.value.startsWith('token:')
-                                    ? store.setActingToken(e.target.value.slice(6))
-                                    : store.setActiveCharacter(e.target.value || null)
-                            }
-                        >
-                            <option value="" disabled>
-                                Выберите персонажа
-                            </option>
-                            {snapshot.scene.characters.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                    {c.name}
-                                </option>
-                            ))}
-                            {actors
-                                .filter((t) => !t.characterId)
-                                .map((t) => (
-                                    <option key={t.id} value={`token:${t.id}`}>
-                                        {t.name} · токен сцены
-                                    </option>
-                                ))}
-                        </select>
-                        {snapshot.scene.activeCharacterId && !actor && (
-                            <small>Нет доступного токена в этой сцене</small>
-                        )}
-                    </label>
-                )}
-                {!snapshot.scene.characters?.length && (
-                    <ActorPicker
-                        tokens={actors}
-                        actor={actor}
-                        disabled={actorBusy}
-                        onChange={(id) => store.setActingToken(id)}
-                    />
-                )}
-                {actorError && <p role="alert">{actorError}</p>}
-            </div>
+            <PlayerGameplayHUD
+                store={store}
+                renderer={renderer}
+                actor={actor}
+                actors={actors}
+                userId={user.id}
+                disabled={
+                    actorBusy || connection !== 'connected' || save.status !== 'saved' || !!status
+                }
+                actorError={actorError}
+            />
             <Tabletop store={store} rendererRef={renderer} onZoom={setZoom} />
             <RadialMenu
                 store={store}
@@ -293,7 +256,9 @@ function PlayerTabletop({
                     )}
                 </div>
             )}
-            <div className="player-help">
+            <div
+                className={`player-help ${selected?.id === actor?.id && snapshot.scene.activeCharacterId ? 'is-own-active' : ''}`}
+            >
                 {selected ? (
                     <>
                         <strong>{selected.name}</strong>

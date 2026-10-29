@@ -8,7 +8,7 @@ import {
     type RefObject,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Sparkles, CircleUserRound } from 'lucide-react';
 import { buildRadialActions, type RadialTarget } from './radialActions';
 import type { SceneStore } from '../../tabletop/state/SceneStore';
 import type { SaveQueue } from '../../tabletop/state/SaveQueue';
@@ -74,6 +74,7 @@ export function RadialMenu({
             origin = undefined;
         };
         const open = (x: number, y: number) => {
+            if (store.abilityTargeting) return;
             const hit = renderer.current?.contextTarget(x, y);
             renderer.current?.cancelGesture();
             if (!hit) {
@@ -94,6 +95,7 @@ export function RadialMenu({
             open(e.clientX, e.clientY);
         };
         const down = (e: PointerEvent) => {
+            if (store.abilityTargeting) return;
             clear();
             if (
                 !e.isPrimary ||
@@ -209,6 +211,38 @@ export function RadialMenu({
                   },
               }))
             : gmActions;
+    if (
+        store.role === 'player' &&
+        target?.kind === 'token' &&
+        entity &&
+        'isOwner' in entity &&
+        entity.isOwner &&
+        entity.characterId
+    ) {
+        const characterId = entity.characterId;
+        actions.push({
+            label: 'Способности',
+            Icon: Sparkles,
+            tone: 'interaction',
+            run: async () => {
+                store.setActiveCharacter(characterId);
+                requestAnimationFrame(() =>
+                    window.dispatchEvent(new CustomEvent('ytt:character-panel')),
+                );
+            },
+        });
+        actions.push({
+            label: 'Подробнее',
+            Icon: CircleUserRound,
+            tone: 'interaction',
+            run: async () => {
+                store.setActiveCharacter(characterId);
+                requestAnimationFrame(() =>
+                    window.dispatchEvent(new CustomEvent('ytt:character-panel')),
+                );
+            },
+        });
+    }
     const position = target
         ? radialPosition(target.x, target.y, window.innerWidth, window.innerHeight)
         : null;
@@ -234,7 +268,7 @@ export function RadialMenu({
             )}
             {target &&
                 entity &&
-                (store.role === 'gm' || configured.length > 0) &&
+                (store.role === 'gm' || actions.length > 0) &&
                 position &&
                 createPortal(
                     <div

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AbilityController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AutomationController;
@@ -47,6 +48,8 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
     });
     Route::middleware('auth')->group(function () {
+        Route::post('/scenes/{scene}/abilities/execute', [AbilityController::class, 'execute'])->name('scene.ability')->middleware([IdempotentMutation::class, 'throttle:60,1']);
+        Route::post('/campaigns/{campaign}/resources/adjust', [AbilityController::class, 'resource'])->name('campaign.resource')->middleware(IdempotentMutation::class);
         Route::get('/campaigns/{campaign}/characters', [CharacterController::class, 'index']);
         Route::post('/campaigns/{campaign}/characters', [CharacterController::class, 'save'])->name('campaign.characters.save')->middleware(IdempotentMutation::class);
         Route::put('/campaigns/{campaign}/active-character', [CharacterController::class, 'select']);

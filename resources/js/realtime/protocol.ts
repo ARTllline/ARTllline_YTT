@@ -27,6 +27,7 @@ export interface SceneEvent {
         | 'deletedRegionId'
     > & {
         scene?: Partial<Scene>;
+        gameplayFeedback?: import('../gameplay/model').GameplayFeedback;
     };
 }
 export interface MovePreview extends Point {

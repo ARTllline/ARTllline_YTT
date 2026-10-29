@@ -75,6 +75,10 @@ export interface Scene {
     tokens: readonly Token[];
 }
 export interface Character {
+    resources?: import('../../gameplay/model').CharacterResource[];
+    abilities?: import('../../gameplay/model').Ability[];
+    ac?: number | null;
+    speed?: number | null;
     id: string;
     name: string;
     portrait: ImageAsset | null;

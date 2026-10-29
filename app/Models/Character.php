@@ -12,7 +12,7 @@ class Character extends Model
 
     protected function casts(): array
     {
-        return ['check_stats' => 'array', 'hp' => 'integer', 'max_hp' => 'integer', 'owner_user_id' => 'integer'];
+        return ['check_stats' => 'array', 'resources' => 'array', 'abilities' => 'array', 'ac' => 'integer', 'speed' => 'integer', 'hp' => 'integer', 'max_hp' => 'integer', 'owner_user_id' => 'integer'];
     }
 
     public function campaign(): BelongsTo

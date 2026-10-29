@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { ResourceEditor } from '../../gameplay/ResourceEditor';
+import { AbilityEditor } from '../../gameplay/AbilityEditor';
 import { CircleUserRound, Plus, Settings2 } from 'lucide-react';
 import { api } from '../../api/workspace';
 import { charactersApi } from '../../api/characters';
@@ -152,6 +154,55 @@ export function CharacterBrowser({
                                 ))}
                         </select>
                     </label>
+                    <fieldset disabled={busy} className="character-gameplay-fields">
+                        <div className="gameplay-form-row">
+                            <label>
+                                Защита / AC
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={99}
+                                    value={draft.ac ?? ''}
+                                    onChange={(e) =>
+                                        setDraft({
+                                            ...draft,
+                                            ac:
+                                                e.target.value === ''
+                                                    ? null
+                                                    : Number(e.target.value),
+                                        })
+                                    }
+                                />
+                            </label>
+                            <label>
+                                Скорость
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={999}
+                                    value={draft.speed ?? ''}
+                                    onChange={(e) =>
+                                        setDraft({
+                                            ...draft,
+                                            speed:
+                                                e.target.value === ''
+                                                    ? null
+                                                    : Number(e.target.value),
+                                        })
+                                    }
+                                />
+                            </label>
+                        </div>
+                        <ResourceEditor
+                            resources={draft.resources ?? []}
+                            onChange={(resources) => setDraft({ ...draft, resources })}
+                        />
+                        <AbilityEditor
+                            character={draft}
+                            campaignId={campaignId}
+                            onChange={(abilities) => setDraft({ ...draft, abilities })}
+                        />
+                    </fieldset>
                     <CheckStatsEditor
                         stats={draft.checkStats}
                         save={(checkStats) => setDraft({ ...draft, checkStats })}

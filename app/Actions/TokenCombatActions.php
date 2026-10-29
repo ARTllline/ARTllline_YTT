@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Models\Character;
 use App\Models\Token;
 use App\Models\User;
 use App\Services\SceneSnapshotBuilder;
@@ -20,12 +21,7 @@ class TokenCombatActions
             $token->setRelation('scene', $scene);
             Gate::forUser($user)->authorize('update', $token);
             if ($command === 'hp') {
-                $hp = ['hp' => max(0, min($token->max_hp, $token->hp + $data['delta']))];
-                if ($token->character_id) {
-                    app(CharacterActions::class)->updateLinked($user, $token, $hp);
-                } else {
-                    $token->update($hp);
-                }
+                $this->adjustHp($user, $token, $data['delta']);
             } elseif ($command === 'condition-add') {
                 $key = $data['key'] ?? null;
                 $label = $key ? ucfirst($key) : Str::squish($data['label']);
@@ -49,5 +45,19 @@ class TokenCombatActions
 
             return ['token' => $this->snapshots->token($token->refresh(), true, $user), 'charactersChanged' => $token->character_id !== null && $command === 'hp', '_wasVisible' => ! $token->is_hidden];
         }, $command === 'hp' ? 'token.hp_changed' : 'token.conditions_changed');
+    }
+
+    /** Caller holds campaign/scene locks and authorizes the command (GM or configured ability). */
+    public function adjustHp(User $user, Token|Character $subject, int $delta): void
+    {
+        $hp = ['hp' => max(0, min($subject->max_hp, $subject->hp + $delta))];
+        if ($subject instanceof Character) {
+            $subject->update($hp);
+            app(CharacterActions::class)->publish($user, $subject);
+        } elseif ($subject->character_id) {
+            app(CharacterActions::class)->updateLinked($user, $subject, $hp);
+        } else {
+            $subject->update($hp);
+        }
     }
 }

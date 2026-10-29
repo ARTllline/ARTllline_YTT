@@ -45,8 +45,13 @@ export type SceneCommand =
     | { type: 'map'; map: SceneMap | null };
 /** Observable domain projection. Network requests are delegated to the persistence adapter. */
 export class SceneStore {
+    onGameplayFeedback?: (event: import('../../gameplay/model').GameplayFeedback) => void;
     history?: import('./SceneHistory').SceneHistory;
     readonly spatial = new SpatialState();
+    abilityTargeting = false;
+    setAbilityTargeting(value: boolean) {
+        this.abilityTargeting = value;
+    }
     movementEnabled = true;
     objectEditingEnabled = true;
     onRevisionGap?: () => void;

@@ -15,6 +15,10 @@ export const charactersApi = {
             name: character.name,
             owner_user_id: character.ownerUserId,
             check_stats: character.checkStats,
+            ac: character.ac ?? null,
+            speed: character.speed ?? null,
+            resources: character.resources ?? [],
+            abilities: character.abilities ?? [],
             clientMutationId: commandId(),
         }),
     select: (campaign: string, id: string | null) =>

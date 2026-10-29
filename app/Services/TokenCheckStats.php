@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Character;
 use App\Models\Token;
 use Illuminate\Validation\ValidationException;
 
@@ -19,7 +20,7 @@ class TokenCheckStats
         ];
     }
 
-    public function resolve(?Token $token, array $config): array
+    public function resolve(Token|Character|null $token, array $config): array
     {
         $key = $config['stat_key'] ?? null;
         if ($key) {
@@ -28,9 +29,11 @@ class TokenCheckStats
                 throw ValidationException::withMessages(['actorTokenId' => 'У персонажа не настроена эта проверка. Попросите GM добавить модификатор.']);
             }
 
-            return ['source' => $token->character_id ? 'character_stat' : 'token_stat',
-                ...($token->character_id ? ['characterId' => (string) $token->character_id, 'characterName' => $token->name] : []),
-                'tokenId' => (string) $token->id, 'tokenName' => $token->name,
+            $characterId = $token instanceof Character ? $token->id : $token->character_id;
+
+            return ['source' => $characterId ? 'character_stat' : 'token_stat',
+                ...($characterId ? ['characterId' => (string) $characterId, 'characterName' => $token->name] : []),
+                'tokenId' => $token instanceof Token ? (string) $token->id : null, 'tokenName' => $token->name,
                 'statKey' => $key, 'statLabel' => $stat['label'], 'baseModifier' => (int) $stat['modifier'],
                 'otherModifiers' => [], 'finalModifier' => (int) $stat['modifier']];
         }
@@ -38,7 +41,7 @@ class TokenCheckStats
         // Task 16B configurations remain fixed until a GM explicitly converts them.
         $modifier = (int) ($config['modifier'] ?? 0);
 
-        return ['source' => 'legacy_interaction', 'tokenId' => $token ? (string) $token->id : null,
+        return ['source' => 'legacy_interaction', 'tokenId' => $token instanceof Token ? (string) $token->id : null,
             'tokenName' => $token?->name, 'statKey' => $config['ability_key'] ?? null,
             'statLabel' => $config['label'], 'baseModifier' => $modifier,
             'otherModifiers' => [], 'finalModifier' => $modifier];

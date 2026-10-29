@@ -11,7 +11,7 @@ class Token extends Model
     /** Persistent fields are read from Character; legacy columns remain for standalone tokens. */
     public const CHARACTER_FIELDS = ['name' => 'name', 'token_image_asset_id' => 'portrait_asset_id',
         'owner_user_id' => 'owner_user_id', 'kind' => 'kind', 'disposition' => 'disposition',
-        'check_stats' => 'check_stats', 'hp' => 'hp', 'max_hp' => 'max_hp'];
+        'ac' => 'ac', 'speed' => 'speed', 'check_stats' => 'check_stats', 'hp' => 'hp', 'max_hp' => 'max_hp'];
 
     protected $guarded = ['id', 'scene_id'];
 

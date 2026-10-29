@@ -141,6 +141,11 @@ export class SceneSubscriber {
         if (!('revision' in event)) return;
         const change = event as SceneEvent;
         if (change.revision <= (scene.revision ?? 0)) return;
+        if (
+            change.payload.gameplayFeedback &&
+            scene.tokens.some((t) => t.id === change.payload.gameplayFeedback!.tokenId)
+        )
+            this.store.onGameplayFeedback?.(change.payload.gameplayFeedback);
         this.previews.finish(change.dragSessionId);
         this.store.remotePreviews.clear();
         if (this.store.localMutations.has(change.mutationId)) {

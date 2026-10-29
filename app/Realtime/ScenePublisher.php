@@ -93,6 +93,9 @@ class ScenePublisher
                     $payload = array_key_exists('combat', $result) ? ['combat' => $playerCombat] : [];
                 }
             }
+            if (! empty($result['gameplayFeedback']) && $scene->tokens()->where('is_hidden', false)->whereKey($result['gameplayFeedback']['tokenId'])->exists()) {
+                $payload['gameplayFeedback'] = $result['gameplayFeedback'];
+            }
             if ($result['charactersChanged'] ?? false) {
                 $payload['scene'] = app(CharacterActions::class)->roster($scene->campaign, $member);
             }

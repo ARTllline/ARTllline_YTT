@@ -1,4 +1,5 @@
 import { t } from '../../i18n';
+import { GameplayLayer } from '../layers/GameplayLayer';
 import { AtmosphereLayer } from '../layers/AtmosphereLayer';
 import type { Effect, Intensity } from '../../media/model';
 import { DirectorCamera } from '../../director/DirectorCamera';
@@ -41,6 +42,17 @@ export class TabletopRenderer {
     private regions?: RegionLayer;
     private overlay = new InteractionLayer();
     private response = new Graphics();
+    readonly gameplay = new GameplayLayer();
+    setGameplayTarget(kind?: 'token' | 'prop' | 'point') {
+        this.gameplay.targetKind = kind;
+    }
+    hoverGameplayTarget(target?: {
+        kind: string;
+        id?: string;
+        point?: import('../types/scene').Point;
+    }) {
+        this.gameplay.hover = target;
+    }
     private responseTarget?: { kind: 'token' | 'prop'; id: string; until: number };
     private input?: PointerController;
     private observer?: ResizeObserver;
@@ -92,6 +104,7 @@ export class TabletopRenderer {
             this.spatial,
             this.overlay,
             this.response,
+            this.gameplay,
         );
         if (this.store.role === 'gm') {
             this.regions = new RegionLayer();
@@ -101,6 +114,7 @@ export class TabletopRenderer {
         }
         this.app.stage.addChild(this.world);
         this.app.stage.addChild(this.weather);
+        this.store.onGameplayFeedback = (event) => this.gameplay.feedback(event);
         this.input = new PointerController(
             canvas,
             this.camera,
@@ -153,6 +167,12 @@ export class TabletopRenderer {
         this.app.ticker.add((ticker) => {
             this.input?.reapplyPreview();
             const now = performance.now();
+            this.gameplay.tick(
+                this.store.getSnapshot().scene,
+                this.camera.state.zoom,
+                now,
+                this.reducedMotion.matches,
+            );
             this.response.clear();
             if (this.responseTarget && this.responseTarget.until > now) {
                 const target = this.responseTarget;
@@ -172,13 +192,11 @@ export class TabletopRenderer {
                                   object.image.width * object.scaleX,
                                   object.image.height * object.scaleY,
                               ) / 2;
-                    this.response
-                        .circle(object.x, object.y, radius + 5 + progress * 16)
-                        .stroke({
-                            color: 0xa6d9c3,
-                            width: 2 / this.camera.state.zoom,
-                            alpha: 1 - progress,
-                        });
+                    this.response.circle(object.x, object.y, radius + 5 + progress * 16).stroke({
+                        color: 0xa6d9c3,
+                        width: 2 / this.camera.state.zoom,
+                        alpha: 1 - progress,
+                    });
                 }
             }
             for (const [id, preview] of this.store.remotePreviews) {
@@ -365,6 +383,7 @@ export class TabletopRenderer {
         this.destroyed = true;
         this.observer?.disconnect();
         this.input?.destroy();
+        this.store.onGameplayFeedback = undefined;
         this.unsubscribe?.();
         if (this.ready) this.release();
     }

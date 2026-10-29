@@ -11,6 +11,7 @@ import '../css/identity.css';
 import '../css/creation.css';
 import '../css/interactions.css';
 import '../css/checks.css';
+import '../css/gameplay.css';
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
