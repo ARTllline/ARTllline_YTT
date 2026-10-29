@@ -1,14 +1,16 @@
 import type { Token } from '../types/scene';
-// Presentation only: a creature kind is not an allegiance.
+// Identity is independent of ownership. Hidden GM markers retain their private accent.
 export function tokenAppearance(token: Token) {
     return {
         color: token.isHidden
             ? 0xbda6ef
-            : token.ownerUserId || token.isOwner
-              ? 0x9de2c4
-              : token.color === 0x94cbb8
-                ? 0x95bce8
-                : token.color,
+            : token.disposition
+              ? { friendly: 0x9de2c4, neutral: 0x95bce8, hostile: 0xe79a97 }[token.disposition]
+              : token.ownerUserId || token.isOwner
+                ? 0x9de2c4
+                : token.color === 0x94cbb8
+                  ? 0x95bce8
+                  : token.color,
         initials: token.name
             .trim()
             .split(/\s+/)
@@ -18,11 +20,13 @@ export function tokenAppearance(token: Token) {
             .toLocaleUpperCase(),
         marker: token.isHidden
             ? 'GM'
-            : token.isLocked
+            : token.disposition === 'hostile'
               ? '◆'
-              : token.ownerUserId || token.isOwner
-                ? '●'
-                : '',
+              : token.isLocked
+                ? '◇'
+                : token.ownerUserId || token.isOwner
+                  ? '●'
+                  : '',
     };
 }
 export function tokenLabelVisible(zoom: number, emphasized: boolean) {

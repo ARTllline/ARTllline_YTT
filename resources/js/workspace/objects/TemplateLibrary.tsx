@@ -24,10 +24,12 @@ export function TemplateLibrary({
     kind,
     refresh,
     onUse,
+    placement = false,
 }: {
     campaignId: string;
     kind: 'prefab' | 'encounter';
     refresh: number;
+    placement?: boolean;
     onUse: (template: Pick<ContentTemplate, 'id' | 'kind' | 'name'>) => void;
 }) {
     const [search, setSearch] = useState(''),
@@ -77,7 +79,12 @@ export function TemplateLibrary({
                     }}
                 />
             </label>
-            <p className="hint"> {t('Drag onto the map, or click to place at the center.')} </p>
+            <p className="hint">
+                {' '}
+                {placement
+                    ? 'Перетащите на карту или выберите место после клика.'
+                    : t('Drag onto the map, or click to place at the center.')}{' '}
+            </p>
             {error && (
                 <p role="alert" className="form-error">
                     {error}

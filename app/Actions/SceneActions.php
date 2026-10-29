@@ -18,13 +18,18 @@ class SceneActions
 {
     public function __construct(private SceneTransaction $transaction, private SceneSnapshotBuilder $snapshots) {}
 
-    public function create(User $user, Campaign $campaign, string $name): Scene
+    public function create(User $user, Campaign $campaign, string $name, ?int $mapAssetId = null): Scene
     {
-        return DB::transaction(function () use ($user, $campaign, $name) {
+        return DB::transaction(function () use ($user, $campaign, $name, $mapAssetId) {
             $campaign = Campaign::whereKey($campaign->id)->lockForUpdate()->firstOrFail();
             Gate::forUser($user)->authorize('update', $campaign);
 
-            $scene = $campaign->scenes()->create(['name' => $name, 'sort_order' => ($campaign->scenes()->max('sort_order') ?? -1) + 1]);
+            $map = $mapAssetId ? Asset::where('campaign_id', $campaign->id)->where('kind', 'map')->find($mapAssetId) : null;
+            if ($mapAssetId && ! $map) {
+                throw ValidationException::withMessages(['mapAssetId' => 'Choose a map belonging to this campaign.']);
+            }
+            $size = $map ? ['width' => max(120, min(20000, $map->width)), 'height' => max(120, min(20000, $map->height)), 'map_asset_id' => $map->id, 'map_width' => min(20000, $map->width), 'map_height' => min(20000, $map->height)] : [];
+            $scene = $campaign->scenes()->create($size + ['name' => $name, 'sort_order' => ($campaign->scenes()->max('sort_order') ?? -1) + 1]);
             app(ScenePublisher::class)->campaign($campaign);
 
             return $scene;

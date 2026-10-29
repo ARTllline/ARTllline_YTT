@@ -16,7 +16,7 @@ class TokenController extends Controller
     {
         Gate::authorize('update', $scene);
 
-        return $actions->create($request->user(), $scene, $request->validate(self::POSITION + ['name' => 'required|string|max:80', 'token_image_asset_id' => 'sometimes|integer|min:1']));
+        return $actions->create($request->user(), $scene, $request->validate(self::POSITION + ['name' => 'required|string|max:80', 'token_image_asset_id' => 'sometimes|integer|min:1', 'kind' => 'sometimes|in:player_character,npc', 'disposition' => 'sometimes|in:friendly,neutral,hostile', 'hp' => 'sometimes|integer|between:0,9999', 'max_hp' => 'sometimes|integer|between:1,9999']));
     }
 
     public function move(Request $request, Token $token, TokenActions $actions): array
@@ -31,6 +31,7 @@ class TokenController extends Controller
         Gate::authorize('update', $token);
 
         return $actions->update($request->user(), $token, $request->validate([
+            'kind' => 'sometimes|in:player_character,npc', 'disposition' => 'sometimes|in:friendly,neutral,hostile',
             'name' => 'sometimes|required|string|max:80', 'x' => 'sometimes|numeric|between:-1000000,1000000', 'y' => 'sometimes|numeric|between:-1000000,1000000',
             'rotation' => 'sometimes|numeric|between:0,359.999', 'scale' => 'sometimes|numeric|between:0.4,3', 'size' => 'sometimes|numeric|between:20,300',
             'hp' => 'sometimes|integer|between:0,9999', 'max_hp' => 'sometimes|integer|between:1,9999',

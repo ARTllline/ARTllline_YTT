@@ -57,7 +57,7 @@ export function Inspector({
             {token && position ? (
                 <div className="inspector-body" key={token.id}>
                     <div className="identity">
-                        <div className={`portrait ${token.kind === 'hero' ? 'hero' : 'enemy'}`}>
+                        <div className={`portrait disposition-${token.disposition ?? 'neutral'}`}>
                             {token.image ? (
                                 <img src={token.image.url} alt="" />
                             ) : (
@@ -66,7 +66,8 @@ export function Inspector({
                         </div>
                         <span className="eyebrow">
                             {' '}
-                            {t('TOKEN ·')} {token.kind === 'hero' ? t('ADVENTURER') : t('CREATURE')}
+                            {t('TOKEN ·')}{' '}
+                            {token.kind === 'player_character' ? t('ADVENTURER') : t('CREATURE')}
                         </span>
                         <h2>{token.name}</h2>
                         <span className="muted">
@@ -79,6 +80,39 @@ export function Inspector({
                         <summary>Личность</summary>
                         <section>
                             <h3> {t('Identity')} </h3>
+                            <label className="field">
+                                <span>Тип токена</span>
+                                <select
+                                    aria-label="Тип токена"
+                                    value={token.kind}
+                                    onChange={(e) =>
+                                        store.updateToken(token.id, {
+                                            kind: e.target.value as typeof token.kind,
+                                        })
+                                    }
+                                >
+                                    <option value="player_character">Персонаж игрока</option>
+                                    <option value="npc">NPC</option>
+                                </select>
+                            </label>
+                            <label className="field">
+                                <span>Отношение</span>
+                                <select
+                                    aria-label="Отношение токена"
+                                    value={token.disposition ?? 'neutral'}
+                                    onChange={(e) =>
+                                        store.updateToken(token.id, {
+                                            disposition: e.target.value as NonNullable<
+                                                typeof token.disposition
+                                            >,
+                                        })
+                                    }
+                                >
+                                    <option value="friendly">Дружественный</option>
+                                    <option value="neutral">Нейтральный</option>
+                                    <option value="hostile">Враждебный</option>
+                                </select>
+                            </label>
                             {token.image && (
                                 <img
                                     className="token-image-preview"

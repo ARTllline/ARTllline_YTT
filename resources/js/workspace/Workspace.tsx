@@ -1,3 +1,7 @@
+import { CreationHub } from './creation/CreationHub';
+import { PlacementOverlay } from './creation/PlacementOverlay';
+import { SceneCreation } from './creation/SceneCreation';
+import { CREATION_MIME, creationFromAsset, type Placement } from './creation/model';
 import { t } from '../i18n';
 import { currentTokenId } from '../tabletop/types/combat';
 import { RadialMenu } from './radial/RadialMenu';
@@ -28,7 +32,6 @@ import {
     X,
     ImagePlus,
     LogOut,
-    StickyNote,
     EyeOff,
 } from 'lucide-react';
 import { preparation, type LibraryAsset, type AssetKind } from '../api/preparation';
@@ -43,7 +46,7 @@ import { NameDialog } from './NameDialog';
 import { ConfirmDialog } from './ConfirmDialog';
 import { snapPoint } from '../tabletop/utils/coordinates';
 import type { TabletopRenderer } from '../tabletop/renderer/TabletopRenderer';
-import type { Tool, Scene } from '../tabletop/types/scene';
+import type { Tool, Scene, Point } from '../tabletop/types/scene';
 import { Sidebar } from './Sidebar';
 import { Tabletop } from './Tabletop';
 import { Toolbar } from './Toolbar';
@@ -159,8 +162,12 @@ export function Workspace({
     const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
     const { scene } = snapshot;
     const selectionKey = useWorkspaceSelection(store);
+    const [hubOpen, setHubOpen] = useState(false);
+    const [placement, setPlacement] = useState<Placement | null>(null);
     const rightPanel =
-        workspace.left && !sessionMode ? null : contextualPanel(workspace, selectionKey);
+        placement || (workspace.left && !sessionMode)
+            ? null
+            : contextualPanel(workspace, selectionKey);
     const openRight = (panel: RightPanel) =>
         void run(async () => {
             if (panelGuard.current) throw new Error(panelGuard.current);
@@ -191,6 +198,18 @@ export function Workspace({
     >(null);
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
+    const armPlacement = (item: Placement) => {
+        leaveSurface('.creation-hub');
+        setHubOpen(false);
+        store.select(null);
+        renderer.current?.setTool('select');
+        setPlacement(item);
+    };
+    const closeHub = () => {
+        leaveSurface('.creation-hub');
+        setHubOpen(false);
+        document.querySelector<HTMLCanvasElement>('.canvas-host canvas')?.focus();
+    };
     const [templateRefresh, setTemplateRefresh] = useState(0);
     const placeTemplate = (
         template: Pick<ContentTemplate, 'id' | 'kind' | 'name'>,
@@ -320,6 +339,37 @@ export function Workspace({
             setPlaced(`${asset.name} · на сцене`);
         });
     };
+    const commitPlacement = (item: Placement, point: Point) =>
+        run(async () => {
+            if (panelGuard.current) throw new Error(panelGuard.current);
+            await queue.flush();
+            const at = snapPoint(point, store.getSnapshot().scene.grid);
+            if (item.type === 'token') {
+                const result = await api.createToken(scene.id!, at, item.draft.asset, item.draft);
+                store.addToken(result.token!, result.revision);
+            } else if (item.type === 'prop') {
+                store.objectCommand({
+                    endpoint: 'props',
+                    data: { action: 'create', assetId: item.asset.id, ...at },
+                });
+            } else if (item.type === 'template') placeTemplate(item.template, at);
+            else if (item.type === 'note') {
+                store.noteCommand({ action: 'create', ...at });
+            } else {
+                const size = scene.grid.size * 3;
+                store.regionCommand({
+                    action: 'create',
+                    name: 'Новая область',
+                    shape: 'rectangle',
+                    enabled: false,
+                    geometry: { ...at, width: size, height: size },
+                });
+            }
+            await queue.flush();
+            setPlaced(`${item.name} · на сцене`);
+            if (item.type !== 'prop')
+                setPlacement((current) => (current === item ? null : current));
+        });
     const [zoom, setZoom] = useState(100);
     const help = useRef<HTMLDialogElement>(null);
     const allowExit = useRef(false);
@@ -360,6 +410,8 @@ export function Workspace({
         return () => window.removeEventListener('keydown', key);
     }, []);
     const changeTool = (next: Tool) => {
+        setPlacement(null);
+        setHubOpen(false);
         renderer.current?.setTool(next);
         if (next === 'region') openRight('region');
     };
@@ -507,6 +559,10 @@ export function Workspace({
                     className="tabletop"
                     aria-label={t('Tabletop workspace')}
                     onDragOver={(event) => {
+                        if ((event.target as HTMLElement).closest('.creation-hub')) {
+                            setDropping(false);
+                            return;
+                        }
                         if (
                             !event.dataTransfer.types.includes('Files') &&
                             !event.dataTransfer.types.includes(ASSET_MIME) &&
@@ -530,14 +586,16 @@ export function Workspace({
                                               'application/x-ytt-handout',
                                           )
                                         ? t('Drop to prepare and preview handout')
-                                        : target?.tokenId
-                                          ? t('replaceImage', {
-                                                name:
-                                                    scene.tokens.find(
-                                                        (token) => token.id === target.tokenId,
-                                                    )?.name ?? t('selected token'),
-                                            })
-                                          : t('Create a token here'),
+                                        : event.dataTransfer.types.includes(CREATION_MIME)
+                                          ? t('Create a token here')
+                                          : target?.tokenId
+                                            ? t('replaceImage', {
+                                                  name:
+                                                      scene.tokens.find(
+                                                          (token) => token.id === target.tokenId,
+                                                      )?.name ?? t('selected token'),
+                                              })
+                                            : t('Create a token here'),
                         );
                         if (scene.id && !busy) setDropping(true);
                     }}
@@ -546,6 +604,10 @@ export function Workspace({
                             setDropping(false);
                     }}
                     onDrop={(event) => {
+                        if ((event.target as HTMLElement).closest('.creation-hub')) {
+                            setDropping(false);
+                            return;
+                        }
                         event.preventDefault();
                         setDropping(false);
                         const file = event.dataTransfer.files[0];
@@ -559,25 +621,61 @@ export function Workspace({
                             event.dataTransfer.getData(TEMPLATE_MIME),
                         );
                         if (template) {
-                            placeTemplate(template, target.point);
+                            const item: Placement = {
+                                type: 'template',
+                                template,
+                                name: template.name,
+                            };
+                            armPlacement(item);
+                            void commitPlacement(item, target.point);
                             return;
                         }
                         const asset = readAssetDrag(event.dataTransfer.getData(ASSET_MIME));
-                        if (asset) placeAsset(asset, target);
+                        if (asset) {
+                            const fromHub = event.dataTransfer.getData(CREATION_MIME);
+                            if (fromHub && (asset.kind === 'token' || asset.kind === 'prop')) {
+                                const item = creationFromAsset(asset, fromHub);
+                                if (!item) return;
+                                armPlacement(item);
+                                void commitPlacement(item, target.point);
+                            } else placeAsset(asset, target);
+                        }
                     }}
                 >
                     {scene.id && <Tabletop store={store} rendererRef={renderer} onZoom={setZoom} />}
                     <DropMarker />
+                    {scene.id && hubOpen && (
+                        <CreationHub
+                            campaignId={campaign.id}
+                            refresh={templateRefresh}
+                            onPlace={armPlacement}
+                            onClose={closeHub}
+                        />
+                    )}
+                    {scene.id && placement && (
+                        <PlacementOverlay
+                            item={placement}
+                            renderer={renderer}
+                            busy={busy || save.status !== 'saved'}
+                            onCancel={() => setPlacement(null)}
+                            onPlace={(point) => commitPlacement(placement, point)}
+                        />
+                    )}
+
                     {placed && (
                         <div className="placement-feedback" role="status" key={placed}>
                             ✓ {placed}
                         </div>
                     )}
-                    {scene.id && (
+                    {scene.id && !placement && (
                         <RadialMenu
                             store={store}
                             queue={queue}
                             renderer={renderer}
+                            onCreate={() => {
+                                setPlacement(null);
+                                setHubOpen(true);
+                            }}
                             onPanel={async (panel) => {
                                 if (panelGuard.current) throw new Error(panelGuard.current);
                                 await sessionFlush.current?.();
@@ -616,6 +714,8 @@ export function Workspace({
                             </button>
                         </div>
                     ) : (
+                        !placement &&
+                        !hubOpen &&
                         !scene.map &&
                         scene.tokens.length === 0 &&
                         !scene.props?.length &&
@@ -663,6 +763,23 @@ export function Workspace({
                             <PanelLeftOpen size={16} />
                             <span>{sessionMode ? 'План сессии' : 'Сцены'}</span>
                         </button>
+                        {scene.id && (
+                            <button
+                                className="creation-launch primary-button"
+                                aria-expanded={hubOpen}
+                                onClick={() => {
+                                    if (panelGuard.current) {
+                                        setError(panelGuard.current);
+                                        return;
+                                    }
+                                    setPlacement(null);
+                                    if (hubOpen) closeHub();
+                                    else setHubOpen(true);
+                                }}
+                            >
+                                <Plus size={17} /> Добавить
+                            </button>
+                        )}
                         <div className="scene-state">
                             <i
                                 className={campaign.activeSceneId === scene.id ? 'status-dot' : ''}
@@ -686,16 +803,6 @@ export function Workspace({
                             {!sessionMode && (
                                 <div className="scene-quick-actions">
                                     <button
-                                        className="secondary-button"
-                                        title={t('Place a private GM note')}
-                                        onClick={() => {
-                                            store.select(null);
-                                            changeTool('note');
-                                        }}
-                                    >
-                                        <StickyNote size={14} /> {t('Note')}{' '}
-                                    </button>
-                                    <button
                                         className="icon-button surface"
                                         title={t('Show / hide GM notes')}
                                         aria-label={t('Show GM Notes')}
@@ -703,29 +810,6 @@ export function Workspace({
                                         onClick={() => store.toggleNotes()}
                                     >
                                         <EyeOff size={14} />
-                                    </button>
-                                    <button
-                                        className="secondary-button"
-                                        disabled={busy}
-                                        onClick={() =>
-                                            void run(async () => {
-                                                await queue.flush();
-                                                const result = await api.createToken(
-                                                    scene.id!,
-                                                    snapPoint(
-                                                        renderer.current?.center() ?? {
-                                                            x: scene.width / 2,
-                                                            y: scene.height / 2,
-                                                        },
-                                                        scene.grid,
-                                                    ),
-                                                );
-                                                store.addToken(result.token!, result.revision);
-                                                dispatch({ type: 'right', panel: 'context' });
-                                            })
-                                        }
-                                    >
-                                        <Plus size={14} /> {t('Add token')}{' '}
                                     </button>
                                     <button
                                         className="secondary-button"
@@ -1009,13 +1093,14 @@ export function Workspace({
                 />
             )}
             {modal === 'createScene' && (
-                <NameDialog
-                    title={t('Create a scene')}
-                    label={t('Scene name')}
+                <SceneCreation
+                    campaignId={campaign.id}
                     onClose={() => setModal(null)}
-                    submit={async (name) => {
+                    onCreate={async (name, asset) => {
+                        if (panelGuard.current) throw new Error(panelGuard.current);
+                        await sessionFlush.current?.();
                         await queue.flush();
-                        const created = await api.createScene(campaign.id, name);
+                        const created = await api.createScene(campaign.id, name, asset?.id);
                         location.assign(`/campaigns/${campaign.id}/scenes/${created.id}`);
                     }}
                 />

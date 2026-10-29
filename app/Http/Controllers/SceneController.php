@@ -19,7 +19,8 @@ class SceneController extends Controller
     public function store(Request $request, Campaign $campaign, SceneActions $actions): array
     {
         Gate::authorize('update', $campaign);
-        $scene = $actions->create($request->user(), $campaign, $request->validate(['name' => 'required|string|max:120'])['name']);
+        $data = $request->validate(['name' => 'required|string|max:120', 'mapAssetId' => 'sometimes|nullable|integer|min:1']);
+        $scene = $actions->create($request->user(), $campaign, $data['name'], $data['mapAssetId'] ?? null);
 
         return ['id' => (string) $scene->id, 'name' => $scene->name, 'revision' => 0];
     }

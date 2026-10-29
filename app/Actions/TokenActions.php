@@ -26,8 +26,11 @@ class TokenActions
                 if (! $asset) {
                     throw ValidationException::withMessages(['token_image_asset_id' => 'Choose a token image belonging to this campaign.']);
                 }
-                $data['size'] = $scene->grid_visible ? max(20, min(300, $scene->grid_size)) : 60;
             }
+            if (($data['hp'] ?? 10) > ($data['max_hp'] ?? 10)) {
+                throw ValidationException::withMessages(['hp' => 'HP cannot exceed maximum HP.']);
+            }
+            $data['size'] = $scene->grid_visible ? max(20, min(300, $scene->grid_size)) : 60;
             $token = $scene->tokens()->create($data);
             $token->refresh();
 

@@ -1,3 +1,4 @@
+import { CREATION_MIME } from '../creation/model';
 import { t } from '../../i18n';
 import { isAudio, durationLabel } from '../../media/model';
 import { AudioPreview } from '../../media/AudioPreview';
@@ -25,10 +26,12 @@ export function AssetLibrary({
     campaignId,
     onUse,
     pickerKind,
+    creationKind,
 }: {
     campaignId: string;
     onUse?: (asset: LibraryAsset) => void;
     pickerKind?: AssetKind;
+    creationKind?: 'hero' | 'enemy' | 'prop';
 }) {
     const [filters, setFilters] = useState({ ...initial, kind: pickerKind ?? '' });
     useEffect(() => () => audioEngine.stopPreview(), []);
@@ -180,6 +183,7 @@ export function AssetLibrary({
                     <select
                         aria-label={t('Upload asset type')}
                         value={kind}
+                        disabled={!!pickerKind}
                         onChange={(e) => setKind(e.target.value as AssetKind)}
                     >
                         <option value="map"> {t('Maps')} </option>
@@ -260,13 +264,18 @@ export function AssetLibrary({
                         <button
                             key={asset.id}
                             className="asset-card"
-                            draggable={!pickerKind}
+                            draggable={!pickerKind || !!creationKind}
                             title={t('assetCardHint', {
                                 name: asset.name,
                                 kind: t(`kind.${asset.kind}`),
                             })}
                             onDragStart={(e) => {
                                 e.currentTarget.classList.add('is-dragging');
+                                if (creationKind)
+                                    e.dataTransfer.setData(
+                                        CREATION_MIME,
+                                        JSON.stringify({ assetId: asset.id, preset: creationKind }),
+                                    );
                                 e.dataTransfer.setData(ASSET_MIME, JSON.stringify(asset));
                                 e.dataTransfer.setData(`application/x-ytt-${asset.kind}`, '1');
                                 e.dataTransfer.effectAllowed = 'copy';
@@ -291,12 +300,20 @@ export function AssetLibrary({
                     <h3>
                         {filters.search || filters.tag || filters.collection
                             ? t('No matching assets')
-                            : t('Make room for your world')}
+                            : pickerKind === 'token'
+                              ? 'Добавьте первый портрет'
+                              : pickerKind === 'prop'
+                                ? 'Объекты для вашей сцены'
+                                : pickerKind === 'map'
+                                  ? 'Выберите первую карту'
+                                  : t('Make room for your world')}
                     </h3>
                     <p>
                         {isAudio(filters.kind)
                             ? 'Перетащите MP3, OGG или WAV сюда. До 64 МБ, стерео или моно, до 2 часов.'
-                            : t('Drop images here or upload your first map, token or handout.')}
+                            : pickerKind
+                              ? 'Перетащите изображение сюда или загрузите его кнопкой выше.'
+                              : t('Drop images here or upload your first map, token or handout.')}
                     </p>
                     <button
                         onClick={() => {

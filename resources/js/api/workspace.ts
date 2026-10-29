@@ -95,9 +95,15 @@ export const api = {
     createCampaign: (name: string) => request<Campaign>('/campaigns', 'POST', { name }),
     renameCampaign: (id: string, name: string) =>
         request<Campaign>(`/campaigns/${id}`, 'PATCH', { name }),
-    createScene: (campaign: string, name: string, clientMutationId = commandId()) =>
+    createScene: (
+        campaign: string,
+        name: string,
+        mapAssetId?: string,
+        clientMutationId = commandId(),
+    ) =>
         request<{ id: string; name: string }>(`/campaigns/${campaign}/scenes`, 'POST', {
             name,
+            mapAssetId,
             clientMutationId,
         }),
     renameScene: (id: string, name: string) =>
@@ -135,11 +141,30 @@ export const api = {
                   }
                 : { assetId: null, x: 0, y: 0, width: 1440, height: 1080, clientMutationId },
         ),
-    createToken: (scene: string, point: Point, asset?: ImageAsset & { name: string }) =>
+    createToken: (
+        scene: string,
+        point: Point,
+        asset?: ImageAsset & { name: string },
+        identity?: {
+            name: string;
+            kind: Token['kind'];
+            disposition: NonNullable<Token['disposition']>;
+            hp: number;
+        },
+    ) =>
         request<Mutation>(`/scenes/${scene}/tokens`, 'POST', {
             ...point,
             name: asset?.name.slice(0, 80) ?? t('New token'),
             ...(asset ? { token_image_asset_id: asset.id } : {}),
+            ...(identity
+                ? {
+                      name: identity.name,
+                      kind: identity.kind,
+                      disposition: identity.disposition,
+                      hp: identity.hp,
+                      max_hp: Math.max(1, identity.hp),
+                  }
+                : {}),
             clientMutationId: commandId(),
         }),
     move: (id: string, point: Point, clientMutationId = commandId(), dragSessionId?: string) =>

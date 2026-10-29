@@ -4,7 +4,7 @@ import type { Token } from '../types/scene';
 const token: Token = {
     id: '1',
     name: 'Керн Северный',
-    kind: 'hero',
+    kind: 'player_character',
     x: 0,
     y: 0,
     size: 64,
@@ -24,5 +24,18 @@ describe('token presentation', () => {
         expect(tokenLabelVisible(0.3, false)).toBe(false);
         expect(tokenLabelVisible(0.3, true)).toBe(true);
         expect(tokenLabelVisible(0.8, false)).toBe(true);
+    });
+    it('uses disposition independently from kind, ownership and portrait color', () => {
+        expect(tokenAppearance({ ...token, disposition: 'hostile', ownerUserId: '9' }).color).toBe(
+            0xe79a97,
+        );
+        expect(tokenAppearance({ ...token, disposition: 'hostile' }).marker).toBe('◆');
+        expect(tokenAppearance({ ...token, kind: 'npc', disposition: 'friendly' }).color).toBe(
+            0x9de2c4,
+        );
+        expect(tokenAppearance({ ...token, disposition: 'neutral' }).color).toBe(0x95bce8);
+        expect(tokenAppearance({ ...token, disposition: 'hostile', isHidden: true }).marker).toBe(
+            'GM',
+        );
     });
 });

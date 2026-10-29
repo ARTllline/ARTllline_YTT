@@ -72,3 +72,42 @@ it('keeps validation and permission failures actionable at the API boundary', as
         message: 'У вас нет доступа к этому действию.',
     });
 });
+
+it('creates a quick token through the existing endpoint with identity and full HP but no library payload', async () => {
+    const fetch = vi
+        .fn()
+        .mockImplementation(
+            async () => new Response(JSON.stringify({ revision: 1 }), { status: 200 }),
+        );
+    vi.stubGlobal('fetch', fetch);
+    const draft = {
+        name: 'Гоблин',
+        kind: 'npc' as const,
+        disposition: 'hostile' as const,
+        hp: 7,
+        asset: { id: '4', name: 'Portrait', url: '/private/4', width: 256, height: 256 },
+    };
+    await api.createToken('12', { x: 120, y: 180 }, draft.asset, draft);
+    expect(fetch.mock.calls[0][0]).toBe('/api/scenes/12/tokens');
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({
+        x: 120,
+        y: 180,
+        name: 'Гоблин',
+        kind: 'npc',
+        disposition: 'hostile',
+        hp: 7,
+        max_hp: 7,
+        token_image_asset_id: '4',
+        clientMutationId: expect.any(String),
+    });
+    await api.token('8', { kind: 'player_character', disposition: 'friendly' });
+    expect(JSON.parse(fetch.mock.calls[1][1].body)).toMatchObject({
+        kind: 'player_character',
+        disposition: 'friendly',
+    });
+    await api.createScene('6', 'Forest', '4');
+    expect(JSON.parse(fetch.mock.calls[2][1].body)).toMatchObject({
+        name: 'Forest',
+        mapAssetId: '4',
+    });
+});

@@ -28,7 +28,7 @@ class TemplateActions
             foreach ($objects as $object) {
                 $prop = $object instanceof SceneProp;
                 $fields = $prop ? ['name', 'rotation', 'scale_x', 'scale_y', 'z_index', 'is_locked', 'is_hidden']
-                    : ['name', 'rotation', 'size', 'scale', 'kind', 'color', 'max_hp', 'ac', 'speed', 'is_hidden', 'is_locked'];
+                    : ['name', 'rotation', 'size', 'scale', 'kind', 'disposition', 'color', 'max_hp', 'ac', 'speed', 'is_hidden', 'is_locked'];
                 $values = $object->only($fields);
                 if (! $prop) {
                     // Reusable starting state never captures accidental damage, ownership or conditions.
@@ -63,6 +63,9 @@ class TemplateActions
                     $values['z_index'] = $baseZ + $values['z_index'] - $originZ;
                     $props->push(SceneProp::create($values + ['scene_id' => $scene->id, 'asset_id' => $item->asset_id])->refresh());
                 } else {
+                    // Older templates had no identity (or presentation-only kinds).
+                    $values['kind'] = in_array($values['kind'] ?? null, ['player_character', 'npc']) ? $values['kind'] : 'npc';
+                    $values['disposition'] = $values['disposition'] ?? 'neutral';
                     $tokens->push($scene->tokens()->create($values + ['token_image_asset_id' => $item->asset_id, 'owner_user_id' => null])->refresh());
                 }
             }

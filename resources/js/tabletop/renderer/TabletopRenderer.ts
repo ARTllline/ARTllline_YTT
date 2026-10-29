@@ -18,7 +18,7 @@ import { InteractionLayer } from '../layers/InteractionLayer';
 import type { SceneStore } from '../state/SceneStore';
 import type { Tool } from '../types/scene';
 import { currentTokenId } from '../types/combat';
-import { screenToWorld } from '../utils/coordinates';
+import { screenToWorld, snapPoint, worldToScreen } from '../utils/coordinates';
 
 export class TabletopRenderer {
     private app = new Application();
@@ -276,6 +276,13 @@ export class TabletopRenderer {
         this.input?.cancel();
         if (event) this.director.apply(event, this.width, this.height, this.reducedMotion.matches);
         else this.director.release();
+    }
+    placementPreview(clientX: number, clientY: number) {
+        const target = this.dropTarget(clientX, clientY);
+        return worldToScreen(
+            snapPoint(target.point, this.store.getSnapshot().scene.grid),
+            this.camera.state,
+        );
     }
     dropTarget(clientX: number, clientY: number) {
         const bounds = this.app.canvas.getBoundingClientRect();

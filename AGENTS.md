@@ -52,6 +52,14 @@ Default application URL: **http://localhost:8090**. Default browser WebSocket:
 in `.env.docker` if the user changes them. No shared accounts or demo campaign are
 seeded; users register through the application.
 
+The current local Docker volumes are **not empty**: on 2026-10-29 the existing
+host test dataset was copied into Docker at the user's request, preserving account
+password hashes, relationships, private files and the matching source APP_KEY.
+The restore contained 17 users, 13 campaigns, 34 scenes and 414 asset records;
+43 tables and 1014 private files were verified. Treat this as existing prepared
+data. Fresh installations still start without seeded accounts. The original host
+database/files and the Docker copy are independent after the transfer.
+
 For direct Compose commands, always specify the Docker environment file, for example:
 
 ```powershell
@@ -95,6 +103,10 @@ verification for changes that affect multiplayer behavior.
 startup, including random APP_KEY, MySQL passwords and Reverb credentials. Preserve
 that file and its keys; do not print secrets, commit it, or regenerate it on updates.
 The host `.env`, database and uploaded files are separate from the Docker test data.
+The current Docker APP_KEY was deliberately matched to the imported host dataset;
+preserve it on subsequent launches. Restore evidence and backups are under ignored
+`artifacts/docker-transfer-20261029-restore/`; environment backups there are encrypted
+with Windows user DPAPI. See `docs/VALIDATION.md` for the transfer checks.
 
 Persistent volumes: `ytt-test_mysql`, `ytt-test_storage`, `ytt-test_redis`.
 Normal `down` preserves them. Do not add `--volumes`, `migrate:fresh`, automatic

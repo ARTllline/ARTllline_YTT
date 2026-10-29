@@ -1,3 +1,33 @@
+# Existing test data restored into Docker — 2026-10-29
+
+At the user's request, copied the original local `ytt` MySQL database and its
+private campaign storage into the previously empty Docker test environment.
+
+- Preserved all **17 users, 13 campaigns, 34 scenes, 237 tokens and 414 asset
+  records**, including password hashes and membership/ownership relationships.
+- Compared row-content SHA-256 digests for **all 43 tables** and byte sizes/SHA-256
+  for **all 1014 private files**. No referenced original assets were missing.
+- MySQL source sessions use `+03:00`, whereas Docker uses UTC. Table comparisons
+  explicitly normalized TIMESTAMP values to UTC; stored instants matched.
+- Preserved the matching original APP_KEY in `.env.docker`, retaining Docker DB,
+  Redis and public/internal Reverb connection settings. No password reset occurred.
+- Browser login verified for the original GM and QA09 Player 1. Campaign 13,
+  "Последний маяк · QA13", scene 40 loaded in both contexts. Player ownership and
+  hidden-token filtering were preserved; both clients showed connected realtime.
+- Downloaded the restored map (asset 410), music (411) and handout (415) over the
+  authenticated HTTP routes and matched their SHA-256 against the original files.
+  No browser page errors; all 11 doctor checks OK and all migrations already applied.
+- Paused Docker writers for import. The source was placed into maintenance only
+  while taking its snapshot, then returned to its previous maintenance state.
+  The source dataset remains intact and is independent from subsequent Docker edits.
+
+Local ignored backups/evidence: `artifacts/docker-transfer-20261029-restore/`.
+Contains source and pre-import Docker SQL/private-file archives, verification
+manifests, browser report/screenshots, and Windows user DPAPI encrypted copies of
+the source, pre-import Docker and restored Docker environment configuration.
+DPAPI environment backups require the same Windows user/machine for decryption.
+Credentials are not recorded in this document or Git.
+
 # Docker local test environment — 2026-10-29
 
 Windows Docker Desktop, Linux Engine 27.0.3 / Compose 2.28.1. See

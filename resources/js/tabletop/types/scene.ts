@@ -20,7 +20,8 @@ export interface Token extends Point {
     isOwner?: boolean;
     id: string;
     name: string;
-    kind: 'hero' | 'scout' | 'archer';
+    kind: 'player_character' | 'npc';
+    disposition?: 'friendly' | 'neutral' | 'hostile';
     rotation: number;
     scale: number;
     size: number;
@@ -69,6 +70,8 @@ export type TokenPatch = Partial<
         | 'x'
         | 'y'
         | 'name'
+        | 'kind'
+        | 'disposition'
         | 'rotation'
         | 'scale'
         | 'size'

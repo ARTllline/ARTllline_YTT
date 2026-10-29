@@ -1,6 +1,13 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
+import {
+    useEffect,
+    useLayoutEffect,
+    useRef,
+    useState,
+    useSyncExternalStore,
+    type RefObject,
+} from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { buildRadialActions, type RadialTarget } from './radialActions';
 import type { SceneStore } from '../../tabletop/state/SceneStore';
 import type { SaveQueue } from '../../tabletop/state/SaveQueue';
@@ -12,11 +19,13 @@ export function RadialMenu({
     queue,
     renderer,
     onPanel,
+    onCreate,
 }: {
     store: SceneStore;
     queue: SaveQueue;
     renderer: RefObject<TabletopRenderer | null>;
     onPanel: (panel: RightPanel) => Promise<void>;
+    onCreate: () => void;
 }) {
     const mount = useRef<HTMLSpanElement>(null),
         menu = useRef<HTMLDivElement>(null);
@@ -25,7 +34,13 @@ export function RadialMenu({
         [busy, setBusy] = useState(false);
     useSyncExternalStore(store.subscribe, store.getSnapshot);
     const save = useSyncExternalStore(queue.subscribe, queue.getSnapshot);
+    const create = useRef(onCreate);
+    const holdClick = useRef(false);
+    useLayoutEffect(() => {
+        create.current = onCreate;
+    }, [onCreate]);
     const close = () => {
+        holdClick.current = false;
         setTarget(null);
         mount.current?.parentElement?.querySelector('canvas')?.focus({ preventScroll: true });
     };
@@ -40,8 +55,12 @@ export function RadialMenu({
         };
         const open = (x: number, y: number) => {
             const hit = renderer.current?.contextTarget(x, y);
-            if (!hit) return;
             renderer.current?.cancelGesture();
+            if (!hit) {
+                setTarget(null);
+                create.current();
+                return;
+            }
             setError('');
             setTarget({ ...hit, x, y });
         };
@@ -73,6 +92,7 @@ export function RadialMenu({
                         tokenIds: [...before.selectedIds],
                         propIds: [...(before.selectedPropIds ?? [])],
                     });
+                holdClick.current = true;
                 open(e.clientX, e.clientY);
                 origin = undefined;
             }, 520);
@@ -130,6 +150,18 @@ export function RadialMenu({
                 createPortal(
                     <div
                         className="radial-scrim"
+                        onPointerDownCapture={() => {
+                            holdClick.current = false;
+                        }}
+                        onClickCapture={(e) => {
+                            // A held finger can lift over the new center action. Consume only
+                            // that synthetic click; a fresh pointerdown enables normal actions.
+                            if (holdClick.current) {
+                                holdClick.current = false;
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }
+                        }}
                         onPointerDown={(e) => {
                             if (e.target === e.currentTarget && !busy) close();
                         }}
@@ -196,6 +228,18 @@ export function RadialMenu({
                                             : 'ТОКЕН'}
                                 </span>
                                 <strong>{entity.name || 'Объект'}</strong>
+                                <button
+                                    className="radial-create"
+                                    role="menuitem"
+                                    disabled={busy}
+                                    title="Добавить на сцену"
+                                    onClick={() => {
+                                        close();
+                                        onCreate();
+                                    }}
+                                >
+                                    <Plus size={13} /> Добавить
+                                </button>
                                 <button
                                     title="Закрыть · Esc"
                                     aria-label="Закрыть меню действий"

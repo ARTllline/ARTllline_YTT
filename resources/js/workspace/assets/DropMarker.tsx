@@ -11,6 +11,10 @@ export function DropMarker() {
             element.hidden = true;
         };
         const over = (event: DragEvent) => {
+            if ((event.target as HTMLElement).closest('.creation-hub')) {
+                hide();
+                return;
+            }
             if (
                 !event.dataTransfer?.types.some((type) =>
                     [ASSET_MIME, TEMPLATE_MIME, 'Files'].includes(type),

@@ -8,7 +8,7 @@ export const createDemoScene = (): Scene => ({
         {
             id: 'kern',
             name: 'Kern',
-            kind: 'hero',
+            kind: 'player_character',
             x: 630,
             y: 750,
             rotation: 0,
@@ -21,7 +21,7 @@ export const createDemoScene = (): Scene => ({
         {
             id: 'mira',
             name: 'Mira',
-            kind: 'hero',
+            kind: 'player_character',
             x: 750,
             y: 810,
             rotation: 25,
@@ -34,7 +34,7 @@ export const createDemoScene = (): Scene => ({
         {
             id: 'scout',
             name: 'Goblin Scout',
-            kind: 'scout',
+            kind: 'npc',
             x: 570,
             y: 390,
             rotation: 160,
@@ -47,7 +47,7 @@ export const createDemoScene = (): Scene => ({
         {
             id: 'archer',
             name: 'Goblin Archer',
-            kind: 'archer',
+            kind: 'npc',
             x: 930,
             y: 450,
             rotation: 210,

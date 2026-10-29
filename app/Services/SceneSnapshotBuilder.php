@@ -68,7 +68,7 @@ class SceneSnapshotBuilder
         $data = ['id' => (string) $token->id, 'name' => $token->name,
             'x' => (float) $token->x, 'y' => (float) $token->y, 'rotation' => (float) $token->rotation,
             'scale' => (float) $token->scale, 'size' => (float) $token->size,
-            'kind' => 'hero', 'color' => 9751480, 'image' => $this->asset($token->imageAsset),
+            'kind' => $token->kind, 'disposition' => $token->disposition, 'color' => 9751480, 'image' => $this->asset($token->imageAsset),
             'canMove' => $gm || ($token->owner_user_id === $user->id && ! $token->is_locked)];
         $data['conditions'] = $token->conditions->filter(fn ($condition) => $gm || $condition->visibility === 'public')->values()->map(fn ($condition) => [
             'id' => (string) $condition->id, 'key' => $condition->key, 'label' => $condition->label,
