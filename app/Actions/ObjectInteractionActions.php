@@ -28,9 +28,19 @@ class ObjectInteractionActions
         $author = User::find($action['author_id']);
 
         return $action['enabled'] && $author && Gate::forUser($author)->allows('update', $scene)
-            && ($action['result_type'] === 'handout'
-                ? Handout::where('campaign_id', $scene->campaign_id)->whereKey($action['result_target'])->exists()
-                : Cue::where('scene_id', $scene->id)->whereKey($action['result_target'])->exists());
+            && (($action['check']['enabled'] ?? false)
+                ? $this->validResult($scene, $action['check']['success']) && $this->validResult($scene, $action['check']['failure'])
+                : $this->validResult($scene, $action));
+    }
+
+    private function validResult(Scene $scene, array $result): bool
+    {
+        return match ($result['result_type']) {
+            'nothing' => true,
+            'handout' => Handout::where('campaign_id', $scene->campaign_id)->whereKey($result['result_target'] ?? null)->exists(),
+            'cue' => Cue::where('scene_id', $scene->id)->whereKey($result['result_target'] ?? null)->exists(),
+            default => false,
+        };
     }
 
     public function projection(Token|SceneProp $object, bool $gm): array
@@ -43,7 +53,15 @@ class ObjectInteractionActions
             return [];
         }
 
-        return array_values(array_map(fn ($a) => array_intersect_key($a, array_flip(['id', 'label', 'icon'])),
+        return array_values(array_map(function ($a) {
+            $safe = array_intersect_key($a, array_flip(['id', 'label', 'icon']));
+            if ($a['check']['enabled'] ?? false) {
+                $safe['check'] = ['enabled' => true, 'label' => $a['check']['label']]
+                    + (($a['check']['dc_visible'] ?? false) ? ['dc' => $a['check']['dc']] : []);
+            }
+
+            return $safe;
+        },
             array_filter($actions, fn ($a) => $this->available($object->scene, $a))));
     }
 
@@ -54,20 +72,38 @@ class ObjectInteractionActions
             $data = Validator::make($data, [
                 'kind' => 'required|in:token,prop', 'id' => 'required|integer|min:1',
                 'actions' => 'present|array|max:8',
-                'actions.*' => 'required|array:id,label,icon,result_type,result_target,enabled',
+                'actions.*' => 'required|array:id,label,icon,result_type,result_target,enabled,check',
                 'actions.*.id' => 'required|uuid|distinct', 'actions.*.label' => 'required|string|max:48',
                 'actions.*.icon' => 'required|in:'.implode(',', self::ICONS),
-                'actions.*.result_type' => 'required|in:handout,cue',
-                'actions.*.result_target' => 'required|integer|min:1', 'actions.*.enabled' => 'required|boolean',
+                'actions.*.result_type' => 'required|in:handout,cue,nothing',
+                'actions.*.result_target' => 'nullable|integer|min:1', 'actions.*.enabled' => 'required|boolean',
+                'actions.*.check' => 'sometimes|array:enabled,label,ability_key,dc,dc_visible,modifier,retry,success,failure',
+                'actions.*.check.enabled' => 'required_with:actions.*.check|boolean',
             ])->validate();
             $object = $this->object($scene, $data['kind'], $data['id']);
             foreach ($data['actions'] as &$action) {
-                $valid = $action['result_type'] === 'handout'
-                    ? Handout::where('campaign_id', $scene->campaign_id)->whereKey($action['result_target'])->exists()
-                    : Cue::where('scene_id', $scene->id)->whereKey($action['result_target'])->exists();
+                if ($action['check']['enabled'] ?? false) {
+                    $action['check'] = Validator::make($action['check'], [
+                        'enabled' => 'required|boolean', 'label' => 'required|string|max:80',
+                        'ability_key' => 'nullable|string|max:48|regex:/^[a-zA-Z0-9_-]+$/',
+                        'dc' => 'required|integer|min:1|max:100', 'dc_visible' => 'sometimes|boolean',
+                        'modifier' => 'required|integer|min:-100|max:100',
+                        'retry' => 'required|in:once,once_per_player,repeatable',
+                        'success' => 'required|array:result_type,result_target', 'failure' => 'required|array:result_type,result_target',
+                        'success.result_type' => 'required|in:nothing,handout,cue', 'failure.result_type' => 'required|in:nothing,handout,cue',
+                        'success.result_target' => 'nullable|integer|min:1', 'failure.result_target' => 'nullable|integer|min:1',
+                    ])->validate();
+                    $action['check']['dc_visible'] ??= false;
+                    foreach (['dc', 'modifier'] as $number) {
+                        $action['check'][$number] = (int) $action['check'][$number];
+                    }
+                    $valid = $this->validResult($scene, $action['check']['success']) && $this->validResult($scene, $action['check']['failure']);
+                } else {
+                    $valid = $this->validResult($scene, $action);
+                }
                 abort_unless($valid, 422, 'Цель недоступна. Выберите материал кампании или событие этой сцены.');
                 $action['author_id'] = $user->id;
-                $action['result_target'] = (string) $action['result_target'];
+                $action['result_target'] = isset($action['result_target']) ? (string) $action['result_target'] : null;
                 $action['enabled'] = (bool) $action['enabled'];
             }
             unset($action);

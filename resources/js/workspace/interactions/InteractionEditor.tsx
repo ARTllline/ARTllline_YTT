@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUp, ArrowDown, Plus, Trash2, MousePointer2 } from 'lucide-react';
 import { commandId } from '../../api/workspace';
+import { CheckEditor, CheckHistoryList, defaultCheck } from './CheckEditor';
 import type { SceneStore } from '../../tabletop/state/SceneStore';
 import {
     interactions,
@@ -97,45 +98,81 @@ export function InteractionEditor({
                                         />
                                     </label>
                                 </div>
-                                <div className="interaction-result">
-                                    <select
-                                        aria-label={`Результат действия ${index + 1}`}
-                                        value={action.result_type}
+                                <label className="check-toggle">
+                                    <input
+                                        type="checkbox"
+                                        checked={!!action.check?.enabled}
                                         onChange={(e) =>
                                             patch(index, {
-                                                result_type: e.target.value as 'cue' | 'handout',
-                                                result_target: '',
+                                                check: e.target.checked
+                                                    ? {
+                                                          ...defaultCheck(),
+                                                          ...action.check,
+                                                          enabled: true,
+                                                      }
+                                                    : {
+                                                          ...action.check,
+                                                          enabled: false,
+                                                          label:
+                                                              action.check?.label ??
+                                                              'Внимательность',
+                                                      },
                                             })
                                         }
-                                    >
-                                        <option value="handout">Открыть Handout</option>
-                                        <option value="cue">Запустить Cue</option>
-                                    </select>
-                                    <select
-                                        aria-label={`Цель действия ${index + 1}`}
-                                        value={action.result_target}
-                                        onChange={(e) =>
-                                            patch(index, { result_target: e.target.value })
-                                        }
-                                    >
-                                        <option value="">
-                                            {resources ? 'Выберите…' : 'Загрузка…'}
-                                        </option>
-                                        {action.result_target &&
-                                            !options?.some(
-                                                (o) => o.id === action.result_target,
-                                            ) && (
-                                                <option value={action.result_target}>
-                                                    Цель недоступна
+                                    />
+                                    Требуется проверка
+                                </label>
+                                {action.check?.enabled ? (
+                                    <CheckEditor
+                                        value={action.check}
+                                        resources={resources}
+                                        onChange={(check) => patch(index, { check })}
+                                    />
+                                ) : (
+                                    <div className="interaction-result">
+                                        <select
+                                            aria-label={`Результат действия ${index + 1}`}
+                                            value={action.result_type}
+                                            onChange={(e) =>
+                                                patch(index, {
+                                                    result_type: e.target.value as
+                                                        'cue' | 'handout' | 'nothing',
+                                                    result_target: '',
+                                                })
+                                            }
+                                        >
+                                            <option value="handout">Открыть Handout</option>
+                                            <option value="cue">Запустить Cue</option>
+                                            <option value="nothing">Ничего</option>
+                                        </select>
+                                        {action.result_type !== 'nothing' && (
+                                            <select
+                                                aria-label={`Цель действия ${index + 1}`}
+                                                value={action.result_target}
+                                                onChange={(e) =>
+                                                    patch(index, { result_target: e.target.value })
+                                                }
+                                            >
+                                                <option value="">
+                                                    {resources ? 'Выберите…' : 'Загрузка…'}
                                                 </option>
-                                            )}
-                                        {options?.map((o) => (
-                                            <option key={o.id} value={o.id}>
-                                                {o.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                                                {action.result_target &&
+                                                    !options?.some(
+                                                        (o) => o.id === action.result_target,
+                                                    ) && (
+                                                        <option value={action.result_target}>
+                                                            Цель недоступна
+                                                        </option>
+                                                    )}
+                                                {options?.map((o) => (
+                                                    <option key={o.id} value={o.id}>
+                                                        {o.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        )}
+                                    </div>
+                                )}
                                 <div className="interaction-card-tools">
                                     <select
                                         aria-label={`Иконка действия ${index + 1}`}
@@ -202,7 +239,20 @@ export function InteractionEditor({
                         <button
                             className="secondary-button"
                             disabled={
-                                !resources || draft.some((a) => !a.label.trim() || !a.result_target)
+                                !resources ||
+                                draft.some(
+                                    (a) =>
+                                        !a.label.trim() ||
+                                        (a.check?.enabled
+                                            ? !a.check.label.trim() ||
+                                              [a.check.success, a.check.failure].some(
+                                                  (branch) =>
+                                                      !branch ||
+                                                      (branch.result_type !== 'nothing' &&
+                                                          !branch.result_target),
+                                              )
+                                            : a.result_type !== 'nothing' && !a.result_target),
+                                )
                             }
                             onClick={() => {
                                 mutation.current ??= commandId();
@@ -224,6 +274,7 @@ export function InteractionEditor({
                         </button>
                     </div>
                 </fieldset>
+                <CheckHistoryList sceneId={sceneId} kind={kind} id={id} />
                 {saved && (
                     <p className="interaction-saved" role="status">
                         Действия сохранены

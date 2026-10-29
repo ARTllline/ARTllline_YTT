@@ -36,24 +36,33 @@ class ObjectInteraction
             if (isset($data['actionId'])) {
                 $object = app(ObjectInteractionActions::class)->object($scene, $data['kind'], $data['id']);
                 $action = collect($object->interactions)->firstWhere('id', $data['actionId']);
-                $author = User::findOrFail($action['author_id']);
-                if ($action['result_type'] === 'handout') {
-                    $result = app(HandoutActions::class)->show($author, $campaign, $action['result_target'],
-                        $campaign->roleFor($user) === 'gm' ? [] : [(string) $user->id]);
-                    if ($campaign->roleFor($user) === 'gm') {
-                        return ['accepted' => true, 'handout' => $result['handout']];
-                    }
-                } else {
-                    $cue = Cue::where('scene_id', $scene->id)->findOrFail($action['result_target']);
-                    app(CueRunner::class)->start($author, $scene, $cue);
+                if ($action['check']['enabled'] ?? false) {
+                    return app(ObjectCheckActions::class)->execute($user, $scene, $data, $action);
                 }
 
-                return ['accepted' => true];
+                return ['accepted' => true] + $this->result($user, $scene, $action['author_id'], $action);
             }
             app(TriggerEvents::class)->event($scene, 'object.interact', 'interaction:'.app(CommandContext::class)->id(), ['kind' => $data['kind'], 'id' => (int) $data['id']]);
 
             // Same response for every authorized object, even without a trigger.
             return ['accepted' => true];
         });
+    }
+
+    public function result(User $actor, Scene $scene, int $authorId, array $result): array
+    {
+        $author = User::findOrFail($authorId);
+        if ($result['result_type'] === 'handout') {
+            $shown = app(HandoutActions::class)->show($author, $scene->campaign, $result['result_target'],
+                $scene->campaign->roleFor($actor) === 'gm' ? [] : [(string) $actor->id]);
+
+            return $scene->campaign->roleFor($actor) === 'gm' ? $shown : [];
+        }
+        if ($result['result_type'] === 'cue') {
+            $cue = Cue::where('scene_id', $scene->id)->findOrFail($result['result_target']);
+            app(CueRunner::class)->start($author, $scene, $cue);
+        }
+
+        return [];
     }
 }

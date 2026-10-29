@@ -1,5 +1,6 @@
 import { t } from '../../i18n';
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
+import { checkPresentation } from '../interactions/checkPresentation';
 import { BookOpen, X } from 'lucide-react';
 import { preparation } from '../../api/preparation';
 import type { LiveEcho } from '../../realtime/useCampaignLive';
@@ -21,6 +22,10 @@ export function HandoutShelf({
     onClose?: () => void;
 }) {
     const [open, setOpen] = useState(docked);
+    const checking = useSyncExternalStore(
+        checkPresentation.subscribe,
+        checkPresentation.getSnapshot,
+    );
     const [page, setPage] = useState(1);
     const { items, pages, error, selected, select, close } = useHandouts(
         campaignId,
@@ -96,7 +101,7 @@ export function HandoutShelf({
                     )}
                 </aside>
             )}
-            {selected && (
+            {selected && !checking && (
                 <HandoutViewer
                     key={selected.id}
                     handout={selected}

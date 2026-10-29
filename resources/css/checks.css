@@ -1,0 +1,231 @@
+.check-dialog {
+    --check-tone: var(--information);
+    width: min(420px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    position: fixed;
+    padding: 36px 32px 28px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text);
+    background: radial-gradient(ellipse at 50% 30%, #9dc5e212, transparent 65%), var(--surface);
+    box-shadow:
+        0 28px 100px #0009,
+        inset 0 1px #ffffff0a;
+    text-align: center;
+    animation: surface-arrive var(--motion-normal) var(--ease-out);
+}
+.check-dialog::backdrop {
+    background: #090c12bd;
+    backdrop-filter: blur(5px);
+}
+.check-dialog h2 {
+    font-size: 23px;
+    margin: 12px 0 8px;
+    font-weight: 600;
+}
+.check-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+}
+.check-label {
+    color: var(--check-tone);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 11px;
+    margin: 0;
+}
+.check-dc {
+    display: block;
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 11px;
+}
+.check-die {
+    position: relative;
+    width: 152px;
+    height: 168px;
+    margin: 28px auto 16px;
+    color: var(--check-tone);
+}
+.check-die svg {
+    width: 100%;
+    height: 100%;
+    stroke: currentColor;
+    stroke-width: 1;
+    filter: drop-shadow(0 0 16px #9dc5e22a);
+}
+.check-die strong {
+    position: absolute;
+    inset: 58px 0 auto;
+    line-height: 1;
+    font-size: 44px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+.check-dialog.phase-rolling .check-die {
+    animation: check-tumble 540ms var(--ease-state) infinite;
+}
+.check-dialog.phase-settle .check-die {
+    animation: check-settle var(--motion-normal) var(--ease-out);
+}
+.check-die.natural-twenty {
+    color: var(--attention);
+}
+.check-die.natural-one {
+    color: var(--gm-only);
+}
+.check-equation {
+    min-height: 44px;
+    display: grid;
+    place-items: center;
+    font-size: 24px;
+    font-variant-numeric: tabular-nums;
+}
+.check-equation strong {
+    font-size: 32px;
+    font-weight: 600;
+}
+.check-equals {
+    color: var(--muted);
+    margin: 0 5px;
+}
+.check-hint {
+    font-size: 12px;
+    color: var(--muted);
+}
+.check-outcome {
+    height: 64px;
+    display: grid;
+    align-content: center;
+    gap: 6px;
+    color: var(--check-tone);
+}
+.check-outcome strong {
+    letter-spacing: 0.2em;
+    font-size: 16px;
+    animation: content-arrive var(--motion-normal) var(--ease-out);
+}
+.check-outcome small {
+    color: var(--muted);
+    font-size: 11px;
+}
+.check-dialog.is-success {
+    --check-tone: var(--accent);
+}
+.check-dialog.is-failure {
+    --check-tone: var(--danger);
+}
+.check-roll {
+    min-height: 42px;
+    width: 100%;
+    justify-content: center;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 10px;
+}
+.check-toggle {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--muted);
+    font-size: 12px;
+    margin: 10px 0;
+}
+.check-toggle input {
+    width: auto;
+}
+.check-editor {
+    padding-top: 8px;
+    border-top: 1px solid var(--border-soft);
+    display: grid;
+    gap: 10px;
+}
+.check-editor label {
+    display: grid;
+    gap: 5px;
+    color: var(--muted);
+    font-size: 12px;
+}
+.check-editor .check-toggle {
+    display: flex;
+}
+.check-editor input,
+.check-editor select {
+    width: 100%;
+    min-width: 0;
+}
+.check-editor .check-toggle input {
+    width: auto;
+}
+.check-numbers {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.check-editor summary,
+.check-history summary {
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+}
+.check-history {
+    margin-top: 14px;
+}
+.check-history > div {
+    display: grid;
+    gap: 5px;
+    margin-top: 12px;
+    font-size: 11px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-soft);
+}
+.check-history time {
+    color: var(--muted);
+}
+@keyframes check-tumble {
+    0%,
+    100% {
+        transform: rotate(-8deg) scale(0.97);
+        opacity: 0.7;
+    }
+    50% {
+        transform: rotate(9deg) scale(1.04);
+        opacity: 1;
+    }
+}
+@keyframes check-settle {
+    from {
+        transform: scale(1.06);
+    }
+    to {
+        transform: scale(1);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .check-dialog,
+    .check-dialog .check-die,
+    .check-dialog .check-outcome strong {
+        animation: none;
+        transition: none;
+    }
+    .check-dialog::backdrop {
+        backdrop-filter: none;
+    }
+}
+@media (max-height: 620px) {
+    .check-dialog {
+        padding-top: 22px;
+    }
+    .check-die {
+        width: 110px;
+        height: 121px;
+        margin: 15px auto 8px;
+    }
+    .check-die strong {
+        top: 42px;
+        font-size: 32px;
+    }
+}

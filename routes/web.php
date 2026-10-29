@@ -53,6 +53,7 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/scenes/{scene}/interact', [AutomationController::class, 'interact'])->name('scene.interact')->middleware([IdempotentMutation::class, 'throttle:60,1']);
         Route::post('/scenes/{scene}/object-actions', [AutomationController::class, 'objectActions'])->name('scene.object-actions')->middleware(IdempotentMutation::class);
         Route::get('/scenes/{scene}/object-action-resources', [AutomationController::class, 'interactionResources']);
+        Route::get('/scenes/{scene}/object-checks', [AutomationController::class, 'checkHistory']);
         Route::get('/campaigns/{campaign}/sessions', [GameSessionController::class, 'index']);
         Route::get('/campaigns/{campaign}/session-resources', [GameSessionController::class, 'resources']);
         Route::get('/campaigns/{campaign}/sessions/{gameSession}', [GameSessionController::class, 'show']);

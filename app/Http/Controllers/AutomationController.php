@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\ObjectCheckActions;
 use App\Actions\ObjectInteraction;
 use App\Actions\ObjectInteractionActions;
 use App\Actions\RegionActions;
@@ -43,9 +44,18 @@ class AutomationController extends Controller
     public function interact(Request $request, Scene $scene, ObjectInteraction $action): array
     {
         $data = $request->validate(['kind' => 'required|in:token,prop', 'id' => 'required|integer|min:1', 'epoch' => 'required|integer|min:0',
-            'actionId' => 'sometimes|required|uuid', 'result_target' => 'prohibited', 'result_type' => 'prohibited', 'cueId' => 'prohibited', 'handoutId' => 'prohibited']);
+            'actionId' => 'sometimes|required|uuid', 'actorTokenId' => 'sometimes|integer|min:1',
+            'check' => 'prohibited', 'dc' => 'prohibited', 'modifier' => 'prohibited', 'success' => 'prohibited', 'failure' => 'prohibited',
+            'result_target' => 'prohibited', 'result_type' => 'prohibited', 'cueId' => 'prohibited', 'handoutId' => 'prohibited']);
 
         return $action->execute($request->user(), $scene, $data);
+    }
+
+    public function checkHistory(Request $request, Scene $scene, ObjectCheckActions $checks): array
+    {
+        $data = $request->validate(['kind' => 'required|in:token,prop', 'id' => 'required|integer|min:1']);
+
+        return $checks->history($request->user(), $scene, $data['kind'], (int) $data['id']);
     }
 
     public function objectActions(Request $request, Scene $scene, ObjectInteractionActions $actions): array

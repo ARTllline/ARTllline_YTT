@@ -18,6 +18,7 @@ import { interactions, interactionIcons } from '../interactions/model';
 import { commandId } from '../../api/workspace';
 import type { Handout } from '../../api/preparation';
 import { HandoutViewer } from '../handouts/HandoutViewer';
+import { CheckDialog, type CheckInvocation } from '../interactions/CheckDialog';
 export function RadialMenu({
     store,
     queue,
@@ -41,6 +42,7 @@ export function RadialMenu({
     const [interactionMode, setInteractionMode] = useState(store.role === 'player');
     const [notice, setNotice] = useState('');
     const [preview, setPreview] = useState<Handout | null>(null);
+    const [check, setCheck] = useState<CheckInvocation | null>(null);
     const mutation = useRef<{ key: string; id: string } | null>(null);
     useEffect(() => {
         if (!notice) return;
@@ -171,6 +173,22 @@ export function RadialMenu({
                   Icon: (interactionIcons[action.icon] ?? interactionIcons.hand).Icon,
                   tone: 'interaction',
                   run: async () => {
+                      if (action.check?.enabled) {
+                          const snapshot = store.getSnapshot();
+                          const controlled = snapshot.scene.tokens.find(
+                              (token) => snapshot.selectedIds.includes(token.id) && token.isOwner,
+                          );
+                          setCheck({
+                              action,
+                              sceneId: snapshot.scene.id!,
+                              kind: target.kind as 'token' | 'prop',
+                              objectId: target.id,
+                              epoch: snapshot.scene.liveRevision ?? 0,
+                              userId: store.spatial.identity?.id ?? store.role,
+                              actorTokenId: controlled?.id,
+                          });
+                          return;
+                      }
                       const key = `${target.kind}:${target.id}:${action.id}`;
                       if (mutation.current?.key !== key)
                           mutation.current = { key, id: commandId() };
@@ -201,6 +219,13 @@ export function RadialMenu({
                 </div>
             )}
             {preview && <HandoutViewer handout={preview} onClose={() => setPreview(null)} />}
+            {check && (
+                <CheckDialog
+                    invocation={check}
+                    onClose={() => setCheck(null)}
+                    onHandout={setPreview}
+                />
+            )}
             {target &&
                 entity &&
                 (store.role === 'gm' || configured.length > 0) &&
