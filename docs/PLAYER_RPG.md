@@ -12,8 +12,9 @@ modifier, optional resource costs, small damage expression and a result. Cue
 options show their scene; a Cue can run only on its own scene. Handouts use the
 existing selective reveal path. Saving rejects broken resource/result references.
 
-Player: select the active character above the HUD. Click the portrait for HP,
-resources, AC/speed, visible conditions, modifiers and the ability list. Click an
+Player: the bottom HUD combines portrait, identity, HP, resource rail and hotbar.
+Click the portrait to switch between owned heroes when there is more than one;
+click the name for HP, resources, AC/speed, conditions, modifiers and abilities. Click an
 action icon (or keys **1–8** outside text fields/dialogs), choose a highlighted
 world target to execute. **Escape/right click** cancels targeting; **Tab/arrows +
 Enter** provide keyboard targeting without a target select. The twelve hotbar slots

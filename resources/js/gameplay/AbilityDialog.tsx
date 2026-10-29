@@ -1,5 +1,6 @@
-import { gameplayIcons } from './icons';
 import { RpgDice } from './RpgDice';
+import { RpgIcon } from './RpgIcon';
+import { usePlayerDice } from './PlayerDiceProvider';
 import { useEffect, useRef, useState } from 'react';
 import { Dices, X } from 'lucide-react';
 import { ApiError } from '../api/client';
@@ -44,6 +45,7 @@ export function AbilityDialog({
     onAccepted: (result: AbilityResult) => void;
 }) {
     const { ability } = invocation;
+    const cinematic = !!usePlayerDice() && !!(ability.check || ability.damage);
     const slot = abilitySlot(userId, campaignId, character.id);
     const dialog = useRef<HTMLDialogElement>(null);
     const [retained, setRetained] = useState<PendingAbility | null>(
@@ -61,6 +63,7 @@ export function AbilityDialog({
     const lock = useRef(false),
         alive = useRef(true);
     const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const visualSettled = useRef<(() => void) | null>(null);
     const busy = !['ready', 'damage'].includes(phase) && !(phase === 'outcome' && !result?.damage);
     useEffect(() => {
         alive.current = true;
@@ -101,7 +104,6 @@ export function AbilityDialog({
             clearAbility(slot);
             if (!alive.current) return;
             const settle = () => {
-                setResult(response.execution);
                 setPhase('settle');
                 timer.current = setTimeout(
                     () => {
@@ -125,10 +127,13 @@ export function AbilityDialog({
                     reduced ? 0 : 200,
                 );
             };
-            timer.current = setTimeout(
-                settle,
-                Math.max(0, (reduced ? 0 : 850) - (performance.now() - start)),
-            );
+            visualSettled.current = settle;
+            setResult(response.execution);
+            if (!response.execution.roll)
+                timer.current = setTimeout(
+                    settle,
+                    Math.max(0, (reduced ? 0 : 450) - (performance.now() - start)),
+                );
         } catch (e) {
             if (e instanceof ApiError && e.status > 0 && e.status < 500) {
                 clearAbility(slot);
@@ -153,8 +158,7 @@ export function AbilityDialog({
         onClose();
     };
     const roll = result?.roll;
-    const ActionIcon =
-        gameplayIcons[ability.icon as keyof typeof gameplayIcons] ?? gameplayIcons.spark;
+    const showingDamage = phase === 'damage' && !!result?.damage;
     const naturalClass =
         roll?.natural === 20 ? 'natural-high' : roll?.natural === 1 ? 'natural-low' : '';
     const label =
@@ -170,7 +174,7 @@ export function AbilityDialog({
     return (
         <dialog
             ref={dialog}
-            className={`check-dialog ability-dialog rpg-dice-dialog phase-${phase} ${naturalClass} ${phase === 'outcome' ? (result?.success ? 'is-success' : 'is-failure') : ''}`}
+            className={`check-dialog ability-dialog rpg-dice-dialog ${cinematic ? 'player-check-stage' : ''} phase-${phase} ${naturalClass} ${phase === 'outcome' ? (result?.success ? 'is-success' : 'is-failure') : ''}`}
             aria-labelledby="ability-roll-title"
             onCancel={(e) => {
                 e.preventDefault();
@@ -202,7 +206,12 @@ export function AbilityDialog({
             <span className="eyebrow">
                 {ability.category === 'attack' ? 'АТАКА' : ability.check ? 'ПРОВЕРКА' : 'ДЕЙСТВИЕ'}
             </span>
-            <h2 id="ability-roll-title">{ability.name}</h2>
+            <h2 id="ability-roll-title">
+                {cinematic && ability.category === 'check'
+                    ? (character.checkStats.find((s) => s.key === ability.check?.stat_key)?.label ??
+                      ability.name)
+                    : ability.name}
+            </h2>
             <p className="check-label">
                 {invocation.targetName ??
                     (ability.target === 'self' ? 'На себя' : ability.description)}
@@ -221,22 +230,44 @@ export function AbilityDialog({
                     ))}
                 </div>
             )}
-            {ability.check ? (
+            {roll && (
+                <div className="rpg-roll-context">
+                    {roll.dc !== undefined && <span>Сложность {roll.dc}</span>}
+                    <strong>
+                        {roll.modifier >= 0 ? '+' : '−'}
+                        {Math.abs(roll.modifier)}{' '}
+                        {character.checkStats.find((s) => s.key === ability.check?.stat_key)
+                            ?.label ?? 'Модификатор'}
+                    </strong>
+                </div>
+            )}
+            {ability.check || showingDamage ? (
                 <RpgDice
-                    dice={roll?.rawDice}
-                    selected={roll?.selectedDie}
+                    dice={showingDamage ? result!.damage!.rawDice : roll?.rawDice}
+                    sides={
+                        showingDamage
+                            ? Number(result!.damage!.expression.match(/d(\d+)/)?.[1] ?? 6)
+                            : 20
+                    }
+                    selected={showingDamage ? 0 : roll?.selectedDie}
                     mode={mode}
                     phase={phase}
+                    onSettled={showingDamage ? undefined : () => visualSettled.current?.()}
                 />
             ) : (
-                <div className="ability-sigil" aria-hidden="true">
-                    <ActionIcon size={76} strokeWidth={1} />
-                </div>
+                phase !== 'damage' && (
+                    <div className="ability-sigil" aria-hidden="true">
+                        <RpgIcon icon={ability.icon} size={76} />
+                    </div>
+                )
             )}
             <div className="check-equation" aria-live="polite">
                 {roll && ['total', 'outcome', 'damage'].includes(phase) ? (
-                    <span>
-                        {roll.natural} {roll.modifier < 0 ? '−' : '+'} {Math.abs(roll.modifier)}{' '}
+                    <span className="check-sum">
+                        <span className="sum-face">{roll.natural}</span>{' '}
+                        <span className="sum-modifier">
+                            {roll.modifier < 0 ? '−' : '+'} {Math.abs(roll.modifier)}
+                        </span>{' '}
                         <span className="check-equals">=</span> <strong>{roll.total}</strong>
                     </span>
                 ) : (
@@ -271,13 +302,6 @@ export function AbilityDialog({
                     <span>
                         {result.damage.expression} · [{result.damage.rawDice.join(', ')}]
                     </span>
-                    <div className="damage-cubes">
-                        {result.damage.rawDice.map((die, i) => (
-                            <b key={i} style={{ animationDelay: `${i * 65}ms` }}>
-                                {die}
-                            </b>
-                        ))}
-                    </div>
                     <strong>
                         {result.damage.total} <small>УРОНА</small>
                     </strong>

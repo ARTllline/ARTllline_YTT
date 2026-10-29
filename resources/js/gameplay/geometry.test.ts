@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { areaContains, abilityPreview, aimPoint } from './geometry';
-import { defaultSlots, placeAbility } from './hotbarModel';
+import { abilityBinding, defaultSlots, placeBinding } from './hotbarModel';
 import type { Ability } from './model';
 import type { Scene, Token } from '../tabletop/types/scene';
 const actor = { id: '1', x: 0, y: 0 } as Token;
@@ -62,11 +62,18 @@ describe('spatial ability targeting', () => {
 describe('hotbar slots', () => {
     it('swaps assigned slots, preserves blanks and restores from browser', () => {
         const initial = defaultSlots(['a', 'b']);
-        const moved = placeAbility(initial, 'a', 5);
+        const moved = placeBinding(initial, abilityBinding('a'), 5);
         expect(moved[0]).toBeNull();
-        expect(moved[5]).toBe('a');
-        expect(placeAbility(moved, 'b', 5).slice(0, 6)).toEqual([null, 'a', null, null, null, 'b']);
-        expect(placeAbility(moved, 'c', 9)[9]).toBe('c');
-        expect(initial[0]).toBe('a');
+        expect(moved[5]).toEqual(abilityBinding('a'));
+        expect(placeBinding(moved, abilityBinding('b'), 5).slice(0, 6)).toEqual([
+            null,
+            abilityBinding('a'),
+            null,
+            null,
+            null,
+            abilityBinding('b'),
+        ]);
+        expect(placeBinding(moved, abilityBinding('c'), 9)[9]).toEqual(abilityBinding('c'));
+        expect(initial[0]).toEqual(abilityBinding('a'));
     });
 });

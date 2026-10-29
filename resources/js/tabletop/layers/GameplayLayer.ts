@@ -19,19 +19,26 @@ export class GameplayLayer extends Container {
         this.addChild(this.rings);
     }
     feedback(event: GameplayFeedback) {
+        // Coalesce a repeated receipt/live echo and replace older text on this token.
+        const previous = this.floating.find(
+            (f) => f.tokenId === event.tokenId && performance.now() - f.start < 650,
+        );
+        if (previous?.label.text === event.text) return;
+        for (const f of this.floating.filter((f) => f.tokenId === event.tokenId)) f.label.destroy();
+        this.floating = this.floating.filter((f) => f.tokenId !== event.tokenId);
         const label = new Text({
             text: event.text,
             style: {
-                fontFamily: 'Inter, system-ui, sans-serif',
-                fontSize: 26,
-                fontWeight: '700',
+                fontFamily: 'Georgia, serif',
+                fontSize: 25,
+                fontWeight: '600',
                 fill:
                     event.tone === 'damage'
-                        ? 0xf0b0a4
+                        ? 0xe9aa94
                         : event.tone === 'heal'
-                          ? 0xa2e0c7
-                          : 0xd4dbe8,
-                stroke: { color: 0x12151e, width: 4 },
+                          ? 0xc3d2a1
+                          : 0xd7cab1,
+                stroke: { color: 0x21160f, width: 4 },
             },
         });
         label.anchor.set(0.5);
@@ -117,13 +124,31 @@ export class GameplayLayer extends Container {
                 'size' in t
                     ? (t.size * t.scale) / 2
                     : Math.max(t.image.width * t.scaleX, t.image.height * t.scaleY) / 2;
+            const friendly = 'disposition' in t && t.disposition === 'friendly';
             this.rings.circle(t.x, t.y, radius + (hover || affected ? 8 : 4) / zoom).stroke({
-                color: affected ? 0xe4bc78 : available ? 0xb7bc91 : 0xa66d63,
+                color: affected
+                    ? friendly
+                        ? 0xd99670
+                        : 0xf0dec0
+                    : available
+                      ? 0xb7bc91
+                      : 0xa66d63,
                 width: (hover || affected ? 3 : 1.3) / zoom,
                 alpha: hover || affected ? 1 : 0.45,
             });
             if (affected)
-                this.rings.circle(t.x, t.y, radius).fill({ color: 0xdeaa60, alpha: 0.13 });
+                this.rings
+                    .circle(t.x, t.y, radius)
+                    .fill({ color: friendly ? 0xc57e56 : 0xdeaa60, alpha: 0.16 });
+            if (hover) {
+                this.rings
+                    .circle(t.x, t.y, radius + 13 / zoom)
+                    .stroke({
+                        color: available ? 0xf2d39a : 0xc08070,
+                        width: 1 / zoom,
+                        alpha: 0.65,
+                    });
+            }
         }
         this.floating = this.floating.filter((f) => {
             const token = scene.tokens.find((t) => t.id === f.tokenId);

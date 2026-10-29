@@ -1,0 +1,447 @@
+.player-dice-park {
+    position: fixed;
+    left: -15000px;
+    top: 0;
+    width: min(1240px, calc(100vw - 48px));
+    height: max(220px, calc(100dvh - 370px));
+    visibility: hidden;
+    pointer-events: none;
+}
+.persistent-dice-surface {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+.persistent-dice-surface > canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+.check-dialog.player-check-stage {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: radial-gradient(ellipse at 50% 45%, #80603a12, transparent 58%);
+    animation: none;
+}
+.check-dialog.player-check-stage::backdrop {
+    background: #0e0c09a8;
+    backdrop-filter: none;
+}
+.player-view:has(.player-check-stage[open]) .player-gameplay {
+    opacity: 0.32;
+    filter: none;
+}
+.player-view:has(.player-check-stage[open]) .player-topbar,
+.player-view:has(.player-check-stage[open]) .player-combat,
+.player-view:has(.player-check-stage[open]) .toolbar-wrap,
+.player-view:has(.player-check-stage[open]) .player-controls {
+    opacity: 0.12;
+}
+.player-check-stage .check-hint {
+    display: none;
+}
+.player-check-stage .check-close {
+    position: absolute;
+    top: 24px;
+    right: 30px;
+    z-index: 4;
+}
+.player-check-stage > .ability-roll-actor,
+.player-check-stage > .actor-picker {
+    position: absolute;
+    left: 30px;
+    top: 22px;
+    max-width: 250px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0.8;
+}
+.player-check-stage .actor-portrait {
+    width: 34px;
+    height: 38px;
+    border-radius: 30% 30% 18% 18%;
+}
+.player-check-stage > .eyebrow {
+    position: absolute;
+    top: 34px;
+    left: 30%;
+    right: 30%;
+    font-size: 9px;
+    letter-spacing: 0.24em;
+}
+.player-check-stage > h2 {
+    position: absolute;
+    top: 62px;
+    left: 5%;
+    right: 5%;
+    margin: 0;
+    font:
+        32px Georgia,
+        serif;
+    color: #f0dfbc;
+}
+.player-check-stage > .check-label {
+    position: absolute;
+    left: 20%;
+    right: 20%;
+    top: 105px;
+    margin: 0;
+    color: #af9974;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+}
+.player-check-stage > .rpg-roll-context {
+    position: absolute;
+    top: 130px;
+    left: 20%;
+    right: 20%;
+    margin: 0;
+    font-size: 12px;
+}
+.player-check-stage > .rpg-roll-context > strong {
+    position: fixed;
+    bottom: 179px;
+    left: 10%;
+    right: 10%;
+    font:
+        16px Georgia,
+        serif;
+    color: #d8c396;
+}
+.player-check-stage > .check-source {
+    position: absolute;
+    bottom: 177px;
+    left: 10%;
+    right: 10%;
+    margin: 0;
+    border: 0;
+    background: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 9px;
+}
+.player-check-stage > .check-source > strong {
+    font:
+        18px Georgia,
+        serif;
+}
+.player-check-stage > .check-source > span {
+    font-size: 11px;
+}
+.player-check-stage > .check-dc {
+    position: absolute;
+    top: 130px;
+    bottom: auto;
+    left: 0;
+    right: 0;
+    width: max-content;
+    margin: 0 auto;
+    font:
+        12px Georgia,
+        serif;
+    border: 0;
+    padding: 0;
+}
+.player-check-stage:has(> .rpg-roll-context) > .check-dc {
+    display: none;
+}
+.player-check-stage > .physical-dice-stage {
+    position: absolute;
+    top: 160px;
+    bottom: 250px;
+    left: max(24px, calc((100vw - 1240px) / 2));
+    right: max(24px, calc((100vw - 1240px) / 2));
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    border: 0;
+    background: none;
+}
+.player-check-stage .physical-dice-canvas {
+    inset: 0;
+}
+.player-check-stage .physical-dice-values {
+    bottom: 4px;
+    gap: 30px;
+}
+.player-check-stage .physical-dice-values figure {
+    gap: 6px;
+}
+.player-check-stage .physical-dice-values strong {
+    font-size: 22px;
+}
+.player-check-stage .physical-dice-values figcaption {
+    font-size: 8px;
+    letter-spacing: 0.14em;
+}
+.player-check-stage .dice-awaiting {
+    align-content: end;
+    padding-bottom: 8px;
+    pointer-events: none;
+}
+.player-check-stage .dice-awaiting small {
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    color: #bea775;
+}
+.player-check-stage .state-static .physical-dice-values {
+    inset: 0;
+    align-items: center;
+}
+.player-check-stage .state-static .physical-dice-values figure {
+    border: 0;
+    background: radial-gradient(circle, #8d6a3029, transparent 70%);
+    padding: 42px;
+}
+.player-check-stage .state-static .physical-dice-values strong {
+    font:
+        80px Georgia,
+        serif;
+}
+.player-check-stage > .check-equation {
+    position: absolute;
+    bottom: 108px;
+    left: 10%;
+    right: 10%;
+    height: 110px;
+    min-height: 0;
+    margin: 0;
+    font:
+        24px Georgia,
+        serif;
+}
+.player-check-stage .check-sum {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.player-check-stage .sum-face {
+    font:
+        26px Georgia,
+        serif;
+}
+.player-check-stage .sum-modifier {
+    font:
+        17px Georgia,
+        serif;
+    color: #bda475;
+}
+.player-check-stage .check-sum > .check-equals {
+    display: none;
+}
+.player-check-stage .check-sum > strong {
+    border-top: 1px solid #a88a4f77;
+    padding: 4px 17px 0;
+    min-width: 85px;
+}
+.player-check-stage.phase-total > .rpg-roll-context > strong,
+.player-check-stage.phase-outcome > .rpg-roll-context > strong,
+.player-check-stage.phase-total > .check-source,
+.player-check-stage.phase-outcome > .check-source {
+    display: none;
+}
+.player-check-stage > .check-equation strong {
+    font-size: 44px;
+    font-weight: 400;
+}
+.player-check-stage > .check-outcome {
+    position: absolute;
+    bottom: 61px;
+    left: 10%;
+    right: 10%;
+    min-height: 0;
+    height: 38px;
+    margin: 0;
+}
+.player-check-stage .check-outcome > strong {
+    font-size: 19px;
+    letter-spacing: 0.2em;
+}
+.player-check-stage .check-outcome > small {
+    font-size: 8px;
+}
+.player-check-stage > .check-roll {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    min-width: 180px;
+    height: 35px;
+    min-height: 35px;
+    border-radius: 20px;
+    font:
+        12px Georgia,
+        serif;
+    color: #ead6a6;
+    border: 1px solid #a78a5066;
+    background: linear-gradient(#46351e, #231a10);
+}
+.player-check-stage > .check-roll:hover:not(:disabled) {
+    border-color: #d8bc7a;
+    color: #fff0cd;
+    background: linear-gradient(#624b29, #352414);
+}
+.player-check-stage > .check-mode {
+    position: absolute;
+    bottom: 178px;
+    left: 25%;
+    right: 25%;
+    width: max-content;
+    margin: 0 auto;
+    padding: 0;
+    font-size: 10px;
+}
+.player-check-stage:not(.phase-ready) > .check-mode {
+    display: none;
+}
+.player-check-stage.phase-ready > .check-source {
+    bottom: 216px;
+}
+.player-check-stage > .hint,
+.player-check-stage > .error {
+    position: absolute;
+    bottom: 51px;
+    left: 20%;
+    right: 20%;
+    font-size: 11px;
+}
+.player-check-stage > .ability-damage {
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    bottom: 85px;
+    height: 100px;
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+}
+.player-check-stage > .ability-damage > span {
+    font-size: 10px;
+}
+.player-check-stage > .ability-damage > strong {
+    font:
+        34px Georgia,
+        serif;
+}
+.player-check-stage.phase-damage > .rpg-roll-context > strong {
+    display: none;
+}
+.player-check-stage.phase-damage > .check-equation {
+    top: 105px;
+    bottom: auto;
+    opacity: 0.7;
+    font-size: 12px;
+    height: 25px;
+}
+.player-check-stage.phase-damage .check-sum {
+    display: inline;
+}
+.player-check-stage.phase-damage .check-sum > * {
+    display: inline;
+    font-size: 14px;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+.player-check-stage.phase-damage > .check-equation strong {
+    font-size: 18px;
+}
+.player-check-stage.phase-damage > .check-label {
+    display: none;
+}
+.player-check-stage.phase-damage > .check-outcome {
+    bottom: 60px;
+    height: 27px;
+}
+.player-check-stage.phase-damage .check-outcome > strong {
+    font-size: 12px;
+}
+.player-check-stage.phase-damage .check-outcome > small {
+    display: none;
+}
+@media (max-width: 760px) {
+    .player-dice-park {
+        width: calc(100vw - 24px);
+    }
+    .player-check-stage > .physical-dice-stage {
+        left: 12px;
+        right: 12px;
+    }
+    .player-check-stage > h2 {
+        top: 72px;
+        font-size: 24px;
+    }
+    .player-check-stage > .eyebrow {
+        top: 51px;
+        font-size: 8px;
+    }
+    .player-check-stage > .check-label {
+        top: 108px;
+        left: 8%;
+        right: 8%;
+        font-size: 8px;
+    }
+    .player-check-stage > .ability-roll-actor,
+    .player-check-stage > .actor-picker {
+        top: 12px;
+        left: 14px;
+        max-width: 240px;
+    }
+    .player-check-stage .ability-roll-actor .eyebrow,
+    .player-check-stage .actor-picker label > span {
+        display: none;
+    }
+    .player-check-stage .actor-portrait {
+        width: 26px;
+        height: 28px;
+    }
+    .player-check-stage .check-close {
+        top: 12px;
+        right: 12px;
+    }
+    .player-check-stage > .check-mode {
+        left: 10%;
+        right: 10%;
+    }
+    .player-check-stage > .check-source {
+        bottom: 177px;
+    }
+    .player-check-stage > .rpg-roll-context > strong {
+        font-size: 14px;
+    }
+}
+@media (max-height: 650px) and (min-width: 761px) {
+    .player-check-stage > h2 {
+        top: 30px;
+        font-size: 24px;
+    }
+    .player-check-stage > .eyebrow {
+        display: none;
+    }
+    .player-check-stage > .check-label {
+        top: 65px;
+    }
+    .player-check-stage > .check-dc,
+    .player-check-stage > .rpg-roll-context {
+        top: 90px;
+    }
+    .player-check-stage > .physical-dice-stage {
+        top: 110px;
+        bottom: 190px;
+    }
+}

@@ -1,22 +1,24 @@
 import type { RollMode } from '../workspace/interactions/actingToken';
 import { AbilityHotbar } from './AbilityHotbar';
 import { useHotbar } from './useHotbar';
+import { normalizeSlots } from './hotbarModel';
 import { abilityPreview } from './geometry';
 import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
-import { ChevronUp, CircleUserRound, Heart, Shield, Footprints, X } from 'lucide-react';
+import { ChevronUp, Heart, Shield, Footprints, X } from 'lucide-react';
 import { ApiError } from '../api/client';
 import { currentTokenId } from '../tabletop/types/combat';
 import { api, commandId } from '../api/workspace';
 import type { SceneStore } from '../tabletop/state/SceneStore';
 import type { TabletopRenderer } from '../tabletop/renderer/TabletopRenderer';
 import type { Character, Token } from '../tabletop/types/scene';
-import { ActorPicker } from '../workspace/interactions/ActorPicker';
 import { ConditionList } from '../workspace/combat/TokenCombatControls';
 import { gameplayIcon } from './icons';
 import { canAfford, gameplayApi, type Ability, type AbilityResult } from './model';
 import { AbilityDialog, type AbilityInvocation } from './AbilityDialog';
 import { AbilityTargeting } from './AbilityTargeting';
 import { abilitySlot, readPendingAbility } from './pendingAbility';
+import { HeroPortrait } from './HeroPortrait';
+import { usePlayerDice } from './PlayerDiceProvider';
 
 export function PlayerGameplayHUD({
     store,
@@ -36,54 +38,19 @@ export function PlayerGameplayHUD({
     actorError: string;
 }) {
     const { scene } = useSyncExternalStore(store.subscribe, store.getSnapshot);
+    const dice = usePlayerDice();
+    const warmDice = () => {
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
+            void dice?.prepare().catch(() => {});
+    };
     const character = scene.characters?.find((c) => c.id === scene.activeCharacterId);
     return (
-        <div className="player-gameplay">
-            <div className="character-switch">
-                {scene.characters?.length ? (
-                    <label>
-                        <span className="sr-only">Действующий персонаж</span>
-                        <select
-                            aria-label="Действующий персонаж"
-                            value={scene.activeCharacterId ?? (actor ? `token:${actor.id}` : '')}
-                            disabled={disabled}
-                            onChange={(e) =>
-                                e.target.value.startsWith('token:')
-                                    ? store.setActingToken(e.target.value.slice(6))
-                                    : store.setActiveCharacter(e.target.value || null)
-                            }
-                        >
-                            <option value="" disabled>
-                                Выберите персонажа
-                            </option>
-                            {scene.characters.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                    {c.name}
-                                </option>
-                            ))}
-                            {actors
-                                .filter((t) => !t.characterId)
-                                .map((t) => (
-                                    <option value={`token:${t.id}`} key={t.id}>
-                                        {t.name} · токен сцены
-                                    </option>
-                                ))}
-                        </select>
-                    </label>
-                ) : (
-                    <ActorPicker
-                        tokens={actors}
-                        actor={actor}
-                        disabled={disabled}
-                        onChange={(id) => store.setActingToken(id)}
-                    />
-                )}
-                {actorError && (
-                    <p role="alert" className="error">
-                        {actorError}
-                    </p>
-                )}
-            </div>
+        <div className="player-gameplay" onPointerEnter={warmDice} onFocus={warmDice}>
+            {actorError && (
+                <p role="alert" className="gameplay-error">
+                    {actorError}
+                </p>
+            )}
             {character ? (
                 <CharacterHUD
                     key={character.id}
@@ -93,15 +60,21 @@ export function PlayerGameplayHUD({
                     renderer={renderer}
                     userId={userId}
                     disabled={disabled}
+                    actors={actors}
                 />
             ) : actor ? (
                 <div className="character-legacy">
+                    <HeroPortrait store={store} actors={actors} actor={actor} disabled={disabled} />
+                    <strong>{actor.name}</strong>
                     <Heart size={14} />
                     {actor.hp} / {actor.maxHp} HP
                     <ConditionList token={actor} />
                 </div>
             ) : (
-                <p className="hud-empty">Выберите героя, чтобы действовать</p>
+                <div className="hud-empty">
+                    <HeroPortrait store={store} actors={actors} disabled={disabled} />
+                    Выберите героя, чтобы действовать
+                </div>
             )}
         </div>
     );
@@ -114,6 +87,7 @@ function CharacterHUD({
     renderer,
     userId,
     disabled,
+    actors,
 }: {
     character: Character;
     actor?: Token;
@@ -121,6 +95,7 @@ function CharacterHUD({
     renderer: RefObject<TabletopRenderer | null>;
     userId: string;
     disabled: boolean;
+    actors: Token[];
 }) {
     const [panel, setPanel] = useState(false);
     useEffect(() => {
@@ -179,43 +154,6 @@ function CharacterHUD({
         if (['token', 'prop', 'point'].includes(ability.target)) setTargeting(ability);
         else setInvocation({ ability, target: null, auto: true, mode: rollMode });
     };
-    const shortcut = useRef<(index: number) => void>(() => {});
-    useEffect(() => {
-        shortcut.current = (index) => {
-            const ability = abilities.find((a) => a.id === hotbar.slots[index]);
-            if (
-                !ability ||
-                !canAfford(ability, resources) ||
-                (!actor && ['token', 'prop', 'point'].includes(ability.target))
-            )
-                return;
-            choose(ability);
-        };
-    });
-    useEffect(() => {
-        const key = (event: KeyboardEvent) => {
-            if (
-                event.ctrlKey ||
-                event.metaKey ||
-                event.altKey ||
-                event.shiftKey ||
-                event.repeat ||
-                event.isComposing ||
-                !/^[1-8]$/.test(event.key) ||
-                document.querySelector('dialog[open]')
-            )
-                return;
-            if (
-                event.target instanceof HTMLElement &&
-                event.target.closest('input,textarea,select,[contenteditable="true"]')
-            )
-                return;
-            event.preventDefault();
-            shortcut.current(Number(event.key) - 1);
-        };
-        window.addEventListener('keydown', key);
-        return () => window.removeEventListener('keydown', key);
-    }, []);
     const radialRequest = useRef<(event: CustomEvent) => void>(() => {});
     useEffect(() => {
         radialRequest.current = (event) => {
@@ -409,29 +347,23 @@ function CharacterHUD({
                 </section>
             )}
             <div className="character-hud" key={character.id}>
-                <button
-                    className="hud-portrait"
-                    aria-label={`Подробнее: ${character.name}`}
-                    aria-expanded={panel}
-                    onClick={() => setPanel(!panel)}
-                >
-                    {character.portrait ? (
-                        <img src={character.portrait.url} alt="" />
-                    ) : (
-                        <CircleUserRound size={30} />
-                    )}
-                    <ChevronUp size={12} />
-                    {!!actor?.conditions?.length && (
-                        <span
-                            className="hud-condition-badge"
-                            title={actor.conditions.map((c) => c.label).join(' · ')}
-                        >
-                            {actor.conditions.length}
-                        </span>
-                    )}
-                </button>
+                <HeroPortrait
+                    store={store}
+                    actors={actors}
+                    actor={actor}
+                    character={character}
+                    disabled={disabled}
+                    onDetails={() => setPanel(!panel)}
+                />
                 <div className="hud-identity">
-                    <strong>{character.name}</strong>
+                    <button
+                        className="hud-character-details"
+                        aria-label={`Подробнее: ${character.name}`}
+                        aria-expanded={panel}
+                        onClick={() => setPanel(!panel)}
+                    >
+                        {character.name} <ChevronUp size={12} />
+                    </button>
                     <div className="hud-hp">
                         <Heart size={12} />
                         <span key={character.hp}>
@@ -463,42 +395,7 @@ function CharacterHUD({
                     )}
                     {!actor && <small className="hud-offscene">Вне этой сцены</small>}
                 </div>
-                <div className="hud-resources">
-                    {resources.map((r) => {
-                        const Icon = gameplayIcon(r.icon);
-                        return (
-                            <button
-                                key={r.key}
-                                className={`hud-resource accent-${r.accent}`}
-                                onClick={() => setPanel(true)}
-                                title={`${r.label}: ${r.current} / ${r.max}`}
-                                aria-label={`${r.label}: ${r.current} из ${r.max}`}
-                            >
-                                <Icon size={15} />
-                                <span key={r.current}>
-                                    {r.current}
-                                    <small>/{r.max}</small>
-                                </span>
-                                <span
-                                    className={`resource-visual ${r.max <= 10 ? 'is-pips' : 'is-bar'}`}
-                                    aria-hidden="true"
-                                >
-                                    {r.max <= 10 ? (
-                                        Array.from({ length: r.max }, (_, i) => (
-                                            <i
-                                                className={i < r.current ? 'is-filled' : ''}
-                                                key={i}
-                                            />
-                                        ))
-                                    ) : (
-                                        <i style={{ width: `${(r.current / r.max) * 100}%` }} />
-                                    )}
-                                </span>
-                            </button>
-                        );
-                    })}
-                </div>
-                {actor && (
+                {!!actor?.conditions?.length && (
                     <div className="hud-conditions">
                         <ConditionList token={actor} />
                     </div>
@@ -510,7 +407,10 @@ function CharacterHUD({
                 slots={hotbar.slots}
                 onLayout={(next) =>
                     hotbar.change(
-                        next.map((id) => (abilities.some((a) => a.id === id) ? id : null)),
+                        normalizeSlots(
+                            next,
+                            abilities.map((a) => a.id),
+                        ),
                     )
                 }
                 onChoose={choose}
@@ -524,6 +424,8 @@ function CharacterHUD({
                 rollMode={rollMode}
                 onRollMode={setRollMode}
                 worldAvailable={!!actor}
+                onResourceDetails={() => setPanel(true)}
+                preferencesKey={`ytt:deck:${userId}:${scene.campaignId}:${character.id}`}
             />
             {pending && !invocation && (
                 <button

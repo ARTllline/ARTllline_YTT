@@ -1,6 +1,8 @@
 import { canAfford } from '../../gameplay/model';
 import { abilityPreview } from '../../gameplay/geometry';
 import { gameplayIcon } from '../../gameplay/icons';
+import { RpgIcon } from '../../gameplay/RpgIcon';
+import { RadialPlate } from './RadialPlate';
 import type { LucideIcon } from 'lucide-react';
 import { actingToken, eligibleActors } from '../interactions/actingToken';
 import {
@@ -39,6 +41,7 @@ export function RadialMenu({
     onCreate?: () => void;
     disabled?: boolean;
 }) {
+    const [hoverSector, setHoverSector] = useState<number | null>(null);
     const mount = useRef<HTMLSpanElement>(null),
         menu = useRef<HTMLDivElement>(null);
     const [target, setTarget] = useState<RadialTarget | null>(null),
@@ -181,6 +184,7 @@ export function RadialMenu({
     const actions: {
         label: string;
         Icon: LucideIcon;
+        art?: string;
         tone?: string;
         disabled?: boolean;
         run: () => void | Promise<void>;
@@ -189,6 +193,14 @@ export function RadialMenu({
             ? configured.map((action) => ({
                   label: action.label,
                   Icon: (interactionIcons[action.icon] ?? interactionIcons.hand).Icon,
+                  art:
+                      store.role === 'player'
+                          ? ['eye', 'book', 'search'].includes(action.icon)
+                              ? action.icon
+                              : action.icon === 'sparkles'
+                                ? 'spark'
+                                : undefined
+                          : undefined,
                   tone: 'interaction',
                   run: async () => {
                       if (action.check?.enabled) {
@@ -274,6 +286,7 @@ export function RadialMenu({
             actions.push({
                 label: ability.name,
                 Icon: gameplayIcon(ability.icon),
+                art: ability.icon,
                 tone: 'interaction',
                 disabled:
                     !canAfford(ability, character.resources ?? []) ||
@@ -295,6 +308,7 @@ export function RadialMenu({
             actions.push({
                 label: 'Заклинания',
                 Icon: Sparkles,
+                art: 'spark',
                 tone: 'interaction',
                 run: async () => {
                     window.dispatchEvent(
@@ -401,6 +415,9 @@ export function RadialMenu({
                                 }
                             }}
                         >
+                            {store.role === 'player' && (
+                                <RadialPlate count={actions.length} active={hoverSector} />
+                            )}
                             <div className="radial-center">
                                 <span>
                                     {busy
@@ -448,12 +465,19 @@ export function RadialMenu({
                                 </button>
                             </div>
                             {actions.map(
-                                ({ label, Icon, run, tone, disabled: actionDisabled }, index) => (
+                                (
+                                    { label, Icon, art, run, tone, disabled: actionDisabled },
+                                    index,
+                                ) => (
                                     <button
                                         role="menuitem"
                                         key={`${index}:${label}`}
                                         className={`radial-action ${tone ?? ''}`}
                                         style={radialSlot(index, actions.length)}
+                                        onPointerEnter={() => setHoverSector(index)}
+                                        onPointerLeave={() => setHoverSector(null)}
+                                        onFocus={() => setHoverSector(index)}
+                                        onBlur={() => setHoverSector(null)}
                                         disabled={
                                             disabled ||
                                             actionDisabled ||
@@ -471,7 +495,16 @@ export function RadialMenu({
                                                 .finally(() => setBusy(false));
                                         }}
                                     >
-                                        <Icon size={20} strokeWidth={1.6} />
+                                        {store.role === 'player' && art ? (
+                                            <RpgIcon
+                                                icon={
+                                                    art ?? (label === 'Подробнее' ? 'eye' : 'spark')
+                                                }
+                                                size={32}
+                                            />
+                                        ) : (
+                                            <Icon size={20} strokeWidth={1.6} />
+                                        )}
                                         <span>{label}</span>
                                     </button>
                                 ),

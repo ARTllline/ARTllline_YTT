@@ -1,78 +1,142 @@
+import { useEffect, useRef, useState } from 'react';
+import { DiceRuntime, type DiceStatus } from './DiceRuntime';
+import { usePlayerDice } from './PlayerDiceProvider';
+
 export function RpgDice({
     dice,
     selected = 0,
     mode = 'normal',
     phase,
+    onSettled,
+    sides = 20,
 }: {
     dice?: number[];
     selected?: number;
     mode?: string;
     phase: string;
+    onSettled?: () => void;
+    sides?: number;
 }) {
-    const values = dice ?? (mode === 'normal' ? [null] : [null, null]);
+    const shared = usePlayerDice();
+    const [local] = useState(() => (shared ? null : new DiceRuntime(false)));
+    const runtime = shared ?? local!;
+    const host = useRef<HTMLDivElement>(null),
+        parking = useRef<HTMLDivElement>(null);
+    const complete = useRef(onSettled);
+    const [state, setState] = useState<'waiting' | 'preparing' | 'rolling' | DiceStatus>('waiting');
+    const count = mode === 'normal' ? 1 : 2;
+    useEffect(() => {
+        complete.current = onSettled;
+    });
+    useEffect(() => {
+        const anchor = host.current!;
+        let alive = true;
+        if (local) local.mount(parking.current!);
+        runtime.attach(anchor);
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            void runtime
+                .prepare()
+                .then(() => {
+                    if (alive && !dice) runtime.preview(count);
+                })
+                .catch(() => {});
+        }
+        return () => {
+            alive = false;
+            runtime.release(anchor);
+            local?.dispose();
+        };
+        // Renderer ownership follows the mounted presentation, not result/phase changes.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [runtime, local]);
+    useEffect(() => {
+        if (!dice && phase === 'ready') runtime.preview(count);
+    }, [runtime, dice, count, phase]);
+    const key = dice?.join(',') ?? '';
+    useEffect(() => {
+        if (!key) return;
+        let alive = true,
+            completeOnce = false;
+        const timeout = setTimeout(() => {
+            if (alive && !completeOnce) {
+                runtime.abort();
+                finish('static');
+            }
+        }, 10000);
+        const media = matchMedia('(prefers-reduced-motion: reduce)');
+        const finish = (status: DiceStatus) => {
+            if (!alive || completeOnce) return;
+            completeOnce = true;
+            clearTimeout(timeout);
+            setState(status);
+            complete.current?.();
+        };
+        const reduced = () => {
+            if (media.matches) {
+                runtime.abort();
+                finish('static');
+            }
+        };
+        media.addEventListener('change', reduced);
+        if (media.matches) queueMicrotask(() => finish('static'));
+        else {
+            queueMicrotask(() => setState('preparing'));
+            void runtime
+                .prepare()
+                .then(() => {
+                    if (!alive || completeOnce) return;
+                    setState('rolling');
+                    return runtime.roll(key.split(',').map(Number), sides).then(finish);
+                })
+                .catch(() => finish('static'));
+        }
+        return () => {
+            alive = false;
+            clearTimeout(timeout);
+            media.removeEventListener('change', reduced);
+        };
+    }, [key, runtime, sides]);
+    const values = dice ?? Array.from({ length: count }, () => null);
     return (
         <div
-            className={`rpg-dice-stage ${values.length > 1 ? 'is-pair' : ''}`}
-            aria-label="Кубики d20"
+            className={`physical-dice-stage ${shared ? 'is-player-stage' : ''} state-${state}`}
+            data-phase={phase}
+            data-runtime={runtime.id}
+            aria-label={`Кубики d${sides}`}
         >
-            {values.map((value, index) => (
-                <figure
-                    key={index}
-                    className={`rpg-d20 ${dice ? (selected === index ? 'is-used' : 'is-discarded') : ''} ${value === 20 ? 'natural-high' : value === 1 ? 'natural-low' : ''}`}
-                >
-                    <div className="die-shadow" />
-                    <div className="die-body">
-                        <svg viewBox="0 0 180 194" aria-hidden="true">
-                            <defs>
-                                <linearGradient
-                                    id={`die-metal-${index}`}
-                                    x1="0"
-                                    y1="0"
-                                    x2="1"
-                                    y2="1"
-                                >
-                                    <stop stopColor="#c2a375" />
-                                    <stop offset=".45" stopColor="#806547" />
-                                    <stop offset="1" stopColor="#322a25" />
-                                </linearGradient>
-                            </defs>
-                            <path
-                                d="M90 5 166 48 166 143 90 189 14 143 14 48Z"
-                                fill={`url(#die-metal-${index})`}
-                                stroke="#d7bd8d"
-                                strokeWidth="1.4"
-                            />
-                            <path d="M90 5 45 68 14 48Z" fill="#ead8ac" opacity=".24" />
-                            <path d="M90 5 135 68 166 48Z" fill="#f4dfb0" opacity=".16" />
-                            <path d="M14 143 45 68 90 159Z" fill="#171514" opacity=".3" />
-                            <path d="M166 143 135 68 90 159Z" fill="#090a09" opacity=".4" />
-                            <path
-                                d="M45 68 135 68 90 159Z"
-                                fill="#242723"
-                                stroke="#e3ca9e"
-                                strokeWidth="1.2"
-                            />
-                            <path
-                                d="M90 5 45 68 14 143 M90 5 135 68 166 143 M14 48 45 68 90 159 135 68 166 48 M14 143 90 159 166 143 M90 159 90 189"
-                                fill="none"
-                                stroke="#ddc197"
-                                strokeWidth=".8"
-                                opacity=".65"
-                            />
-                        </svg>
-                        <strong>{value ?? 'd20'}</strong>
-                    </div>
-                    <figcaption>
-                        {dice
-                            ? index === selected
-                                ? 'В ЗАЧЁТ'
-                                : 'ОТБРОШЕН'
+            <div className="physical-dice-canvas" ref={host} aria-hidden="true" />
+            {local && <div className="player-dice-park" ref={parking} aria-hidden="true" />}
+            {(!dice || state === 'waiting' || state === 'preparing') && (
+                <div className="dice-awaiting">
+                    <small>
+                        {state === 'preparing'
+                            ? 'ПОДГОТАВЛИВАЕМ КУБИКИ…'
                             : phase === 'rolling'
-                              ? 'БРОСОК'
-                              : 'd20'}
-                    </figcaption>
-                </figure>
-            ))}
+                              ? 'СЕРВЕР ОПРЕДЕЛЯЕТ РЕЗУЛЬТАТ…'
+                              : 'НАЖМИТЕ «БРОСИТЬ»'}
+                    </small>
+                </div>
+            )}
+            <div className="physical-dice-values" aria-live="polite">
+                {dice &&
+                    ['settled', 'static'].includes(state) &&
+                    values.map((value, index) => (
+                        <figure
+                            key={index}
+                            className={`${sides === 20 && values.length > 1 && index !== selected ? 'is-discarded' : 'is-used'} ${sides === 20 && value === 20 ? 'natural-high' : sides === 20 && value === 1 ? 'natural-low' : ''}`}
+                        >
+                            <strong>{value}</strong>
+                            <figcaption>
+                                {sides === 20 && values.length > 1
+                                    ? index === selected
+                                        ? 'В ЗАЧЁТ'
+                                        : 'ОТБРОШЕН'
+                                    : `d${sides}`}
+                            </figcaption>
+                        </figure>
+                    ))}
+            </div>
+            {state === 'static' && <small className="dice-fallback-label">Результат сервера</small>}
         </div>
     );
 }

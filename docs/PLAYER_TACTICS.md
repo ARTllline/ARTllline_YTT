@@ -69,12 +69,14 @@ description and Cue/Handout references remain progressively disclosed. GM editor
 chrome retains the existing design system. Warm charcoal, muted brass, ivory and
 sage/plum accents are scoped to Player View and Player radial presentation.
 
-The shared check/attack dice component uses shaded 2.5D facets, a short tumble,
-settle, modifier/comparison and outcome sequence. Advantage/disadvantage displays
-both server dice and clearly marks the discarded one. Damage gets a subsequent
-small dice reveal. Unopposed effects do not pretend to roll a d20. Natural 1/20 have
-visual treatment only. Reduced motion removes transforms/tumbling, without changing
-the authoritative result or execution behavior.
+The shared check/attack component now uses lazy-loaded Three.js/Cannon physical
+dice, with server-forced faces and a final resting-face verification/remap before
+paint. Modifier/comparison and outcome follow settling. Advantage/disadvantage
+displays both server dice and marks the discarded one. Damage has a subsequent
+physical dice stage. Unopposed effects do not pretend to roll a d20. Natural 1/20
+have visual treatment only. Reduced motion, WebGL failure or a bounded visual
+timeout use explicit static server values. Visual completion cannot execute a new
+gameplay command. See [PLAYER_UI_ART_DIRECTION.md](PLAYER_UI_ART_DIRECTION.md).
 
 ## Server execution and limits
 

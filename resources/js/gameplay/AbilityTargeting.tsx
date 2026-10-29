@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import { gameplayIcons } from './icons';
+import { RpgIcon } from './RpgIcon';
 import type { SceneStore } from '../tabletop/state/SceneStore';
 import type { TabletopRenderer } from '../tabletop/renderer/TabletopRenderer';
 import { abilityPreview, aimPoint } from './geometry';
@@ -78,6 +78,9 @@ export function AbilityTargeting({
                 ability.area && ability.area.shape !== 'none'
                     ? `${ability.area.shape === 'circle' ? 'радиус' : 'длина'} ${ability.area.size} ${unit} · Целей: ${preview.affected.length}`
                     : '';
+            const friendlyCount = preview.affected.filter((id) =>
+                scene.tokens.some((t) => t.id === id && t.disposition === 'friendly'),
+            ).length;
             const valid = preview.valid;
             setHint({
                 x,
@@ -91,6 +94,7 @@ export function AbilityTargeting({
                       : [
                             range,
                             area,
+                            friendlyCount ? `Союзников в области: ${friendlyCount}` : '',
                             armed ? 'Ещё раз нажмите для применения' : 'Нажмите, чтобы применить',
                         ]
                             .filter(Boolean)
@@ -228,7 +232,6 @@ export function AbilityTargeting({
             window.removeEventListener('keydown', key, true);
         };
     }, [ability, store, renderer]);
-    const Icon = gameplayIcons[ability.icon as keyof typeof gameplayIcons] ?? gameplayIcons.spark;
     return (
         <>
             <span ref={mount} />
@@ -241,7 +244,7 @@ export function AbilityTargeting({
                     }}
                     role="status"
                 >
-                    <Icon size={21} />
+                    <RpgIcon icon={ability.icon} size={34} />
                     <div>
                         <strong>{ability.name}</strong>
                         <span>{hint.text}</span>

@@ -348,18 +348,46 @@ class CharacterGameplayTest extends TestCase
     public function test_hotbar_is_owned_persistent_sparse_and_scoped_to_player_and_character(): void
     {
         $url = '/api/campaigns/'.$this->campaign->id.'/characters/'.$this->hero->id.'/hotbar';
-        $this->actingAs($this->player)->getJson($url)->assertOk()->assertJsonPath('slots.0', $this->ability['id'])->assertJsonCount(12, 'slots');
+        $this->actingAs($this->player)->getJson($url)->assertOk()->assertJsonPath('slots.0.sourceId', $this->ability['id'])->assertJsonCount(32, 'slots');
         $slots = array_fill(0, 12, null);
         $slots[5] = $this->ability['id'];
-        $this->putJson($url, ['slots' => $slots])->assertOk()->assertJsonPath('slots.0', null)->assertJsonPath('slots.5', $this->ability['id']);
-        $this->getJson($url)->assertOk()->assertJsonPath('slots', $slots);
+        $this->putJson($url, ['slots' => $slots])->assertOk()->assertJsonPath('slots.0', null)->assertJsonPath('slots.5.sourceId', $this->ability['id']);
+        $this->getJson($url)->assertOk()->assertJsonPath('version', 2)->assertJsonPath('slots.5.sourceType', 'ability')->assertJsonPath('slots.5.sourceId', $this->ability['id'])->assertJsonPath('slots.12', null);
         $this->actingAs($this->other)->getJson($url)->assertForbidden();
         $this->putJson($url, ['slots' => $slots])->assertForbidden();
-        $this->actingAs($this->gm)->getJson($url)->assertOk()->assertJsonPath('slots.0', $this->ability['id']);
+        $this->actingAs($this->gm)->getJson($url)->assertOk()->assertJsonPath('slots.0.sourceId', $this->ability['id']);
         $slots[0] = (string) Str::uuid();
         $this->putJson($url, ['slots' => $slots])->assertUnprocessable();
         $slots[0] = $this->ability['id'];
         $this->putJson($url, ['slots' => $slots])->assertUnprocessable();
+    }
+
+    public function test_action_deck_reads_legacy_layout_and_validates_typed_cross_page_bindings(): void
+    {
+        $url = '/api/campaigns/'.$this->campaign->id.'/characters/'.$this->hero->id.'/hotbar';
+        $legacy = array_fill(0, 12, null);
+        $legacy[11] = $this->ability['id'];
+        DB::table('character_hotbars')->insert(['user_id' => $this->player->id, 'character_id' => $this->hero->id, 'slots' => json_encode($legacy), 'created_at' => now(), 'updated_at' => now()]);
+        $this->actingAs($this->player)->getJson($url)->assertOk()->assertJsonPath('slots.11.sourceId', $this->ability['id'])->assertJsonPath('slots.0', null)->assertJsonCount(32, 'slots');
+        $slots = array_fill(0, 32, null);
+        $slots[31] = ['sourceType' => 'ability', 'sourceId' => $this->ability['id']];
+        $this->putJson($url, ['version' => 2, 'slots' => $slots])->assertOk()->assertJsonPath('slots', $slots);
+        $this->getJson($url)->assertOk()->assertJsonPath('slots', $slots);
+        $this->putJson($url, ['slots' => array_fill(0, 12, null)])->assertOk()->assertJsonPath('slots.31.sourceId', $this->ability['id']);
+        $this->actingAs($this->other)->putJson($url, ['version' => 2, 'slots' => $slots])->assertForbidden();
+        $this->actingAs($this->player);
+        $slots[0] = $slots[31];
+        $this->putJson($url, ['version' => 2, 'slots' => $slots])->assertUnprocessable();
+        $slots[0] = null;
+        foreach ([['sourceType' => 'item', 'sourceId' => $this->ability['id']], ['sourceType' => 'ability', 'sourceId' => (string) Str::uuid()], ['sourceType' => 'ability'], ['sourceId' => $this->ability['id']]] as $invalid) {
+            $slots[31] = $invalid;
+            $this->putJson($url, ['version' => 2, 'slots' => $slots])->assertUnprocessable();
+        }
+        $this->getJson($url)->assertOk()->assertJsonPath('slots.31.sourceId', $this->ability['id']);
+        $ability = $this->ability;
+        $ability['enabled'] = false;
+        $this->hero->update(['abilities' => [$ability]]);
+        $this->getJson($url)->assertOk()->assertJsonPath('slots.31', null);
     }
 
     public function test_scene_range_is_authoritative_and_rejected_attacks_never_spend_or_roll(): void

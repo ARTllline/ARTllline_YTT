@@ -1,19 +1,25 @@
 import type { RollMode } from '../workspace/interactions/actingToken';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Grip, Plus, Settings2, X } from 'lucide-react';
+import { ChevronsDown, ChevronsUp, Settings2 } from 'lucide-react';
 import type { Ability, CharacterResource } from './model';
 import { canAfford } from './model';
-import { gameplayIcon } from './icons';
-import { placeAbility, type HotbarSlots } from './hotbarModel';
+import { RpgIcon } from './RpgIcon';
+import { ResourceRail } from './ResourceRail';
+import { PAGE_SIZE, type HotbarSlots } from './hotbarModel';
+import { GAMEPLAY_ENTRY_MIME } from './gameplayDrag';
+import { useGameplayDrag } from './useGameplayDrag';
+import { DeckSlot } from './DeckSlot';
+import { AbilityBrowser } from './AbilityBrowser';
 
-const filters = {
-    all: 'Все',
-    attack: 'Атаки',
-    spell: 'Заклинания',
-    utility: 'Действия',
-    other: 'Прочее',
-};
+function readView(key: string): { page: number; expanded: boolean } {
+    try {
+        const v = JSON.parse(localStorage.getItem(key) ?? '{}');
+        return { page: v.page === 1 ? 1 : 0, expanded: v.expanded === true };
+    } catch {
+        return { page: 0, expanded: false };
+    }
+}
 export function AbilityHotbar({
     abilities,
     resources,
@@ -30,6 +36,8 @@ export function AbilityHotbar({
     rollMode,
     onRollMode,
     worldAvailable,
+    onResourceDetails,
+    preferencesKey,
 }: {
     abilities: Ability[];
     resources: CharacterResource[];
@@ -46,194 +54,216 @@ export function AbilityHotbar({
     rollMode: RollMode;
     onRollMode: (mode: RollMode) => void;
     worldAvailable: boolean;
+    onResourceDetails: () => void;
+    preferencesKey: string;
 }) {
+    const [view, setView] = useState(() => readView(preferencesKey));
     const [browser, setBrowser] = useState(false),
-        [filter, setFilter] = useState<keyof typeof filters>('all'),
-        [edit, setEdit] = useState(false),
-        [destination, setDestination] = useState<number | null>(null);
-    const [nativeDrag, setNativeDrag] = useState<string | null>(null);
-    const [ghost, setGhost] = useState<{ id: string; x: number; y: number } | null>(null),
-        [over, setOver] = useState<number | null>(null);
-    const hold = useRef<ReturnType<typeof setTimeout> | undefined>(undefined),
-        touchDrag = useRef<string | null>(null),
-        suppressClick = useRef(false);
-    const callbacks = useRef({ onLayout, slots });
+        [edit, setEdit] = useState(false);
+    const [destination, setDestination] = useState<number | null>(null);
+    const [initialFilter, setInitialFilter] = useState<'spell' | undefined>();
+    const belt = useRef<HTMLDivElement>(null);
+    const actionSpace = useRef<HTMLDivElement>(null);
+    const previousHeight = useRef(0);
+    useLayoutEffect(() => {
+        const node = actionSpace.current!;
+        const height = node.offsetHeight;
+        const animation =
+            previousHeight.current && !matchMedia('(prefers-reduced-motion: reduce)').matches
+                ? node.animate(
+                      [
+                          { height: `${previousHeight.current}px`, overflow: 'clip' },
+                          { height: `${height}px`, overflow: 'clip' },
+                      ],
+                      { duration: 170, easing: 'ease-out' },
+                  )
+                : null;
+        previousHeight.current = height;
+        return () => animation?.cancel();
+    }, [view.expanded]);
+    const drag = useGameplayDrag(
+        slots,
+        onLayout,
+        editable,
+        (binding) =>
+            binding.sourceType === 'ability' && abilities.some((a) => a.id === binding.sourceId),
+    );
     useEffect(() => {
-        callbacks.current = { onLayout, slots };
-    });
+        try {
+            localStorage.setItem(preferencesKey, JSON.stringify(view));
+        } catch {
+            /* Optional view preference. */
+        }
+    }, [view, preferencesKey]);
     useEffect(() => {
         if (openRequest)
             queueMicrotask(() => {
-                setFilter('spell');
+                setInitialFilter('spell');
                 setBrowser(true);
             });
     }, [openRequest]);
-    useEffect(() => () => clearTimeout(hold.current), []);
-    const assign = (id: string, index: number) => onLayout(placeAbility(slots, id, index));
-    const touch = (id: string) => ({
-        onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => {
-            if (e.pointerType !== 'touch' || !editable) return;
-            const button = e.currentTarget,
-                x = e.clientX,
-                y = e.clientY;
-            suppressClick.current = false;
-            hold.current = setTimeout(() => {
-                touchDrag.current = id;
-                setGhost({ id, x, y });
-                button.setPointerCapture(e.pointerId);
-            }, 230);
-        },
-        onPointerMove: (e: React.PointerEvent<HTMLButtonElement>) => {
-            if (!touchDrag.current) return;
-            e.preventDefault();
-            setGhost({ id, x: e.clientX, y: e.clientY });
-            const hit = document
-                .elementFromPoint(e.clientX, e.clientY)
-                ?.closest<HTMLElement>('[data-hotbar-slot]');
-            setOver(hit ? Number(hit.dataset.hotbarSlot) : null);
-        },
-        onPointerUp: (e: React.PointerEvent<HTMLButtonElement>) => {
-            clearTimeout(hold.current);
-            if (!touchDrag.current) return;
-            e.preventDefault();
-            suppressClick.current = true;
-            const hit = document
-                .elementFromPoint(e.clientX, e.clientY)
-                ?.closest<HTMLElement>('[data-hotbar-slot]');
-            if (hit)
-                callbacks.current.onLayout(
-                    placeAbility(
-                        callbacks.current.slots,
-                        touchDrag.current,
-                        Number(hit.dataset.hotbarSlot),
-                    ),
-                );
-            touchDrag.current = null;
-            setGhost(null);
-            setOver(null);
-        },
-        onPointerCancel: () => {
-            clearTimeout(hold.current);
-            touchDrag.current = null;
-            setGhost(null);
-            setOver(null);
-        },
-    });
-    const execute = (a: Ability) => {
-        if (suppressClick.current) {
-            suppressClick.current = false;
-            return;
-        }
+    const page = (value: number) => {
+        setView((v) => ({ ...v, page: value }));
+        belt.current?.scrollTo({ left: 0 });
+    };
+    const toggleExpanded = () => {
+        previousHeight.current = actionSpace.current?.offsetHeight ?? 0;
+        setView((v) => ({ ...v, expanded: !v.expanded }));
+    };
+    const choose = (a: Ability) => {
         setBrowser(false);
         onChoose(a);
     };
-    const cost = (a: Ability) => (
-        <span className="slot-cost">
-            {a.costs.map((c) => {
-                const r = resources.find((r) => r.key === c.key),
-                    Icon = gameplayIcon(r?.icon ?? 'spark');
-                return (
-                    <span key={c.key} className={`accent-${r?.accent ?? 'violet'}`}>
-                        <Icon size={10} />
-                        {c.amount}
-                    </span>
-                );
-            })}
-        </span>
-    );
-    const shown = abilities.filter((a) =>
-        filter === 'all' || filter === 'spell'
-            ? filter === 'all' || a.attack_type === 'spell'
-            : filter === 'attack'
-              ? a.category === 'attack' && a.attack_type !== 'spell'
-              : filter === 'utility'
-                ? a.category === 'utility' || a.category === 'effect'
-                : a.category === 'check',
-    );
+    const shortcut = useRef<(index: number) => void>(() => {});
+    useEffect(() => {
+        shortcut.current = (index) => {
+            if (edit || browser || disabled) return;
+            const binding = slots[view.page * PAGE_SIZE + index];
+            const a = abilities.find(
+                (a) => binding?.sourceType === 'ability' && a.id === binding.sourceId,
+            );
+            if (
+                a &&
+                canAfford(a, resources) &&
+                (worldAvailable || !['token', 'prop', 'point'].includes(a.target))
+            )
+                choose(a);
+        };
+    });
+    useEffect(() => {
+        const key = (e: KeyboardEvent) => {
+            if (
+                e.ctrlKey ||
+                e.metaKey ||
+                e.altKey ||
+                e.repeat ||
+                e.isComposing ||
+                !/^Digit[1-8]$/.test(e.code) ||
+                document.querySelector('dialog[open]') ||
+                (e.target instanceof HTMLElement &&
+                    e.target.closest('input,textarea,select,[contenteditable="true"]'))
+            )
+                return;
+            e.preventDefault();
+            shortcut.current(Number(e.code.slice(-1)) - 1 + (e.shiftKey ? 8 : 0));
+        };
+        window.addEventListener('keydown', key);
+        return () => window.removeEventListener('keydown', key);
+    }, []);
+    const visible = slots
+        .map((binding, index) => ({ binding, index }))
+        .filter(({ index }) => view.expanded || Math.floor(index / PAGE_SIZE) === view.page);
     return (
         <>
             {browser && (
-                <section className="ability-browser" aria-label="Браузер способностей">
-                    <header>
-                        <div>
-                            <span className="eyebrow">АРСЕНАЛ ПЕРСОНАЖА</span>
-                            <h3>Способности</h3>
-                        </div>
-                        <button
-                            className="icon-button"
-                            aria-label="Закрыть браузер способностей"
-                            onClick={() => {
-                                setBrowser(false);
-                                setDestination(null);
-                            }}
-                        >
-                            <X size={17} />
-                        </button>
-                    </header>
-                    <div className="ability-filters">
-                        {Object.entries(filters).map(([k, label]) => (
+                <AbilityBrowser
+                    key={initialFilter ?? 'all'}
+                    abilities={abilities}
+                    resources={resources}
+                    drag={drag}
+                    destination={destination}
+                    initialFilter={initialFilter}
+                    onClose={() => {
+                        setBrowser(false);
+                        setDestination(null);
+                    }}
+                    onSelect={(a) => {
+                        if (destination !== null) {
+                            drag.assign({ sourceType: 'ability', sourceId: a.id }, destination);
+                            setDestination(null);
+                        } else choose(a);
+                    }}
+                />
+            )}
+            <section
+                className={`hotbar-shell action-deck ${view.expanded ? 'is-expanded' : ''} ${edit ? 'is-editing' : ''}`}
+                aria-label="Панель действий"
+            >
+                <ResourceRail resources={resources} onDetails={onResourceDetails} />
+                <div className="deck-action-space" ref={actionSpace}>
+                    <div className="deck-heading">
+                        <span>ДЕЙСТВИЯ</span>
+                        <small aria-live="polite">
+                            {saving
+                                ? 'Сохраняем…'
+                                : !editable
+                                  ? 'Загрузка раскладки…'
+                                  : edit
+                                    ? 'Перетащите · × убрать слот'
+                                    : '1–8 · Shift + 1–8'}
+                        </small>
+                    </div>
+                    <div
+                        className="rpg-hotbar"
+                        role="toolbar"
+                        aria-label="Способности персонажа"
+                        ref={belt}
+                        key={view.page}
+                    >
+                        {visible.map(({ binding, index }) => (
+                            <DeckSlot
+                                key={index}
+                                index={index}
+                                shortcutActive={Math.floor(index / PAGE_SIZE) === view.page}
+                                ability={abilities.find(
+                                    (a) =>
+                                        binding?.sourceType === 'ability' &&
+                                        a.id === binding.sourceId,
+                                )}
+                                resources={resources}
+                                drag={drag}
+                                edit={edit}
+                                selected={selected}
+                                disabled={disabled}
+                                worldAvailable={worldAvailable}
+                                onClear={() => {
+                                    if (editable)
+                                        onLayout(slots.map((s, i) => (i === index ? null : s)));
+                                }}
+                                onPick={() => {
+                                    setDestination(index);
+                                    setInitialFilter(undefined);
+                                    setBrowser(true);
+                                }}
+                                onChoose={choose}
+                            />
+                        ))}
+                    </div>
+                </div>
+                <footer className="deck-navigation">
+                    <div className="deck-pages" role="group" aria-label="Страницы действий">
+                        {['Основное', 'Резерв'].map((label, i) => (
                             <button
-                                key={k}
-                                aria-pressed={filter === k}
-                                onClick={() => setFilter(k as keyof typeof filters)}
+                                key={i}
+                                aria-pressed={view.page === i}
+                                onClick={() => page(i)}
+                                onDragEnter={(e) => {
+                                    if (
+                                        !view.expanded &&
+                                        e.dataTransfer.types.includes(GAMEPLAY_ENTRY_MIME)
+                                    )
+                                        page(i);
+                                }}
                             >
-                                {label}
+                                {label}{' '}
+                                <small>
+                                    {i * 16 + 1}–{(i + 1) * 16}
+                                </small>
                             </button>
                         ))}
                     </div>
-                    <p>
-                        {destination !== null
-                            ? `Выберите способность для ячейки ${destination + 1}`
-                            : 'Перетащите в ячейку. Нажмите, чтобы применить.'}
-                    </p>
-                    <div className="ability-browser-grid">
-                        {shown.map((a) => {
-                            const Icon = gameplayIcon(a.icon);
-                            return (
-                                <button
-                                    key={a.id}
-                                    onContextMenu={(e) => e.preventDefault()}
-                                    onDragEnd={() => {
-                                        setNativeDrag(null);
-                                        setOver(null);
-                                    }}
-                                    draggable={editable}
-                                    {...touch(a.id)}
-                                    onDragStart={(e) => {
-                                        e.dataTransfer.setData('application/ytt-ability', a.id);
-                                        e.dataTransfer.effectAllowed = 'copyMove';
-                                        setNativeDrag(a.id);
-                                    }}
-                                    onClick={() => {
-                                        if (destination !== null) {
-                                            assign(a.id, destination);
-                                            setDestination(null);
-                                        } else execute(a);
-                                    }}
-                                    aria-label={`Способность: ${a.name}`}
-                                >
-                                    <Icon size={24} />
-                                    <strong>{a.name}</strong>
-                                    <small>{a.description}</small>
-                                    {cost(a)}
-                                    <span className="browser-drag-hint">
-                                        <Grip size={12} /> В панель
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                    {!shown.length && <p>В этой категории пока нет способностей.</p>}
-                </section>
-            )}
-            <div className="hotbar-shell">
-                <header>
                     <button
                         className="hotbar-browser-button"
+                        aria-label="Способности"
                         aria-expanded={browser}
-                        onClick={() => setBrowser(!browser)}
+                        onClick={() => {
+                            setInitialFilter(undefined);
+                            setDestination(null);
+                            setBrowser(!browser);
+                        }}
                     >
-                        <BookOpen size={14} /> Способности
+                        <RpgIcon icon="book" size={17} />
+                        <span>Способности</span>
                     </button>
                     <div className="hotbar-roll-stance" role="group" aria-label="Режим броска">
                         {(['normal', 'advantage', 'disadvantage'] as const).map((mode, i) => (
@@ -248,145 +278,46 @@ export function AbilityHotbar({
                             </button>
                         ))}
                     </div>
-                    <small aria-live="polite">
-                        {saving
-                            ? 'Сохраняем раскладку…'
-                            : edit
-                              ? 'Перетащите · Delete убирает слот'
-                              : '1–8 · выбор действия'}
-                    </small>
                     <button
-                        className="icon-button"
+                        className="deck-edit icon-button"
                         aria-label="Настроить панель способностей"
                         aria-pressed={edit}
                         disabled={!editable}
                         onClick={() => setEdit(!edit)}
                     >
-                        <Settings2 size={14} />
+                        <Settings2 size={17} />
                     </button>
-                </header>
-                <div className="rpg-hotbar" role="toolbar" aria-label="Способности персонажа">
-                    {slots.map((id, index) => {
-                        const a = abilities.find((a) => a.id === id),
-                            Icon = gameplayIcon(a?.icon ?? 'spark');
-                        return (
-                            <div
-                                className={`rpg-slot ${over === index ? 'is-drop-target' : ''} ${ghost?.id === id || nativeDrag === id ? 'is-lifted' : ''}`}
-                                data-hotbar-slot={index}
-                                key={index}
-                                onDragOver={(e) => {
-                                    if (editable) {
-                                        e.preventDefault();
-                                        setOver(index);
-                                    }
-                                }}
-                                onDragLeave={() => setOver(null)}
-                                onDrop={(e) => {
-                                    e.preventDefault();
-                                    const id = e.dataTransfer.getData('application/ytt-ability');
-                                    if (abilities.some((a) => a.id === id)) assign(id, index);
-                                    setOver(null);
-                                }}
-                            >
-                                <button
-                                    aria-label={a?.name ?? `Пустая ячейка ${index + 1}`}
-                                    aria-pressed={!!a && selected === a.id}
-                                    disabled={
-                                        !!a &&
-                                        (disabled ||
-                                            (!edit && !canAfford(a, resources)) ||
-                                            (!worldAvailable &&
-                                                ['token', 'prop', 'point'].includes(a.target)))
-                                    }
-                                    onContextMenu={(e) => e.preventDefault()}
-                                    onDragEnd={() => {
-                                        setNativeDrag(null);
-                                        setOver(null);
-                                    }}
-                                    draggable={!!a && editable}
-                                    {...(a ? touch(a.id) : {})}
-                                    onDragStart={(e) => {
-                                        if (a) {
-                                            e.dataTransfer.setData('application/ytt-ability', a.id);
-                                            e.dataTransfer.effectAllowed = 'move';
-                                            setNativeDrag(a.id);
-                                        }
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (a && (e.key === 'Delete' || e.key === 'Backspace')) {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            onLayout(slots.map((v, i) => (i === index ? null : v)));
-                                        }
-                                    }}
-                                    onClick={() => {
-                                        if (a && !edit) execute(a);
-                                        else {
-                                            setDestination(index);
-                                            setBrowser(true);
-                                        }
-                                    }}
-                                >
-                                    <span className="slot-key">{index < 8 ? index + 1 : '·'}</span>
-                                    {a ? (
-                                        <>
-                                            <Icon size={25} strokeWidth={1.55} />
-                                            {cost(a)}
-                                        </>
-                                    ) : (
-                                        <Plus size={14} />
-                                    )}
-                                </button>
-                                {edit && a && (
-                                    <button
-                                        className="slot-remove"
-                                        aria-label={`Убрать ${a.name} из панели`}
-                                        onClick={() =>
-                                            onLayout(slots.map((v, i) => (i === index ? null : v)))
-                                        }
-                                    >
-                                        <X size={10} />
-                                    </button>
-                                )}
-                                {a && (
-                                    <div className="rpg-slot-tooltip" role="tooltip">
-                                        <strong>{a.name}</strong>
-                                        <span>{a.description}</span>
-                                        <small>
-                                            {a.range
-                                                ? `${a.range.normal}${a.range.long ? ` / ${a.range.long}` : ''} · дальность`
-                                                : 'Без ограничения дальности'}
-                                            {a.area && a.area.shape !== 'none'
-                                                ? ` · ${a.area.shape} ${a.area.size}`
-                                                : ''}
-                                        </small>
-                                        {cost(a)}
-                                        {!canAfford(a, resources) && <em>Недостаточно ресурса</em>}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-            {error && (
-                <div className="hotbar-save-error" role="alert">
-                    Раскладка не подтверждена: {error}
-                    <button onClick={onRetry}>Повторить</button>
-                </div>
-            )}
-            {ghost &&
+                    <button
+                        className="deck-expand icon-button"
+                        aria-label={
+                            view.expanded ? 'Свернуть панель действий' : 'Развернуть все 32 ячейки'
+                        }
+                        aria-expanded={view.expanded}
+                        onClick={toggleExpanded}
+                    >
+                        {view.expanded ? <ChevronsDown size={18} /> : <ChevronsUp size={18} />}
+                    </button>
+                </footer>
+                {error && (
+                    <div className="hotbar-save-error" role="alert">
+                        Раскладка не подтверждена: {error}
+                        <button onClick={onRetry}>Повторить</button>
+                    </div>
+                )}
+            </section>
+            {drag.ghost &&
                 createPortal(
                     <div
                         className="hotbar-drag-ghost"
-                        style={{ left: ghost.x + 12, top: ghost.y - 52 }}
+                        style={{ left: drag.ghost.x + 12, top: drag.ghost.y - 65 }}
                     >
-                        {(() => {
-                            const Icon = gameplayIcon(
-                                abilities.find((a) => a.id === ghost.id)?.icon ?? 'spark',
-                            );
-                            return <Icon size={29} />;
-                        })()}
+                        <RpgIcon
+                            icon={
+                                abilities.find((a) => a.id === drag.ghost?.binding.sourceId)
+                                    ?.icon ?? 'spark'
+                            }
+                            size={62}
+                        />
                     </div>,
                     document.body,
                 )}

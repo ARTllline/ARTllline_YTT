@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { request } from '../api/client';
-import { defaultSlots, type HotbarSlots } from './hotbarModel';
+import { defaultSlots, normalizeSlots, type DeckLayout, type HotbarSlots } from './hotbarModel';
 
 export function useHotbar(campaign: string, character: string, ids: string[]) {
     const [slots, setSlots] = useState<HotbarSlots>(() => defaultSlots(ids));
@@ -11,12 +11,16 @@ export function useHotbar(campaign: string, character: string, ids: string[]) {
         running = useRef(false),
         alive = useRef(true);
     const url = `/campaigns/${campaign}/characters/${character}/hotbar`;
+    const available = useRef(ids);
+    useEffect(() => {
+        available.current = ids;
+    });
     const read = () =>
-        request<{ slots: HotbarSlots }>(url)
+        request<DeckLayout>(url)
             .then((r) => {
                 if (alive.current) {
-                    desired.current = r.slots;
-                    setSlots(r.slots);
+                    desired.current = normalizeSlots(r.slots, available.current);
+                    setSlots(desired.current);
                     setLoaded(true);
                     setError('');
                 }
@@ -27,11 +31,11 @@ export function useHotbar(campaign: string, character: string, ids: string[]) {
     useEffect(() => {
         alive.current = true;
         const abort = new AbortController();
-        void request<{ slots: HotbarSlots }>(url, 'GET', undefined, abort.signal)
+        void request<DeckLayout>(url, 'GET', undefined, abort.signal)
             .then((r) => {
                 if (!abort.signal.aborted) {
-                    desired.current = r.slots;
-                    setSlots(r.slots);
+                    desired.current = normalizeSlots(r.slots, available.current);
+                    setSlots(desired.current);
                     setLoaded(true);
                 }
             })
@@ -53,7 +57,7 @@ export function useHotbar(campaign: string, character: string, ids: string[]) {
             do {
                 const value = [...desired.current];
                 accepted = JSON.stringify(value);
-                await request(url, 'PUT', { slots: value });
+                await request(url, 'PUT', { version: 2, slots: value });
             } while (alive.current && accepted !== JSON.stringify(desired.current));
         } catch (e) {
             if (alive.current) setError((e as Error).message);

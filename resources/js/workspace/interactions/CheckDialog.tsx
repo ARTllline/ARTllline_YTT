@@ -1,4 +1,5 @@
 import { RpgDice } from '../../gameplay/RpgDice';
+import { usePlayerDice } from '../../gameplay/PlayerDiceProvider';
 import { useEffect, useRef, useState } from 'react';
 import { Dices, X } from 'lucide-react';
 import { ApiError } from '../../api/client';
@@ -36,6 +37,7 @@ export function CheckDialog({
     onHandout: (handout: Handout) => void;
 }) {
     const requestKey = `${invocation.userId}:${invocation.sceneId}:${invocation.epoch}:${invocation.kind}:${invocation.objectId}:${invocation.action.id}`;
+    const cinematic = !!usePlayerDice();
     const [retained, setRetained] = useState(() => readCheckRequest(requestKey));
     const [mode, setMode] = useState<RollMode>(retained?.context?.rollMode ?? 'normal');
     const acting = retained?.context
@@ -48,6 +50,7 @@ export function CheckDialog({
     const locked = useRef(false);
     const alive = useRef(true);
     const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+    const visualSettled = useRef<(() => void) | null>(null);
     const pending = useRef<ReturnType<typeof checkRequest> | null>(null);
     const [phase, setPhase] = useState<CheckPhase>('ready');
     const [result, setResult] = useState<CheckResult | null>(null);
@@ -85,7 +88,6 @@ export function CheckDialog({
         });
         setRetained({ id: pending.current.id, context: pending.current.context });
         const timing = checkTimings(reduced.current);
-        const started = performance.now();
         try {
             const response = await interactions.run(
                 sceneId,
@@ -105,7 +107,6 @@ export function CheckDialog({
             if (!alive.current) return;
             setPreview(response.handout ?? null);
             const settle = () => {
-                setResult(response.check!);
                 setPhase('settle');
                 timers.current.push(
                     setTimeout(() => {
@@ -119,9 +120,8 @@ export function CheckDialog({
                     }, timing.settle),
                 );
             };
-            timers.current.push(
-                setTimeout(settle, Math.max(0, timing.roll - (performance.now() - started))),
-            );
+            visualSettled.current = settle;
+            setResult(response.check!);
         } catch (e) {
             if (e instanceof ApiError && e.status > 0 && e.status < 500) {
                 pending.current.complete();
@@ -140,7 +140,7 @@ export function CheckDialog({
     return (
         <dialog
             ref={dialog}
-            className={`check-dialog rpg-dice-dialog phase-${phase} ${phase === 'outcome' ? (result?.success ? 'is-success' : 'is-failure') : ''}`}
+            className={`check-dialog rpg-dice-dialog ${cinematic ? 'player-check-stage' : ''} phase-${phase} ${phase === 'outcome' ? (result?.success ? 'is-success' : 'is-failure') : ''}`}
             aria-labelledby="check-title"
             aria-describedby="check-label"
             onCancel={(e) => {
@@ -174,9 +174,9 @@ export function CheckDialog({
                 />
             )}
             <span className="eyebrow">ВЗАИМОДЕЙСТВИЕ</span>
-            <h2 id="check-title">{invocation.action.label}</h2>
+            <h2 id="check-title">{cinematic ? check.label : invocation.action.label}</h2>
             <p id="check-label" className="check-label">
-                Проверка · {check.label}
+                {cinematic ? invocation.action.label : `Проверка · ${check.label}`}
             </p>
             <div className="check-source">
                 <strong>
@@ -199,21 +199,36 @@ export function CheckDialog({
                         : 'Выберите действующего персонажа.'}
                 </p>
             )}
-            <label className="check-mode">
-                Режим броска
-                <select
-                    aria-label="Режим броска"
-                    value={result?.rollMode ?? mode}
-                    disabled={busy || !!result || !!retained?.context}
-                    onChange={(e) => setMode(e.target.value as RollMode)}
-                >
+            {cinematic ? (
+                <div className="check-mode roll-mode-chips" role="group" aria-label="Режим броска">
                     {Object.entries(rollModes).map(([key, label]) => (
-                        <option key={key} value={key}>
+                        <button
+                            key={key}
+                            aria-pressed={(result?.rollMode ?? mode) === key}
+                            disabled={busy || !!result || !!retained?.context}
+                            onClick={() => setMode(key as RollMode)}
+                        >
                             {label}
-                        </option>
+                        </button>
                     ))}
-                </select>
-            </label>
+                </div>
+            ) : (
+                <label className="check-mode">
+                    Режим броска
+                    <select
+                        aria-label="Режим броска"
+                        value={result?.rollMode ?? mode}
+                        disabled={busy || !!result || !!retained?.context}
+                        onChange={(e) => setMode(e.target.value as RollMode)}
+                    >
+                        {Object.entries(rollModes).map(([key, label]) => (
+                            <option key={key} value={key}>
+                                {label}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+            )}
             {retained?.context && !result && (
                 <p className="hint">
                     Сохранён запрос: персонаж и режим закреплены до ответа сервера.
@@ -227,11 +242,15 @@ export function CheckDialog({
                 selected={result?.selectedDie}
                 mode={mode}
                 phase={phase}
+                onSettled={() => visualSettled.current?.()}
             />
             <div className="check-equation" aria-live="polite">
                 {showTotal && result ? (
-                    <span>
-                        {natural} {result.modifier < 0 ? '−' : '+'} {Math.abs(result.modifier)}{' '}
+                    <span className="check-sum">
+                        <span className="sum-face">{natural}</span>{' '}
+                        <span className="sum-modifier">
+                            {result.modifier < 0 ? '−' : '+'} {Math.abs(result.modifier)}
+                        </span>{' '}
                         <span className="check-equals">=</span> <strong>{result.total}</strong>
                     </span>
                 ) : (

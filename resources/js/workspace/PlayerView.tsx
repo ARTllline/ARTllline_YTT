@@ -1,4 +1,5 @@
 import { PlayerGameplayHUD } from '../gameplay/PlayerGameplayHUD';
+import { PlayerDiceProvider } from '../gameplay/PlayerDiceProvider';
 import { charactersApi } from '../api/characters';
 import { actingToken, eligibleActors } from './interactions/actingToken';
 import { t } from '../i18n';
@@ -65,69 +66,74 @@ export function PlayerView({ campaign: initial, user }: { campaign: Campaign; us
             ? loaded
             : null;
     return (
-        <div className="player-view">
-            <header className="player-topbar">
-                <a href="/" title={t('Your campaigns')} aria-label={t('Your campaigns')}>
-                    <ArrowLeft size={17} />
-                </a>
-                <div>
-                    <span className="eyebrow">{campaign.name}</span>
-                    <strong>{current?.scene.name ?? t('Your table')}</strong>
-                </div>
-                <ConnectionBadge state={connection} />
-                {preload.status && (
-                    <button
-                        className="preload-player-status"
-                        onClick={preload.retry}
-                        title="Повторить подготовку"
-                    >
-                        {preload.status}
-                    </button>
-                )}
-                <HandoutShelf campaignId={campaign.id} userId={user.id} echo={echo} />
-                <Suspense fallback={null}>
-                    <MediaPanel campaignId={campaign.id} syncError={media.syncError} />
-                </Suspense>
-                <span className="player-name">{user.name}</span>
-            </header>
-            {current ? (
-                <PlayerTabletop
-                    key={`${current.scene.id}:${current.epoch}`}
-                    scene={current.scene}
-                    user={user}
-                    echo={echo}
-                    connection={connection}
-                />
-            ) : (
-                <main className="player-waiting">
-                    <div className="waiting-orbit" aria-hidden="true">
-                        ✦
+        <PlayerDiceProvider>
+            <div className="player-view">
+                <header className="player-topbar">
+                    <a href="/" title={t('Your campaigns')} aria-label={t('Your campaigns')}>
+                        <ArrowLeft size={17} />
+                    </a>
+                    <div>
+                        <span className="eyebrow">{campaign.name}</span>
+                        <strong>{current?.scene.name ?? t('Your table')}</strong>
                     </div>
-                    <span className="eyebrow"> {t('THE NEXT CHAPTER')} </span>
-                    <h1>
-                        {error
-                            ? t('The scene could not open.')
-                            : campaign.activeSceneId
-                              ? t('Entering the scene…')
-                              : t('Your Game Master is setting the scene.')}
-                    </h1>
-                    <p>
-                        {error ||
-                            (campaign.activeSceneId
-                                ? t('Preparing your view of the world.')
-                                : t(
-                                      'Stay here. Your adventure will appear when the table is ready.',
-                                  ))}
-                    </p>
-                    {error && (
-                        <button className="secondary-button" onClick={() => setRetry((n) => n + 1)}>
-                            {' '}
-                            {t('Try again')}{' '}
+                    <ConnectionBadge state={connection} />
+                    {preload.status && (
+                        <button
+                            className="preload-player-status"
+                            onClick={preload.retry}
+                            title="Повторить подготовку"
+                        >
+                            {preload.status}
                         </button>
                     )}
-                </main>
-            )}
-        </div>
+                    <HandoutShelf campaignId={campaign.id} userId={user.id} echo={echo} />
+                    <Suspense fallback={null}>
+                        <MediaPanel campaignId={campaign.id} syncError={media.syncError} />
+                    </Suspense>
+                    <span className="player-name">{user.name}</span>
+                </header>
+                {current ? (
+                    <PlayerTabletop
+                        key={`${current.scene.id}:${current.epoch}`}
+                        scene={current.scene}
+                        user={user}
+                        echo={echo}
+                        connection={connection}
+                    />
+                ) : (
+                    <main className="player-waiting">
+                        <div className="waiting-orbit" aria-hidden="true">
+                            ✦
+                        </div>
+                        <span className="eyebrow"> {t('THE NEXT CHAPTER')} </span>
+                        <h1>
+                            {error
+                                ? t('The scene could not open.')
+                                : campaign.activeSceneId
+                                  ? t('Entering the scene…')
+                                  : t('Your Game Master is setting the scene.')}
+                        </h1>
+                        <p>
+                            {error ||
+                                (campaign.activeSceneId
+                                    ? t('Preparing your view of the world.')
+                                    : t(
+                                          'Stay here. Your adventure will appear when the table is ready.',
+                                      ))}
+                        </p>
+                        {error && (
+                            <button
+                                className="secondary-button"
+                                onClick={() => setRetry((n) => n + 1)}
+                            >
+                                {' '}
+                                {t('Try again')}{' '}
+                            </button>
+                        )}
+                    </main>
+                )}
+            </div>
+        </PlayerDiceProvider>
     );
 }
 function PlayerTabletop({
