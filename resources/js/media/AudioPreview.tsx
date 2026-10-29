@@ -9,6 +9,7 @@ export function AudioPreview({ asset }: { asset: LibraryAsset }) {
         <button
             type="button"
             className="audio-preview"
+            title={`${view.preview === asset.id ? 'Остановить просмотр' : 'Прослушать'}: ${asset.name}`}
             onClick={() => void audioEngine.preview(asset)}
         >
             {view.preview === asset.id ? <Square size={13} /> : <Play size={13} />}

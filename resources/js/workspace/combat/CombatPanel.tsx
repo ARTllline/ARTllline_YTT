@@ -1,4 +1,5 @@
 import { t } from '../../i18n';
+import { tokenAppearance } from '../../tabletop/objects/tokenAppearance';
 import { resourceCache } from '../../preload/ResourceCache';
 import { useState, useSyncExternalStore } from 'react';
 import {
@@ -170,6 +171,23 @@ export function CombatPanel({
                         </div>
                     ) : (
                         <>
+                            {combat.status === 'active' && (
+                                <div
+                                    className="combat-spotlight"
+                                    key={`${current}-${combat.round}`}
+                                    aria-live="polite"
+                                >
+                                    <span className="eyebrow">
+                                        СЕЙЧАС ХОДИТ · РАУНД {combat.round}
+                                    </span>
+                                    <strong>{turnName}</strong>
+                                    <span>
+                                        {currentToken?.hp !== undefined
+                                            ? `${currentToken.hp} / ${currentToken.maxHp ?? '—'} HP`
+                                            : 'В центре сцены'}
+                                    </span>
+                                </div>
+                            )}
                             {gm && (
                                 <div className="combat-toolbar">
                                     <button disabled={disabled} onClick={() => setPicker(true)}>
@@ -290,7 +308,9 @@ export function CombatPanel({
                                                                 alt=""
                                                             />
                                                         ) : (
-                                                            <Shield size={18} />
+                                                            <span className="combat-monogram">
+                                                                {tokenAppearance(token).initials}
+                                                            </span>
                                                         )}
                                                     </span>
                                                     <span>

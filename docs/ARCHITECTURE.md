@@ -1,5 +1,26 @@
 # Architecture — persistent multiplayer tabletop
 
+## Task 14 — presentation and interaction polish
+
+`identity.css` follows `workspace.css`: semantic surfaces, type hierarchy and a shared
+80/140/220/420 ms motion scale. `ui/motion.ts` reads CSS timing for finite Pixi/WAAPI
+feedback. Panel exits use temporary inert, aria-hidden copies, removed on completion;
+the live panel and canvas geometry are never animated by changing width/height.
+
+`radial/RadialMenu` owns context gestures and accessible menu presentation;
+`radialActions` maps existing token/prop/region commands to those controls, and
+`radialLayout` handles bounded positioning and keyboard order. The renderer exposes
+hit testing and selected-object screen coordinates without putting viewport pixels in
+scene state. Long press restores pre-press selection before releasing pointer capture
+so the contextual Inspector does not resize the map under the menu.
+
+`TokenView` keeps portrait/fallback, HP, caption, selection and current-turn graphics
+separate. Its finite pulse and caption scale use the existing renderer ticker. The
+appearance helper preserves configured colors except the standard unowned fallback;
+it does not infer hostility from a creature kind. Asset drop feedback is local DOM
+presentation and is confirmed by the existing save queue. No schema, API, SceneStore,
+realtime protocol, Combat/Cue execution or Session data changes accompany this layer.
+
 ## Task 13 — workspace presentation state
 
 `workspaceState.ts` owns mode, one left workspace, one explicit right dock and

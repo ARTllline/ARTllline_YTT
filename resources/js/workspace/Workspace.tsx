@@ -1,4 +1,8 @@
 import { t } from '../i18n';
+import { currentTokenId } from '../tabletop/types/combat';
+import { RadialMenu } from './radial/RadialMenu';
+import { leaveSurface } from './ui/motion';
+import { DropMarker } from './assets/DropMarker';
 import { useLiveMedia } from '../media/useLiveMedia';
 import { SelectionControls } from './objects/SelectionControls';
 import { TEMPLATE_MIME, readTemplateDrag } from './objects/TemplateLibrary';
@@ -94,6 +98,8 @@ export function Workspace({
         void run(async () => {
             if (panelGuard.current) throw new Error(panelGuard.current);
             await sessionFlush.current?.();
+            leaveSurface('.workspace-body > .workspace-left');
+            leaveSurface('.workspace-body > .workspace-dock');
             dispatch({ type: 'mode', mode });
             if (mode === 'session') renderer.current?.setTool('select');
             try {
@@ -159,6 +165,7 @@ export function Workspace({
         void run(async () => {
             if (panelGuard.current) throw new Error(panelGuard.current);
             if (window.innerWidth <= 1100) await sessionFlush.current?.();
+            leaveSurface('.workspace-body > .workspace-dock');
             dispatch({ type: 'right', panel, compact: window.innerWidth <= 1100 });
         });
     const closeRight = () => {
@@ -166,6 +173,7 @@ export function Workspace({
             setError(panelGuard.current);
             return;
         }
+        leaveSurface('.workspace-body > .workspace-dock');
         dispatch({ type: 'close-right', selection: selectionKey });
     };
     useEffect(() => {
@@ -197,6 +205,12 @@ export function Workspace({
     };
     const [dropping, setDropping] = useState(false);
     const [dropHint, setDropHint] = useState(t('Drop to choose how to use this image'));
+    const [placed, setPlaced] = useState('');
+    useEffect(() => {
+        if (!placed) return;
+        const timer = setTimeout(() => setPlaced(''), 2200);
+        return () => clearTimeout(timer);
+    }, [placed]);
     const [replaceMap, setReplaceMap] = useState<LibraryAsset | null>(null);
     const [fileDrop, setFileDrop] = useState<{
         file: File;
@@ -261,6 +275,7 @@ export function Workspace({
             tokenId: null as string | null,
         },
     ) => {
+        setPlaced('');
         if (asset.kind === 'prop' && scene.id) {
             store.objectCommand({
                 endpoint: 'props',
@@ -269,6 +284,10 @@ export function Workspace({
                     assetId: asset.id,
                     ...snapPoint(target.point, scene.grid),
                 },
+            });
+            void run(async () => {
+                await queue.flush();
+                setPlaced(`${asset.name} · на сцене`);
             });
             return;
         }
@@ -298,6 +317,7 @@ export function Workspace({
                 );
                 store.addToken(result.token!, result.revision);
             }
+            setPlaced(`${asset.name} · на сцене`);
         });
     };
     const [zoom, setZoom] = useState(100);
@@ -547,6 +567,29 @@ export function Workspace({
                     }}
                 >
                     {scene.id && <Tabletop store={store} rendererRef={renderer} onZoom={setZoom} />}
+                    <DropMarker />
+                    {placed && (
+                        <div className="placement-feedback" role="status" key={placed}>
+                            ✓ {placed}
+                        </div>
+                    )}
+                    {scene.id && (
+                        <RadialMenu
+                            store={store}
+                            queue={queue}
+                            renderer={renderer}
+                            onPanel={async (panel) => {
+                                if (panelGuard.current) throw new Error(panelGuard.current);
+                                await sessionFlush.current?.();
+                                dispatch({
+                                    type: 'right',
+                                    panel,
+                                    force: true,
+                                    compact: window.innerWidth <= 1100,
+                                });
+                            }}
+                        />
+                    )}
                     {scene.id && (
                         <SelectionControls
                             store={store}
@@ -700,6 +743,10 @@ export function Workspace({
                     )}
                     <LiveDock
                         panel={rightPanel}
+                        currentName={
+                            scene.tokens.find((token) => token.id === currentTokenId(scene.combat))
+                                ?.name
+                        }
                         round={scene.combat?.status === 'active' ? scene.combat.round : undefined}
                         onPanel={openRight}
                     />
@@ -1060,6 +1107,10 @@ export function Workspace({
                     <dd>Ctrl/Cmd+Z / Ctrl/Cmd+Shift+Z · до 50 правок в этой сцене</dd>
                     <dt>{t('Duplicate selection')}</dt>
                     <dd>Ctrl / Cmd + D</dd>
+                    <dt>Меню объекта</dt>
+                    <dd>
+                        Правая кнопка · удержание на планшете · Shift+F10 для выбранного объекта
+                    </dd>
                     <dt>{t('Delete selection')}</dt>
                     <dd>Delete</dd>
                     <dt>{t('Resize prop')}</dt>

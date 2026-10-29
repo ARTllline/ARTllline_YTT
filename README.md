@@ -6,6 +6,14 @@ state. The product contract is `AGENTS.md`.
 
 ## Current status
 
+**Task 14: visual identity, motion and interaction polish.**
+The graphite workspace now has semantic mode accents, clearer Session NOW/NEXT and
+Combat focus, image-first assets, connected Cue steps and zoom-aware token labels.
+Right-click an object (or hold on touch / Shift+F10 on a selection) for contextual
+actions. Radial commands use the existing persistence queue; destructive removal
+stays outside the menu. Motion respects reduced-motion preferences.
+See the [visual report, three passes and 14 screenshots](docs/TASK14_VISUAL_POLISH.md).
+
 **Task 13: canvas-first workspace and live UX redesign.**
 Open **Стол** for the map, **Подготовка** for scenes, assets, prefabs, encounters,
 cues and automation, **Сессия** for the run-of-show, and **Библиотека** for media.

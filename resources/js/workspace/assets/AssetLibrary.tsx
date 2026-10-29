@@ -131,45 +131,51 @@ export function AssetLibrary({
                         onChange={(e) => update({ search: e.target.value })}
                     />
                 </label>
-                <div className="asset-filter-row">
-                    <select
-                        aria-label={t('Filter collection')}
-                        value={filters.collection}
-                        onChange={(e) => update({ collection: e.target.value })}
-                    >
-                        <option value=""> {t('All collections')} </option>
-                        {data?.collections.map((c) => (
-                            <option key={c.id} value={c.id}>
-                                {c.name}
-                            </option>
-                        ))}
-                    </select>
-                    <select
-                        aria-label={t('Filter tag')}
-                        value={filters.tag}
-                        onChange={(e) => update({ tag: e.target.value })}
-                    >
-                        <option value=""> {t('All tags')} </option>
-                        {data?.tags.map((t) => (
-                            <option key={t.id} value={t.id}>
-                                {t.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                <div className="asset-filter-row">
-                    <select
-                        aria-label={t('Asset order')}
-                        value={filters.sort}
-                        onChange={(e) => update({ sort: e.target.value })}
-                    >
-                        <option value="newest"> {t('Recent uploads')} </option>
-                        <option value="name"> {t('Name')} </option>
-                    </select>
-                    <small>
-                        {data?.total ?? 0} {t('assets')}{' '}
-                    </small>
-                </div>
+                <details className="asset-advanced-filters">
+                    <summary>
+                        Коллекции, теги и порядок
+                        {filters.collection || filters.tag ? ' · есть фильтр' : ''}
+                    </summary>
+                    <div className="asset-filter-row">
+                        <select
+                            aria-label={t('Filter collection')}
+                            value={filters.collection}
+                            onChange={(e) => update({ collection: e.target.value })}
+                        >
+                            <option value=""> {t('All collections')} </option>
+                            {data?.collections.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                    {c.name}
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            aria-label={t('Filter tag')}
+                            value={filters.tag}
+                            onChange={(e) => update({ tag: e.target.value })}
+                        >
+                            <option value=""> {t('All tags')} </option>
+                            {data?.tags.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                    {t.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="asset-filter-row">
+                        <select
+                            aria-label={t('Asset order')}
+                            value={filters.sort}
+                            onChange={(e) => update({ sort: e.target.value })}
+                        >
+                            <option value="newest"> {t('Recent uploads')} </option>
+                            <option value="name"> {t('Name')} </option>
+                        </select>
+                        <small>
+                            {data?.total ?? 0} {t('assets')}{' '}
+                        </small>
+                    </div>
+                </details>
                 <div className="asset-filter-row">
                     <select
                         aria-label={t('Upload asset type')}
@@ -260,10 +266,12 @@ export function AssetLibrary({
                                 kind: t(`kind.${asset.kind}`),
                             })}
                             onDragStart={(e) => {
+                                e.currentTarget.classList.add('is-dragging');
                                 e.dataTransfer.setData(ASSET_MIME, JSON.stringify(asset));
                                 e.dataTransfer.setData(`application/x-ytt-${asset.kind}`, '1');
                                 e.dataTransfer.effectAllowed = 'copy';
                             }}
+                            onDragEnd={(e) => e.currentTarget.classList.remove('is-dragging')}
                             onClick={() =>
                                 pickerKind && onUse ? onUse(asset) : setSelected(asset)
                             }

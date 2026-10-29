@@ -10,9 +10,11 @@ export class BattleMapLayer extends Container {
     update(scene: Scene, texture?: Texture) {
         this.surface
             .clear()
+            .roundRect(-8, -8, scene.width + 16, scene.height + 16, 4)
+            .fill({ color: 0x000000, alpha: 0.18 })
             .rect(0, 0, scene.width, scene.height)
-            .fill(0x24302e)
-            .stroke({ color: 0x43584c, width: 2 });
+            .fill(0x232b2e)
+            .stroke({ color: 0x66777c, width: 1, alpha: 0.25 });
         const map = scene.map;
         this.image.visible = !!map && !!texture;
         if (map && texture) {

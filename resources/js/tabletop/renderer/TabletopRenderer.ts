@@ -61,7 +61,7 @@ export class TabletopRenderer {
     ) {}
     async init() {
         await this.app.init({
-            background: '#14161b',
+            backgroundAlpha: 0,
             antialias: true,
             autoDensity: true,
             resolution: Math.min(window.devicePixelRatio || 1, 2),
@@ -154,6 +154,13 @@ export class TabletopRenderer {
                 if (preview.expires < now) this.store.remotePreviews.delete(id);
             }
             for (const [id, view] of this.tokens.views) {
+                view.tick(
+                    ticker.deltaMS,
+                    this.camera.state.zoom,
+                    this.reducedMotion.matches,
+                    this.input?.draggingToken === id ||
+                        !!this.input?.draggingObjectTokens.includes(id),
+                );
                 if (
                     this.input?.draggingToken === id ||
                     this.input?.draggingObjectTokens.includes(id)
@@ -220,6 +227,47 @@ export class TabletopRenderer {
         this.input?.cancel();
         const scene = this.store.getSnapshot().scene;
         this.camera.fit(this.width, this.height, scene.width, scene.height);
+    }
+    contextTarget(clientX: number, clientY: number) {
+        if (this.camera.directed) return;
+        const bounds = this.host.getBoundingClientRect();
+        const point = screenToWorld(
+            { x: clientX - bounds.left, y: clientY - bounds.top },
+            this.camera.state,
+        );
+        const token = this.tokens.hit(point);
+        if (token) return { kind: 'token' as const, id: token };
+        const prop = this.props.hit(point);
+        if (prop) return { kind: 'prop' as const, id: prop };
+        const region = this.regions?.hit(point);
+        if (region) return { kind: 'region' as const, id: region };
+    }
+    selectedContextPoint() {
+        const state = this.store.getSnapshot();
+        const region = state.scene.regions?.find((r) => r.id === state.selectedRegionId);
+        const target =
+            state.scene.tokens.find((t) => t.id === state.selectedIds[0]) ??
+            state.scene.props?.find((p) => p.id === state.selectedPropIds?.[0]) ??
+            (region
+                ? {
+                      x:
+                          region.geometry.x +
+                          (region.shape === 'rectangle' ? (region.geometry.width ?? 0) / 2 : 0),
+                      y:
+                          region.geometry.y +
+                          (region.shape === 'rectangle' ? (region.geometry.height ?? 0) / 2 : 0),
+                  }
+                : undefined);
+        if (!target) return;
+        const bounds = this.host.getBoundingClientRect(),
+            camera = this.camera.state;
+        return {
+            x: bounds.left + camera.x + target.x * camera.zoom,
+            y: bounds.top + camera.y + target.y * camera.zoom,
+        };
+    }
+    cancelGesture() {
+        this.input?.cancel();
     }
     center() {
         return screenToWorld({ x: this.width / 2, y: this.height / 2 }, this.camera.state);

@@ -1,7 +1,8 @@
 import { t } from '../i18n';
 import { PropInspector } from './objects/PropInspector';
 import { useSyncExternalStore } from 'react';
-import { Crosshair, SlidersHorizontal, Shield, X, Trash2, ImagePlus } from 'lucide-react';
+import { Crosshair, SlidersHorizontal, X, Trash2, ImagePlus } from 'lucide-react';
+import { tokenAppearance } from '../tabletop/objects/tokenAppearance';
 import type { SceneStore } from '../tabletop/state/SceneStore';
 import { NumberField } from './NumberField';
 import { MapInspector } from './MapInspector';
@@ -57,7 +58,11 @@ export function Inspector({
                 <div className="inspector-body" key={token.id}>
                     <div className="identity">
                         <div className={`portrait ${token.kind === 'hero' ? 'hero' : 'enemy'}`}>
-                            <Shield size={30} />
+                            {token.image ? (
+                                <img src={token.image.url} alt="" />
+                            ) : (
+                                tokenAppearance(token).initials
+                            )}
                         </div>
                         <span className="eyebrow">
                             {' '}
@@ -370,7 +375,7 @@ export function Inspector({
                     <div className="inspector-foot">
                         <Crosshair size={13} /> {t('World coordinates · px')}{' '}
                     </div>
-                    <section>
+                    <section className="inspector-danger">
                         <button className="danger-button" onClick={deleteToken}>
                             <Trash2 size={14} /> {t('Delete token')}{' '}
                         </button>

@@ -1,3 +1,31 @@
+# Task 14 — visual and interaction validation
+
+Validated locally **2026-10-29 Europe/Kiev**, Chromium 156.0.8078.74.
+See [the 18-section report and 14 screenshots](TASK14_VISUAL_POLISH.md).
+
+- Three screenshot/interaction passes, followed by the final responsive matrix.
+- 1920×1080: clean, session, combat, assets, cue editor, inspector, radial.
+- 1440×1000: clean, session, combat, radial; 768×1024: table/session; 390×844: Player.
+- No horizontal overflow, duplicate canvas or page errors in the final matrix.
+- Radial: keyboard/outside/Escape, persisted lock/duplicate, existing Combat path,
+  prop/region actions, four edges, touch long press with stable camera, reduced motion.
+- Native token drag → server → real Player Reverb update → Undo; hide/reveal filtering.
+- Native library drop with saved feedback; Cue reorder/restore/save; Combat and Session
+  next/previous; Inspector → Combat → Audio → close; wheel world-anchor invariance.
+- Frontend: **127 tests / 26 files**, typecheck, lint and build passed.
+- Backend: **89 tests / 1169 assertions**, Pint passed. `git diff --check` passed.
+- Fresh heavy scene benchmark: 200 props, 36 tokens, 1200 fog strokes, 2 image textures,
+  one canvas, mask 2048². 240 rAF intervals: p50 **8.3 ms**, p95/max **8.5 ms**.
+  Same recorded frame percentiles as Task 13. DOM 309; approximate heap 15.45 MB.
+- Evidence: `artifacts/task14-final-screenshots.json`, `task14-pass3-interactions.json`,
+  `task14-extra-report.json`, `task14-performance.json` and the linked PNGs.
+
+Physical tablet input and Firefox/Safari are unverified. Portrait aspect ratios retain
+letterboxing under Fit to preserve the full map. Server DTOs do not carry allegiance;
+hostility is not invented in the presentation layer. No production rollout was made.
+
+The sections below are historical validation records for earlier tasks.
+
 # Task 13 — workspace redesign validation
 
 Validated locally **2026-10-29 Europe/Kiev**, starting at `93899cf`.

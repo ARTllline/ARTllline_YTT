@@ -95,10 +95,12 @@ export function PreparationTabs({
 export function LiveDock({
     panel,
     round,
+    currentName,
     onPanel,
 }: {
     panel: RightPanel | null;
     round?: number;
+    currentName?: string;
     onPanel: (panel: RightPanel) => void;
 }) {
     return (
@@ -111,7 +113,9 @@ export function LiveDock({
                 onClick={() => onPanel('combat')}
             >
                 <Swords size={17} />
-                <span>Бой{round ? ` · Раунд ${round}` : ''}</span>
+                <span>
+                    {round ? `Раунд ${round}${currentName ? ` · ${currentName}` : ''}` : 'Бой'}
+                </span>
             </button>
             <i />
             {(

@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, Copy, GripVertical, Plus, Trash2, X, Film } from 'l
 import type { Scene } from '../../tabletop/types/scene';
 import { actionLabels, cues, newStep, reorder, type ActionType, type Cue } from './model';
 import { CueActionFields } from './CueActionFields';
+import { stepSubtitle } from './stepPresentation';
 
 export function CueEditor({
     cue,
@@ -21,6 +22,8 @@ export function CueEditor({
     const [busy, setBusy] = useState(false),
         [error, setError] = useState(''),
         [dirty, setDirty] = useState(false);
+    const [draggingStep, setDraggingStep] = useState<number | null>(null);
+    const [dropStep, setDropStep] = useState<number | null>(null);
     const dialog = useRef<HTMLDialogElement>(null),
         dragged = useRef<number | null>(null);
     useEffect(() => {
@@ -121,12 +124,18 @@ export function CueEditor({
                         {draft.steps.map((item, index) => (
                             <div
                                 key={index}
-                                className={`cue-step ${selected === index ? 'selected' : ''}`}
-                                onDragOver={(e) => e.preventDefault()}
+                                className={`cue-step ${selected === index ? 'selected' : ''} ${draggingStep === index ? 'is-dragging' : ''} ${dropStep === index ? 'is-drop-target' : ''}`}
+                                data-action-family={item.type.split('.')[0]}
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    if (dragged.current !== null) setDropStep(index);
+                                }}
                                 onDrop={(e) => {
                                     e.preventDefault();
                                     if (dragged.current !== null) move(dragged.current, index);
                                     dragged.current = null;
+                                    setDraggingStep(null);
+                                    setDropStep(null);
                                 }}
                             >
                                 <button
@@ -136,10 +145,13 @@ export function CueEditor({
                                     aria-label={`Перетащить шаг ${index + 1}`}
                                     onDragStart={(e) => {
                                         dragged.current = index;
+                                        setDraggingStep(index);
                                         e.dataTransfer.setData('text/plain', String(index));
                                     }}
                                     onDragEnd={() => {
                                         dragged.current = null;
+                                        setDraggingStep(null);
+                                        setDropStep(null);
                                     }}
                                 >
                                     <GripVertical size={15} />
@@ -152,6 +164,7 @@ export function CueEditor({
                                 >
                                     <span>{String(index + 1).padStart(2, '0')}</span>
                                     <strong>{actionLabels[item.type]}</strong>
+                                    <em className="cue-step-subtitle">{stepSubtitle(item)}</em>
                                     {item.config.duration !== undefined && (
                                         <small>{item.config.duration / 1000} с</small>
                                     )}

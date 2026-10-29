@@ -44,7 +44,11 @@ export function WorkspaceDock({
     const state = store.getSnapshot();
     const active = campaign.activeSceneId === state.scene.id;
     return (
-        <aside className={`workspace-dock dock-${panel}`} aria-label="Контекстная панель">
+        <aside
+            key={panel}
+            className={`workspace-dock dock-${panel}`}
+            aria-label="Контекстная панель"
+        >
             <Suspense
                 fallback={
                     <Panel title="Загрузка…" onClose={onClose}>

@@ -16,6 +16,7 @@ export function Tabletop({
     const host = useRef<HTMLDivElement>(null);
     const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
     const [presented, setPresented] = useState(false);
+    const [arrival, setArrival] = useState(true);
     const [media, setMedia] = useState<{ loading: boolean; error: string | null }>({
         loading: false,
         error: null,
@@ -108,6 +109,16 @@ export function Tabletop({
                     className={`director-fade scene-arrival ${presented ? 'ready' : ''}`}
                     aria-hidden="true"
                 />
+            )}
+            {status === 'ready' && presented && arrival && (
+                <div
+                    className="scene-title-arrival"
+                    onAnimationEnd={() => setArrival(false)}
+                    aria-hidden="true"
+                >
+                    <span>YTT · {store.role === 'gm' ? 'ВАША СЦЕНА' : 'ВЫ НА СЦЕНЕ'}</span>
+                    <strong>{store.getSnapshot().scene.name}</strong>
+                </div>
             )}
             {status !== 'ready' && (
                 <div className="canvas-message" role="status">

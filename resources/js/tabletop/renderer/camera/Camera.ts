@@ -8,13 +8,13 @@ export class Camera {
     private reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     fit(width: number, height: number, sceneWidth: number, sceneHeight: number) {
         const zoom = clamp(
-            Math.min((width - 80) / sceneWidth, (height - 150) / sceneHeight),
+            Math.min(Math.max(1, width - 32) / sceneWidth, Math.max(1, height - 32) / sceneHeight),
             MIN_ZOOM,
             1.2,
         );
         this.state = {
             x: (width - sceneWidth * zoom) / 2,
-            y: (height - sceneHeight * zoom) / 2 + 12,
+            y: (height - sceneHeight * zoom) / 2,
             zoom,
         };
         this.target = zoom;

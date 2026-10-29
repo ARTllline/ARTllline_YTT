@@ -41,6 +41,22 @@ export function Toolbar({
     };
     return (
         <div className="toolbar-wrap">
+            <div className="active-tool-label" key={tool} role="status">
+                {(
+                    {
+                        select: 'Выбор',
+                        pan: 'Обзор',
+                        fog: 'Туман',
+                        ruler: 'Линейка',
+                        ping: 'Указатель',
+                        circle: 'Круг',
+                        cone: 'Конус',
+                        rectangle: 'Область',
+                        note: 'Заметка',
+                        region: 'Регион',
+                    } as Record<string, string>
+                )[tool] ?? tool}
+            </div>
             <div className="tabletop-toolbar" role="toolbar" aria-label={t('Tabletop tools')}>
                 {store.role === 'gm' && preparation && store.history && (
                     <HistoryControls store={store} />

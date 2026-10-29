@@ -7,7 +7,21 @@ import {
     useSyncExternalStore,
     type RefObject,
 } from 'react';
-import { ArrowLeft, ArrowRight, ListOrdered, Pencil, Play, Plus, X } from 'lucide-react';
+import {
+    ArrowLeft,
+    ArrowRight,
+    ListOrdered,
+    Pencil,
+    Play,
+    Plus,
+    X,
+    Map,
+    Film,
+    BookOpen,
+    Swords,
+    StickyNote,
+    Bookmark,
+} from 'lucide-react';
 import { api, commandId, type Campaign } from '../api/workspace';
 import { preparation } from '../api/preparation';
 import type { Member } from '../realtime/useCampaignLive';
@@ -289,7 +303,11 @@ export function SessionConsole({
                         )}
                     </div>
                     {current && (
-                        <section className="session-current">
+                        <section
+                            className="session-current"
+                            key={current.id}
+                            data-beat-type={current.type}
+                        >
                             <span className="eyebrow">
                                 СЕЙЧАС · {position + 1} / {session.items.length}
                             </span>
@@ -338,26 +356,53 @@ export function SessionConsole({
                             </button>
                         </div>
                     )}
+                    {session.items[position + 1] && (
+                        <div className="session-next">
+                            <span className="eyebrow">
+                                ДАЛЕЕ · {itemLabels[session.items[position + 1].type]}
+                            </span>
+                            <strong>{itemTitle(session.items[position + 1])}</strong>
+                        </div>
+                    )}
                     <p className="session-focus-hint">Переход меняет только фокус плана.</p>
                     <ol className="session-run-list">
-                        {session.items.map((item, index) => (
-                            <li key={item.id} className={item.type === 'chapter' ? 'chapter' : ''}>
-                                <button
-                                    disabled={busy}
-                                    aria-current={
-                                        item.id === session.currentItemId ? 'step' : undefined
-                                    }
-                                    onClick={() => focus(item)}
+                        {session.items.map((item, index) => {
+                            const BeatIcon = {
+                                scene: Map,
+                                cue: Film,
+                                handout: BookOpen,
+                                encounter: Swords,
+                                note: StickyNote,
+                                chapter: Bookmark,
+                            }[item.type];
+                            return (
+                                <li
+                                    key={item.id}
+                                    data-beat-type={item.type}
+                                    className={item.type === 'chapter' ? 'chapter' : ''}
                                 >
-                                    <span>{String(index + 1).padStart(2, '0')}</span>
-                                    <div>
-                                        <small>{itemLabels[item.type]}</small>
-                                        <strong>{itemTitle(item)}</strong>
-                                    </div>
-                                    {item.missing && <span title="Материал удалён">!</span>}
-                                </button>
-                            </li>
-                        ))}
+                                    <button
+                                        disabled={busy}
+                                        aria-current={
+                                            item.id === session.currentItemId ? 'step' : undefined
+                                        }
+                                        onClick={() => focus(item)}
+                                    >
+                                        <span
+                                            className="beat-icon"
+                                            title={`${index + 1} · ${itemLabels[item.type]}`}
+                                        >
+                                            <BeatIcon size={16} />
+                                        </span>
+                                        <div>
+                                            <small>{itemLabels[item.type]}</small>
+                                            <strong>{itemTitle(item)}</strong>
+                                        </div>
+                                        {item.missing && <span title="Материал удалён">!</span>}
+                                    </button>
+                                </li>
+                            );
+                        })}
                     </ol>
                     <details className="session-notes-disclosure">
                         <summary>Заметки мастера</summary>
