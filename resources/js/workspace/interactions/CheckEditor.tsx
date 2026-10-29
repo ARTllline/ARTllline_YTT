@@ -1,3 +1,4 @@
+import { rollModes } from './actingToken';
 import {
     interactions,
     type CheckHistory,
@@ -10,10 +11,9 @@ import { useEffect, useState } from 'react';
 export const defaultCheck = (): InteractionCheck => ({
     enabled: true,
     label: 'Внимательность',
-    ability_key: 'perception',
+    stat_key: 'perception',
     dc: 15,
     dc_visible: false,
-    modifier: 0,
     retry: 'once_per_player',
     success: { result_type: 'nothing' },
     failure: { result_type: 'nothing' },
@@ -91,6 +91,22 @@ export function CheckEditor({
                     onChange={(e) => patch({ label: e.target.value })}
                 />
             </label>
+            <label>
+                Ключ проверки персонажа
+                <input
+                    aria-label="Ключ проверки"
+                    value={value.stat_key ?? ''}
+                    placeholder={value.ability_key ?? 'perception'}
+                    maxLength={48}
+                    onChange={(e) => patch({ stat_key: e.target.value })}
+                />
+            </label>
+            {!value.stat_key && value.modifier !== undefined && (
+                <p className="hint">
+                    Старая проверка Task 16B · фиксированный модификатор {value.modifier ?? 0}.
+                    Укажите ключ, чтобы использовать характеристику персонажа.
+                </p>
+            )}
             <div className="check-numbers">
                 <label>
                     DC
@@ -101,17 +117,6 @@ export function CheckEditor({
                         max={100}
                         value={value.dc ?? 15}
                         onChange={(e) => patch({ dc: Number(e.target.value) })}
-                    />
-                </label>
-                <label>
-                    Модификатор
-                    <input
-                        aria-label="Модификатор проверки"
-                        type="number"
-                        min={-100}
-                        max={100}
-                        value={value.modifier ?? 0}
-                        onChange={(e) => patch({ modifier: Number(e.target.value) })}
                     />
                 </label>
             </div>
@@ -149,17 +154,9 @@ export function CheckEditor({
                     />
                     Показывать DC игроку
                 </label>
-                <label>
-                    Ключ проверки
-                    <input
-                        aria-label="Ключ проверки"
-                        value={value.ability_key ?? ''}
-                        maxLength={48}
-                        onChange={(e) => patch({ ability_key: e.target.value })}
-                    />
-                </label>
                 <p className="hint">
-                    Сравнивается d20 + модификатор с DC. Натуральные 1 и 20 не меняют правило.
+                    Сервер берёт модификатор по ключу у действующего персонажа. Сравнивается d20 +
+                    модификатор с DC. Натуральные 1 и 20 не меняют правило.
                 </p>
             </details>
         </div>
@@ -210,12 +207,18 @@ export function CheckHistoryList({
             {checks.map((check) => (
                 <div key={check.id}>
                     <strong>
-                        {check.actor.name} · {check.actionLabel}
+                        {check.provenance.tokenName ?? check.actor.name} · {check.actionLabel}
                     </strong>
                     <span>
                         {check.label}: {check.natural} {check.modifier < 0 ? '−' : '+'}{' '}
                         {Math.abs(check.modifier)} = {check.total} · DC {check.dc} ·{' '}
                         {check.success ? 'Успех' : 'Провал'}
+                    </span>
+                    <span>
+                        {check.provenance.statKey ?? 'Task 16B'} · база{' '}
+                        {check.provenance.baseModifier} · итоговый модификатор{' '}
+                        {check.provenance.finalModifier} · {rollModes[check.rollMode]} [
+                        {check.rawDice.join(', ')}]
                     </span>
                     <time dateTime={check.rolledAt}>
                         {new Date(check.rolledAt).toLocaleString()}

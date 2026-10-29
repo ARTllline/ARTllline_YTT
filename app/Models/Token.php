@@ -12,7 +12,7 @@ class Token extends Model
 
     protected function casts(): array
     {
-        return ['is_hidden' => 'boolean', 'is_locked' => 'boolean', 'interactions' => 'array'];
+        return ['is_hidden' => 'boolean', 'is_locked' => 'boolean', 'interactions' => 'array', 'check_stats' => 'array'];
     }
 
     public function scene(): BelongsTo

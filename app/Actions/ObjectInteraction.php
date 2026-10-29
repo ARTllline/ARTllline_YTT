@@ -20,9 +20,16 @@ class ObjectInteraction
         abort_unless($scene->campaign->active_scene_id === $scene->id && $scene->campaign->live_revision === (int) $data['epoch'], 409, 'Сцена изменилась. Повторите действие на текущей сцене.');
         $object = $data['kind'] === 'token' ? $scene->tokens()->findOrFail($data['id']) : SceneProp::where('scene_id', $scene->id)->findOrFail($data['id']);
         abort_if($object->is_hidden, 403);
+        if (isset($data['actorTokenId'])) {
+            $actor = $scene->tokens()->findOrFail($data['actorTokenId']);
+            abort_unless(! $actor->is_hidden && ($actor->owner_user_id === $user->id || $scene->campaign->roleFor($user) === 'gm'), 403, 'Этот персонаж вам недоступен.');
+        }
         if (isset($data['actionId'])) {
             $action = collect($object->interactions ?? [])->firstWhere('id', $data['actionId']);
             abort_unless($action && app(ObjectInteractionActions::class)->available($scene, $action), 403, 'Действие больше недоступно.');
+            if (($action['check']['enabled'] ?? false) && ! empty($action['check']['stat_key'])) {
+                abort_unless(isset($data['actorTokenId']), 422, 'Выберите действующего персонажа.');
+            }
         }
     }
 

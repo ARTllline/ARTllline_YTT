@@ -57,7 +57,13 @@ describe('check request recovery and presentation', () => {
             userId: 'u',
         };
         const html = renderToStaticMarkup(
-            createElement(CheckDialog, { invocation, onClose: vi.fn(), onHandout: vi.fn() }),
+            createElement(CheckDialog, {
+                actors: [],
+                onActorChange: vi.fn(),
+                invocation,
+                onClose: vi.fn(),
+                onHandout: vi.fn(),
+            }),
         );
         expect(html).toContain('Внимательность');
         expect(html).toContain('Бросить');

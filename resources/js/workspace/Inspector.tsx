@@ -1,3 +1,4 @@
+import { TokenCheckEditor } from './interactions/TokenCheckEditor';
 import { t } from '../i18n';
 import { PropInspector } from './objects/PropInspector';
 import { InteractionEditor } from './interactions/InteractionEditor';
@@ -77,6 +78,7 @@ export function Inspector({
                                 : t('Visible in the scene')}
                         </span>
                     </div>
+                    <TokenCheckEditor token={token} store={store} disabled={combatBusy} />
                     <InteractionEditor
                         key={`interactions:${token.id}`}
                         store={store}

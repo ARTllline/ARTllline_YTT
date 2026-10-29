@@ -1,4 +1,5 @@
 import { BookOpen, Eye, Hand, Search, DoorOpen, Sparkles, MessageCircle, Play } from 'lucide-react';
+import type { RollMode } from './actingToken';
 import { request } from '../../api/client';
 import type { Mutation } from '../../api/workspace';
 import type { Handout } from '../../api/preparation';
@@ -32,6 +33,7 @@ export interface InteractionCheck {
     enabled: boolean;
     label: string;
     ability_key?: string;
+    stat_key?: string;
     dc?: number;
     dc_visible?: boolean;
     modifier?: number;
@@ -51,6 +53,38 @@ export interface CheckResult {
     dc?: number;
     tokenId: string | null;
     rolledAt: string;
+    rollMode: RollMode;
+    rawDice: number[];
+    selectedDie: number;
+    provenance: {
+        source: 'token_stat' | 'legacy_interaction';
+        tokenId: string | null;
+        tokenName: string | null;
+        statKey: string | null;
+        statLabel: string;
+        baseModifier: number;
+        otherModifiers: { label: string; modifier: number }[];
+        finalModifier: number;
+    };
+}
+/** Receipts committed before the stat migration retain their original response shape. */
+export function normalizeCheckResult(check: CheckResult): CheckResult {
+    return {
+        ...check,
+        rollMode: check.rollMode ?? 'normal',
+        rawDice: check.rawDice ?? [check.natural],
+        selectedDie: check.selectedDie ?? 0,
+        provenance: check.provenance ?? {
+            source: 'legacy_interaction',
+            tokenId: check.tokenId,
+            tokenName: null,
+            statKey: null,
+            statLabel: check.label,
+            baseModifier: check.modifier,
+            otherModifiers: [],
+            finalModifier: check.modifier,
+        },
+    };
 }
 export type CheckHistory = CheckResult & { actor: { id: string; name: string } };
 export type InteractionResources = {
@@ -93,6 +127,7 @@ export const interactions = {
         epoch: number,
         clientMutationId: string,
         actorTokenId?: string,
+        rollMode?: RollMode,
     ) =>
         request<{ accepted: boolean; handout?: Handout; check?: CheckResult }>(
             `/scenes/${scene}/interact`,
@@ -104,6 +139,10 @@ export const interactions = {
                 epoch,
                 clientMutationId,
                 ...(actorTokenId ? { actorTokenId } : {}),
+                ...(rollMode ? { rollMode } : {}),
             },
-        ),
+        ).then((response) => ({
+            ...response,
+            ...(response.check ? { check: normalizeCheckResult(response.check) } : {}),
+        })),
 };

@@ -18,6 +18,7 @@ import { clamp } from '../utils/coordinates';
 import type { CombatCommand, TokenCombatCommand } from '../types/combat';
 
 export interface WorkspaceSnapshot {
+    actingTokenId?: string;
     selectedRegionId?: string;
     showRegions?: boolean;
     regionShape?: Region['shape'];
@@ -111,6 +112,9 @@ export class SceneStore {
         readonly role: 'gm' | 'player' = 'gm',
     ) {
         this.snapshot = { scene, selectedIds: [], preview: null };
+    }
+    setActingToken(id?: string) {
+        this.emit({ ...this.snapshot, actingTokenId: id });
     }
     getSnapshot = () => this.snapshot;
     subscribe = (listener: () => void) => {

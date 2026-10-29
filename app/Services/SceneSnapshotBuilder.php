@@ -76,7 +76,7 @@ class SceneSnapshotBuilder
             'id' => (string) $condition->id, 'key' => $condition->key, 'label' => $condition->label,
         ] + ($gm ? ['visibility' => $condition->visibility] : []))->all();
         if ($gm || $token->owner_user_id === $user->id) {
-            $data += ['hp' => $token->hp, 'maxHp' => $token->max_hp];
+            $data += ['hp' => $token->hp, 'maxHp' => $token->max_hp, 'checkStats' => $token->check_stats ?? []];
         }
         if (! $gm) {
             $data['isOwner'] = $token->owner_user_id === $user->id;

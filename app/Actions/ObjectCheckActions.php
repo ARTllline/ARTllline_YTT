@@ -10,6 +10,7 @@ use App\Realtime\ChannelAccess;
 use App\Realtime\CommandContext;
 use App\Realtime\SafeBroadcast;
 use App\Services\D20Roller;
+use App\Services\TokenCheckStats;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -21,12 +22,15 @@ class ObjectCheckActions
     {
         $checks = ObjectCheck::where('scene_id', $scene->id)->where('object_kind', $data['kind'])
             ->where('object_id', $data['id'])->where('action_id', $action['id']);
+        $context = ['actorTokenId' => isset($data['actorTokenId']) ? (string) $data['actorTokenId'] : null, 'rollMode' => $data['rollMode'] ?? 'normal'];
         $mutation = app(CommandContext::class)->id();
         // Durable roll identity also survives eventual transport-receipt cleanup.
         $existing = ObjectCheck::where('user_id', $user->id)->where('mutation_id', $mutation)->first();
         if ($existing) {
             abort_unless($existing->scene_id === $scene->id && $existing->object_kind === $data['kind']
                 && $existing->object_id === (int) $data['id'] && $existing->action_id === $action['id'], 409);
+
+            abort_if($existing->request_context !== null && $existing->request_context != $context, 409);
 
             return ['accepted' => true, 'check' => $existing->projection()];
         }
@@ -42,20 +46,27 @@ class ObjectCheckActions
         $token = null;
         if (isset($data['actorTokenId'])) {
             $token = $scene->tokens()->findOrFail($data['actorTokenId']);
-            abort_unless($token->owner_user_id === $user->id && ! $token->is_hidden, 403);
+            // Actor authorization also runs on receipt replay.
         } else {
             $owned = $scene->tokens()->where('owner_user_id', $user->id)->where('is_hidden', false)->limit(2)->get();
             $token = $owned->count() === 1 ? $owned->first() : null;
         }
-        $natural = app(D20Roller::class)->roll();
-        $total = $natural + $config['modifier'];
+        $provenance = app(TokenCheckStats::class)->resolve($token, $config);
+        $dice = [app(D20Roller::class)->roll()];
+        $mode = $context['rollMode'];
+        if ($mode !== 'normal') {
+            $dice[] = app(D20Roller::class)->roll();
+        }
+        $natural = $mode === 'advantage' ? max($dice) : min($dice);
+        $total = $natural + $provenance['finalModifier'];
         $success = $total >= $config['dc'];
         $branch = $config[$success ? 'success' : 'failure'];
         $check = ObjectCheck::create(['id' => (string) Str::uuid(), 'scene_id' => $scene->id,
             'object_kind' => $data['kind'], 'object_id' => $data['id'], 'action_id' => $action['id'],
             'user_id' => $user->id, 'token_id' => $token?->id, 'mutation_id' => $mutation,
             'action_label' => $action['label'], 'label' => $config['label'], 'ability_key' => $config['ability_key'] ?? null,
-            'natural' => $natural, 'modifier' => $config['modifier'], 'total' => $total, 'dc' => $config['dc'],
+            'provenance' => $provenance, 'raw_dice' => $dice, 'roll_mode' => $mode, 'request_context' => $context,
+            'natural' => $natural, 'modifier' => $provenance['finalModifier'], 'total' => $total, 'dc' => $config['dc'],
             'dc_visible' => $config['dc_visible'] ?? false, 'success' => $success, 'branch' => $branch, 'created_at' => now()]);
         $result = app(ObjectInteraction::class)->result($user, $scene, $action['author_id'], $branch);
         $event = new TabletopEvent(ChannelAccess::gm($scene->campaign_id, $scene->id), [

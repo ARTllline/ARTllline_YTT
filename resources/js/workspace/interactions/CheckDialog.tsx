@@ -3,7 +3,10 @@ import { Dices, X } from 'lucide-react';
 import { ApiError } from '../../api/client';
 import { interactions, type ObjectInteraction, type CheckResult } from './model';
 import { checkPresentation, checkTimings, type CheckPhase } from './checkPresentation';
-import { checkRequest } from './checkRequest';
+import { ActorPicker, ActorPortrait } from './ActorPicker';
+import { rollModes, signedModifier, type RollMode } from './actingToken';
+import type { Token } from '../../tabletop/types/scene';
+import { checkRequest, readCheckRequest } from './checkRequest';
 import type { Handout } from '../../api/preparation';
 
 export interface CheckInvocation {
@@ -13,17 +16,33 @@ export interface CheckInvocation {
     objectId: string;
     epoch: number;
     userId: string;
-    actorTokenId?: string;
 }
 export function CheckDialog({
     invocation,
+    actors,
+    actorRequired = false,
+    actor,
+    onActorChange,
     onClose,
     onHandout,
 }: {
     invocation: CheckInvocation;
+    actors: readonly Token[];
+    actorRequired?: boolean;
+    actor?: Token;
+    onActorChange: (id: string) => void;
     onClose: () => void;
     onHandout: (handout: Handout) => void;
 }) {
+    const requestKey = `${invocation.userId}:${invocation.sceneId}:${invocation.epoch}:${invocation.kind}:${invocation.objectId}:${invocation.action.id}`;
+    const [retained, setRetained] = useState(() => readCheckRequest(requestKey));
+    const [mode, setMode] = useState<RollMode>(retained?.context?.rollMode ?? 'normal');
+    const acting = retained?.context
+        ? actors.find((t) => t.id === retained.context!.actorTokenId)
+        : actor;
+    const stat = acting?.checkStats?.find((s) => s.key === invocation.action.check?.stat_key);
+    const missingActor = actorRequired && !acting;
+    const missingStat = !!invocation.action.check?.stat_key && !stat;
     const dialog = useRef<HTMLDialogElement>(null);
     const locked = useRef(false);
     const alive = useRef(true);
@@ -53,14 +72,17 @@ export function CheckDialog({
         if (preview) onHandout(preview);
     };
     const roll = async () => {
-        if (locked.current || result) return;
+        if (locked.current || result || ((missingStat || missingActor) && !retained?.context))
+            return;
         locked.current = true;
         setError('');
         setPhase('rolling');
-        const { sceneId, kind, objectId, action, epoch, userId, actorTokenId } = invocation;
-        pending.current ??= checkRequest(
-            `${userId}:${sceneId}:${epoch}:${kind}:${objectId}:${action.id}`,
-        );
+        const { sceneId, kind, objectId, action, epoch } = invocation;
+        pending.current ??= checkRequest(requestKey, undefined, {
+            actorTokenId: acting?.id,
+            rollMode: mode,
+        });
+        setRetained({ id: pending.current.id, context: pending.current.context });
         const timing = checkTimings(reduced.current);
         const started = performance.now();
         try {
@@ -71,7 +93,8 @@ export function CheckDialog({
                 action.id,
                 epoch,
                 pending.current.id,
-                actorTokenId,
+                pending.current.context?.actorTokenId,
+                pending.current.context?.rollMode,
             );
             if (!response.check)
                 throw new Error(
@@ -102,6 +125,7 @@ export function CheckDialog({
             if (e instanceof ApiError && e.status > 0 && e.status < 500) {
                 pending.current.complete();
                 pending.current = null;
+                setRetained(null);
             }
             if (!alive.current) return;
             locked.current = false;
@@ -132,22 +156,92 @@ export function CheckDialog({
             >
                 <X size={18} />
             </button>
+            {result ? (
+                <div className="actor-picker check-actor-result">
+                    <ActorPortrait token={actors.find((t) => t.id === result.provenance.tokenId)} />
+                    <label>
+                        <span>БРОСОК ПЕРСОНАЖА</span>
+                        <strong>{result.provenance.tokenName ?? 'Игрок'}</strong>
+                    </label>
+                </div>
+            ) : (
+                <ActorPicker
+                    tokens={actors}
+                    actor={acting}
+                    onChange={onActorChange}
+                    disabled={busy || !!retained?.context}
+                />
+            )}
             <span className="eyebrow">ВЗАИМОДЕЙСТВИЕ</span>
             <h2 id="check-title">{invocation.action.label}</h2>
             <p id="check-label" className="check-label">
                 Проверка · {check.label}
             </p>
+            <div className="check-source">
+                <strong>
+                    {result || stat ? signedModifier(result?.modifier ?? stat!.modifier) : '—'}
+                </strong>
+                <span>
+                    {result
+                        ? `${result.provenance.tokenName ?? 'Игрок'} · ${result.provenance.statLabel}`
+                        : stat
+                          ? `${acting?.name} · ${stat.label}`
+                          : check.stat_key
+                            ? `Не настроено: ${check.stat_key}`
+                            : 'Task 16B · фиксированный модификатор'}
+                </span>
+            </div>
+            {(missingStat || missingActor) && !result && (
+                <p className="hint">
+                    {acting
+                        ? 'Попросите GM настроить эту проверку персонажа.'
+                        : 'Выберите действующего персонажа.'}
+                </p>
+            )}
+            <label className="check-mode">
+                Режим броска
+                <select
+                    aria-label="Режим броска"
+                    value={result?.rollMode ?? mode}
+                    disabled={busy || !!result || !!retained?.context}
+                    onChange={(e) => setMode(e.target.value as RollMode)}
+                >
+                    {Object.entries(rollModes).map(([key, label]) => (
+                        <option key={key} value={key}>
+                            {label}
+                        </option>
+                    ))}
+                </select>
+            </label>
+            {retained?.context && !result && (
+                <p className="hint">
+                    Сохранён запрос: персонаж и режим закреплены до ответа сервера.
+                </p>
+            )}
             {check.dc !== undefined && check.dc_visible !== false && (
                 <span className="check-dc">DC {check.dc}</span>
             )}
             <div
-                className={`check-die ${natural === 20 ? 'natural-twenty' : natural === 1 ? 'natural-one' : ''}`}
-                aria-hidden="true"
+                className={`check-dice ${(result?.rawDice.length ?? (mode === 'normal' ? 1 : 2)) > 1 ? 'is-pair' : ''}`}
             >
-                <svg viewBox="0 0 160 176" fill="none">
-                    <path d="M80 4 150 45 150 128 80 172 10 128 10 45Z M80 4 38 62 10 128 M80 4 122 62 150 128 M10 45 38 62 80 145 122 62 150 45 M10 128 80 145 150 128 M80 145 80 172 M38 62 122 62" />
-                </svg>
-                <strong>{result ? natural : 'd20'}</strong>
+                {(result?.rawDice ?? (mode === 'normal' ? [null] : [null, null])).map(
+                    (die, index) => (
+                        <div
+                            key={index}
+                            className={`check-die ${result ? (index === result.selectedDie ? 'is-used' : 'is-discarded') : ''}`}
+                        >
+                            <svg viewBox="0 0 160 176" fill="none" aria-hidden="true">
+                                <path d="M80 4 150 45 150 128 80 172 10 128 10 45Z M80 4 38 62 10 128 M80 4 122 62 150 128 M10 45 38 62 80 145 122 62 150 45 M10 128 80 145 150 128 M80 145 80 172 M38 62 122 62" />
+                            </svg>
+                            <strong>{die ?? 'd20'}</strong>
+                            {result && (
+                                <small>
+                                    {index === result.selectedDie ? 'В зачёт' : 'Отброшен'}
+                                </small>
+                            )}
+                        </div>
+                    ),
+                )}
             </div>
             <div className="check-equation" aria-live="polite">
                 {showTotal && result ? (
@@ -191,7 +285,7 @@ export function CheckDialog({
             ) : (
                 <button
                     className="primary-button check-roll"
-                    disabled={busy}
+                    disabled={busy || ((missingStat || missingActor) && !retained?.context)}
                     onClick={() => void roll()}
                 >
                     <Dices size={18} />

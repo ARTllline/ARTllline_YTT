@@ -57,6 +57,7 @@ class ObjectInteractionActions
             $safe = array_intersect_key($a, array_flip(['id', 'label', 'icon']));
             if ($a['check']['enabled'] ?? false) {
                 $safe['check'] = ['enabled' => true, 'label' => $a['check']['label']]
+                    + (! empty($a['check']['stat_key']) ? ['stat_key' => $a['check']['stat_key']] : [])
                     + (($a['check']['dc_visible'] ?? false) ? ['dc' => $a['check']['dc']] : []);
             }
 
@@ -77,7 +78,7 @@ class ObjectInteractionActions
                 'actions.*.icon' => 'required|in:'.implode(',', self::ICONS),
                 'actions.*.result_type' => 'required|in:handout,cue,nothing',
                 'actions.*.result_target' => 'nullable|integer|min:1', 'actions.*.enabled' => 'required|boolean',
-                'actions.*.check' => 'sometimes|array:enabled,label,ability_key,dc,dc_visible,modifier,retry,success,failure',
+                'actions.*.check' => 'sometimes|array:enabled,label,ability_key,stat_key,dc,dc_visible,modifier,retry,success,failure',
                 'actions.*.check.enabled' => 'required_with:actions.*.check|boolean',
             ])->validate();
             $object = $this->object($scene, $data['kind'], $data['id']);
@@ -87,14 +88,18 @@ class ObjectInteractionActions
                         'enabled' => 'required|boolean', 'label' => 'required|string|max:80',
                         'ability_key' => 'nullable|string|max:48|regex:/^[a-zA-Z0-9_-]+$/',
                         'dc' => 'required|integer|min:1|max:100', 'dc_visible' => 'sometimes|boolean',
-                        'modifier' => 'required|integer|min:-100|max:100',
+                        'modifier' => 'required_without:stat_key|integer|min:-100|max:100',
+                        'stat_key' => 'nullable|string|max:48|regex:/^[a-z][a-z0-9_]*$/',
                         'retry' => 'required|in:once,once_per_player,repeatable',
                         'success' => 'required|array:result_type,result_target', 'failure' => 'required|array:result_type,result_target',
                         'success.result_type' => 'required|in:nothing,handout,cue', 'failure.result_type' => 'required|in:nothing,handout,cue',
                         'success.result_target' => 'nullable|integer|min:1', 'failure.result_target' => 'nullable|integer|min:1',
                     ])->validate();
                     $action['check']['dc_visible'] ??= false;
-                    foreach (['dc', 'modifier'] as $number) {
+                    if (! empty($action['check']['stat_key'])) {
+                        unset($action['check']['modifier'], $action['check']['ability_key']);
+                    }
+                    foreach (array_intersect(['dc', 'modifier'], array_keys($action['check'])) as $number) {
                         $action['check'][$number] = (int) $action['check'][$number];
                     }
                     $valid = $this->validResult($scene, $action['check']['success']) && $this->validResult($scene, $action['check']['failure']);

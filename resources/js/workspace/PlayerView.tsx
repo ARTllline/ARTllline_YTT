@@ -1,3 +1,5 @@
+import { ActorPicker } from './interactions/ActorPicker';
+import { actingToken, eligibleActors } from './interactions/actingToken';
 import { t } from '../i18n';
 import { useLiveMedia } from '../media/useLiveMedia';
 import { usePlayerPreload } from '../preload/usePlayerPreload';
@@ -157,10 +159,27 @@ function PlayerTabletop({
     const save = useSyncExternalStore(queue.subscribe, queue.getSnapshot);
     const renderer = useRef<TabletopRenderer | null>(null);
     const [zoom, setZoom] = useState(100);
+    const actors = eligibleActors(snapshot.scene.tokens, 'player');
+    const actor = actingToken(actors, snapshot.actingTokenId);
+    useEffect(() => {
+        const eligible = eligibleActors(snapshot.scene.tokens, 'player');
+        if (
+            !eligible.some((token) => token.id === snapshot.actingTokenId) &&
+            (snapshot.actingTokenId || eligible.length === 1)
+        )
+            store.setActingToken(eligible.length === 1 ? eligible[0].id : undefined);
+    }, [snapshot.scene.tokens, snapshot.actingTokenId, store]);
     const selected = snapshot.scene.tokens.find((t) => t.id === snapshot.selectedIds[0]);
     const selectedProp = snapshot.scene.props?.find((p) => p.id === snapshot.selectedPropIds?.[0]);
     return (
         <main className="player-tabletop">
+            <div className="player-actor">
+                <ActorPicker
+                    tokens={actors}
+                    actor={actor}
+                    onChange={(id) => store.setActingToken(id)}
+                />
+            </div>
             <Tabletop store={store} rendererRef={renderer} onZoom={setZoom} />
             <RadialMenu
                 store={store}
@@ -227,11 +246,14 @@ function PlayerTabletop({
                     (selected || selectedProp) && (
                         <InteractButton
                             key={`${selected ? 'token' : 'prop'}:${(selected ?? selectedProp)!.id}`}
+                            actorTokenId={actor?.id}
                             sceneId={initial.id!}
                             epoch={initial.liveRevision ?? 0}
                             kind={selected ? 'token' : 'prop'}
                             id={(selected ?? selectedProp)!.id}
-                            disabled={connection !== 'connected' || save.status !== 'saved'}
+                            disabled={
+                                !actor || connection !== 'connected' || save.status !== 'saved'
+                            }
                         />
                     )
                 )}

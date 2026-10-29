@@ -238,6 +238,116 @@ class ObjectCheckTest extends TestCase
         $this->postJson($this->base.'/interact', $data)->assertConflict();
     }
 
+    private function useTokenStats(): void
+    {
+        unset($this->action['check']['modifier'], $this->action['check']['ability_key']);
+        $this->action['check']['stat_key'] = 'perception';
+        $this->action['check']['retry'] = 'repeatable';
+        $this->action['check']['success'] = ['result_type' => 'nothing'];
+        $this->save();
+        $this->token->update(['check_stats' => [['key' => 'perception', 'label' => 'Внимательность', 'modifier' => 3]]]);
+    }
+
+    public function test_check_resolves_each_actor_stats_and_snapshots_immutable_provenance(): void
+    {
+        $this->useTokenStats();
+        $second = $this->scene->tokens()->create(['name' => 'Mage', 'x' => 0, 'y' => 0, 'owner_user_id' => $this->player->id,
+            'is_locked' => true, 'check_stats' => [['key' => 'perception', 'label' => 'Внимательность мага', 'modifier' => 7]]]);
+        $this->roll(10, 2);
+        $command = $this->command() + ['actorTokenId' => $this->token->id];
+        $first = $this->actingAs($this->player)->postJson($this->base.'/interact', $command)->assertOk()
+            ->assertJsonPath('check.total', 13)->assertJsonPath('check.modifier', 3)
+            ->assertJsonPath('check.provenance.source', 'token_stat')->assertJsonPath('check.provenance.statKey', 'perception')
+            ->assertJsonPath('check.provenance.baseModifier', 3)->assertJsonPath('check.provenance.otherModifiers', [])
+            ->assertJsonPath('check.provenance.finalModifier', 3)->assertJsonMissingPath('check.dc');
+        $this->postJson($this->base.'/interact', $this->command() + ['actorTokenId' => $second->id])->assertOk()
+            ->assertJsonPath('check.total', 17)->assertJsonPath('check.provenance.tokenName', 'Mage');
+        $this->token->update(['name' => 'Renamed', 'check_stats' => []]);
+        $this->postJson($this->base.'/interact', $command)->assertOk()->assertExactJson($first->json());
+        DB::table('scene_mutation_receipts')->where('client_mutation_id', $command['clientMutationId'])->delete();
+        $this->postJson($this->base.'/interact', $command)->assertOk()->assertJsonPath('check', $first->json('check'));
+        DB::table('scene_mutation_receipts')->where('client_mutation_id', $command['clientMutationId'])->delete();
+        $command['actorTokenId'] = $second->id;
+        $this->postJson($this->base.'/interact', $command)->assertConflict();
+    }
+
+    public function test_advantage_and_disadvantage_store_both_dice_and_replay_identically(): void
+    {
+        $this->useTokenStats();
+        $this->mock(D20Roller::class)->shouldReceive('roll')->times(4)->andReturn(4, 18, 16, 2);
+        foreach ([['advantage', [4, 18], 18, 21, 1], ['disadvantage', [16, 2], 2, 5, 1]] as [$mode, $dice, $natural, $total, $selected]) {
+            $command = $this->command() + ['actorTokenId' => $this->token->id, 'rollMode' => $mode];
+            $first = $this->actingAs($this->player)->postJson($this->base.'/interact', $command)->assertOk()
+                ->assertJsonPath('check.rollMode', $mode)->assertJsonPath('check.rawDice', $dice)
+                ->assertJsonPath('check.selectedDie', $selected)->assertJsonPath('check.natural', $natural)->assertJsonPath('check.total', $total);
+            $this->postJson($this->base.'/interact', $command)->assertOk()->assertExactJson($first->json());
+            $record = ObjectCheck::findOrFail($first->json('check.id'));
+            $this->assertSame($dice, $record->raw_dice);
+            $this->assertSame($mode, $record->roll_mode);
+            $command['rollMode'] = 'normal';
+            $this->postJson($this->base.'/interact', $command)->assertConflict();
+        }
+    }
+
+    public function test_actor_is_required_for_new_checks_and_forged_hidden_or_cross_scene_actors_cannot_roll(): void
+    {
+        $this->useTokenStats();
+        $this->mock(D20Roller::class)->shouldNotReceive('roll');
+        $this->actingAs($this->player)->postJson($this->base.'/interact', $this->command())->assertUnprocessable();
+        $this->token->update(['owner_user_id' => $this->other->id]);
+        $this->postJson($this->base.'/interact', $this->command() + ['actorTokenId' => $this->token->id])->assertForbidden();
+        $this->token->update(['owner_user_id' => $this->player->id, 'is_hidden' => true]);
+        $this->postJson($this->base.'/interact', $this->command() + ['actorTokenId' => $this->token->id])->assertForbidden();
+        $this->token->update(['is_hidden' => false, 'check_stats' => []]);
+        $this->postJson($this->base.'/interact', $this->command() + ['actorTokenId' => $this->token->id])->assertUnprocessable();
+        $scene = $this->scene->campaign->scenes()->create(['name' => 'Other scene']);
+        $foreign = $scene->tokens()->create(['name' => 'Foreign', 'x' => 0, 'y' => 0, 'owner_user_id' => $this->player->id]);
+        $this->postJson($this->base.'/interact', $this->command() + ['actorTokenId' => $foreign->id])->assertNotFound();
+        $this->postJson($this->base.'/interact', $this->command() + ['actorTokenId' => $this->token->id, 'rollMode' => 'critical'])->assertUnprocessable();
+        $this->assertDatabaseCount('object_checks', 0);
+    }
+
+    public function test_replaying_receipt_revalidates_actor_ownership_before_returning_saved_roll(): void
+    {
+        $this->useTokenStats();
+        $this->roll(8);
+        $command = $this->command() + ['actorTokenId' => $this->token->id];
+        $this->actingAs($this->player)->postJson($this->base.'/interact', $command)->assertOk();
+        $this->token->update(['owner_user_id' => $this->other->id]);
+        $this->postJson($this->base.'/interact', $command)->assertForbidden();
+        $this->assertDatabaseCount('object_checks', 1);
+    }
+
+    public function test_only_gm_edits_stats_and_only_controller_receives_them_in_snapshots_and_events(): void
+    {
+        $stats = [['key' => 'perception', 'label' => 'Внимательность', 'modifier' => 3], ['key' => 'magic', 'label' => 'Магия', 'modifier' => -2]];
+        $url = '/api/tokens/'.$this->token->id;
+        $this->actingAs($this->player)->patchJson($url, ['check_stats' => $stats])->assertForbidden();
+        $this->actingAs($this->gm)->patchJson($url, ['check_stats' => $stats])->assertOk()->assertJsonPath('token.checkStats', $stats);
+        $this->token->refresh();
+        $this->assertSame($stats, $this->token->check_stats);
+        $this->actingAs($this->player)->getJson($this->base.'/snapshot')->assertJsonPath('tokens.0.checkStats', $stats);
+        $this->actingAs($this->other)->getJson($this->base.'/snapshot')->assertJsonMissingPath('tokens.0.checkStats');
+        foreach ([[$stats[0], $stats[0]], [['key' => 'invalid key', 'label' => 'Сила', 'modifier' => 3]], [['key' => 'test', 'label' => 'Сила', 'modifier' => 101]]] as $invalid) {
+            $this->actingAs($this->gm)->patchJson($url, ['check_stats' => $invalid])->assertUnprocessable();
+        }
+        Event::assertDispatched(TabletopEvent::class, fn ($e) => str_ends_with($e->channel, '.user.'.$this->player->id) && ($e->envelope['token']['checkStats'] ?? null) === $stats);
+        Event::assertNotDispatched(TabletopEvent::class, fn ($e) => str_ends_with($e->channel, '.user.'.$this->other->id) && isset($e->envelope['token']['checkStats']));
+    }
+
+    public function test_new_config_ignores_stored_fixed_modifier_and_projects_only_public_stat_key(): void
+    {
+        $this->useTokenStats();
+        $this->action['check']['modifier'] = 99;
+        $this->save();
+        $this->assertArrayNotHasKey('modifier', $this->prop->refresh()->interactions[0]['check']);
+        $this->roll(5);
+        $this->actingAs($this->player)->getJson($this->base.'/snapshot')
+            ->assertJsonPath('props.0.interactions.0.check.stat_key', 'perception')
+            ->assertJsonMissingPath('props.0.interactions.0.check.dc')->assertJsonMissingPath('props.0.interactions.0.check.modifier');
+        $this->postJson($this->base.'/interact', $this->command() + ['actorTokenId' => $this->token->id])->assertOk()->assertJsonPath('check.total', 8);
+    }
+
     public function test_random_source_returns_only_d20_values(): void
     {
         $roller = new D20Roller;

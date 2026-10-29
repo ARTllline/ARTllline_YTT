@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\TokenActions;
 use App\Models\Scene;
 use App\Models\Token;
+use App\Services\TokenCheckStats;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
@@ -38,7 +39,7 @@ class TokenController extends Controller
             'ac' => 'sometimes|nullable|integer|between:0,99', 'speed' => 'sometimes|nullable|integer|between:0,999',
             'is_hidden' => 'sometimes|boolean', 'is_locked' => 'sometimes|boolean',
             'owner_user_id' => 'sometimes|nullable|integer|min:1', 'token_image_asset_id' => 'sometimes|nullable|integer|min:1',
-        ]));
+        ] + TokenCheckStats::rules()));
     }
 
     public function destroy(Request $request, Token $token, TokenActions $actions): array

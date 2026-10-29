@@ -1,104 +1,104 @@
-# Object interaction checks
+# Object checks and acting characters
 
-An object action may require a server roll before resolving its result. Existing
-actions without a check retain their Handout/Cue behavior. No character sheet or
-rules engine is introduced.
+Checks use authoritative Token modifiers. This is a minimal, system-agnostic
+foundation, without attributes, proficiency calculations or a character sheet.
 
 ## GM preparation
 
-Open the token/prop Inspector → Взаимодействия → Требуется проверка. Configure a
-free-text check label, optional ability key, DC (1–100), fixed modifier (−100–100),
-retry policy, and separate success/failure results. Each branch supports Nothing,
-Show Handout, or Run Cue. DC is secret by default; visibility and the ability key
-are under Дополнительно. The key is metadata, not a lookup into character stats.
+Token Inspector → **Модификаторы проверок** provides a stable internal key,
+editable Russian label and integer modifier (−100…100). Quick presets include
+`perception`, `strength`, `dexterity`, and `magic`. Custom keys start with a lowercase
+ASCII letter and contain lowercase letters, digits and underscores (48 characters
+maximum). Keys cannot be renamed in place. Each Token supports up to 30 rows.
 
-Player radial actions open a focused d20 presentation. The server rolls only when
-the Player presses Бросить. The final die, modifier, total, and outcome come from
-the response. Natural 1/20 receive distinct presentation; success always means
-`natural + modifier >= DC`, without automatic critical rules. Reduced motion
-removes die animation and all presentation delays. A resulting Handout waits
-behind the check until the Player dismisses the outcome.
+Object Inspector → **Взаимодействия → Требуется проверка** stores `stat_key`, label,
+DC, visibility, retry policy, and success/failure branches. New checks default to
+`perception` and do not store the character modifier. Missing stats produce an
+explanation instead of assuming zero. Configure the key on each character before
+play. Branch targets must belong to the same campaign (Handout) or exact scene (Cue).
+
+## Player workflow
+
+Player View shows **ДЕЙСТВУЕТ** with a portrait and character selector independent
+of canvas selection. One visible controlled Token is automatic; several require
+an explicit choice. Hidden, deleted and reassigned Tokens stop being eligible.
+A movement lock does not prevent an owner from making a check.
+
+Radial checks show the actor, check name, modifier source and roll mode: Обычный,
+С преимуществом, С помехой. Commands send `actorTokenId` and `rollMode`. Only pressing
+Бросить rolls dice. Normal rolls one d20; advantage/disadvantage roll two and use
+the maximum/minimum (ties select the first). Both raw dice and the used die are
+shown. Natural 1/20 have no automatic success/failure rules.
+
+The preview comes from the authorized snapshot; the server resolves it again
+inside the transaction. Results show the original character/source even when a
+Once per Player policy returns an earlier character's result. Handouts wait behind
+the presentation until dismissal. Reduced motion removes animation delays.
 
 ## Authority and privacy
 
-The command contains the object/action IDs, active-scene epoch, mutation UUID, and
-optionally an owned actor token ID. DC, modifier, branches, and policy come only
-from the stored GM configuration. Forged configuration is rejected or excluded
-from validated command data. Both branches must point to the same campaign
-(Handout) or exact scene (Cue), and the action author must still have GM access.
-Hidden objects, inactive scenes, stale epochs, and non-members cannot run checks.
+An explicit actor must be a visible Token in the current scene controlled by the
+Player; GM may use any visible Token. New stat checks require the actor ID, including
+automatically selected sole actors. Authorization runs again on receipt replay.
+Submitted modifiers, DC, branches and targets cannot override stored configuration.
+Inactive scenes, stale epochs, hidden objects and non-members remain rejected.
 
-The actor is the authenticated invoking user. An explicit token must belong to
-that user in the same scene and be visible. Without one, the server associates the
-single visible owned token, if unambiguous; otherwise it records the Player alone.
-The interacted object is not treated as the actor. An owned token's locked position
-does not prevent its owner from being associated with a check.
+Only GM and the Token controller receive `checkStats`, through snapshots and
+incremental realtime events. Public action DTOs contain action ID, label/icon,
+check label, stat key and explicitly public DC. Secret DC, branches, targets and
+retry policy stay private. HTTP results contain safe arithmetic/provenance.
+`check.resolved` still goes only to the scene GM channel, after commit. Other
+Players receive no roll details.
 
-Player object DTOs expose only `enabled`, `label`, and explicitly visible DC for
-checks. Modifier and retry policy are absent before rolling. The accepted result
-reveals the arithmetic but no secret DC, targets, or branch configuration.
-`check.resolved` is sent after commit only to the authorized scene GM channel.
-The invoking Player receives their safe result by HTTP; other Players receive no
-roll details. Existing Cue effects may affect the group, as configured by the GM.
-Handouts reuse the existing selective reveal executor.
+## History, transactions and retries
 
-## Transactions, repeats, and history
+The existing campaign writer lock, receipts and transaction boundaries are
+retained. Roll history, receipt, Handout access/Cue run and queued Cue job commit
+together. Cue workers never reroll checks.
 
-`scene.interact` uses the existing idempotent mutation middleware. Its campaign
-writer lock serializes concurrent commands; receipt reservation, check history,
-Handout access/Cue run, and queued Cue job commit together. `random_int(1, 20)` is
-called inside that transaction. Replaying the same mutation UUID returns its
-original receipt and never executes the branch again. Existing Cue worker guards
-prevent job redelivery from repeating a committed step; Cue jobs never roll dice.
+History snapshots Token ID/name, stat key/label, base modifier, other modifiers
+(currently an empty list), final modifier and source kind. It also stores raw dice,
+mode, selected natural die, total, outcome and private DC/branch. Later stat edits
+do not change accepted rolls. GM-only history shows the latest 20 object checks.
 
-- Once: one result per scene/object/action for the whole group. Its original
-  actor can inspect the saved result; other Players receive a generic conflict.
-- Once per Player: each Player has one independent result. A new UUID from that
-  same Player returns their previous result without executing the branch again.
-- Repeatable: each new UUID can roll; retrying a UUID replays its original result.
+- Once: one result per object/action for the group; another Player gets a generic conflict.
+- Once per Player: one result per authenticated Player, **not per character**.
+- Repeatable: each new UUID can roll; replaying a UUID returns the saved result.
 
-Action identity is stable when editing/reordering. Changing DC, modifier, branches,
-or label does not reset consumed attempts. A genuinely new action UUID has its own
-history. GM invocations use the same policy and record the GM as actor.
+Changing actor/mode with the same UUID is a conflict. SessionStorage retains the
+original UUID, actor and mode across lost responses/reload. Ambiguous requests pin
+those controls until a server answer. Reconnection does not automatically roll.
+When browser storage is unavailable, recovery is limited to the current dialog's
+in-memory request. Do not casually prune receipts/history: policy and aliases
+depend on them. Durable roll identity also checks actor/mode after receipt removal.
 
-The client synchronously guards the roll button and retains ambiguous UUIDs in
-sessionStorage, scoped to user/scene/epoch/object/action. A lost response followed
-by reconnect or page reload can be retried with the original UUID. Reconnecting
-does not automatically roll. When browser storage is unavailable, recovery is
-limited to the current page's retained request identity.
+## Task 16B compatibility
 
-`object_checks` preserves actor, optional token, action identity/label, natural die,
-modifier, total, outcome, timestamp, and private DC/selected branch. A unique
-user/mutation key also protects original rolls if a transport receipt is removed.
-Do not prune receipts or check history casually: retry policies depend on history,
-and transport receipts preserve aliases when a new UUID reuses an earlier result.
-GM-only `GET /api/scenes/{scene}/object-checks?kind=token|prop&id=...` returns the
-20 most recent results. Inspector history refreshes while expanded.
+The additive migration adds nullable stats/provenance/dice without rewriting old
+actions/history. Checks without `stat_key` retain their fixed modifier, optional
+single-owned-Token association, retry policy and effects. GM sees the legacy source
+and can convert an action by entering a stat key. Conversion does not reset attempts
+or change old results. Historical rolls project as normal one-die rolls with
+`legacy_interaction` provenance. The frontend also accepts old receipt shapes.
 
-## Before character stats
+## Before Player Game Layer
 
-Resolve future modifiers from authoritative Player/token data, not submitted
-totals or skill names. Keep actor selection explicit when several owned tokens
-exist. Snapshot the resolved modifier and its provenance on the check so later
-stat edits cannot change an accepted roll. Preserve the transaction/receipt and
-recipient-specific projection boundaries; no client character sheet may bypass
-them. V1 has one fixed action modifier and no advantage, resources, or formulas.
+Stats belong to individual scene Tokens. Decide how persistent character identity
+maps to these Tokens before adding shared cross-scene data. Copies are independent.
+Keep retry policies scoped to Players unless per-actor attempts become an explicit
+product decision. Additional modifiers, resources and character data must preserve
+server authority and the existing transaction/projection boundaries.
 
-## Verification
+## Verification scope
 
-Backend tests cover secure d20 range, deterministic arithmetic, UUID replay,
-reconnect-style resubmission, repeat policies, both result branches, natural 1/20,
-secret DTO/event isolation, cross-campaign access, actor ownership, and GM-only
-history. Frontend tests cover retained identities and reduced-motion timing.
+Tests cover automatic/explicit actor selection, independence from canvas selection,
+different stat totals, missing/forged/hidden/cross-scene actors, GM-only edits,
+owner-only DTO/events, both two-die modes, immutable provenance, UUID replay,
+retained actor/mode, private DC and existing Task 16B branches/policies.
 
-The local Docker browser workflow exercises GM and two independent Players,
-real Reverb/Cue execution, double click, concurrent MySQL requests, failure
-Handout, and a committed response deliberately dropped before reload/retry.
-Local ignored screenshots and browser evidence: `artifacts/object-checks/`.
-
-Verified on 2026-10-29: 113 backend tests / 1474 assertions and 135 frontend
-tests / 29 files passed. Typecheck, lint, production build, changed-file Pint,
-and Prettier checks passed. Browser checks also confirmed concurrent distinct
-UUIDs cannot bypass Once per Player, actual GM-only Reverb delivery, and the
-390 px Player layout. Temporary campaigns/accounts created by these checks were
-removed after validating their exact IDs and membership; prepared data was kept.
+2026-10-29 implementation check: 141 frontend tests, typecheck, ESLint, production build and changed-file Pint passed.
+The restricted Windows runtime needs `preserveSymlinks` and a workspace-local
+TEMP for Vitest; its ignored verification configuration is in
+`artifacts/acting-token/`. Backend/browser verification requires rebuilding Docker;
+automatic approval review was unavailable (model capacity), so these checks and
+the new migration have not yet run in Docker. Screenshot capture was also blocked by the browser approval review (model capacity); no screenshot is claimed. Do not treat this as deployment approval.

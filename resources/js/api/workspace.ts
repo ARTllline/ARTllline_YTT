@@ -176,6 +176,7 @@ export const api = {
     token: (id: string, patch: TokenPatch, clientMutationId = commandId()) => {
         const fields: Record<string, unknown> = {};
         const keys: Record<string, string> = {
+            checkStats: 'check_stats',
             maxHp: 'max_hp',
             isHidden: 'is_hidden',
             isLocked: 'is_locked',

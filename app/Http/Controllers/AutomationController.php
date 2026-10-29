@@ -45,6 +45,7 @@ class AutomationController extends Controller
     {
         $data = $request->validate(['kind' => 'required|in:token,prop', 'id' => 'required|integer|min:1', 'epoch' => 'required|integer|min:0',
             'actionId' => 'sometimes|required|uuid', 'actorTokenId' => 'sometimes|integer|min:1',
+            'rollMode' => 'sometimes|in:normal,advantage,disadvantage',
             'check' => 'prohibited', 'dc' => 'prohibited', 'modifier' => 'prohibited', 'success' => 'prohibited', 'failure' => 'prohibited',
             'result_target' => 'prohibited', 'result_type' => 'prohibited', 'cueId' => 'prohibited', 'handoutId' => 'prohibited']);
 

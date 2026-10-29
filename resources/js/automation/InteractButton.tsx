@@ -7,12 +7,14 @@ export function InteractButton({
     kind,
     id,
     disabled,
+    actorTokenId,
 }: {
     sceneId: string;
     epoch: number;
     kind: 'token' | 'prop';
     id: string;
     disabled: boolean;
+    actorTokenId?: string;
 }) {
     const [busy, setBusy] = useState(false),
         [error, setError] = useState(''),
@@ -29,7 +31,7 @@ export function InteractButton({
                     setError('');
                     setSent(false);
                     void automation
-                        .interact(sceneId, kind, id, epoch, mutation.current)
+                        .interact(sceneId, kind, id, epoch, mutation.current, actorTokenId)
                         .then(() => {
                             mutation.current = null;
                             setSent(true);

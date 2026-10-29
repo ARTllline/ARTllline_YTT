@@ -1,3 +1,4 @@
+import { actingToken, eligibleActors } from '../interactions/actingToken';
 import {
     useEffect,
     useLayoutEffect,
@@ -49,7 +50,9 @@ export function RadialMenu({
         const timer = setTimeout(() => setNotice(''), 1800);
         return () => clearTimeout(timer);
     }, [notice]);
-    useSyncExternalStore(store.subscribe, store.getSnapshot);
+    const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
+    const actors = eligibleActors(snapshot.scene.tokens, store.role);
+    const actor = actingToken(actors, snapshot.actingTokenId);
     const save = useSyncExternalStore(queue.subscribe, queue.getSnapshot);
     const create = useRef(onCreate);
     const holdClick = useRef(false);
@@ -175,9 +178,6 @@ export function RadialMenu({
                   run: async () => {
                       if (action.check?.enabled) {
                           const snapshot = store.getSnapshot();
-                          const controlled = snapshot.scene.tokens.find(
-                              (token) => snapshot.selectedIds.includes(token.id) && token.isOwner,
-                          );
                           setCheck({
                               action,
                               sceneId: snapshot.scene.id!,
@@ -185,11 +185,12 @@ export function RadialMenu({
                               objectId: target.id,
                               epoch: snapshot.scene.liveRevision ?? 0,
                               userId: store.spatial.identity?.id ?? store.role,
-                              actorTokenId: controlled?.id,
                           });
                           return;
                       }
-                      const key = `${target.kind}:${target.id}:${action.id}`;
+                      if (store.role === 'player' && !actor)
+                          throw new Error('Выберите действующего персонажа.');
+                      const key = `${actor?.id}:${target.kind}:${target.id}:${action.id}`;
                       if (mutation.current?.key !== key)
                           mutation.current = { key, id: commandId() };
                       const result = await interactions.run(
@@ -199,6 +200,7 @@ export function RadialMenu({
                           action.id,
                           store.getSnapshot().scene.liveRevision ?? 0,
                           mutation.current.id,
+                          actor?.id,
                       );
                       mutation.current = null;
                       renderer.current?.respondToObject(target.kind as 'token' | 'prop', target.id);
@@ -222,6 +224,10 @@ export function RadialMenu({
             {check && (
                 <CheckDialog
                     invocation={check}
+                    actorRequired={store.role === 'player'}
+                    actors={actors}
+                    actor={actor}
+                    onActorChange={(id) => store.setActingToken(id)}
                     onClose={() => setCheck(null)}
                     onHandout={setPreview}
                 />

@@ -15,7 +15,13 @@ export interface GridSettings {
     size: number;
     offset: Point;
 }
+export interface CheckStat {
+    key: string;
+    label: string;
+    modifier: number;
+}
 export interface Token extends Point {
+    checkStats?: CheckStat[];
     interactions?: import('../../workspace/interactions/model').ObjectInteraction[];
     conditions?: TokenCondition[];
     isOwner?: boolean;
@@ -76,6 +82,7 @@ export type TokenPatch = Partial<
         | 'rotation'
         | 'scale'
         | 'size'
+        | 'checkStats'
         | 'hp'
         | 'maxHp'
         | 'ac'

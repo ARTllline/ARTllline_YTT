@@ -64,12 +64,14 @@ export const automation = {
         id: string,
         epoch: number,
         mutation: string,
+        actorTokenId?: string,
     ) =>
         request<{ accepted: boolean }>(`/scenes/${scene}/interact`, 'POST', {
             kind,
             id,
             epoch,
             clientMutationId: mutation,
+            ...(actorTokenId ? { actorTokenId } : {}),
         }),
 };
 export function applyRegionPatch(
