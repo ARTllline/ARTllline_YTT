@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Actions\CharacterActions;
 use App\Actions\ObjectInteractionActions;
 use App\Models\Asset;
 use App\Models\Campaign;
@@ -25,7 +26,7 @@ class SceneSnapshotBuilder
             $scene->setRelation('campaign', $campaign);
             Gate::forUser($user)->authorize('view', $scene);
             $gm = $scene->campaign->roleFor($user) === 'gm';
-            $tokens = $scene->tokens()->with(['imageAsset', 'conditions'])->when(! $gm, fn ($query) => $query->where('is_hidden', false))->orderBy('z_index')->orderBy('id')->get();
+            $tokens = $scene->tokens()->with(['character.portraitAsset', 'imageAsset', 'conditions'])->when(! $gm, fn ($query) => $query->where('is_hidden', false))->orderBy('z_index')->orderBy('id')->get();
 
             return [
                 'id' => (string) $scene->id, 'campaignId' => (string) $scene->campaign_id,
@@ -35,6 +36,7 @@ class SceneSnapshotBuilder
                 'fog' => ['base' => $scene->fog_base, 'actions' => $scene->fogActions()->get()->map(fn ($action) => $action->projection())->all()],
                 'grid' => $this->grid($scene), 'map' => $this->map($scene),
                 'tokens' => $tokens->map(fn ($token) => $this->token($token, $gm, $user))->all(),
+                ...app(CharacterActions::class)->roster($campaign, $user),
                 'props' => SceneProp::with('asset')->where('scene_id', $scene->id)->when(! $gm, fn ($q) => $q->where('is_hidden', false))->orderBy('z_index')->orderBy('id')->get()->map(fn ($p) => $p->projection($gm))->all(),
                 'combat' => app(CombatView::class)->build($scene, $gm),
                 ...($gm ? ['regions' => SceneRegion::where('scene_id', $scene->id)->orderBy('id')->get()->map(fn ($r) => $r->projection())->all()] : []),
@@ -67,10 +69,11 @@ class SceneSnapshotBuilder
     public function token(Token $token, bool $gm, User $user): array
     {
         $data = ['id' => (string) $token->id, 'name' => $token->name,
+            'characterId' => $token->character_id ? (string) $token->character_id : null,
             'interactions' => app(ObjectInteractionActions::class)->projection($token, $gm),
             'x' => (float) $token->x, 'y' => (float) $token->y, 'rotation' => (float) $token->rotation,
             'scale' => (float) $token->scale, 'size' => (float) $token->size,
-            'kind' => $token->kind, 'disposition' => $token->disposition, 'color' => 9751480, 'image' => $this->asset($token->imageAsset),
+            'kind' => $token->kind, 'disposition' => $token->disposition, 'color' => 9751480, 'image' => $this->asset($token->character_id ? $token->character->portraitAsset : $token->imageAsset),
             'canMove' => $gm || ($token->owner_user_id === $user->id && ! $token->is_locked)];
         $data['conditions'] = $token->conditions->filter(fn ($condition) => $gm || $condition->visibility === 'public')->values()->map(fn ($condition) => [
             'id' => (string) $condition->id, 'key' => $condition->key, 'label' => $condition->label,

@@ -52,7 +52,7 @@ export function RadialMenu({
     }, [notice]);
     const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
     const actors = eligibleActors(snapshot.scene.tokens, store.role);
-    const actor = actingToken(actors, snapshot.actingTokenId);
+    const actor = actingToken(actors, snapshot.actingTokenId, snapshot.scene.activeCharacterId);
     const save = useSyncExternalStore(queue.subscribe, queue.getSnapshot);
     const create = useRef(onCreate);
     const holdClick = useRef(false);

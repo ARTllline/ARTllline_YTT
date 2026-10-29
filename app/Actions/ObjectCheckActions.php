@@ -48,7 +48,10 @@ class ObjectCheckActions
             $token = $scene->tokens()->findOrFail($data['actorTokenId']);
             // Actor authorization also runs on receipt replay.
         } else {
-            $owned = $scene->tokens()->where('owner_user_id', $user->id)->where('is_hidden', false)->limit(2)->get();
+            $owned = $scene->tokens()->with('character')->where('is_hidden', false)->where(function ($q) use ($user) {
+                $q->where(fn ($q) => $q->whereNull('character_id')->where('owner_user_id', $user->id))
+                    ->orWhereHas('character', fn ($q) => $q->where('owner_user_id', $user->id));
+            })->limit(2)->get();
             $token = $owned->count() === 1 ? $owned->first() : null;
         }
         $provenance = app(TokenCheckStats::class)->resolve($token, $config);

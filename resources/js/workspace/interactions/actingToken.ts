@@ -4,7 +4,8 @@ export function eligibleActors(tokens: readonly Token[], role: 'gm' | 'player') 
     return tokens.filter((token) => !token.isHidden && (role === 'gm' || token.isOwner === true));
 }
 
-export function actingToken(tokens: readonly Token[], id?: string) {
+export function actingToken(tokens: readonly Token[], id?: string, characterId?: string | null) {
+    if (characterId) return tokens.find((token) => token.characterId === characterId);
     return tokens.find((token) => token.id === id) ?? (tokens.length === 1 ? tokens[0] : undefined);
 }
 

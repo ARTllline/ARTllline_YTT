@@ -114,7 +114,39 @@ export class SceneStore {
         this.snapshot = { scene, selectedIds: [], preview: null };
     }
     setActingToken(id?: string) {
+        const token = this.snapshot.scene.tokens.find((t) => t.id === id);
+        if (token?.characterId) {
+            this.setActiveCharacter(token.characterId);
+            return;
+        }
+        if (this.snapshot.scene.activeCharacterId) this.onActiveCharacterChange?.(null);
+        this.snapshot = {
+            ...this.snapshot,
+            scene: { ...this.snapshot.scene, activeCharacterId: null },
+        };
         this.emit({ ...this.snapshot, actingTokenId: id });
+    }
+    onActiveCharacterChange?: (id: string | null) => void;
+    bindActiveCharacter(handler?: (id: string | null) => void) {
+        this.onActiveCharacterChange = handler;
+    }
+    setActiveCharacter(id: string | null) {
+        if (
+            id &&
+            this.role === 'player' &&
+            !this.snapshot.scene.characters?.some((c) => c.id === id)
+        )
+            return;
+        const actor = this.snapshot.scene.tokens.find(
+            (t) => t.characterId === id && !t.isHidden && (this.role === 'gm' || t.isOwner),
+        );
+        this.emit({
+            ...this.snapshot,
+            actingTokenId: undefined,
+            scene: { ...this.snapshot.scene, activeCharacterId: id },
+            selectedIds: actor ? [actor.id] : [],
+        });
+        this.onActiveCharacterChange?.(id);
     }
     getSnapshot = () => this.snapshot;
     subscribe = (listener: () => void) => {

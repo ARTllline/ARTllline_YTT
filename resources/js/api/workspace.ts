@@ -146,6 +146,7 @@ export const api = {
         point: Point,
         asset?: ImageAsset & { name: string },
         identity?: {
+            characterId?: string;
             name: string;
             kind: Token['kind'];
             disposition: NonNullable<Token['disposition']>;
@@ -163,6 +164,7 @@ export const api = {
                       disposition: identity.disposition,
                       hp: identity.hp,
                       max_hp: Math.max(1, identity.hp),
+                      ...(identity.characterId ? { character_id: identity.characterId } : {}),
                   }
                 : {}),
             clientMutationId: commandId(),

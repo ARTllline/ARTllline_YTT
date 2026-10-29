@@ -29,7 +29,7 @@ class PreloadService
     private function assets(Scene $scene, bool $audio): array
     {
         $ids = array_filter([$scene->map_asset_id,
-            ...Token::where('scene_id', $scene->id)->where('is_hidden', false)->pluck('token_image_asset_id')->all(),
+            ...Token::with('character')->where('scene_id', $scene->id)->where('is_hidden', false)->get()->map(fn ($t) => $t->token_image_asset_id)->all(),
             ...SceneProp::where('scene_id', $scene->id)->where('is_hidden', false)->pluck('asset_id')->all()]);
         if ($audio) {
             foreach (CueStep::whereIn('cue_id', DB::table('cues')->where('scene_id', $scene->id)->select('id'))

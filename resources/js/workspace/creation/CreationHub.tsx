@@ -14,6 +14,7 @@ import {
 import { AssetLibrary } from '../assets/LazyAssets';
 import { TemplateLibrary } from '../objects/TemplateLibrary';
 import { presets, tokenDraft, type Placement, type TokenDraft } from './model';
+import { CharacterBrowser } from './CharacterBrowser';
 
 const categories = [
     ['characters', 'Персонажи', CircleUserRound],
@@ -180,6 +181,9 @@ export function CreationHub({
                         ))}
                     </nav>
                     <div className="creation-content">
+                        {category === 'characters' && (
+                            <CharacterBrowser campaignId={campaignId} onPlace={onPlace} />
+                        )}
                         <div className="creation-section-title">
                             <h3>{categories.find((c) => c[0] === category)?.[1]}</h3>
                             {token && (
@@ -194,11 +198,13 @@ export function CreationHub({
                             )}
                         </div>
                         <p className="hint">
-                            {token
-                                ? 'Выберите портрет для быстрого токена или перетащите его на карту.'
-                                : category === 'props'
-                                  ? 'Выберите объект. Ставьте копии кликами, пока не нажмёте Esc.'
-                                  : 'Выберите группу и укажите её место на карте.'}
+                            {category === 'characters'
+                                ? 'Или создайте нового героя из портрета. Он сохранится в кампании.'
+                                : token
+                                  ? 'Выберите портрет для быстрого токена или перетащите его на карту.'
+                                  : category === 'props'
+                                    ? 'Выберите объект. Ставьте копии кликами, пока не нажмёте Esc.'
+                                    : 'Выберите группу и укажите её место на карте.'}
                         </p>
                         {(token || category === 'props') && (
                             <AssetLibrary

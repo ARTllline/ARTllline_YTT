@@ -6,6 +6,7 @@ use App\Models\Asset;
 use App\Models\AssetCollection;
 use App\Models\AssetTag;
 use App\Models\Campaign;
+use App\Models\Character;
 use App\Models\ContentTemplate;
 use App\Models\Handout;
 use App\Models\Scene;
@@ -45,10 +46,11 @@ class AssetLibrary
         }
 
         return array_merge(
+            Character::where('portrait_asset_id', $asset->id)->get()->map(fn ($c) => 'Персонаж · '.$c->name)->all(),
             SceneProp::where('asset_id', $asset->id)->with('scene:id,name')->get()->map(fn ($p) => 'Объект · '.$p->name.' / '.$p->scene->name)->all(),
             ContentTemplate::whereHas('items', fn ($q) => $q->where('asset_id', $asset->id))->get()->map(fn ($t) => ($t->kind === 'prefab' ? 'Заготовка · ' : 'Столкновение · ').$t->name)->all(),
             Scene::where('map_asset_id', $asset->id)->get(['id', 'name'])->map(fn ($s) => 'Карта · '.$s->name)->all(),
-            Token::where('token_image_asset_id', $asset->id)->with('scene:id,name')->get()->map(fn ($t) => 'Токен · '.$t->name.' / '.$t->scene->name)->all(),
+            Token::whereNull('character_id')->where('token_image_asset_id', $asset->id)->with('scene:id,name')->get()->map(fn ($t) => 'Токен · '.$t->name.' / '.$t->scene->name)->all(),
             Handout::where('asset_id', $asset->id)->get(['title'])->map(fn ($h) => 'Раздаточный материал · '.$h->title)->all(),
         );
     }

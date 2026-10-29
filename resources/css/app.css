@@ -1035,3 +1035,53 @@ dd {
         animation: none !important;
     }
 }
+
+.character-browser {
+    padding: 14px 0 18px;
+    border-bottom: 1px solid var(--border, #343b4b);
+    margin-bottom: 18px;
+}
+.character-browser-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+}
+.character-browser-row > div {
+    flex: 1;
+    min-width: 0;
+}
+.character-browser-row strong,
+.character-browser-row small {
+    display: block;
+    overflow-wrap: anywhere;
+}
+.character-browser-row small,
+.character-picker small {
+    color: var(--muted, #9ba5b7);
+    font-size: 11px;
+}
+.character-editor {
+    padding: 12px;
+    margin-top: 10px;
+    background: #151a24;
+    border-radius: 8px;
+}
+.character-picker {
+    display: grid;
+    gap: 4px;
+    max-width: 260px;
+}
+.character-picker > span {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: #9ba5b7;
+}
+.character-picker select {
+    width: 100%;
+    background: #151a24;
+    color: #e1e7f0;
+    border: 1px solid #343b4b;
+    border-radius: 5px;
+    padding: 5px;
+}

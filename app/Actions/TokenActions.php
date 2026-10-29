@@ -21,6 +21,31 @@ class TokenActions
     {
         return $this->transaction->run($scene, function ($scene) use ($user, $data) {
             Gate::forUser($user)->authorize('update', $scene);
+            $character = null;
+            $newCharacter = false;
+            if (! empty($data['character_id'])) {
+                $character = $scene->campaign->characters()->findOrFail($data['character_id']);
+                if ($scene->tokens()->where('character_id', $character->id)->exists()) {
+                    throw ValidationException::withMessages(['character_id' => 'Этот персонаж уже представлен на сцене.']);
+                }
+                // Placement accepts only spatial data: identity and vitals always come from Character.
+                $data = array_diff_key($data, Token::CHARACTER_FIELDS);
+                $data['name'] = $character->name;
+            } elseif (($data['kind'] ?? null) === 'player_character') {
+                $identity = [];
+                foreach (Token::CHARACTER_FIELDS as $field => $target) {
+                    if (array_key_exists($field, $data)) {
+                        $identity[$target] = $data[$field];
+                    }
+                }
+                app(CharacterActions::class)->validate($scene->campaign, $identity);
+                $character = $scene->campaign->characters()->create($identity)->refresh();
+                $newCharacter = true;
+                $data['character_id'] = $character->id;
+            }
+            if (! empty($data['owner_user_id']) && ! CampaignMember::where('campaign_id', $scene->campaign_id)->where('user_id', $data['owner_user_id'])->exists()) {
+                throw ValidationException::withMessages(['owner_user_id' => 'The controller must be a member of this campaign.']);
+            }
             if (! empty($data['token_image_asset_id'])) {
                 $asset = Asset::whereKey($data['token_image_asset_id'])->where('campaign_id', $scene->campaign_id)->where('kind', 'token')->first();
                 if (! $asset) {
@@ -33,8 +58,11 @@ class TokenActions
             $data['size'] = $scene->grid_visible ? max(20, min(300, $scene->grid_size)) : 60;
             $token = $scene->tokens()->create($data);
             $token->refresh();
+            if ($newCharacter) {
+                app(CharacterActions::class)->publish($user, $character, $scene->id);
+            }
 
-            return ['token' => $this->snapshots->token($token, true, $user)];
+            return ['token' => $this->snapshots->token($token, true, $user), 'charactersChanged' => $character !== null];
         }, 'token.created');
     }
 
@@ -47,6 +75,21 @@ class TokenActions
             $wasVisible = ! $token->is_hidden;
             $before = clone $token;
             if (! $move) {
+                if ($token->character_id) {
+                    $identity = [];
+                    foreach (Token::CHARACTER_FIELDS as $field => $target) {
+                        if (array_key_exists($field, $data)) {
+                            $identity[$target] = $data[$field];
+                            unset($data[$field]);
+                        }
+                    }
+                    if (isset($identity['max_hp']) && ! isset($identity['hp']) && $token->hp > $identity['max_hp']) {
+                        $identity['hp'] = $identity['max_hp'];
+                    }
+                    if ($identity) {
+                        app(CharacterActions::class)->updateLinked($user, $token, $identity);
+                    }
+                }
                 if (! empty($data['owner_user_id']) && ! CampaignMember::where('campaign_id', $scene->campaign_id)->where('user_id', $data['owner_user_id'])->exists()) {
                     throw ValidationException::withMessages(['owner_user_id' => 'The controller must be a member of this campaign.']);
                 }
@@ -69,7 +112,7 @@ class TokenActions
                 app(TriggerEvents::class)->movement($scene, [[$before, $token]]);
             }
 
-            return ['token' => $this->snapshots->token($token, $scene->campaign->roleFor($user) === 'gm', $user), '_wasVisible' => $wasVisible, '_combatChanged' => array_key_exists('is_hidden', $data)];
+            return ['token' => $this->snapshots->token($token, $scene->campaign->roleFor($user) === 'gm', $user), 'charactersChanged' => $token->character_id !== null && ! $move, '_wasVisible' => $wasVisible, '_combatChanged' => array_key_exists('is_hidden', $data)];
         }, $move ? 'token.moved' : 'token.updated');
     }
 

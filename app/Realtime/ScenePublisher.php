@@ -2,6 +2,7 @@
 
 namespace App\Realtime;
 
+use App\Actions\CharacterActions;
 use App\Events\TabletopEvent;
 use App\Models\Campaign;
 use App\Models\Scene;
@@ -19,7 +20,7 @@ class ScenePublisher
     public function changed(Scene $scene, string $type, array $result, bool $wasVisible, array $previousVisibility = ['tokens' => [], 'props' => []]): void
     {
         $members = $scene->campaign->members()->get();
-        $token = isset($result['token']) ? $scene->tokens()->with(['imageAsset', 'conditions'])->find($result['token']['id']) : null;
+        $token = isset($result['token']) ? $scene->tokens()->with(['character.portraitAsset', 'imageAsset', 'conditions'])->find($result['token']['id']) : null;
         $base = ['type' => $type, 'sceneId' => (string) $scene->id, 'revision' => $scene->revision, 'mutationId' => $this->context->id()];
         if ($this->context->dragSessionId) {
             $base['dragSessionId'] = $this->context->dragSessionId;
@@ -28,6 +29,10 @@ class ScenePublisher
         if ($gm) {
             $payload = $result;
             unset($payload['revision'], $payload['mutationId']);
+            if ($result['charactersChanged'] ?? false) {
+                $payload['scene'] = app(CharacterActions::class)->roster($scene->campaign, $gm);
+            }
+            unset($payload['charactersChanged']);
             if ($token) {
                 $payload['token'] = $this->snapshots->token($token, true, $gm);
             }
@@ -37,7 +42,7 @@ class ScenePublisher
             return;
         }
         $playerCombat = array_key_exists('combat', $result) ? app(CombatView::class)->build($scene, false) : null;
-        $batchTokens = $type === 'objects.changed' ? $scene->tokens()->with(['imageAsset', 'conditions'])->whereIn('id', array_column($result['tokens'] ?? [], 'id'))->where('is_hidden', false)->get() : collect();
+        $batchTokens = $type === 'objects.changed' ? $scene->tokens()->with(['character.portraitAsset', 'imageAsset', 'conditions'])->whereIn('id', array_column($result['tokens'] ?? [], 'id'))->where('is_hidden', false)->get() : collect();
         $batchProps = $type === 'objects.changed' ? SceneProp::with('asset')->where('scene_id', $scene->id)->whereIn('id', array_column($result['props'] ?? [], 'id'))->where('is_hidden', false)->get() : collect();
         foreach ($members as $member) {
             if ($member->pivot->role !== 'player') {
@@ -87,6 +92,9 @@ class ScenePublisher
                     $event['type'] = 'scene.revision';
                     $payload = array_key_exists('combat', $result) ? ['combat' => $playerCombat] : [];
                 }
+            }
+            if ($result['charactersChanged'] ?? false) {
+                $payload['scene'] = app(CharacterActions::class)->roster($scene->campaign, $member);
             }
             $this->schedule(ChannelAccess::player($scene->campaign_id, $scene->id, $scene->campaign->live_revision, $member->id), $event + ['payload' => $payload ?: (object) []]);
         }

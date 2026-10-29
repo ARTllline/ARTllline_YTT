@@ -28,7 +28,9 @@ class TokenCheckStats
                 throw ValidationException::withMessages(['actorTokenId' => 'У персонажа не настроена эта проверка. Попросите GM добавить модификатор.']);
             }
 
-            return ['source' => 'token_stat', 'tokenId' => (string) $token->id, 'tokenName' => $token->name,
+            return ['source' => $token->character_id ? 'character_stat' : 'token_stat',
+                ...($token->character_id ? ['characterId' => (string) $token->character_id, 'characterName' => $token->name] : []),
+                'tokenId' => (string) $token->id, 'tokenName' => $token->name,
                 'statKey' => $key, 'statLabel' => $stat['label'], 'baseModifier' => (int) $stat['modifier'],
                 'otherModifiers' => [], 'finalModifier' => (int) $stat['modifier']];
         }

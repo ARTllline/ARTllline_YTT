@@ -4,6 +4,7 @@ use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\CampaignController;
+use App\Http\Controllers\CharacterController;
 use App\Http\Controllers\CombatController;
 use App\Http\Controllers\CueController;
 use App\Http\Controllers\FogController;
@@ -46,6 +47,9 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
     });
     Route::middleware('auth')->group(function () {
+        Route::get('/campaigns/{campaign}/characters', [CharacterController::class, 'index']);
+        Route::post('/campaigns/{campaign}/characters', [CharacterController::class, 'save'])->name('campaign.characters.save')->middleware(IdempotentMutation::class);
+        Route::put('/campaigns/{campaign}/active-character', [CharacterController::class, 'select']);
         Route::post('/scenes/{scene}/edit-history', SceneEditController::class)->name('scene.edit-history')->middleware(IdempotentMutation::class);
         Route::get('/scenes/{scene}/triggers', [AutomationController::class, 'index']);
         Route::post('/scenes/{scene}/regions', [AutomationController::class, 'regions'])->name('scene.regions')->middleware(IdempotentMutation::class);

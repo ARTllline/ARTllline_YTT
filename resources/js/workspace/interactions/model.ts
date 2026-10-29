@@ -57,7 +57,9 @@ export interface CheckResult {
     rawDice: number[];
     selectedDie: number;
     provenance: {
-        source: 'token_stat' | 'legacy_interaction';
+        source: 'token_stat' | 'character_stat' | 'legacy_interaction';
+        characterId?: string;
+        characterName?: string;
         tokenId: string | null;
         tokenName: string | null;
         statKey: string | null;

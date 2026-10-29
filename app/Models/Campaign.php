@@ -25,6 +25,11 @@ class Campaign extends Model
         return $this->hasMany(Scene::class);
     }
 
+    public function characters(): HasMany
+    {
+        return $this->hasMany(Character::class);
+    }
+
     public function roleFor(User $user): ?string
     {
         return $this->members()->where('users.id', $user->id)->first()?->pivot->role;

@@ -8,7 +8,26 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Token extends Model
 {
+    /** Persistent fields are read from Character; legacy columns remain for standalone tokens. */
+    public const CHARACTER_FIELDS = ['name' => 'name', 'token_image_asset_id' => 'portrait_asset_id',
+        'owner_user_id' => 'owner_user_id', 'kind' => 'kind', 'disposition' => 'disposition',
+        'check_stats' => 'check_stats', 'hp' => 'hp', 'max_hp' => 'max_hp'];
+
     protected $guarded = ['id', 'scene_id'];
+
+    public function character(): BelongsTo
+    {
+        return $this->belongsTo(Character::class);
+    }
+
+    public function getAttribute($key)
+    {
+        if (isset(self::CHARACTER_FIELDS[$key]) && ! empty($this->attributes['character_id'])) {
+            return $this->character->getAttribute(self::CHARACTER_FIELDS[$key]);
+        }
+
+        return parent::getAttribute($key);
+    }
 
     protected function casts(): array
     {

@@ -331,8 +331,9 @@ class ObjectCheckTest extends TestCase
         foreach ([[$stats[0], $stats[0]], [['key' => 'invalid key', 'label' => 'Сила', 'modifier' => 3]], [['key' => 'test', 'label' => 'Сила', 'modifier' => 101]]] as $invalid) {
             $this->actingAs($this->gm)->patchJson($url, ['check_stats' => $invalid])->assertUnprocessable();
         }
-        Event::assertDispatched(TabletopEvent::class, fn ($e) => str_ends_with($e->channel, '.user.'.$this->player->id) && ($e->envelope['token']['checkStats'] ?? null) === $stats);
-        Event::assertNotDispatched(TabletopEvent::class, fn ($e) => str_ends_with($e->channel, '.user.'.$this->other->id) && isset($e->envelope['token']['checkStats']));
+        Event::assertDispatched(TabletopEvent::class, fn ($e) => str_ends_with($e->channel, '.user.'.$this->player->id) && ($e->envelope['payload']['token']['checkStats'] ?? null) === $stats);
+        Event::assertDispatched(TabletopEvent::class, fn ($e) => str_ends_with($e->channel, '.user.'.$this->other->id) && isset($e->envelope['payload']['token']));
+        Event::assertNotDispatched(TabletopEvent::class, fn ($e) => str_ends_with($e->channel, '.user.'.$this->other->id) && isset($e->envelope['payload']['token']['checkStats']));
     }
 
     public function test_new_config_ignores_stored_fixed_modifier_and_projects_only_public_stat_key(): void
@@ -354,5 +355,28 @@ class ObjectCheckTest extends TestCase
         for ($i = 0; $i < 50; $i++) {
             $this->assertContains($roller->roll(), range(1, 20));
         }
+    }
+
+    public function test_linked_character_owns_modifier_authority_and_preserves_check_identity(): void
+    {
+        $this->useTokenStats();
+        $character = $this->scene->campaign->characters()->create(['name' => 'Керн', 'owner_user_id' => $this->player->id,
+            'check_stats' => [['key' => 'perception', 'label' => 'Внимательность', 'modifier' => 7]]]);
+        $this->token->update(['character_id' => $character->id, 'check_stats' => [['key' => 'perception', 'label' => 'Stale token value', 'modifier' => 99]]]);
+        $this->roll(10, 2);
+        $command = $this->command() + ['actorTokenId' => $this->token->id];
+        $first = $this->actingAs($this->player)->postJson($this->base.'/interact', $command)->assertOk()
+            ->assertJsonPath('check.total', 17)->assertJsonPath('check.provenance.source', 'character_stat')
+            ->assertJsonPath('check.provenance.characterId', (string) $character->id)->assertJsonPath('check.provenance.characterName', 'Керн');
+        $character->update(['name' => 'Renamed', 'check_stats' => [['key' => 'perception', 'label' => 'Новая проверка', 'modifier' => 2]]]);
+        $this->postJson($this->base.'/interact', $command)->assertOk()->assertExactJson($first->json());
+        DB::table('scene_mutation_receipts')->where('client_mutation_id', $command['clientMutationId'])->delete();
+        $this->postJson($this->base.'/interact', $command)->assertOk()->assertJsonPath('check', $first->json('check'));
+        $this->postJson($this->base.'/interact', $this->command() + ['actorTokenId' => $this->token->id])->assertOk()->assertJsonPath('check.total', 12);
+        $character->update(['owner_user_id' => $this->other->id]);
+        $this->postJson($this->base.'/interact', $command)->assertForbidden();
+        DB::table('scene_mutation_receipts')->where('client_mutation_id', $command['clientMutationId'])->delete();
+        $this->postJson($this->base.'/interact', $command)->assertForbidden();
+        $this->assertDatabaseCount('object_checks', 2);
     }
 }

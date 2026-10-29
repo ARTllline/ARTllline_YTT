@@ -1,4 +1,5 @@
 import { ActorPicker } from './interactions/ActorPicker';
+import { charactersApi } from '../api/characters';
 import { actingToken, eligibleActors } from './interactions/actingToken';
 import { t } from '../i18n';
 import { useLiveMedia } from '../media/useLiveMedia';
@@ -160,25 +161,106 @@ function PlayerTabletop({
     const renderer = useRef<TabletopRenderer | null>(null);
     const [zoom, setZoom] = useState(100);
     const actors = eligibleActors(snapshot.scene.tokens, 'player');
-    const actor = actingToken(actors, snapshot.actingTokenId);
+    const actor = actingToken(actors, snapshot.actingTokenId, snapshot.scene.activeCharacterId);
+    const [actorBusy, setActorBusy] = useState(false);
+    const [actorError, setActorError] = useState('');
+    useEffect(() => {
+        let alive = true;
+        let chain = Promise.resolve();
+        let version = 0;
+        store.bindActiveCharacter((id) => {
+            const current = ++version;
+            setActorBusy(true);
+            setActorError('');
+            chain = chain
+                .then(() => charactersApi.select(initial.campaignId!, id))
+                .then((roster) => {
+                    if (alive && current === version)
+                        store.reconcile({ ...store.getSnapshot().scene, ...roster });
+                })
+                .catch((e) => {
+                    if (alive && current === version) {
+                        setActorError(e.message);
+                        void api
+                            .snapshot(initial.id!)
+                            .then((scene) => {
+                                if (alive && current === version) store.reconcile(scene);
+                            })
+                            .catch(() => {});
+                    }
+                })
+                .finally(() => {
+                    if (alive && current === version) setActorBusy(false);
+                });
+        });
+        return () => {
+            alive = false;
+            store.bindActiveCharacter();
+        };
+    }, [store, initial.campaignId, initial.id]);
+    useEffect(() => {
+        if (snapshot.scene.activeCharacterId) store.select(actor?.id ?? null);
+    }, [store, snapshot.scene.activeCharacterId, actor?.id]);
     useEffect(() => {
         const eligible = eligibleActors(snapshot.scene.tokens, 'player');
+        if (snapshot.scene.activeCharacterId) return;
         if (
             !eligible.some((token) => token.id === snapshot.actingTokenId) &&
             (snapshot.actingTokenId || eligible.length === 1)
         )
             store.setActingToken(eligible.length === 1 ? eligible[0].id : undefined);
-    }, [snapshot.scene.tokens, snapshot.actingTokenId, store]);
+    }, [snapshot.scene.tokens, snapshot.scene.activeCharacterId, snapshot.actingTokenId, store]);
     const selected = snapshot.scene.tokens.find((t) => t.id === snapshot.selectedIds[0]);
     const selectedProp = snapshot.scene.props?.find((p) => p.id === snapshot.selectedPropIds?.[0]);
     return (
         <main className="player-tabletop">
             <div className="player-actor">
-                <ActorPicker
-                    tokens={actors}
-                    actor={actor}
-                    onChange={(id) => store.setActingToken(id)}
-                />
+                {!!snapshot.scene.characters?.length && (
+                    <label className="character-picker">
+                        <span>ПЕРСОНАЖ</span>
+                        <select
+                            aria-label="Постоянный персонаж"
+                            value={
+                                snapshot.scene.activeCharacterId ??
+                                (snapshot.actingTokenId ? `token:${snapshot.actingTokenId}` : '')
+                            }
+                            disabled={actorBusy}
+                            onChange={(e) =>
+                                e.target.value.startsWith('token:')
+                                    ? store.setActingToken(e.target.value.slice(6))
+                                    : store.setActiveCharacter(e.target.value || null)
+                            }
+                        >
+                            <option value="" disabled>
+                                Выберите персонажа
+                            </option>
+                            {snapshot.scene.characters.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                    {c.name}
+                                </option>
+                            ))}
+                            {actors
+                                .filter((t) => !t.characterId)
+                                .map((t) => (
+                                    <option key={t.id} value={`token:${t.id}`}>
+                                        {t.name} · токен сцены
+                                    </option>
+                                ))}
+                        </select>
+                        {snapshot.scene.activeCharacterId && !actor && (
+                            <small>Нет доступного токена в этой сцене</small>
+                        )}
+                    </label>
+                )}
+                {!snapshot.scene.characters?.length && (
+                    <ActorPicker
+                        tokens={actors}
+                        actor={actor}
+                        disabled={actorBusy}
+                        onChange={(id) => store.setActingToken(id)}
+                    />
+                )}
+                {actorError && <p role="alert">{actorError}</p>}
             </div>
             <Tabletop store={store} rendererRef={renderer} onZoom={setZoom} />
             <RadialMenu

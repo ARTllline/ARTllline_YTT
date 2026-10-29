@@ -54,6 +54,7 @@ class SelectionActions
                 app(TriggerEvents::class)->movement($scene, $moves);
             } else {
                 $duplicate = function ($object) {
+                    abort_if($object instanceof Token && $object->character_id, 422, 'Персонаж уже представлен на сцене. Разместите его в другой сцене через «Персонажи».');
                     abort_if(abs($object->x + 30) > 1000000 || abs($object->y + 30) > 1000000, 422, 'Объекты выходят за допустимые границы.');
                     $copy = $object->replicate();
                     $copy->x += 30;

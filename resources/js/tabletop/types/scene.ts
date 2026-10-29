@@ -21,6 +21,7 @@ export interface CheckStat {
     modifier: number;
 }
 export interface Token extends Point {
+    characterId?: string | null;
     checkStats?: CheckStat[];
     interactions?: import('../../workspace/interactions/model').ObjectInteraction[];
     conditions?: TokenCondition[];
@@ -55,6 +56,8 @@ export interface SceneMap extends Point {
     height: number;
 }
 export interface Scene {
+    characters?: readonly Character[];
+    activeCharacterId?: string | null;
     regions?: readonly import('../../automation/model').Region[];
     props?: readonly SceneProp[];
     notes?: readonly SceneNote[];
@@ -70,6 +73,17 @@ export interface Scene {
     height: number;
     grid: GridSettings;
     tokens: readonly Token[];
+}
+export interface Character {
+    id: string;
+    name: string;
+    portrait: ImageAsset | null;
+    ownerUserId: string | null;
+    kind: Token['kind'];
+    disposition: NonNullable<Token['disposition']>;
+    checkStats: CheckStat[];
+    hp: number;
+    maxHp: number;
 }
 export type TokenPatch = Partial<
     Pick<

@@ -19,10 +19,26 @@ export function TokenCheckEditor({
     store: SceneStore;
     disabled: boolean;
 }) {
-    const stats = token.checkStats ?? [];
+    return (
+        <CheckStatsEditor
+            stats={token.checkStats ?? []}
+            save={(next) => store.updateToken(token.id, { checkStats: next })}
+            disabled={disabled}
+        />
+    );
+}
+
+export function CheckStatsEditor({
+    stats,
+    save,
+    disabled,
+}: {
+    stats: CheckStat[];
+    save: (next: CheckStat[]) => void;
+    disabled: boolean;
+}) {
     const [key, setKey] = useState('');
     const [label, setLabel] = useState('');
-    const save = (next: CheckStat[]) => store.updateToken(token.id, { checkStats: next });
     return (
         <details className="inspector-section token-check-editor">
             <summary>Модификаторы проверок · {stats.length}</summary>

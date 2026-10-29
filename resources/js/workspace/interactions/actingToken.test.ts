@@ -24,6 +24,75 @@ const token = (id: string, modifier: number, extra: Partial<Token> = {}): Token 
 });
 
 describe('acting character', () => {
+    it('follows Character through scene tokens and never falls back to someone else when absent', () => {
+        const first = token('first', 3, { characterId: 'character-kern' });
+        const second = token('second', 3, { characterId: 'character-kern' });
+        const other = token('other', 7, { characterId: 'character-mira' });
+        expect(actingToken([first], undefined, 'character-kern')).toBe(first);
+        expect(actingToken([second, other], 'first', 'character-kern')).toBe(second);
+        expect(actingToken([other], 'first', 'character-kern')).toBeUndefined();
+        expect(
+            actingToken(
+                eligibleActors([{ ...second, isOwner: false }], 'player'),
+                undefined,
+                'character-kern',
+            ),
+        ).toBeUndefined();
+        expect(
+            actingToken(
+                eligibleActors([{ ...second, isHidden: true }], 'player'),
+                undefined,
+                'character-kern',
+            ),
+        ).toBeUndefined();
+    });
+    it('selects a linked character separately from transient scene selection and rejects unassigned characters', () => {
+        const kern = token('instance', 3, { characterId: 'character-kern' });
+        const store = new SceneStore(
+            {
+                tokens: [kern],
+                characters: [
+                    {
+                        id: 'character-kern',
+                        name: 'Керн',
+                        portrait: null,
+                        ownerUserId: 'player',
+                        kind: 'player_character',
+                        disposition: 'friendly',
+                        checkStats: [],
+                        hp: 10,
+                        maxHp: 10,
+                    },
+                ],
+                width: 1000,
+                height: 1000,
+                grid: { size: 50, snap: true, visible: true, offset: { x: 0, y: 0 } },
+            },
+            'player',
+        );
+        const persist = vi.fn();
+        store.onActiveCharacterChange = persist;
+        store.setActingToken(kern.id);
+        expect(store.getSnapshot().scene.activeCharacterId).toBe('character-kern');
+        expect(store.getSnapshot().selectedIds).toEqual([kern.id]);
+        expect(persist).toHaveBeenCalledWith('character-kern');
+        store.select(null);
+        expect(store.getSnapshot().scene.activeCharacterId).toBe('character-kern');
+        store.setActiveCharacter('unassigned');
+        expect(store.getSnapshot().scene.activeCharacterId).toBe('character-kern');
+        const next = {
+            ...store.getSnapshot().scene,
+            tokens: [token('new-instance', 3, { characterId: 'character-kern' })],
+        };
+        store.reconcile(next);
+        expect(
+            actingToken(
+                eligibleActors(next.tokens, 'player'),
+                undefined,
+                store.getSnapshot().scene.activeCharacterId,
+            )?.id,
+        ).toBe('new-instance');
+    });
     it('automatically uses one owned visible token, including a movement-locked token; requires a choice for two', () => {
         const one = token('kern', 3);
         const eligible = eligibleActors(

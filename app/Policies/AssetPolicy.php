@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Asset;
+use App\Models\Character;
 use App\Models\Handout;
 use App\Models\Scene;
 use App\Models\SceneProp;
@@ -22,6 +23,9 @@ class AssetPolicy
         if ($role !== 'player') {
             return false;
         }
+        if (Character::where('campaign_id', $campaign->id)->where('owner_user_id', $user->id)->where('portrait_asset_id', $asset->id)->exists()) {
+            return true;
+        }
         if ($asset->duration_ms !== null) {
             return app(LiveMedia::class)->authorized($campaign, $asset);
         }
@@ -35,6 +39,9 @@ class AssetPolicy
 
         return Scene::whereKey($campaign->active_scene_id)->where('campaign_id', $campaign->id)->where('map_asset_id', $asset->id)->exists()
             || SceneProp::where('scene_id', $campaign->active_scene_id)->where('is_hidden', false)->where('asset_id', $asset->id)->exists()
-            || Token::where('scene_id', $campaign->active_scene_id)->where('is_hidden', false)->where('token_image_asset_id', $asset->id)->exists();
+            || Token::where('scene_id', $campaign->active_scene_id)->where('is_hidden', false)->where(function ($q) use ($asset) {
+                $q->where(fn ($q) => $q->whereNull('character_id')->where('token_image_asset_id', $asset->id))
+                    ->orWhereHas('character', fn ($q) => $q->where('portrait_asset_id', $asset->id));
+            })->exists();
     }
 }

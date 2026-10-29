@@ -72,6 +72,12 @@ export function Inspector({
                             {token.kind === 'player_character' ? t('ADVENTURER') : t('CREATURE')}
                         </span>
                         <h2>{token.name}</h2>
+                        {token.characterId && (
+                            <p className="hint">
+                                Персонаж кампании · личность, игрок, проверки и HP общие для всех
+                                сцен.
+                            </p>
+                        )}
                         <span className="muted">
                             {token.isHidden
                                 ? t('GM only · hidden from players')
@@ -296,12 +302,19 @@ export function Inspector({
                                     }
                                 >
                                     <option value=""> {t('Unassigned')} </option>
-                                    {campaign.members?.map((member) => (
-                                        <option key={member.id} value={member.id}>
-                                            {member.name} ·{' '}
-                                            {member.role === 'gm' ? t('Game Master') : t('Player')}
-                                        </option>
-                                    ))}
+                                    {campaign.members
+                                        ?.filter(
+                                            (member) =>
+                                                !token.characterId || member.role === 'player',
+                                        )
+                                        .map((member) => (
+                                            <option key={member.id} value={member.id}>
+                                                {member.name} ·{' '}
+                                                {member.role === 'gm'
+                                                    ? t('Game Master')
+                                                    : t('Player')}
+                                            </option>
+                                        ))}
                                 </select>
                             </label>
                         </section>

@@ -9,6 +9,7 @@ export const presets = {
     enemy: { label: 'Враг', kind: 'npc', disposition: 'hostile' },
 } as const;
 export interface TokenDraft {
+    characterId?: string;
     name: string;
     kind: Token['kind'];
     disposition: NonNullable<Token['disposition']>;
