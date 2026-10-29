@@ -2,6 +2,7 @@ import { t } from '../i18n';
 import { useLiveMedia } from '../media/useLiveMedia';
 import { usePlayerPreload } from '../preload/usePlayerPreload';
 import { InteractButton } from '../automation/InteractButton';
+import { RadialMenu } from './radial/RadialMenu';
 import { DirectorLayer } from '../director/DirectorLayer';
 import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ArrowLeft, Maximize, Minus, Plus } from 'lucide-react';
@@ -161,6 +162,12 @@ function PlayerTabletop({
     return (
         <main className="player-tabletop">
             <Tabletop store={store} rendererRef={renderer} onZoom={setZoom} />
+            <RadialMenu
+                store={store}
+                queue={queue}
+                renderer={renderer}
+                disabled={connection !== 'connected'}
+            />
             <DirectorLayer
                 sceneId={initial.id!}
                 epoch={initial.liveRevision ?? 0}
@@ -214,15 +221,19 @@ function PlayerTabletop({
                         </span>
                     </>
                 )}
-                {(selected || selectedProp) && (
-                    <InteractButton
-                        key={`${selected ? 'token' : 'prop'}:${(selected ?? selectedProp)!.id}`}
-                        sceneId={initial.id!}
-                        epoch={initial.liveRevision ?? 0}
-                        kind={selected ? 'token' : 'prop'}
-                        id={(selected ?? selectedProp)!.id}
-                        disabled={connection !== 'connected' || save.status !== 'saved'}
-                    />
+                {(selected ?? selectedProp)?.interactions?.length ? (
+                    <span>ПКМ / долгое нажатие — действия объекта</span>
+                ) : (
+                    (selected || selectedProp) && (
+                        <InteractButton
+                            key={`${selected ? 'token' : 'prop'}:${(selected ?? selectedProp)!.id}`}
+                            sceneId={initial.id!}
+                            epoch={initial.liveRevision ?? 0}
+                            kind={selected ? 'token' : 'prop'}
+                            id={(selected ?? selectedProp)!.id}
+                            disabled={connection !== 'connected' || save.status !== 'saved'}
+                        />
+                    )
                 )}
             </div>
             <div className="player-controls">

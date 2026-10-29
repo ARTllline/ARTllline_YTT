@@ -1,5 +1,6 @@
 import { t } from '../i18n';
 import { PropInspector } from './objects/PropInspector';
+import { InteractionEditor } from './interactions/InteractionEditor';
 import { useSyncExternalStore } from 'react';
 import { Crosshair, SlidersHorizontal, X, Trash2, ImagePlus } from 'lucide-react';
 import { tokenAppearance } from '../tabletop/objects/tokenAppearance';
@@ -76,6 +77,14 @@ export function Inspector({
                                 : t('Visible in the scene')}
                         </span>
                     </div>
+                    <InteractionEditor
+                        key={`interactions:${token.id}`}
+                        store={store}
+                        kind="token"
+                        id={token.id}
+                        actions={token.interactions}
+                        disabled={combatBusy}
+                    />
                     <details className="inspector-section" open>
                         <summary>Личность</summary>
                         <section>

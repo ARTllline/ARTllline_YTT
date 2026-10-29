@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Models\Campaign;
+use App\Models\Cue;
 use App\Models\Scene;
 use App\Models\SceneProp;
 use App\Models\User;
@@ -18,7 +19,11 @@ class ObjectInteraction
         Gate::forUser($user)->authorize('view', $scene);
         abort_unless($scene->campaign->active_scene_id === $scene->id && $scene->campaign->live_revision === (int) $data['epoch'], 409, 'Сцена изменилась. Повторите действие на текущей сцене.');
         $object = $data['kind'] === 'token' ? $scene->tokens()->findOrFail($data['id']) : SceneProp::where('scene_id', $scene->id)->findOrFail($data['id']);
-        abort_if($scene->campaign->roleFor($user) !== 'gm' && $object->is_hidden, 403);
+        abort_if($object->is_hidden, 403);
+        if (isset($data['actionId'])) {
+            $action = collect($object->interactions ?? [])->firstWhere('id', $data['actionId']);
+            abort_unless($action && app(ObjectInteractionActions::class)->available($scene, $action), 403, 'Действие больше недоступно.');
+        }
     }
 
     public function execute(User $user, Scene $scene, array $data): array
@@ -28,6 +33,23 @@ class ObjectInteraction
             $scene = Scene::whereKey($scene->id)->lockForUpdate()->firstOrFail();
             $scene->setRelation('campaign', $campaign);
             $this->authorize($user, $scene, $data);
+            if (isset($data['actionId'])) {
+                $object = app(ObjectInteractionActions::class)->object($scene, $data['kind'], $data['id']);
+                $action = collect($object->interactions)->firstWhere('id', $data['actionId']);
+                $author = User::findOrFail($action['author_id']);
+                if ($action['result_type'] === 'handout') {
+                    $result = app(HandoutActions::class)->show($author, $campaign, $action['result_target'],
+                        $campaign->roleFor($user) === 'gm' ? [] : [(string) $user->id]);
+                    if ($campaign->roleFor($user) === 'gm') {
+                        return ['accepted' => true, 'handout' => $result['handout']];
+                    }
+                } else {
+                    $cue = Cue::where('scene_id', $scene->id)->findOrFail($action['result_target']);
+                    app(CueRunner::class)->start($author, $scene, $cue);
+                }
+
+                return ['accepted' => true];
+            }
             app(TriggerEvents::class)->event($scene, 'object.interact', 'interaction:'.app(CommandContext::class)->id(), ['kind' => $data['kind'], 'id' => (int) $data['id']]);
 
             // Same response for every authorized object, even without a trigger.

@@ -16,6 +16,7 @@ export interface GridSettings {
     offset: Point;
 }
 export interface Token extends Point {
+    interactions?: import('../../workspace/interactions/model').ObjectInteraction[];
     conditions?: TokenCondition[];
     isOwner?: boolean;
     id: string;
@@ -92,6 +93,7 @@ export interface SceneNote extends Point {
     icon: 'note' | 'warning' | 'secret' | 'encounter' | 'clue';
 }
 export interface SceneProp extends Point {
+    interactions?: import('../../workspace/interactions/model').ObjectInteraction[];
     id: string;
     name: string | null;
     image: ImageAsset;

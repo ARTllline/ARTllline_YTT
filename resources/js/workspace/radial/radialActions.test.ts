@@ -7,6 +7,29 @@ import type { Combat } from '../../tabletop/types/combat';
 afterEach(() => vi.restoreAllMocks());
 const target = { kind: 'token' as const, id: 'kern', x: 100, y: 100 };
 describe('radial commands reuse existing authority paths', () => {
+    it('never exposes GM tools to a player, including view-only tokens and props', () => {
+        const scene = createDemoScene();
+        scene.props = [
+            {
+                id: 'desk',
+                name: 'Desk',
+                x: 100,
+                y: 100,
+                image: { id: 'asset', url: '/private', width: 100, height: 100 },
+                rotation: 0,
+                scaleX: 1,
+                scaleY: 1,
+                zIndex: 0,
+            },
+        ];
+        const store = new SceneStore(scene, 'player');
+        const queue = new SaveQueue();
+        expect(buildRadialActions(target, store, queue, vi.fn()).actions).toEqual([]);
+        expect(
+            buildRadialActions({ ...target, kind: 'prop', id: 'desk' }, store, queue, vi.fn())
+                .actions,
+        ).toEqual([]);
+    });
     it('opens without selecting and duplicates only the context target, not previous selection', () => {
         const store = new SceneStore(createDemoScene()),
             queue = new SaveQueue();

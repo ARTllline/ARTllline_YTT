@@ -14,24 +14,39 @@ import type { SaveQueue } from '../../tabletop/state/SaveQueue';
 import type { TabletopRenderer } from '../../tabletop/renderer/TabletopRenderer';
 import type { RightPanel } from '../workspaceState';
 import { radialPosition, radialSlot, radialFocus } from './radialLayout';
+import { interactions, interactionIcons } from '../interactions/model';
+import { commandId } from '../../api/workspace';
+import type { Handout } from '../../api/preparation';
+import { HandoutViewer } from '../handouts/HandoutViewer';
 export function RadialMenu({
     store,
     queue,
     renderer,
     onPanel,
     onCreate,
+    disabled = false,
 }: {
     store: SceneStore;
     queue: SaveQueue;
     renderer: RefObject<TabletopRenderer | null>;
-    onPanel: (panel: RightPanel) => Promise<void>;
-    onCreate: () => void;
+    onPanel?: (panel: RightPanel) => Promise<void>;
+    onCreate?: () => void;
+    disabled?: boolean;
 }) {
     const mount = useRef<HTMLSpanElement>(null),
         menu = useRef<HTMLDivElement>(null);
     const [target, setTarget] = useState<RadialTarget | null>(null),
         [error, setError] = useState(''),
         [busy, setBusy] = useState(false);
+    const [interactionMode, setInteractionMode] = useState(store.role === 'player');
+    const [notice, setNotice] = useState('');
+    const [preview, setPreview] = useState<Handout | null>(null);
+    const mutation = useRef<{ key: string; id: string } | null>(null);
+    useEffect(() => {
+        if (!notice) return;
+        const timer = setTimeout(() => setNotice(''), 1800);
+        return () => clearTimeout(timer);
+    }, [notice]);
     useSyncExternalStore(store.subscribe, store.getSnapshot);
     const save = useSyncExternalStore(queue.subscribe, queue.getSnapshot);
     const create = useRef(onCreate);
@@ -58,10 +73,12 @@ export function RadialMenu({
             renderer.current?.cancelGesture();
             if (!hit) {
                 setTarget(null);
-                create.current();
+                create.current?.();
                 return;
             }
             setError('');
+            setInteractionMode(store.role === 'player');
+            mutation.current = null;
             setTarget({ ...hit, x, y });
         };
         const context = (e: MouseEvent) => {
@@ -137,15 +154,56 @@ export function RadialMenu({
     useEffect(() => {
         if (target) menu.current?.querySelector<HTMLButtonElement>('[role=menuitem]')?.focus();
     }, [target]);
-    const { entity, actions } = buildRadialActions(target, store, queue, onPanel);
+    const { entity, actions: gmActions } = buildRadialActions(
+        target,
+        store,
+        queue,
+        onPanel ?? (async () => {}),
+    );
+    const configured =
+        entity && 'interactions' in entity && !entity.isHidden
+            ? (entity.interactions ?? []).filter((a) => a.enabled !== false)
+            : [];
+    const actions =
+        interactionMode && target && target.kind !== 'region'
+            ? configured.map((action) => ({
+                  label: action.label,
+                  Icon: (interactionIcons[action.icon] ?? interactionIcons.hand).Icon,
+                  tone: 'interaction',
+                  run: async () => {
+                      const key = `${target.kind}:${target.id}:${action.id}`;
+                      if (mutation.current?.key !== key)
+                          mutation.current = { key, id: commandId() };
+                      const result = await interactions.run(
+                          store.getSnapshot().scene.id!,
+                          target.kind as 'token' | 'prop',
+                          target.id,
+                          action.id,
+                          store.getSnapshot().scene.liveRevision ?? 0,
+                          mutation.current.id,
+                      );
+                      mutation.current = null;
+                      renderer.current?.respondToObject(target.kind as 'token' | 'prop', target.id);
+                      setNotice('Действие принято');
+                      if (result.handout) setPreview(result.handout);
+                  },
+              }))
+            : gmActions;
     const position = target
         ? radialPosition(target.x, target.y, window.innerWidth, window.innerHeight)
         : null;
     return (
         <>
             <span ref={mount} className="radial-mount" />
+            {notice && (
+                <div className="interaction-notice" role="status">
+                    ✓ {notice}
+                </div>
+            )}
+            {preview && <HandoutViewer handout={preview} onClose={() => setPreview(null)} />}
             {target &&
                 entity &&
+                (store.role === 'gm' || configured.length > 0) &&
                 position &&
                 createPortal(
                     <div
@@ -171,6 +229,7 @@ export function RadialMenu({
                             ref={menu}
                             className="radial-menu"
                             role="menu"
+                            aria-busy={busy}
                             aria-label={`Действия: ${entity.name || 'Объект'}`}
                             style={{
                                 left: position.left,
@@ -228,18 +287,32 @@ export function RadialMenu({
                                             : 'ТОКЕН'}
                                 </span>
                                 <strong>{entity.name || 'Объект'}</strong>
-                                <button
-                                    className="radial-create"
-                                    role="menuitem"
-                                    disabled={busy}
-                                    title="Добавить на сцену"
-                                    onClick={() => {
-                                        close();
-                                        onCreate();
-                                    }}
-                                >
-                                    <Plus size={13} /> Добавить
-                                </button>
+                                {store.role === 'gm' && configured.length > 0 && (
+                                    <button
+                                        className="radial-mode"
+                                        role="menuitem"
+                                        disabled={busy}
+                                        onClick={() => setInteractionMode(!interactionMode)}
+                                    >
+                                        {interactionMode
+                                            ? '← Инструменты GM'
+                                            : `Действия · ${configured.length} →`}
+                                    </button>
+                                )}
+                                {store.role === 'gm' && onCreate && (
+                                    <button
+                                        className="radial-create"
+                                        role="menuitem"
+                                        disabled={busy}
+                                        title="Добавить на сцену"
+                                        onClick={() => {
+                                            close();
+                                            onCreate();
+                                        }}
+                                    >
+                                        <Plus size={13} /> Добавить
+                                    </button>
+                                )}
                                 <button
                                     title="Закрыть · Esc"
                                     aria-label="Закрыть меню действий"
@@ -252,10 +325,10 @@ export function RadialMenu({
                             {actions.map(({ label, Icon, run, tone }, index) => (
                                 <button
                                     role="menuitem"
-                                    key={label}
+                                    key={`${index}:${label}`}
                                     className={`radial-action ${tone ?? ''}`}
                                     style={radialSlot(index, actions.length)}
-                                    disabled={busy || save.status !== 'saved'}
+                                    disabled={disabled || busy || save.status !== 'saved'}
                                     onClick={() => {
                                         setBusy(true);
                                         setError('');

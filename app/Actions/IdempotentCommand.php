@@ -61,6 +61,8 @@ class IdempotentCommand
                         $scene = Scene::findOrFail($resource);
                         $scene->setRelation('campaign', $campaign);
                         app(ObjectInteraction::class)->authorize($user, $scene, $payload);
+                        // A GM preview receipt must never be replayed after becoming a player.
+                        abort_if(isset($result['handout']) && $campaign->roleFor($user) !== 'gm', 403);
                     } else {
                         Gate::forUser($user)->authorize('update', $campaign);
                     }

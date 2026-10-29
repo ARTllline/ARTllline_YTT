@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Actions\ObjectInteractionActions;
 use App\Models\Asset;
 use App\Models\Campaign;
 use App\Models\Scene;
@@ -66,6 +67,7 @@ class SceneSnapshotBuilder
     public function token(Token $token, bool $gm, User $user): array
     {
         $data = ['id' => (string) $token->id, 'name' => $token->name,
+            'interactions' => app(ObjectInteractionActions::class)->projection($token, $gm),
             'x' => (float) $token->x, 'y' => (float) $token->y, 'rotation' => (float) $token->rotation,
             'scale' => (float) $token->scale, 'size' => (float) $token->size,
             'kind' => $token->kind, 'disposition' => $token->disposition, 'color' => 9751480, 'image' => $this->asset($token->imageAsset),

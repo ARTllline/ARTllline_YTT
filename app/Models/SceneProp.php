@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Actions\ObjectInteractionActions;
 use App\Services\SceneSnapshotBuilder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,7 @@ class SceneProp extends Model
 
     protected function casts(): array
     {
-        return ['is_hidden' => 'boolean', 'is_locked' => 'boolean'];
+        return ['is_hidden' => 'boolean', 'is_locked' => 'boolean', 'interactions' => 'array'];
     }
 
     public function asset(): BelongsTo
@@ -28,6 +29,7 @@ class SceneProp extends Model
     public function projection(bool $gm): array
     {
         return ['id' => (string) $this->id, 'name' => $this->name,
+            'interactions' => app(ObjectInteractionActions::class)->projection($this, $gm),
             'image' => app(SceneSnapshotBuilder::class)->asset($this->asset),
             'x' => (float) $this->x, 'y' => (float) $this->y, 'rotation' => (float) $this->rotation,
             'scaleX' => (float) $this->scale_x, 'scaleY' => (float) $this->scale_y, 'zIndex' => $this->z_index,

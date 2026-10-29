@@ -9,6 +9,7 @@ import '../css/preparation.css';
 import '../css/workspace.css';
 import '../css/identity.css';
 import '../css/creation.css';
+import '../css/interactions.css';
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>

@@ -43,7 +43,7 @@ export function buildRadialActions(
         run: () => void | Promise<void>;
         tone?: string;
     }[] = [];
-    if (target && entity) {
+    if (target && entity && store.role === 'gm') {
         actions.push({ label: 'Свойства', Icon: SlidersHorizontal, run: () => panel('context') });
         if (target.kind === 'region' && 'enabled' in entity) {
             actions.push(

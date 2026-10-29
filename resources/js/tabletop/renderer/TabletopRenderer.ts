@@ -4,7 +4,7 @@ import type { Effect, Intensity } from '../../media/model';
 import { DirectorCamera } from '../../director/DirectorCamera';
 import type { DirectorEvent } from '../../director/DirectorState';
 import { ScenePropLayer } from '../layers/ScenePropLayer';
-import { Application, Container, Texture } from 'pixi.js';
+import { Application, Container, Texture, Graphics } from 'pixi.js';
 import { FogLayer } from '../layers/FogLayer';
 import { SpatialLayer } from '../layers/SpatialLayer';
 import { GMLayer } from '../layers/GMLayer';
@@ -40,6 +40,8 @@ export class TabletopRenderer {
     private notes?: GMLayer;
     private regions?: RegionLayer;
     private overlay = new InteractionLayer();
+    private response = new Graphics();
+    private responseTarget?: { kind: 'token' | 'prop'; id: string; until: number };
     private input?: PointerController;
     private observer?: ResizeObserver;
     private unsubscribe?: () => void;
@@ -89,6 +91,7 @@ export class TabletopRenderer {
             this.fog,
             this.spatial,
             this.overlay,
+            this.response,
         );
         if (this.store.role === 'gm') {
             this.regions = new RegionLayer();
@@ -150,6 +153,34 @@ export class TabletopRenderer {
         this.app.ticker.add((ticker) => {
             this.input?.reapplyPreview();
             const now = performance.now();
+            this.response.clear();
+            if (this.responseTarget && this.responseTarget.until > now) {
+                const target = this.responseTarget;
+                const scene = this.store.getSnapshot().scene;
+                const object =
+                    target.kind === 'token'
+                        ? scene.tokens.find((t) => t.id === target.id)
+                        : scene.props?.find((p) => p.id === target.id);
+                if (object) {
+                    const progress = this.reducedMotion.matches
+                        ? 0
+                        : 1 - (target.until - now) / 420;
+                    const radius =
+                        'size' in object
+                            ? (object.size * object.scale) / 2
+                            : Math.max(
+                                  object.image.width * object.scaleX,
+                                  object.image.height * object.scaleY,
+                              ) / 2;
+                    this.response
+                        .circle(object.x, object.y, radius + 5 + progress * 16)
+                        .stroke({
+                            color: 0xa6d9c3,
+                            width: 2 / this.camera.state.zoom,
+                            alpha: 1 - progress,
+                        });
+                }
+            }
             for (const [id, preview] of this.store.remotePreviews) {
                 if (preview.expires < now) this.store.remotePreviews.delete(id);
             }
@@ -268,6 +299,9 @@ export class TabletopRenderer {
     }
     cancelGesture() {
         this.input?.cancel();
+    }
+    respondToObject(kind: 'token' | 'prop', id: string) {
+        this.responseTarget = { kind, id, until: performance.now() + 420 };
     }
     center() {
         return screenToWorld({ x: this.width / 2, y: this.height / 2 }, this.camera.state);

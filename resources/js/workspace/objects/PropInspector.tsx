@@ -3,6 +3,7 @@ import { X, Layers } from 'lucide-react';
 import type { SceneStore } from '../../tabletop/state/SceneStore';
 import type { SceneProp } from '../../tabletop/types/scene';
 import { NumberField } from '../NumberField';
+import { InteractionEditor } from '../interactions/InteractionEditor';
 export function PropInspector({
     prop,
     store,
@@ -50,6 +51,14 @@ export function PropInspector({
                             }}
                         />
                     </label>
+                    <InteractionEditor
+                        key={prop.id}
+                        store={store}
+                        kind="prop"
+                        id={prop.id}
+                        actions={prop.interactions}
+                        disabled={busy}
+                    />
                     <div className="field-grid">
                         <NumberField label="X" value={prop.x} onChange={(x) => patch({ x })} />
                         <NumberField label="Y" value={prop.y} onChange={(y) => patch({ y })} />

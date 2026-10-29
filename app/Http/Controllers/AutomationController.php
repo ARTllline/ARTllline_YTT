@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Actions\ObjectInteraction;
+use App\Actions\ObjectInteractionActions;
 use App\Actions\RegionActions;
 use App\Actions\TriggerActions;
 use App\Models\Cue;
+use App\Models\Handout;
 use App\Models\Scene;
 use App\Models\SceneTrigger;
 use Illuminate\Http\Request;
@@ -40,8 +42,24 @@ class AutomationController extends Controller
 
     public function interact(Request $request, Scene $scene, ObjectInteraction $action): array
     {
-        $data = $request->validate(['kind' => 'required|in:token,prop', 'id' => 'required|integer|min:1', 'epoch' => 'required|integer|min:0']);
+        $data = $request->validate(['kind' => 'required|in:token,prop', 'id' => 'required|integer|min:1', 'epoch' => 'required|integer|min:0',
+            'actionId' => 'sometimes|required|uuid', 'result_target' => 'prohibited', 'result_type' => 'prohibited', 'cueId' => 'prohibited', 'handoutId' => 'prohibited']);
 
         return $action->execute($request->user(), $scene, $data);
+    }
+
+    public function objectActions(Request $request, Scene $scene, ObjectInteractionActions $actions): array
+    {
+        return $actions->save($request->user(), $scene, $request->all());
+    }
+
+    public function interactionResources(Scene $scene): array
+    {
+        Gate::authorize('update', $scene);
+
+        return [
+            'handouts' => Handout::where('campaign_id', $scene->campaign_id)->orderBy('title')->get(['id', 'title'])->map(fn ($h) => ['id' => (string) $h->id, 'name' => $h->title])->all(),
+            'cues' => Cue::where('scene_id', $scene->id)->orderBy('name')->get(['id', 'name'])->map(fn ($c) => ['id' => (string) $c->id, 'name' => $c->name])->all(),
+        ];
     }
 }
