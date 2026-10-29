@@ -1,3 +1,35 @@
+# Docker local test environment — 2026-10-29
+
+Windows Docker Desktop, Linux Engine 27.0.3 / Compose 2.28.1. See
+[the Russian Docker guide](DOCKER.md) for setup and explanation.
+
+- Built PHP 8.4.27/Apache with GD/WebP, MySQL/SQLite PDO, Redis, PCNTL and FFprobe
+  5.1.9; built the frontend with Node 22. No host `.env`, uploads, vendor or
+  node_modules were copied into the image.
+- Started MySQL 8.4, Redis 7.4, migration init, app, Reverb, Cue worker and scheduler.
+  All 11 `tabletop:doctor` checks OK, including the actual scheduler heartbeat.
+- Container tests: **90 PHP tests / 1175 assertions**, with `--fail-on-warning`,
+  and **127 frontend tests / 26 files** passed. Frontend lint, build/typecheck,
+  Composer platform requirements and Pint for changed PHP files passed.
+- Independent GM/Player browser contexts: registration, invite/join, active scene,
+  owned token movement to `(333.5, 444.25)`, server filtering of a hidden token,
+  private image upload/download, authenticated WebSocket subscription and actual
+  `tabletop` event delivery from the container network to localhost succeeded.
+- A Wait → Reveal Cue completed through the real database queue worker.
+- `down` → `up --build --wait` recreated containers without removing volumes:
+  the scene, exact token position, private image bytes and Redis session survived.
+- Local ports bind only to loopback: HTTP 8090, WebSocket 8085. MySQL and Redis
+  have no published host ports. This does not validate public HTTPS/WSS deployment.
+
+Evidence is retained locally in ignored `artifacts/docker-tests-final.log`,
+`artifacts/docker-restart.log`, `artifacts/docker-smoke.js` and
+`artifacts/docker-workspace.png`. Browser QA records are removed after verification.
+
+Docker Desktop initially failed on a stale `userAnalyticsOtlpHttp.sock` reparse
+point. Its temporary IPC directory was preserved as
+`%LOCALAPPDATA%\Docker\run-stale-20261029`, allowing Desktop to create a fresh `run`.
+No Docker data reset was performed by this task.
+
 # Task 14 — visual and interaction validation
 
 Validated locally **2026-10-29 Europe/Kiev**, Chromium 156.0.8078.74.

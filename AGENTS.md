@@ -12,6 +12,98 @@ The goal is to build a polished, coherent, enjoyable virtual tabletop that feels
 
 When implementation choices conflict with this document, prefer this document unless the user explicitly overrides it.
 
+## 1.1. Current local runtime — Docker Compose
+
+**The project already has a working Docker-based local test environment**, verified
+on Windows with Docker Desktop / Linux containers on 2026-10-29. Use this environment
+for local application runs and integration checks. Inspect its current state rather
+than assuming containers are still running. A separate host PHP/MySQL/Redis/Node
+installation is not required for the Docker workflow.
+
+Read [docs/DOCKER.md](docs/DOCKER.md) for the Russian user guide and
+[docs/VALIDATION.md](docs/VALIDATION.md) for verification evidence and limits.
+The Docker configuration is a local test setup; public VPS deployment remains
+documented separately in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+### Launch, stop and verify
+
+Docker Desktop must be running with the Linux Engine ready. From the project root:
+
+```powershell
+# Build the current code and start the complete environment.
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\docker.ps1 up
+
+# Inspect containers, application dependencies, or run isolated automated tests.
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\docker.ps1 status
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\docker.ps1 doctor
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\docker.ps1 test
+
+# Stop and remove the environment's containers while preserving its data volumes.
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\docker.ps1 down
+```
+
+For the user, prefer the existing double-click entry points in the repository root:
+
+- `YTT-Start.bat`: runs `up -OpenBrowser`, waits for readiness, then opens the site.
+- `YTT-Stop.bat`: runs `down`, preserving campaign data and uploaded files.
+
+Default application URL: **http://localhost:8090**. Default browser WebSocket:
+**ws://localhost:8085**. Both ports bind only to loopback. Respect configured values
+in `.env.docker` if the user changes them. No shared accounts or demo campaign are
+seeded; users register through the application.
+
+For direct Compose commands, always specify the Docker environment file, for example:
+
+```powershell
+docker compose --env-file .env.docker ps --all
+docker compose --env-file .env.docker logs --tail 100 app reverb queue scheduler
+```
+
+**Source code is copied into images, not bind-mounted.** After code changes, run
+`up` to rebuild before validating in the browser or running image-based PHP tests.
+Restarting an existing container alone does not load edited source. The interface
+is served from `public/build`; this setup does not run Vite HMR.
+
+### Services and application contracts
+
+- Compose project: `ytt-test`; application image: `ytt-local:dev`.
+- `app`: PHP 8.4 / Apache, Laravel and the built React/PixiJS interface.
+- `mysql`: MySQL 8.4; `redis`: Redis 7.4 for sessions and cache.
+- `reverb`: WebSocket service; `queue`: Cue worker; `scheduler`: Laravel scheduler.
+- `init`: prepares writable storage and applies normal migrations before startup.
+  Its `Exited (0)` state is expected, not a service failure.
+- `frontend`: optional Node 22 tools image (`ytt-frontend:dev`) for frontend checks.
+
+Containers reach MySQL at `mysql:3306`, Redis at `redis:6379`, and Reverb at
+`reverb:8080`. Browser clients use the separate `REVERB_PUBLIC_*` configuration.
+Preserve this separation; Docker service names are not browser hostnames.
+
+The Cue worker uses the existing `tabletop` database queue on the **same MySQL
+connection as application state**. Do not switch that queue to Redis. Preserve
+`SIGTERM` for PHP CLI services; the Apache image's default `SIGWINCH` is used by
+the web service and does not correctly stop the CLI workers.
+
+The `test` helper runs PHP tests in a disposable container with SQLite in memory,
+temporary storage and explicit test environment overrides, then frontend tests.
+Use it instead of running migration-based tests against the persistent Docker MySQL.
+Health checks and `doctor` complement, but do not replace, real browser/realtime
+verification for changes that affect multiplayer behavior.
+
+### Configuration and persistent data
+
+`scripts/docker.ps1` generates `.env.docker` from `.env.docker.example` only on first
+startup, including random APP_KEY, MySQL passwords and Reverb credentials. Preserve
+that file and its keys; do not print secrets, commit it, or regenerate it on updates.
+The host `.env`, database and uploaded files are separate from the Docker test data.
+
+Persistent volumes: `ytt-test_mysql`, `ytt-test_storage`, `ytt-test_redis`.
+Normal `down` preserves them. Do not add `--volumes`, `migrate:fresh`, automatic
+seeding, Docker factory resets, or global pruning to routine launch/update/stop
+workflows. Treat removal of persistent data as a separate destructive operation.
+Old untagged images can remain after rebuilds; they are distinct from campaign
+data volumes. The current Compose configuration repeats the shared image build
+across services and can produce extra untagged images; that optimization is pending.
+
 ---
 
 # 2. Product vision

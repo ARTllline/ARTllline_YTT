@@ -4,6 +4,28 @@ A self-hostable tabletop built around the Game Master's workspace. React owns
 the interface, PixiJS draws the table, and Laravel is authoritative for saved
 state. The product contract is `AGENTS.md`.
 
+## Local testing with Docker (Windows)
+
+For double-click launch, open Docker Desktop and run **YTT-Start.bat** from the
+project root. It waits for the application to be ready and opens the browser.
+Run **YTT-Stop.bat** to shut down; campaign data and uploads stay in Docker volumes.
+
+Start Docker Desktop (Linux containers), then run in PowerShell:
+
+```powershell
+cd B:\DnD\YTT
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\docker.ps1 up
+```
+
+Open **http://localhost:8090** and register an account. The command builds the
+application, runs migrations and starts MySQL, Redis, Reverb, the Cue worker and
+scheduler. Docker data is separate from the existing local `.env`, database and
+uploads. Run the same command after code changes to rebuild the test version.
+
+Replace `up` with `down` to shut down (data stays), `status` to inspect services,
+`logs` to follow logs, `doctor` for diagnostics, or `test` to run isolated tests.
+See [the Russian Docker tutorial and command reference](docs/DOCKER.md).
+
 ## Current status
 
 **Task 14: visual identity, motion and interaction polish.**

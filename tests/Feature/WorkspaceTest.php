@@ -24,4 +24,25 @@ class WorkspaceTest extends TestCase
     {
         $this->get('/up')->assertOk();
     }
+
+    public function test_session_advertises_browser_reverb_address_without_internal_secrets(): void
+    {
+        config([
+            'session.driver' => 'array',
+            'broadcasting.connections.reverb.key' => 'public-key',
+            'broadcasting.connections.reverb.secret' => 'private-secret',
+            'broadcasting.connections.reverb.options.host' => 'reverb',
+            'broadcasting.connections.reverb.options.port' => 8080,
+            'broadcasting.connections.reverb.public.host' => 'localhost',
+            'broadcasting.connections.reverb.public.port' => 8085,
+            'broadcasting.connections.reverb.public.scheme' => 'http',
+        ]);
+
+        $this->getJson('/api/session')->assertOk()
+            ->assertJsonPath('realtime.host', 'localhost')
+            ->assertJsonPath('realtime.port', 8085)
+            ->assertJsonPath('realtime.key', 'public-key')
+            ->assertDontSee('private-secret')
+            ->assertDontSee('"host":"reverb"', false);
+    }
 }
