@@ -1,5 +1,41 @@
 # Architecture — persistent multiplayer tabletop
 
+## Task 13 — workspace presentation state
+
+`workspaceState.ts` owns mode, one left workspace, one explicit right dock and
+the dismissed contextual selection. It does not own campaign or scene data.
+`WorkspaceNavigation`, `WorkspaceDock`, `Panel` and `IconButton` compose the shell;
+existing domain panels keep their API/services and lazy imports. `workspace.css`
+is the final presentation layer over existing feature styles; shared colors,
+spacing, type sizes and panel dimensions live in `tokens.css`.
+
+The empty table has no Inspector. Selecting an object opens its contextual editor;
+an explicit live panel replaces that editor. Closing the live panel restores the
+selection. Preparation uses one secondary workspace; live mode can keep the session
+plan next to one dock on desktop. At 1100px and below a dock action flushes session
+notes and unmounts the left drawer. If a desktop session is resized while both panels
+are open, the plan stays mounted but visually hidden to preserve its draft/queue.
+
+`watchWorkspaceSelection` defers layout selection updates during a canvas pointer
+gesture, publishing after pointer-up/cancel/lost capture. This is essential because
+the existing renderer cancels input on resize. Keyboard selection remains immediate.
+The renderer, camera, scene store and persistence pair remain mounted through mode
+and panel changes; world coordinates and server authority are unchanged.
+
+Mode/route changes flush the SessionConsole note queue. `PanelGuard` keeps a busy or
+failed audio command's retry state mounted until resolved or explicitly dismissed.
+The command palette also flushes scene persistence before action execution. Its media,
+cue and handout retries reuse the command UUID and original closure/epoch within that
+open palette. Native Dialog cancellation delegates to the owner instead of closing
+behind a busy owner; dialogs now have an accessible title association.
+
+`CommandPalette` uses existing bounded campaign-resource and asset endpoints with
+180ms debounce and AbortController cancellation. It never executes a stale search
+result. Active-session focus remounts the flushed session view so the selected beat
+is current. No new endpoint, schema, dependency, rules engine or realtime protocol
+was introduced. Campaign list responses do not contain inactive-scene thumbnails:
+the scene browser uses the loaded map preview and numbered placeholders elsewhere.
+
 ## Task 12 — stabilization contracts
 
 `SceneHistory` records at most 50 acknowledged layout edits per scene/store. Before
@@ -62,13 +98,13 @@ fire state; explicit reset clears count/time while retaining history.
 TriggerEvents is a detector and CueRunner caller, not an action executor. It runs
 inside the campaign → scene writer transaction, before commit, only for:
 
-| Event | Source and transition |
-| --- | --- |
-| region.enter / region.exit | TokenActions final xy update or SelectionActions batch movement; previous persisted footprint vs new persisted footprint |
-| object.interact | Explicit authenticated command; current active scene/epoch, membership, same-scene target and current visibility are rechecked |
-| scene.activated | SceneActions changes active_scene_id to a different non-null scene |
-| combat.started | CombatActions accepts preparing → active |
-| combat.round | CombatActions increases the persisted round; minimum-round filter applies |
+| Event                      | Source and transition                                                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| region.enter / region.exit | TokenActions final xy update or SelectionActions batch movement; previous persisted footprint vs new persisted footprint       |
+| object.interact            | Explicit authenticated command; current active scene/epoch, membership, same-scene target and current visibility are rechecked |
+| scene.activated            | SceneActions changes active_scene_id to a different non-null scene                                                             |
+| combat.started             | CombatActions accepts preparing → active                                                                                       |
+| combat.round               | CombatActions increases the persisted round; minimum-round filter applies                                                      |
 
 No detection runs for drag previews, frame ticks, token creation/spawning, region
 edits, size-only token edits, snapshot reads, editing-scene navigation, preloading,

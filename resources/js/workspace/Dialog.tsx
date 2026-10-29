@@ -1,5 +1,5 @@
 import { t } from '../i18n';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 export function Dialog({
     title,
@@ -11,13 +11,22 @@ export function Dialog({
     children: ReactNode;
 }) {
     const ref = useRef<HTMLDialogElement>(null);
+    const titleId = useId();
     useEffect(() => {
         ref.current?.showModal();
     }, []);
     return (
-        <dialog ref={ref} className="shortcuts-dialog editor-dialog" onCancel={onClose}>
+        <dialog
+            ref={ref}
+            className="shortcuts-dialog editor-dialog"
+            aria-labelledby={titleId}
+            onCancel={(event) => {
+                event.preventDefault();
+                onClose();
+            }}
+        >
             <div className="panel-heading">
-                <strong>{title}</strong>
+                <strong id={titleId}>{title}</strong>
                 <button className="icon-button" aria-label={t('Close dialog')} onClick={onClose}>
                     <X size={16} />
                 </button>

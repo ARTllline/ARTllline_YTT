@@ -134,54 +134,59 @@ export function TokenCombatControls({
                 </button>
             </form>
             <ConditionList token={token} store={store} disabled={disabled} />
-            <form
-                className="condition-add"
-                onSubmit={(e) => {
-                    e.preventDefault();
-                    store.tokenCombat(token.id, {
-                        action: 'condition-add',
-                        ...(condition === 'custom' ? { label: label.trim() } : { key: condition }),
-                        visibility: secret ? 'gm_only' : 'public',
-                    });
-                }}
-            >
-                <select
-                    aria-label={t('tokenCondition', { name: token.name })}
-                    value={condition}
-                    onChange={(e) => setCondition(e.target.value)}
+            <details className="condition-disclosure">
+                <summary>Добавить состояние</summary>
+                <form
+                    className="condition-add"
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        store.tokenCombat(token.id, {
+                            action: 'condition-add',
+                            ...(condition === 'custom'
+                                ? { label: label.trim() }
+                                : { key: condition }),
+                            visibility: secret ? 'gm_only' : 'public',
+                        });
+                    }}
                 >
-                    {conditionKeys.map((key) => (
-                        <option key={key} value={key}>
-                            {conditionLabel({ key, label: key })}
-                        </option>
-                    ))}
-                    <option value="custom"> {t('Custom condition…')} </option>
-                </select>
-                <button
-                    disabled={disabled || (condition === 'custom' && !label.trim())}
-                    type="submit"
-                    aria-label={t('addCondition', { name: token.name })}
-                >
-                    <Plus size={14} /> {t('Add')}{' '}
-                </button>
-                {condition === 'custom' && (
-                    <input
-                        placeholder={t('Condition name')}
-                        aria-label={t('Custom condition name')}
-                        maxLength={40}
-                        value={label}
-                        onChange={(e) => setLabel(e.target.value)}
-                    />
-                )}
-                <label className="condition-private">
-                    <input
-                        type="checkbox"
-                        checked={secret}
-                        onChange={(e) => setSecret(e.target.checked)}
-                    />
-                    <EyeOff size={12} /> {t('GM only')}{' '}
-                </label>
-            </form>
+                    <select
+                        aria-label={t('tokenCondition', { name: token.name })}
+                        value={condition}
+                        onChange={(e) => setCondition(e.target.value)}
+                    >
+                        {conditionKeys.map((key) => (
+                            <option key={key} value={key}>
+                                {conditionLabel({ key, label: key })}
+                            </option>
+                        ))}
+                        <option value="custom"> {t('Custom condition…')} </option>
+                    </select>
+                    <button
+                        disabled={disabled || (condition === 'custom' && !label.trim())}
+                        type="submit"
+                        aria-label={t('addCondition', { name: token.name })}
+                    >
+                        <Plus size={14} /> {t('Add')}{' '}
+                    </button>
+                    {condition === 'custom' && (
+                        <input
+                            placeholder={t('Condition name')}
+                            aria-label={t('Custom condition name')}
+                            maxLength={40}
+                            value={label}
+                            onChange={(e) => setLabel(e.target.value)}
+                        />
+                    )}
+                    <label className="condition-private">
+                        <input
+                            type="checkbox"
+                            checked={secret}
+                            onChange={(e) => setSecret(e.target.checked)}
+                        />
+                        <EyeOff size={12} /> {t('GM only')}{' '}
+                    </label>
+                </form>
+            </details>
         </div>
     );
 }

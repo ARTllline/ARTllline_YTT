@@ -14,18 +14,23 @@ import { AssetLibrary } from '../workspace/assets/LazyAssets';
 import { Dialog } from '../workspace/Dialog';
 import { commandId } from '../api/workspace';
 import type { LibraryAsset } from '../api/preparation';
+import { usePanelGuard } from '../workspace/ui/PanelGuard';
 
 export function MediaPanel({
     campaignId,
     gm = false,
     syncError = '',
+    docked = false,
+    onClose = () => undefined,
 }: {
     campaignId: string;
     gm?: boolean;
     syncError?: string;
+    docked?: boolean;
+    onClose?: () => void;
 }) {
     const view = useSyncExternalStore(audioEngine.subscribe, audioEngine.getSnapshot);
-    const [open, setOpen] = useState(false),
+    const [open, setOpen] = useState(docked),
         [picker, setPicker] = useState<Channel | null>(null);
     const [fade, setFade] = useState(1000),
         [volume, setVolume] = useState(0.8),
@@ -33,6 +38,13 @@ export function MediaPanel({
     const [error, setError] = useState(''),
         [busy, setBusy] = useState(false);
     const [retry, setRetry] = useState<{ action: string; data: object; id: string } | null>(null);
+    usePanelGuard(
+        busy
+            ? 'Дождитесь сохранения команды звука.'
+            : retry
+              ? 'Повторите неудачную команду звука перед закрытием пульта.'
+              : '',
+    );
     const state = view.state;
     const send = async (
         action: string,
@@ -66,15 +78,17 @@ export function MediaPanel({
     };
     return (
         <div className="media-control">
-            <button
-                className={`media-toggle ${!view.enabled ? 'muted' : ''}`}
-                title={view.enabled ? 'Звук и атмосфера' : 'Звук выключен в этом браузере'}
-                onClick={() => setOpen(!open)}
-            >
-                {view.enabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
-                <span>Звук</span>
-                {!view.enabled && <i />}
-            </button>
+            {!docked && (
+                <button
+                    className={`media-toggle ${!view.enabled ? 'muted' : ''}`}
+                    title={view.enabled ? 'Звук и атмосфера' : 'Звук выключен в этом браузере'}
+                    onClick={() => setOpen(!open)}
+                >
+                    {view.enabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                    <span>Звук</span>
+                    {!view.enabled && <i />}
+                </button>
+            )}
             {!view.enabled && (
                 <button className="audio-unlock" onClick={() => void audioEngine.unlock()}>
                     Включить звук
@@ -87,7 +101,15 @@ export function MediaPanel({
                             <span className="eyebrow">{gm ? 'ПУЛЬТ АТМОСФЕРЫ' : 'МОЙ ЗВУК'}</span>
                             <h3>Звук</h3>
                         </div>
-                        <button aria-label="Закрыть звук" onClick={() => setOpen(false)}>
+                        <button
+                            title="Закрыть звук"
+                            aria-label="Закрыть звук"
+                            disabled={docked && (busy || !!retry)}
+                            onClick={() => {
+                                setOpen(false);
+                                onClose();
+                            }}
+                        >
                             <X size={17} />
                         </button>
                     </header>

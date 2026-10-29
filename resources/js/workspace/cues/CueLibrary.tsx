@@ -4,7 +4,15 @@ import type { Scene } from '../../tabletop/types/scene';
 import { actionLabels, cues, statusLabels, type Cue, type CueRun } from './model';
 const CueEditor = lazy(() => import('./CueEditor').then((m) => ({ default: m.CueEditor })));
 
-export function CueLibrary({ scene, active }: { scene: Scene; active: boolean }) {
+export function CueLibrary({
+    scene,
+    active,
+    live = false,
+}: {
+    scene: Scene;
+    active: boolean;
+    live?: boolean;
+}) {
     const [data, setData] = useState<{ cues: Cue[]; runs: CueRun[]; pendingCount: number }>({
         cues: [],
         runs: [],
@@ -15,6 +23,7 @@ export function CueLibrary({ scene, active }: { scene: Scene; active: boolean })
         [busy, setBusy] = useState(false),
         [refresh, setRefresh] = useState(0),
         [loaded, setLoaded] = useState(false);
+    const [search, setSearch] = useState('');
     useEffect(() => {
         const abort = new AbortController();
         let pending = false;
@@ -63,26 +72,37 @@ export function CueLibrary({ scene, active }: { scene: Scene; active: boolean })
                 <span>
                     <Film size={14} /> СОБЫТИЯ
                 </span>
-                <button
-                    className="icon-button"
-                    aria-label="Создать событие"
-                    onClick={() =>
-                        setEditor({
-                            name: '',
-                            description: '',
-                            sort_order: data.cues.length,
-                            steps: [],
-                        })
-                    }
-                >
-                    <Plus size={16} />
-                </button>
+                {!live && (
+                    <button
+                        className="icon-button"
+                        aria-label="Создать событие"
+                        onClick={() =>
+                            setEditor({
+                                name: '',
+                                description: '',
+                                sort_order: data.cues.length,
+                                steps: [],
+                            })
+                        }
+                    >
+                        <Plus size={16} />
+                    </button>
+                )}
             </div>
-            <p className="hint cue-intro">
-                Подготовьте момент.
-                <br />
-                Запустите одним действием.
-            </p>
+            {!live && (
+                <p className="hint cue-intro">
+                    Подготовьте момент.
+                    <br />
+                    Запустите одним действием.
+                </p>
+            )}
+            <input
+                className="cue-search"
+                aria-label="Найти событие"
+                placeholder="Найти событие…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+            />
             {!active && (
                 <p className="cue-inactive">Для запуска активируйте эту сцену для игроков.</p>
             )}
@@ -124,13 +144,17 @@ export function CueLibrary({ scene, active }: { scene: Scene; active: boolean })
                             <RotateCcw size={14} /> Повторить шаг
                         </button>
                     )}
-                    <button
-                        className="secondary-button"
-                        disabled={busy}
-                        onClick={() => execute('cancel', { runId: running.id })}
-                    >
-                        <Square size={13} /> Остановить
-                    </button>
+                    {live ? (
+                        <p className="hint">Подготовьте события в разделе «Подготовка».</p>
+                    ) : (
+                        <button
+                            className="secondary-button"
+                            disabled={busy}
+                            onClick={() => execute('cancel', { runId: running.id })}
+                        >
+                            <Square size={13} /> Остановить
+                        </button>
+                    )}
                     <small>Выполненные изменения останутся. Будущие действия будут отменены.</small>
                     <small>Если очередь не движется, проверьте рабочий процесс сервера.</small>
                     {data.pendingCount > 1 && (
@@ -142,60 +166,68 @@ export function CueLibrary({ scene, active }: { scene: Scene; active: boolean })
                 </section>
             )}
             <div className="cue-card-list">
-                {data.cues.map((cue) => {
-                    const last = data.runs.find((r) => r.cue_id === cue.id);
-                    return (
-                        <article className="cue-card" key={cue.id}>
-                            <div className="cue-card-title">
-                                <Film size={18} />
-                                <h3>{cue.name}</h3>
-                                <button
-                                    className="icon-button"
-                                    aria-label={`Редактировать ${cue.name}`}
-                                    onClick={() => setEditor(cue)}
-                                >
-                                    <Pencil size={14} />
-                                </button>
-                            </div>
-                            {cue.description && <p>{cue.description}</p>}
-                            <div className="cue-card-meta">
-                                <span>{cue.steps.length} действий</span>
-                                {last && <small>{statusLabels[last.status]}</small>}
-                            </div>
-                            <div className="cue-card-actions">
-                                <button
-                                    className="primary-button"
-                                    title={
-                                        !active
-                                            ? 'Сначала активируйте сцену'
-                                            : running
-                                              ? 'Сначала завершите текущее событие'
-                                              : 'Запустить событие'
-                                    }
-                                    disabled={busy || !active || !!running}
-                                    onClick={() => execute('start', { cueId: cue.id })}
-                                >
-                                    <Play size={13} /> Запустить
-                                </button>
-                                <button
-                                    className="icon-button"
-                                    aria-label={`Удалить ${cue.name}`}
-                                    onClick={() => {
-                                        if (
-                                            window.confirm(
-                                                `Удалить событие «${cue.name}»? Выполняющийся план сохранится.`,
-                                            )
-                                        )
-                                            execute('delete', { cueId: cue.id });
-                                    }}
-                                    disabled={busy}
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                            </div>
-                        </article>
-                    );
-                })}
+                {data.cues
+                    .filter((cue) =>
+                        cue.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
+                    )
+                    .map((cue) => {
+                        const last = data.runs.find((r) => r.cue_id === cue.id);
+                        return (
+                            <article className="cue-card" key={cue.id}>
+                                <div className="cue-card-title">
+                                    <Film size={18} />
+                                    <h3>{cue.name}</h3>
+                                    {!live && (
+                                        <button
+                                            className="icon-button"
+                                            aria-label={`Редактировать ${cue.name}`}
+                                            onClick={() => setEditor(cue)}
+                                        >
+                                            <Pencil size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                                {cue.description && <p>{cue.description}</p>}
+                                <div className="cue-card-meta">
+                                    <span>{cue.steps.length} действий</span>
+                                    {last && <small>{statusLabels[last.status]}</small>}
+                                </div>
+                                <div className="cue-card-actions">
+                                    <button
+                                        className="primary-button"
+                                        title={
+                                            !active
+                                                ? 'Сначала активируйте сцену'
+                                                : running
+                                                  ? 'Сначала завершите текущее событие'
+                                                  : 'Запустить событие'
+                                        }
+                                        disabled={busy || !active || !!running}
+                                        onClick={() => execute('start', { cueId: cue.id })}
+                                    >
+                                        <Play size={13} /> Запустить
+                                    </button>
+                                    {!live && (
+                                        <button
+                                            className="icon-button"
+                                            aria-label={`Удалить ${cue.name}`}
+                                            onClick={() => {
+                                                if (
+                                                    window.confirm(
+                                                        `Удалить событие «${cue.name}»? Выполняющийся план сохранится.`,
+                                                    )
+                                                )
+                                                    execute('delete', { cueId: cue.id });
+                                            }}
+                                            disabled={busy}
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                            </article>
+                        );
+                    })}
             </div>
             {loaded && !data.cues.length && (
                 <div className="cue-empty-detail">

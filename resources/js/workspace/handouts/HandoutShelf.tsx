@@ -10,13 +10,17 @@ export function HandoutShelf({
     userId,
     echo,
     gm = false,
+    docked = false,
+    onClose = () => undefined,
 }: {
     campaignId: string;
     userId: string;
     echo: LiveEcho | null;
     gm?: boolean;
+    docked?: boolean;
+    onClose?: () => void;
 }) {
-    const [open, setOpen] = useState(false);
+    const [open, setOpen] = useState(docked);
     const [page, setPage] = useState(1);
     const { items, pages, error, selected, select, close } = useHandouts(
         campaignId,
@@ -27,14 +31,16 @@ export function HandoutShelf({
     );
     return (
         <>
-            <button
-                className="secondary-button handout-launch"
-                onClick={() => setOpen(!open)}
-                title={t('Handouts')}
-            >
-                <BookOpen size={15} />
-                <span> {t('Handouts')} </span>
-            </button>
+            {!docked && (
+                <button
+                    className="secondary-button handout-launch"
+                    onClick={() => setOpen(!open)}
+                    title={t('Handouts')}
+                >
+                    <BookOpen size={15} />
+                    <span> {t('Handouts')} </span>
+                </button>
+            )}
             {open && (
                 <aside
                     className="handout-shelf panel"
@@ -45,7 +51,10 @@ export function HandoutShelf({
                         <button
                             className="icon-button"
                             aria-label={t('Close handout shelf')}
-                            onClick={() => setOpen(false)}
+                            onClick={() => {
+                                setOpen(false);
+                                onClose();
+                            }}
                         >
                             <X size={16} />
                         </button>

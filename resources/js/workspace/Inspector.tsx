@@ -70,268 +70,303 @@ export function Inspector({
                                 : t('Visible in the scene')}
                         </span>
                     </div>
-                    <section>
-                        <h3> {t('Identity')} </h3>
-                        {token.image && (
-                            <img
-                                className="token-image-preview"
-                                src={token.image.url}
-                                alt={t('Current token image')}
-                            />
-                        )}
-                        <button
-                            className="secondary-button"
-                            onClick={() => chooseImage('token', token.id)}
-                        >
-                            {' '}
-                            {t('Choose image from library')}{' '}
-                        </button>
-                        <label className="field">
-                            <span> {t('Name')} </span>
-                            <input
-                                aria-label={t('Token name')}
-                                key={token.name}
-                                defaultValue={token.name}
-                                maxLength={80}
-                                onBlur={(event) => {
-                                    if (event.target.value !== token.name)
-                                        store.updateToken(token.id, { name: event.target.value });
-                                    event.target.value = store
-                                        .getSnapshot()
-                                        .scene.tokens.find((t) => t.id === token.id)!.name;
-                                }}
-                                onKeyDown={(event) => {
-                                    if (event.key === 'Enter') event.currentTarget.blur();
-                                }}
-                            />
-                        </label>
-                    </section>
-                    <section>
-                        <h3>
-                            {' '}
-                            {t('Position')} <span> {t('WORLD')} </span>
-                        </h3>
-                        <div className="field-row">
-                            <NumberField
-                                label="X"
-                                value={position.x}
-                                disabled={!!preview}
-                                onChange={(x) => store.updateToken(token.id, { x })}
-                            />
-                            <NumberField
-                                label="Y"
-                                value={position.y}
-                                disabled={!!preview}
-                                onChange={(y) => store.updateToken(token.id, { y })}
-                            />
-                        </div>
-                    </section>
-                    <section>
-                        <h3> {t('Transform')} </h3>
-                        <div className="field-row">
-                            <NumberField
-                                label={t('Rotation °')}
-                                value={token.rotation}
-                                onChange={(rotation) => store.updateToken(token.id, { rotation })}
-                            />
-                            <NumberField
-                                label={t('Scale')}
-                                value={token.scale}
-                                min={0.4}
-                                max={3}
-                                step={0.1}
-                                onChange={(scale) => store.updateToken(token.id, { scale })}
-                            />
-                        </div>
-                    </section>
-                    <section>
-                        <NumberField
-                            label={t('Base size')}
-                            value={token.size}
-                            min={20}
-                            max={300}
-                            onChange={(size) => store.updateToken(token.id, { size })}
-                        />
-                        <h3> {t('Token image')} </h3>
-                        <label className="upload-button">
-                            <ImagePlus size={14} />
-                            {busy
-                                ? t('Uploading…')
-                                : token.image
-                                  ? t('Replace image')
-                                  : t('Upload image')}
-                            <input
-                                type="file"
-                                aria-label={t('Upload token image')}
-                                accept="image/png,image/jpeg,image/webp"
-                                disabled={busy}
-                                onChange={(event) => {
-                                    const file = event.target.files?.[0];
-                                    if (file) uploadToken(token.id, file);
-                                    event.target.value = '';
-                                }}
-                            />
-                        </label>
-                        {token.image && (
+                    <details className="inspector-section" open>
+                        <summary>Личность</summary>
+                        <section>
+                            <h3> {t('Identity')} </h3>
+                            {token.image && (
+                                <img
+                                    className="token-image-preview"
+                                    src={token.image.url}
+                                    alt={t('Current token image')}
+                                />
+                            )}
                             <button
-                                className="text-button"
-                                onClick={() => store.updateToken(token.id, { image: null })}
+                                className="secondary-button"
+                                onClick={() => chooseImage('token', token.id)}
                             >
                                 {' '}
-                                {t('Use placeholder')}{' '}
+                                {t('Choose image from library')}{' '}
                             </button>
-                        )}
-                    </section>
-                    <section>
-                        <h3> {t('Vitals')} </h3>
-                        <div className="token-combat-context">
-                            {scene.combat ? (
-                                (() => {
-                                    const combat = scene.combat;
-                                    const entry = combat.combatants.find(
-                                        (c) => c.tokenId === token.id,
-                                    );
-                                    return (
-                                        <button
-                                            className="text-button"
-                                            disabled={combatBusy}
-                                            onClick={() =>
-                                                store.combatCommand(
-                                                    entry
-                                                        ? {
-                                                              action: 'remove',
-                                                              combatId: combat.id,
-                                                              combatantId: entry.id,
-                                                          }
-                                                        : {
-                                                              action: 'add',
-                                                              combatId: combat.id,
-                                                              tokenIds: [token.id],
-                                                          },
-                                                )
-                                            }
-                                        >
-                                            {entry ? t('Remove from Combat') : t('Add to Combat')}
-                                        </button>
-                                    );
-                                })()
-                            ) : (
+                            <label className="field">
+                                <span> {t('Name')} </span>
+                                <input
+                                    aria-label={t('Token name')}
+                                    key={token.name}
+                                    defaultValue={token.name}
+                                    maxLength={80}
+                                    onBlur={(event) => {
+                                        if (event.target.value !== token.name)
+                                            store.updateToken(token.id, {
+                                                name: event.target.value,
+                                            });
+                                        event.target.value = store
+                                            .getSnapshot()
+                                            .scene.tokens.find((t) => t.id === token.id)!.name;
+                                    }}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter') event.currentTarget.blur();
+                                    }}
+                                />
+                            </label>
+                        </section>
+                    </details>
+                    <details className="inspector-section" open>
+                        <summary>Здоровье и состояние</summary>
+                        <section>
+                            <h3> {t('Vitals')} </h3>
+                            <div className="token-combat-context">
+                                {scene.combat ? (
+                                    (() => {
+                                        const combat = scene.combat;
+                                        const entry = combat.combatants.find(
+                                            (c) => c.tokenId === token.id,
+                                        );
+                                        return (
+                                            <button
+                                                className="text-button"
+                                                disabled={combatBusy}
+                                                onClick={() =>
+                                                    store.combatCommand(
+                                                        entry
+                                                            ? {
+                                                                  action: 'remove',
+                                                                  combatId: combat.id,
+                                                                  combatantId: entry.id,
+                                                              }
+                                                            : {
+                                                                  action: 'add',
+                                                                  combatId: combat.id,
+                                                                  tokenIds: [token.id],
+                                                              },
+                                                    )
+                                                }
+                                            >
+                                                {entry
+                                                    ? t('Remove from Combat')
+                                                    : t('Add to Combat')}
+                                            </button>
+                                        );
+                                    })()
+                                ) : (
+                                    <button
+                                        className="text-button"
+                                        disabled={combatBusy}
+                                        onClick={() => store.combatCommand({ action: 'prepare' })}
+                                    >
+                                        {' '}
+                                        {t('Prepare Combat')}{' '}
+                                    </button>
+                                )}
+                            </div>
+                            <div className="field-row">
+                                <NumberField
+                                    label="HP"
+                                    value={token.hp ?? 0}
+                                    min={0}
+                                    max={token.maxHp}
+                                    onChange={(hp) => store.updateToken(token.id, { hp })}
+                                />
+                                <NumberField
+                                    label={t('Max HP')}
+                                    value={token.maxHp ?? 1}
+                                    min={1}
+                                    max={9999}
+                                    onChange={(maxHp) => store.updateToken(token.id, { maxHp })}
+                                />
+                            </div>
+                            <div className="health-track">
+                                <i
+                                    style={{
+                                        width: `${((token.hp ?? 0) / (token.maxHp ?? 1)) * 100}%`,
+                                    }}
+                                />
+                            </div>
+                            <TokenCombatControls
+                                token={token}
+                                store={store}
+                                disabled={combatBusy}
+                            />
+                            <div className="field-row">
+                                <NumberField
+                                    label="AC"
+                                    value={token.ac ?? 0}
+                                    min={0}
+                                    max={99}
+                                    onChange={(ac) => store.updateToken(token.id, { ac })}
+                                />
+                                <NumberField
+                                    label={t('Speed')}
+                                    value={token.speed ?? 0}
+                                    min={0}
+                                    max={999}
+                                    onChange={(speed) => store.updateToken(token.id, { speed })}
+                                />
+                            </div>
+                        </section>
+                    </details>
+                    <details className="inspector-section">
+                        <summary>Доступ и видимость</summary>
+                        <section>
+                            <h3> {t('Access & visibility')} </h3>
+                            <label className="toggle-row">
+                                {' '}
+                                {t('Hidden from players')}{' '}
+                                <input
+                                    type="checkbox"
+                                    checked={token.isHidden ?? false}
+                                    onChange={(event) =>
+                                        store.updateToken(token.id, {
+                                            isHidden: event.target.checked,
+                                        })
+                                    }
+                                />
+                            </label>
+                            <label className="toggle-row">
+                                {' '}
+                                {t('Lock position')}{' '}
+                                <input
+                                    type="checkbox"
+                                    checked={token.isLocked ?? false}
+                                    onChange={(event) =>
+                                        store.updateToken(token.id, {
+                                            isLocked: event.target.checked,
+                                        })
+                                    }
+                                />
+                            </label>
+                            <label className="field">
+                                <span> {t('Controlled by')} </span>
+                                <select
+                                    value={token.ownerUserId ?? ''}
+                                    onChange={(event) =>
+                                        store.updateToken(token.id, {
+                                            ownerUserId: event.target.value || null,
+                                        })
+                                    }
+                                >
+                                    <option value=""> {t('Unassigned')} </option>
+                                    {campaign.members?.map((member) => (
+                                        <option key={member.id} value={member.id}>
+                                            {member.name} ·{' '}
+                                            {member.role === 'gm' ? t('Game Master') : t('Player')}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        </section>
+                    </details>
+                    <details className="inspector-section">
+                        <summary>Положение</summary>
+                        <section>
+                            <h3>
+                                {' '}
+                                {t('Position')} <span> {t('WORLD')} </span>
+                            </h3>
+                            <div className="field-row">
+                                <NumberField
+                                    label="X"
+                                    value={position.x}
+                                    disabled={!!preview}
+                                    onChange={(x) => store.updateToken(token.id, { x })}
+                                />
+                                <NumberField
+                                    label="Y"
+                                    value={position.y}
+                                    disabled={!!preview}
+                                    onChange={(y) => store.updateToken(token.id, { y })}
+                                />
+                            </div>
+                        </section>
+                    </details>
+                    <details className="inspector-section">
+                        <summary>Поворот и масштаб</summary>
+                        <section>
+                            <h3> {t('Transform')} </h3>
+                            <div className="field-row">
+                                <NumberField
+                                    label={t('Rotation °')}
+                                    value={token.rotation}
+                                    onChange={(rotation) =>
+                                        store.updateToken(token.id, { rotation })
+                                    }
+                                />
+                                <NumberField
+                                    label={t('Scale')}
+                                    value={token.scale}
+                                    min={0.4}
+                                    max={3}
+                                    step={0.1}
+                                    onChange={(scale) => store.updateToken(token.id, { scale })}
+                                />
+                            </div>
+                        </section>
+                    </details>
+                    <details className="inspector-section">
+                        <summary>Изображение и размер</summary>
+                        <section>
+                            <NumberField
+                                label={t('Base size')}
+                                value={token.size}
+                                min={20}
+                                max={300}
+                                onChange={(size) => store.updateToken(token.id, { size })}
+                            />
+                            <h3> {t('Token image')} </h3>
+                            <label className="upload-button">
+                                <ImagePlus size={14} />
+                                {busy
+                                    ? t('Uploading…')
+                                    : token.image
+                                      ? t('Replace image')
+                                      : t('Upload image')}
+                                <input
+                                    type="file"
+                                    aria-label={t('Upload token image')}
+                                    accept="image/png,image/jpeg,image/webp"
+                                    disabled={busy}
+                                    onChange={(event) => {
+                                        const file = event.target.files?.[0];
+                                        if (file) uploadToken(token.id, file);
+                                        event.target.value = '';
+                                    }}
+                                />
+                            </label>
+                            {token.image && (
                                 <button
                                     className="text-button"
-                                    disabled={combatBusy}
-                                    onClick={() => store.combatCommand({ action: 'prepare' })}
+                                    onClick={() => store.updateToken(token.id, { image: null })}
                                 >
                                     {' '}
-                                    {t('Prepare Combat')}{' '}
+                                    {t('Use placeholder')}{' '}
                                 </button>
                             )}
-                        </div>
-                        <div className="field-row">
-                            <NumberField
-                                label="HP"
-                                value={token.hp ?? 0}
-                                min={0}
-                                max={token.maxHp}
-                                onChange={(hp) => store.updateToken(token.id, { hp })}
-                            />
-                            <NumberField
-                                label={t('Max HP')}
-                                value={token.maxHp ?? 1}
-                                min={1}
-                                max={9999}
-                                onChange={(maxHp) => store.updateToken(token.id, { maxHp })}
-                            />
-                        </div>
-                        <div className="health-track">
-                            <i
-                                style={{
-                                    width: `${((token.hp ?? 0) / (token.maxHp ?? 1)) * 100}%`,
-                                }}
-                            />
-                        </div>
-                        <TokenCombatControls token={token} store={store} disabled={combatBusy} />
-                        <div className="field-row">
-                            <NumberField
-                                label="AC"
-                                value={token.ac ?? 0}
-                                min={0}
-                                max={99}
-                                onChange={(ac) => store.updateToken(token.id, { ac })}
-                            />
-                            <NumberField
-                                label={t('Speed')}
-                                value={token.speed ?? 0}
-                                min={0}
-                                max={999}
-                                onChange={(speed) => store.updateToken(token.id, { speed })}
-                            />
-                        </div>
-                    </section>
-                    <section>
-                        <h3> {t('Access & visibility')} </h3>
-                        <label className="toggle-row">
-                            {' '}
-                            {t('Hidden from players')}{' '}
-                            <input
-                                type="checkbox"
-                                checked={token.isHidden ?? false}
-                                onChange={(event) =>
-                                    store.updateToken(token.id, { isHidden: event.target.checked })
-                                }
-                            />
-                        </label>
-                        <label className="toggle-row">
-                            {' '}
-                            {t('Lock position')}{' '}
-                            <input
-                                type="checkbox"
-                                checked={token.isLocked ?? false}
-                                onChange={(event) =>
-                                    store.updateToken(token.id, { isLocked: event.target.checked })
-                                }
-                            />
-                        </label>
-                        <label className="field">
-                            <span> {t('Controlled by')} </span>
-                            <select
-                                value={token.ownerUserId ?? ''}
-                                onChange={(event) =>
-                                    store.updateToken(token.id, {
-                                        ownerUserId: event.target.value || null,
-                                    })
-                                }
-                            >
-                                <option value=""> {t('Unassigned')} </option>
-                                {campaign.members?.map((member) => (
-                                    <option key={member.id} value={member.id}>
-                                        {member.name} ·{' '}
-                                        {member.role === 'gm' ? t('Game Master') : t('Player')}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                    </section>
-                    <section>
-                        <h3> {t('Placement')} </h3>
-                        <label className="toggle-row">
-                            <span>
+                        </section>
+                    </details>
+                    <details className="inspector-section">
+                        <summary>Привязка</summary>
+                        <section>
+                            <h3> {t('Placement')} </h3>
+                            <label className="toggle-row">
+                                <span>
+                                    {' '}
+                                    {t('Snap to grid')}{' '}
+                                    <small> {t('Scene-wide · cell centers')} </small>
+                                </span>
+                                <input
+                                    type="checkbox"
+                                    checked={scene.grid.snap}
+                                    onChange={(event) =>
+                                        store.updateGrid({ snap: event.target.checked })
+                                    }
+                                />
+                            </label>
+                            <p className="hint">
                                 {' '}
-                                {t('Snap to grid')}{' '}
-                                <small> {t('Scene-wide · cell centers')} </small>
-                            </span>
-                            <input
-                                type="checkbox"
-                                checked={scene.grid.snap}
-                                onChange={(event) =>
-                                    store.updateGrid({ snap: event.target.checked })
-                                }
-                            />
-                        </label>
-                        <p className="hint">
-                            {' '}
-                            {t('Snaps when dropped. Inspector coordinates stay exact.')}{' '}
-                        </p>
-                    </section>
+                                {t('Snaps when dropped. Inspector coordinates stay exact.')}{' '}
+                            </p>
+                        </section>
+                    </details>{' '}
                     <div className="inspector-foot">
                         <Crosshair size={13} /> {t('World coordinates · px')}{' '}
                     </div>

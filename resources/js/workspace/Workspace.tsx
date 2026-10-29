@@ -3,15 +3,20 @@ import { useLiveMedia } from '../media/useLiveMedia';
 import { SelectionControls } from './objects/SelectionControls';
 import { TEMPLATE_MIME, readTemplateDrag } from './objects/TemplateLibrary';
 import type { ContentTemplate } from '../api/objects';
-import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import {
+    lazy,
+    Suspense,
+    useEffect,
+    useRef,
+    useState,
+    useReducer,
+    useSyncExternalStore,
+} from 'react';
 import {
     Box,
     ChevronRight,
     Play,
-    PanelLeftClose,
     PanelLeftOpen,
-    PanelRightClose,
-    PanelRightOpen,
     Maximize,
     Minus,
     Plus,
@@ -25,8 +30,6 @@ import {
 import { preparation, type LibraryAsset, type AssetKind } from '../api/preparation';
 import { ASSET_MIME, readAssetDrag } from './assets/assetDrag';
 import { AssetLibrary, AssetDetails } from './assets/LazyAssets';
-import { HandoutShelf } from './handouts/HandoutShelf';
-import { NoteInspector } from './notes/NoteInspector';
 import { Dialog } from './Dialog';
 import { SceneStore } from '../tabletop/state/SceneStore';
 import { api, type User, type Campaign } from '../api/workspace';
@@ -38,17 +41,27 @@ import { snapPoint } from '../tabletop/utils/coordinates';
 import type { TabletopRenderer } from '../tabletop/renderer/TabletopRenderer';
 import type { Tool, Scene } from '../tabletop/types/scene';
 import { Sidebar } from './Sidebar';
-import { Inspector } from './Inspector';
-import { CombatPanel } from './combat/CombatPanel';
 import { Tabletop } from './Tabletop';
 import { Toolbar } from './Toolbar';
-import { PlayersPanel } from './PlayersPanel';
 import { useCampaignLive } from '../realtime/useCampaignLive';
 import { useSceneLive } from '../realtime/useSceneLive';
-import { TriggerControl } from '../automation/TriggerControl';
-const MediaPanel = lazy(() =>
-    import('../media/MediaPanel').then((m) => ({ default: m.MediaPanel })),
+import { ConnectionBadge } from './PlayersPanel';
+import { NavigationRail, LiveDock } from './WorkspaceNavigation';
+import { WorkspaceDock } from './WorkspaceDock';
+import { PanelGuard } from './ui/PanelGuard';
+import { useWorkspaceSelection } from './useWorkspaceSelection';
+import {
+    contextualPanel,
+    initialWorkspace,
+    workspaceReducer,
+    type WorkspaceMode,
+    type RightPanel,
+} from './workspaceState';
+import { Search, Users, Settings2, Expand } from 'lucide-react';
+const CommandPalette = lazy(() =>
+    import('./CommandPalette').then((m) => ({ default: m.CommandPalette })),
 );
+
 const SessionConsole = lazy(() =>
     import('../session/SessionConsole').then((m) => ({ default: m.SessionConsole })),
 );
@@ -62,24 +75,34 @@ export function Workspace({
     initialScene?: Scene;
 }) {
     const [campaign, setCampaign] = useState(initialCampaign);
-    const [sessionMode, setSessionMode] = useState(() => {
+    const [workspace, dispatch] = useReducer(workspaceReducer, initialWorkspace, (initial) => {
         try {
-            return localStorage.getItem(`ytt.session-mode.${initialCampaign.id}`) === 'true';
+            return localStorage.getItem(`ytt.session-mode.${initialCampaign.id}`) === 'true'
+                ? { ...initial, mode: 'session' as const, left: 'session' as const }
+                : initial;
         } catch {
-            return false;
+            return initial;
         }
     });
-    const [sessionOpen, setSessionOpen] = useState(sessionMode);
+    const sessionMode = workspace.mode === 'session';
+    const sessionOpen = workspace.left === 'session';
     const sessionFlush = useRef<(() => Promise<void>) | null>(null);
-    const changeSessionMode = (value: boolean) => {
-        setSessionMode(value);
-        setSessionOpen(true);
-        try {
-            localStorage.setItem(`ytt.session-mode.${campaign.id}`, String(value));
-        } catch {
-            /* Optional local preference. */
-        }
-    };
+    const panelGuard = useRef('');
+    const [commandOpen, setCommandOpen] = useState(false);
+    const [sessionView, setSessionView] = useState(0);
+    const changeMode = (mode: WorkspaceMode) =>
+        void run(async () => {
+            if (panelGuard.current) throw new Error(panelGuard.current);
+            await sessionFlush.current?.();
+            dispatch({ type: 'mode', mode });
+            if (mode === 'session') renderer.current?.setTool('select');
+            try {
+                localStorage.setItem(`ytt.session-mode.${campaign.id}`, String(mode === 'session'));
+            } catch {
+                /* Optional preference. */
+            }
+        });
+    const changeSessionMode = (value: boolean) => changeMode(value ? 'session' : 'prepare');
     const live = useCampaignLive(campaign.id, setCampaign);
     const media = useLiveMedia(
         campaign.id,
@@ -127,7 +150,27 @@ export function Workspace({
         queue,
         live.connection,
     );
-    const { scene } = useSyncExternalStore(store.subscribe, store.getSnapshot);
+    const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
+    const { scene } = snapshot;
+    const selectionKey = useWorkspaceSelection(store);
+    const rightPanel =
+        workspace.left && !sessionMode ? null : contextualPanel(workspace, selectionKey);
+    const openRight = (panel: RightPanel) =>
+        void run(async () => {
+            if (panelGuard.current) throw new Error(panelGuard.current);
+            if (window.innerWidth <= 1100) await sessionFlush.current?.();
+            dispatch({ type: 'right', panel, compact: window.innerWidth <= 1100 });
+        });
+    const closeRight = () => {
+        if (panelGuard.current) {
+            setError(panelGuard.current);
+            return;
+        }
+        dispatch({ type: 'close-right', selection: selectionKey });
+    };
+    useEffect(() => {
+        dispatch({ type: 'selection', key: selectionKey });
+    }, [selectionKey]);
     const tool = useSyncExternalStore(store.spatial.subscribe, store.spatial.getTool);
     const [modal, setModal] = useState<
         | 'createScene'
@@ -175,6 +218,7 @@ export function Workspace({
     };
     const navigate = (url: string) => {
         void run(async () => {
+            if (panelGuard.current) throw new Error(panelGuard.current);
             await sessionFlush.current?.();
             await queue.flush();
             location.assign(url);
@@ -257,8 +301,6 @@ export function Workspace({
         });
     };
     const [zoom, setZoom] = useState(100);
-    const [left, setLeft] = useState(() => window.innerWidth >= 900);
-    const [right, setRight] = useState(() => window.innerWidth >= 1180);
     const help = useRef<HTMLDialogElement>(null);
     const allowExit = useRef(false);
     useEffect(() => {
@@ -274,36 +316,54 @@ export function Workspace({
         window.addEventListener('beforeunload', guard);
         return () => window.removeEventListener('beforeunload', guard);
     }, [queue]);
+    const toggleLibrary = () =>
+        void run(async () => {
+            if (panelGuard.current) throw new Error(panelGuard.current);
+            await sessionFlush.current?.();
+            dispatch({
+                type: 'left',
+                panel: workspace.left ? null : sessionMode ? 'session' : 'scenes',
+            });
+        });
     useEffect(() => {
-        const compact = window.matchMedia('(max-width: 1179px)');
-        const narrow = window.matchMedia('(max-width: 899px)');
-        const collapseInspector = () => {
-            if (compact.matches) setRight(false);
+        const key = (event: KeyboardEvent) => {
+            if (
+                (event.ctrlKey || event.metaKey) &&
+                event.code === 'KeyK' &&
+                !document.querySelector('dialog[open]')
+            ) {
+                event.preventDefault();
+                setCommandOpen(true);
+            }
         };
-        const collapseLibrary = () => {
-            // A modal may own an unsaved preparation draft inside the library.
-            if (narrow.matches && !document.querySelector('dialog[open]')) setLeft(false);
-        };
-        compact.addEventListener('change', collapseInspector);
-        narrow.addEventListener('change', collapseLibrary);
-        return () => {
-            compact.removeEventListener('change', collapseInspector);
-            narrow.removeEventListener('change', collapseLibrary);
-        };
+        window.addEventListener('keydown', key);
+        return () => window.removeEventListener('keydown', key);
     }, []);
-    const toggleLibrary = () => {
-        if (!left && window.innerWidth < 900) setRight(false);
-        setLeft(!left);
-    };
-    const toggleInspector = () => {
-        if (!right && window.innerWidth < 900) setLeft(false);
-        setRight(!right);
-    };
     const changeTool = (next: Tool) => {
         renderer.current?.setTool(next);
+        if (next === 'region') openRight('region');
     };
     return (
-        <div className={`workspace ${sessionMode ? 'session-mode' : ''}`}>
+        <div
+            className={`workspace redesigned-workspace mode-${workspace.mode} ${sessionMode ? 'session-mode' : ''}`}
+            onKeyDownCapture={(event) => {
+                if (
+                    event.key !== 'Escape' ||
+                    document.querySelector('dialog[open]') ||
+                    (event.target as HTMLElement).closest(
+                        'input, textarea, select, [contenteditable="true"]',
+                    )
+                )
+                    return;
+                if (rightPanel && workspace.right !== 'context') {
+                    event.stopPropagation();
+                    closeRight();
+                } else if (workspace.left) {
+                    event.stopPropagation();
+                    toggleLibrary();
+                }
+            }}
+        >
             <header className="topbar">
                 <a
                     className="brand"
@@ -320,45 +380,32 @@ export function Workspace({
                     </strong>
                 </a>
                 <div className="breadcrumb">
-                    <span>{campaign.name}</span>
+                    <button onClick={() => navigate('/')}>{campaign.name}</button>
                     <ChevronRight size={13} />
-                    <strong>{scene.name ?? t('New workspace')}</strong>
+                    <button className="breadcrumb-scene" onClick={toggleLibrary}>
+                        {scene.name ?? t('New workspace')}
+                    </button>
                 </div>
                 <div className="topbar-actions">
                     <button
-                        className="secondary-button"
-                        aria-pressed={sessionOpen}
-                        onClick={() =>
-                            void run(async () => {
-                                await sessionFlush.current?.();
-                                setSessionOpen(!sessionOpen);
-                            })
-                        }
+                        className="command-launch"
+                        title="Поиск и команды · Ctrl/Cmd+K"
+                        aria-label="Поиск и команды"
+                        onClick={() => setCommandOpen(true)}
                     >
-                        Сессии
+                        <Search size={16} />
+                        <span>Найти или выполнить…</span>
+                        <kbd>Ctrl K</kbd>
                     </button>
-                    <HandoutShelf campaignId={campaign.id} userId={user.id} echo={live.echo} gm />
-                    <TriggerControl
-                        store={store}
-                        queue={queue}
-                        active={campaign.activeSceneId === scene.id}
-                    />
-                    <Suspense fallback={null}>
-                        <MediaPanel campaignId={campaign.id} gm syncError={media.syncError} />
-                    </Suspense>
-                    <PlayersPanel
-                        campaign={campaign}
-                        members={live.members}
-                        connection={live.connection}
-                    />
-                    <span className="local-badge">
-                        <i />{' '}
-                        {activeName ? t('activeScene', { name: activeName }) : t('No active scene')}
-                    </span>
-                    <span title={user.name} className="gm-avatar">
-                        {' '}
-                        {t('GM')}{' '}
-                    </span>
+                    <ConnectionBadge state={live.connection} />
+                    <button
+                        className="players-summary"
+                        title="Игроки за столом"
+                        onClick={() => openRight('players')}
+                    >
+                        <Users size={16} />
+                        <span>{live.members.length}</span>
+                    </button>
                     <button
                         className="present-button"
                         disabled={!scene.id || busy}
@@ -382,60 +429,59 @@ export function Workspace({
                         <Play size={13} fill="currentColor" />{' '}
                         {campaign.activeSceneId === scene.id ? t('Deactivate') : t('Activate')}
                     </button>
-                    <button
-                        className="icon-button"
-                        aria-label={t('Sign out')}
-                        title={t('Sign out')}
-                        onClick={() =>
-                            void run(async () => {
-                                await queue.flush();
-                                await sessionFlush.current?.();
-                                await api.logout();
-                                location.assign('/login');
-                            })
-                        }
-                    >
-                        <LogOut size={16} />
-                    </button>
                 </div>
             </header>
             <div
-                className={`workspace-body ${sessionOpen ? 'session-open' : ''} ${(left && !sessionMode) || sessionOpen ? '' : 'left-closed'} ${right && !sessionMode ? '' : 'right-closed'}`}
+                className={`workspace-body ${workspace.left ? 'has-left' : ''} ${rightPanel ? 'has-right' : ''}`}
             >
-                {sessionOpen && (
-                    <Suspense
-                        fallback={
-                            <aside className="session-console panel">Открываем сессии…</aside>
-                        }
-                    >
-                        <SessionConsole
-                            campaign={campaign}
-                            members={live.members}
-                            store={store}
-                            queue={queue}
-                            liveMode={sessionMode}
-                            onMode={changeSessionMode}
-                            onClose={() => setSessionOpen(false)}
-                            onNavigate={navigate}
-                            onPlace={placeTemplate}
-                            flushRef={sessionFlush}
-                        />
-                    </Suspense>
-                )}
-                {left && !sessionOpen && !sessionMode && (
-                    <Sidebar
-                        store={store}
-                        campaign={campaign}
-                        onClose={() => setLeft(false)}
-                        onNavigate={navigate}
-                        onCreate={() => setModal('createScene')}
-                        onRename={() => setModal('renameScene')}
-                        onDelete={() => setModal('deleteScene')}
-                        onCampaignRename={() => setModal('renameCampaign')}
-                        onUseAsset={placeAsset}
-                        onUseTemplate={placeTemplate}
-                        templateRefresh={templateRefresh}
-                    />
+                <NavigationRail
+                    mode={workspace.mode}
+                    onMode={changeMode}
+                    onSettings={() => openRight('settings')}
+                />
+                {workspace.left && (
+                    <div className="workspace-left">
+                        {sessionOpen && (
+                            <Suspense
+                                fallback={
+                                    <aside className="session-console panel">
+                                        Открываем сессии…
+                                    </aside>
+                                }
+                            >
+                                <SessionConsole
+                                    key={sessionView}
+                                    campaign={campaign}
+                                    members={live.members}
+                                    store={store}
+                                    queue={queue}
+                                    liveMode={sessionMode}
+                                    onMode={changeSessionMode}
+                                    onClose={() => dispatch({ type: 'left', panel: null })}
+                                    onNavigate={navigate}
+                                    onPlace={placeTemplate}
+                                    flushRef={sessionFlush}
+                                />
+                            </Suspense>
+                        )}
+                        {workspace.left && !sessionOpen && (
+                            <Sidebar
+                                store={store}
+                                campaign={campaign}
+                                onClose={() => dispatch({ type: 'left', panel: null })}
+                                onNavigate={navigate}
+                                onCreate={() => setModal('createScene')}
+                                onRename={() => setModal('renameScene')}
+                                onDelete={() => setModal('deleteScene')}
+                                panel={workspace.left!}
+                                onPanel={(panel) => dispatch({ type: 'left', panel })}
+                                onAutomation={() => openRight('triggers')}
+                                onUseAsset={placeAsset}
+                                onUseTemplate={placeTemplate}
+                                templateRefresh={templateRefresh}
+                            />
+                        )}
+                    </div>
                 )}
                 <main
                     className="tabletop"
@@ -501,8 +547,6 @@ export function Workspace({
                     }}
                 >
                     {scene.id && <Tabletop store={store} rendererRef={renderer} onZoom={setZoom} />}
-                    {scene.id && <CombatPanel store={store} queue={queue} />}
-                    {scene.id && <NoteInspector store={store} />}
                     {scene.id && (
                         <SelectionControls
                             store={store}
@@ -564,90 +608,101 @@ export function Workspace({
                     {dropping && <div className="drop-overlay">{dropHint}</div>}
                     <div className="canvas-topline">
                         <button
-                            className="icon-button surface"
+                            className="scene-switch"
                             onClick={toggleLibrary}
-                            title={left ? t('Hide library') : t('Show library')}
-                            aria-label={left ? t('Hide library') : t('Show library')}
+                            aria-expanded={!!workspace.left}
+                            title={
+                                sessionMode
+                                    ? 'Открыть / закрыть план сессии'
+                                    : 'Открыть / закрыть сцены'
+                            }
                         >
-                            {left ? <PanelLeftClose size={17} /> : <PanelLeftOpen size={17} />}
+                            <PanelLeftOpen size={16} />
+                            <span>{sessionMode ? 'План сессии' : 'Сцены'}</span>
                         </button>
-                        <div className="canvas-heading">
-                            <span className="eyebrow">
-                                {scene.id ? t('EDITING SCENE') : t('CAMPAIGN')} <span>/</span>{' '}
-                                {t('PREPARATION')}{' '}
-                            </span>
-                            <h1>{scene.name ?? campaign.name}</h1>
+                        <div className="scene-state">
+                            <i
+                                className={campaign.activeSceneId === scene.id ? 'status-dot' : ''}
+                            />
+                            {campaign.activeSceneId === scene.id
+                                ? 'В ЭФИРЕ'
+                                : 'ПОДГОТОВЛЕННАЯ СЦЕНА'}
+                            {activeName && campaign.activeSceneId !== scene.id && (
+                                <span>Игроки: {activeName}</span>
+                            )}
                         </div>
-                        <button
-                            className="icon-button surface inspector-toggle"
-                            onClick={toggleInspector}
-                            title={right ? t('Hide inspector') : t('Show inspector')}
-                            aria-label={right ? t('Hide inspector') : t('Show inspector')}
-                        >
-                            {right ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}
-                        </button>
                     </div>
                     {scene.id && (
                         <>
-                            <Toolbar store={store} onTool={changeTool} />
-                            <div className="scene-quick-actions">
-                                <button
-                                    className="secondary-button"
-                                    title={t('Place a private GM note')}
-                                    onClick={() => {
-                                        store.select(null);
-                                        changeTool('note');
-                                    }}
-                                >
-                                    <StickyNote size={14} /> {t('Note')}{' '}
-                                </button>
-                                <button
-                                    className="icon-button surface"
-                                    title={t('Show / hide GM notes')}
-                                    aria-label={t('Show GM Notes')}
-                                    aria-pressed={store.getSnapshot().showNotes !== false}
-                                    onClick={() => store.toggleNotes()}
-                                >
-                                    <EyeOff size={14} />
-                                </button>
-                                <button
-                                    className="secondary-button"
-                                    disabled={busy}
-                                    onClick={() =>
-                                        void run(async () => {
-                                            await queue.flush();
-                                            const result = await api.createToken(
-                                                scene.id!,
-                                                snapPoint(
-                                                    renderer.current?.center() ?? {
-                                                        x: scene.width / 2,
-                                                        y: scene.height / 2,
-                                                    },
-                                                    scene.grid,
-                                                ),
-                                            );
-                                            store.addToken(result.token!, result.revision);
-                                            setRight(true);
-                                            if (window.innerWidth < 900) setLeft(false);
-                                        })
-                                    }
-                                >
-                                    <Plus size={14} /> {t('Add token')}{' '}
-                                </button>
-                                <button
-                                    className="secondary-button"
-                                    onClick={() => {
-                                        store.select(null);
-                                        setRight(true);
-                                        if (window.innerWidth < 900) setLeft(false);
-                                    }}
-                                >
-                                    {' '}
-                                    {t('Scene setup')}{' '}
-                                </button>
-                            </div>
+                            <Toolbar
+                                store={store}
+                                onTool={changeTool}
+                                preparation={workspace.mode !== 'session'}
+                                dockedRegions
+                            />
+                            {!sessionMode && (
+                                <div className="scene-quick-actions">
+                                    <button
+                                        className="secondary-button"
+                                        title={t('Place a private GM note')}
+                                        onClick={() => {
+                                            store.select(null);
+                                            changeTool('note');
+                                        }}
+                                    >
+                                        <StickyNote size={14} /> {t('Note')}{' '}
+                                    </button>
+                                    <button
+                                        className="icon-button surface"
+                                        title={t('Show / hide GM notes')}
+                                        aria-label={t('Show GM Notes')}
+                                        aria-pressed={store.getSnapshot().showNotes !== false}
+                                        onClick={() => store.toggleNotes()}
+                                    >
+                                        <EyeOff size={14} />
+                                    </button>
+                                    <button
+                                        className="secondary-button"
+                                        disabled={busy}
+                                        onClick={() =>
+                                            void run(async () => {
+                                                await queue.flush();
+                                                const result = await api.createToken(
+                                                    scene.id!,
+                                                    snapPoint(
+                                                        renderer.current?.center() ?? {
+                                                            x: scene.width / 2,
+                                                            y: scene.height / 2,
+                                                        },
+                                                        scene.grid,
+                                                    ),
+                                                );
+                                                store.addToken(result.token!, result.revision);
+                                                dispatch({ type: 'right', panel: 'context' });
+                                            })
+                                        }
+                                    >
+                                        <Plus size={14} /> {t('Add token')}{' '}
+                                    </button>
+                                    <button
+                                        className="secondary-button"
+                                        onClick={() => {
+                                            store.select(null);
+                                            openRight('scene');
+                                        }}
+                                    >
+                                        {' '}
+                                        {t('Scene setup')}{' '}
+                                    </button>
+                                </div>
+                            )}
                         </>
                     )}
+                    <LiveDock
+                        panel={rightPanel}
+                        round={scene.combat?.status === 'active' ? scene.combat.round : undefined}
+                        onPanel={openRight}
+                    />
                     <div className="canvas-bottomline">
                         <span className="canvas-tip">
                             <kbd>Space</kbd> {t('+ drag to pan')} <span>·</span>{' '}
@@ -677,21 +732,79 @@ export function Workspace({
                             >
                                 <Maximize size={14} />
                             </button>
+                            <button
+                                title="Полный экран"
+                                aria-label="Полный экран"
+                                onClick={() =>
+                                    void (
+                                        document.fullscreenElement
+                                            ? document.exitFullscreen()
+                                            : document.documentElement.requestFullscreen()
+                                    ).catch(() => setError('Браузер не разрешил полный экран.'))
+                                }
+                            >
+                                <Expand size={14} />
+                            </button>
                         </div>
                     </div>
                 </main>
-                {right && !sessionMode && (
-                    <Inspector
-                        combatBusy={save.status !== 'saved'}
-                        store={store}
-                        campaign={campaign}
-                        uploadMap={uploadMap}
-                        uploadToken={uploadToken}
-                        busy={busy}
-                        deleteToken={() => setModal('deleteToken')}
-                        onClose={() => setRight(false)}
-                        chooseImage={(kind, tokenId) => setPicker({ kind, tokenId })}
-                    />
+                {rightPanel && (
+                    <PanelGuard.Provider value={panelGuard}>
+                        <WorkspaceDock
+                            panel={rightPanel}
+                            queue={queue}
+                            members={live.members}
+                            connection={live.connection}
+                            echo={live.echo}
+                            userId={user.id}
+                            syncError={media.syncError}
+                            inspector={{
+                                combatBusy: save.status !== 'saved',
+                                store,
+                                campaign,
+                                uploadMap,
+                                uploadToken,
+                                busy,
+                                deleteToken: () => setModal('deleteToken'),
+                                onClose: closeRight,
+                                chooseImage: (kind, tokenId) => setPicker({ kind, tokenId }),
+                            }}
+                            settings={
+                                <div className="workspace-settings">
+                                    <strong>{campaign.name}</strong>
+                                    <button onClick={() => navigate('/')}>Сменить кампанию</button>
+                                    <button onClick={() => setModal('renameCampaign')}>
+                                        Переименовать кампанию
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            store.select(null);
+                                            openRight('scene');
+                                        }}
+                                    >
+                                        <Settings2 size={15} />
+                                        Настройки сцены
+                                    </button>
+                                    <button onClick={() => help.current?.showModal()}>
+                                        Горячие клавиши
+                                    </button>
+                                    <button
+                                        onClick={() =>
+                                            void run(async () => {
+                                                await queue.flush();
+                                                await sessionFlush.current?.();
+                                                await api.logout();
+                                                location.assign('/login');
+                                            })
+                                        }
+                                    >
+                                        <LogOut size={15} />
+                                        Выйти · {user.name}
+                                    </button>
+                                </div>
+                            }
+                        />
+                    </PanelGuard.Provider>
                 )}
             </div>
             <footer className="statusbar">
@@ -717,6 +830,36 @@ export function Workspace({
                     <Keyboard size={14} /> {t('Shortcuts')}{' '}
                 </button>
             </footer>
+            {commandOpen && (
+                <Suspense fallback={null}>
+                    <CommandPalette
+                        campaign={campaign}
+                        scene={scene}
+                        onClose={() => setCommandOpen(false)}
+                        onPanel={(panel) =>
+                            dispatch({
+                                type: 'right',
+                                panel,
+                                force: true,
+                                compact: window.innerWidth <= 1100,
+                            })
+                        }
+                        onMode={(mode) => {
+                            setSessionView((value) => value + 1);
+                            changeMode(mode);
+                        }}
+                        onNavigate={navigate}
+                        onPlace={placeTemplate}
+                        onAsset={setHandoutAsset}
+                        beforeAction={async () => {
+                            if (panelGuard.current) throw new Error(panelGuard.current);
+                            await sessionFlush.current?.();
+                            await queue.flush();
+                        }}
+                        onCampaign={setCampaign}
+                    />
+                </Suspense>
+            )}
             {replaceMap && (
                 <ConfirmDialog
                     title={t('Replace scene map?')}

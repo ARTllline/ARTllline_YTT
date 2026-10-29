@@ -202,7 +202,7 @@ export function SessionConsole({
                     <span className="eyebrow">{liveMode ? 'РЕЖИМ СЕССИИ' : 'ПОДГОТОВКА'}</span>
                     <strong>
                         <ListOrdered size={17} />
-                        Сессии
+                        {liveMode ? 'За игровым столом' : 'Сессии'}
                     </strong>
                 </div>
                 <button
@@ -359,29 +359,32 @@ export function SessionConsole({
                             </li>
                         ))}
                     </ol>
-                    <SessionNotes
-                        key={session.id}
-                        initial={session.notes}
-                        readOnly={completed}
-                        state={noteState}
-                        retry={notesQueue.retry}
-                        onChange={(notes) => {
-                            const id = commandId(),
-                                sessionId = session.id;
-                            notesQueue.enqueue(
-                                'notes',
-                                async () => {
-                                    await sessions.command(
-                                        campaign.id,
-                                        'notes',
-                                        { sessionId, notes },
-                                        id,
-                                    );
-                                },
-                                550,
-                            );
-                        }}
-                    />
+                    <details className="session-notes-disclosure">
+                        <summary>Заметки мастера</summary>
+                        <SessionNotes
+                            key={session.id}
+                            initial={session.notes}
+                            readOnly={completed}
+                            state={noteState}
+                            retry={notesQueue.retry}
+                            onChange={(notes) => {
+                                const id = commandId(),
+                                    sessionId = session.id;
+                                notesQueue.enqueue(
+                                    'notes',
+                                    async () => {
+                                        await sessions.command(
+                                            campaign.id,
+                                            'notes',
+                                            { sessionId, notes },
+                                            id,
+                                        );
+                                    },
+                                    550,
+                                );
+                            }}
+                        />
+                    </details>
                     {!completed && (
                         <label className="check-row session-auto">
                             <input
@@ -420,7 +423,7 @@ export function SessionConsole({
                 <button onClick={() => setQuick('handout')}>Материалы</button>
                 <button onClick={() => setQuick('encounter')}>Столкновения</button>
             </nav>
-            <p className="session-focus-hint">Звук — в верхней панели. Бой — на игровом столе.</p>
+            <p className="session-focus-hint">Бой, звук и события — в пульте справа от сцены.</p>
             {(error || noteState.error) && (
                 <p role="alert" className="session-error">
                     {error || noteState.error}

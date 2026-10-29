@@ -67,7 +67,15 @@ function Initiative({
     );
 }
 
-export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQueue }) {
+export function CombatPanel({
+    store,
+    queue,
+    onClose,
+}: {
+    store: SceneStore;
+    queue: SaveQueue;
+    onClose?: () => void;
+}) {
     const { scene, selectedIds, combatNotice } = useSyncExternalStore(
         store.subscribe,
         store.getSnapshot,
@@ -76,7 +84,9 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
     const combat = scene.combat;
     const gm = store.role === 'gm';
     const disabled = save.status !== 'saved';
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsed, setCollapsed] = useState(
+        () => !gm && window.matchMedia('(max-width: 600px)').matches,
+    );
     const [picker, setPicker] = useState(false);
     const [ending, setEnding] = useState(false);
     const [dragging, setDragging] = useState<string | null>(null);
@@ -122,7 +132,8 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
         >
             <button
                 className="combat-heading"
-                onClick={() => setCollapsed(!collapsed)}
+                title={onClose ? 'Закрыть бой' : 'Свернуть / развернуть бой'}
+                onClick={() => (onClose ? onClose() : setCollapsed(!collapsed))}
                 aria-expanded={!collapsed}
             >
                 <Swords size={16} />
@@ -130,7 +141,13 @@ export function CombatPanel({ store, queue }: { store: SceneStore; queue: SaveQu
                     <strong>{title}</strong>
                     {combat?.status === 'active' && <small>{turnName}</small>}
                 </span>
-                {collapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
+                {onClose ? (
+                    <X size={16} />
+                ) : collapsed ? (
+                    <ChevronDown size={15} />
+                ) : (
+                    <ChevronUp size={15} />
+                )}
             </button>
             {!collapsed && (
                 <>

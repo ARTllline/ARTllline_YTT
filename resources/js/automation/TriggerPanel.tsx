@@ -4,6 +4,7 @@ import type { SaveQueue } from '../tabletop/state/SaveQueue';
 import { automation, eventLabels, type Trigger, type TriggerData } from './model';
 import { TriggerEditor } from './TriggerEditor';
 import { Dialog } from '../workspace/Dialog';
+import { Panel } from '../workspace/ui/Controls';
 const CueLibrary = lazy(() =>
     import('../workspace/cues/CueLibrary').then((m) => ({ default: m.CueLibrary })),
 );
@@ -13,12 +14,14 @@ export function TriggerPanel({
     active,
     onClose,
     onUpdated,
+    docked = false,
 }: {
     store: SceneStore;
     queue: SaveQueue;
     active: boolean;
     onClose: () => void;
     onUpdated: () => void;
+    docked?: boolean;
 }) {
     const { scene } = useSyncExternalStore(store.subscribe, store.getSnapshot);
     const [data, setData] = useState<TriggerData>({ triggers: [], history: [], cues: [] }),
@@ -77,8 +80,9 @@ export function TriggerPanel({
             !(t.objectType === 'token' ? scene.tokens : scene.props)?.some(
                 (o) => o.id === t.objectId,
             ));
+    const Container = docked ? Panel : Dialog;
     return (
-        <Dialog
+        <Container
             title="Триггеры сцены"
             onClose={() => {
                 if (!busy && !editor) onClose();
@@ -260,6 +264,6 @@ export function TriggerPanel({
                     onSave={(t) => command({ ...t, id: t.id || null, action: 'save' })}
                 />
             )}
-        </Dialog>
+        </Container>
     );
 }

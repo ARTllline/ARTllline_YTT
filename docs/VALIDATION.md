@@ -1,4 +1,63 @@
-# Task 12 — V1 stabilization validation
+# Task 13 — workspace redesign validation
+
+Validated locally **2026-10-29 Europe/Kiev**, starting at `93899cf`.
+See [the complete redesign report](TASK13_REDESIGN.md) for the information architecture,
+all 13 mandatory screenshots, performance comparison and remaining UX concerns.
+No backend, schema, dependencies, `.env`, production deployment or commit/push changes.
+
+## Current checks
+
+| Check                        | Result                     |
+| ---------------------------- | -------------------------- |
+| `composer test`              | 89 passed, 1169 assertions |
+| `npm run test`               | 119 passed, 23 files       |
+| `npm run typecheck`          | Passed                     |
+| `npm run lint`               | Passed                     |
+| `npm run build`              | Passed                     |
+| `php vendor/bin/pint --test` | Passed                     |
+| `git diff --check`           | Passed                     |
+
+Six reducer tests cover contextual/explicit panel replacement, clean state and tablet
+behavior. Three selection-layout tests cover drag deferral, cancellation and unmount
+cleanup. Browser testing caught and fixed the first-drag cancellation caused by opening
+the Inspector on pointer-down: geometry now changes after the gesture completes.
+
+## Browser and workflow evidence
+
+Chromium 156.0.8078.74: 1920×1080 (clean/scenes/Inspector/combat/assets/cue editor/session),
+1440×1000 (clean/combat/session), 768×1024 (GM/session), 390×844 (Player). All 13 states:
+one canvas, no document overflow, zero page errors. Reduced-motion disables panel
+animation; the keyboard palette is bounded to 640px. The mobile Player initiative
+starts collapsed. Captures were visually reviewed, including corrected editor colors,
+palette sizing and tablet header behavior.
+
+Real authenticated GM and Player contexts exercised token drag/persistence/Reverb,
+movement Undo, native asset drag/drop, manual fog, ruler/ping, palette activation and
+navigation, media start/stop, handout broadcast, encounter placement and cue launch.
+The cue completed all three steps through the real queue. Session note flush before
+mode changes and audio failure/retry with the original UUID were explicitly checked.
+Hidden token data was absent from the Player snapshot, not merely visually concealed.
+
+QA writes are confined to campaign **13**, scenes **40–42**, with API-authored fixture
+content and actual UI captures. No old campaign was reset. Campaign 12/scene 39 was
+used for a read-only renderer comparison: 200 props, 36 tokens, 1200 fog actions,
+4096px map and two textures. At 1440×1000, 240 warm rAF samples gave p50 **8.3 → 8.3ms**,
+p95 **8.4 → 8.5ms**, max **8.5 → 8.5ms**. Default DOM size **1836 → 301**. Sixteen dock
+transitions plus pan/zoom retained the original canvas and texture count. This short
+headless sample is not a long-running GPU or memory benchmark.
+
+Local evidence: `artifacts/task13-ui-report.json`, `task13-workflows.json`,
+`task13-additional.json`, `task13-browser-report.json`, `task13-before-metrics.json`,
+`task13-after-metrics.json`, `task13-composer.log`, `task13-frontend.log` and matching
+`.cjs` scripts / `.png` screenshots. These QA artifacts are ignored by Git. Firefox
+launch was attempted but its executable is absent; no current Firefox/Safari/device
+or production/WAN sign-off is claimed.
+
+The sandbox cannot resolve Vite test modules on B: or reach localhost; verified runs
+used approved execution outside that restriction. Full Pint initially reported only
+an old ignored QA helper's formatting; it was corrected and Pint passed afterward.
+
+# Task 12 — V1 stabilization validation (historical)
 
 Validated **2026-10-29 Europe/Kiev** from clean Task 11 commit `845c1c5`.
 No dependency/lockfile, `.env`, APP_KEY or schema changes; no commit/push or VPS
@@ -219,10 +278,10 @@ PHP processes ran final TokenActions movement concurrently against the QA fixtur
 Both entered the same region. Each held the normal campaign lock for 700 ms to force
 overlap (helper `artifacts/qa11-race.php`, restricted to campaign 11/tokens 205,206).
 
-| Process | Started (Unix seconds) | Lock acquired | Finished |
-| --- | ---: | ---: | ---: |
-| 41320 / token 205 | 1793226565.459236 | 1793226565.459931 | 1793226566.221169 |
-| 43236 / token 206 | 1793226565.530774 | 1793226566.210471 | 1793226566.955018 |
+| Process           | Started (Unix seconds) |     Lock acquired |          Finished |
+| ----------------- | ---------------------: | ----------------: | ----------------: |
+| 41320 / token 205 |      1793226565.459236 | 1793226565.459931 | 1793226566.221169 |
+| 43236 / token 206 |      1793226565.530774 | 1793226566.210471 | 1793226566.955018 |
 
 The second process waited approximately **680 ms** for the same lock. Both final
 positions persisted at 850/450; the trigger count became **1**, history grew by

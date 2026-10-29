@@ -6,6 +6,7 @@ import '../css/app.css';
 import '../css/persistence.css';
 import '../css/multiplayer.css';
 import '../css/preparation.css';
+import '../css/workspace.css';
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>

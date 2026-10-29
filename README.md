@@ -6,7 +6,28 @@ state. The product contract is `AGENTS.md`.
 
 ## Current status
 
-**Task 12: V1 stabilization candidate.**
+**Task 13: canvas-first workspace and live UX redesign.**
+Open **Стол** for the map, **Подготовка** for scenes, assets, prefabs, encounters,
+cues and automation, **Сессия** for the run-of-show, and **Библиотека** for media.
+Settings sit at the bottom of the navigation rail. The Inspector appears after
+selection; combat, audio, handouts, players and triggers share one right dock.
+On tablet, opening that dock replaces the session drawer. Escape closes an explicit
+panel; closing combat restores the selected object's Inspector. Canvas gestures
+finish before selection changes the panel layout.
+
+**Ctrl/Cmd+K** searches scenes, cues, encounters, assets, handouts and active session
+items. Commands can activate a scene, launch a cue, place an encounter, share a
+handout, start/stop music, toggle atmosphere or open a live panel. Arrow keys select,
+Enter executes and Escape closes. Scene activation and sharing are explicit commands;
+focusing a session item does not execute it. Search returns up to 40 matches per type.
+
+Session notes flush before switching workspace modes. Failed audio commands retain
+their original retry identity while the dock remains open. The Player UI stays minimal;
+on phones the initiative panel initially shows only the round/current turn.
+See the [redesign report and 13 screenshots](docs/TASK13_REDESIGN.md) and
+[current validation](docs/VALIDATION.md).
+
+**Task 12 foundation: V1 stabilization candidate.**
 The feature set is frozen. GM editing now includes mixed token/prop marquee selection
 (Shift toggles intersections), bounded confirmed Undo/Redo, and selective handout
 sharing/revocation. Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z affect supported layout edits only;

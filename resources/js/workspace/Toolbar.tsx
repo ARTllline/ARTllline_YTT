@@ -19,7 +19,17 @@ import { HistoryControls } from './HistoryControls';
 const RegionControls = lazy(() =>
     import('../automation/RegionControls').then((m) => ({ default: m.RegionControls })),
 );
-export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: Tool) => void }) {
+export function Toolbar({
+    store,
+    onTool,
+    preparation = true,
+    dockedRegions = false,
+}: {
+    store: SceneStore;
+    onTool: (tool: Tool) => void;
+    preparation?: boolean;
+    dockedRegions?: boolean;
+}) {
     const tool = useSyncExternalStore(store.spatial.subscribe, store.spatial.getTool);
     const [gridOpen, setGridOpen] = useState(false);
     const {
@@ -32,12 +42,14 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
     return (
         <div className="toolbar-wrap">
             <div className="tabletop-toolbar" role="toolbar" aria-label={t('Tabletop tools')}>
-                {store.role === 'gm' && store.history && <HistoryControls store={store} />}
+                {store.role === 'gm' && preparation && store.history && (
+                    <HistoryControls store={store} />
+                )}
                 <button
                     className={tool === 'select' ? 'active' : ''}
                     aria-pressed={tool === 'select'}
                     aria-label={t('Select tool')}
-                    title={t('Select and drag tokens')}
+                    title={`${t('Select and drag tokens')} · V`}
                     onClick={() => choose('select')}
                 >
                     <MousePointer2 size={18} />
@@ -52,7 +64,7 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
                     <Hand size={18} />
                 </button>
                 <i />
-                {store.role === 'gm' && (
+                {store.role === 'gm' && preparation && (
                     <button
                         className={gridOpen ? 'active' : ''}
                         aria-expanded={gridOpen}
@@ -84,7 +96,7 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
                 >
                     <Ruler size={18} />
                 </button>
-                {store.role === 'gm' && (
+                {store.role === 'gm' && preparation && (
                     <button
                         className={tool === 'region' ? 'active' : ''}
                         aria-label="Области"
@@ -115,7 +127,7 @@ export function Toolbar({ store, onTool }: { store: SceneStore; onTool: (tool: T
                 </button>
             </div>
             <SpatialSettings store={store} tool={tool} onTool={choose} />
-            {store.role === 'gm' && tool === 'region' && (
+            {store.role === 'gm' && tool === 'region' && !dockedRegions && (
                 <Suspense fallback={<div className="spatial-settings">Открываем области…</div>}>
                     <RegionControls store={store} />
                 </Suspense>

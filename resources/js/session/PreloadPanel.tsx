@@ -103,7 +103,7 @@ export function PreloadPanel({
         }
     };
     return (
-        <details className="session-preload" open>
+        <details className="session-preload">
             <summary>Подготовка сцены</summary>
             <select
                 aria-label="Сцена для предзагрузки"

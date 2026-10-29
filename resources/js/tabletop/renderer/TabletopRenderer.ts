@@ -61,7 +61,7 @@ export class TabletopRenderer {
     ) {}
     async init() {
         await this.app.init({
-            background: '#172020',
+            background: '#14161b',
             antialias: true,
             autoDensity: true,
             resolution: Math.min(window.devicePixelRatio || 1, 2),
