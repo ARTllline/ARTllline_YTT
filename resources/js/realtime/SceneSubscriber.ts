@@ -146,6 +146,9 @@ export class SceneSubscriber {
             scene.tokens.some((t) => t.id === change.payload.gameplayFeedback!.tokenId)
         )
             this.store.onGameplayFeedback?.(change.payload.gameplayFeedback);
+        for (const feedback of change.payload.gameplayFeedbacks ?? [])
+            if (scene.tokens.some((t) => t.id === feedback.tokenId))
+                this.store.onGameplayFeedback?.(feedback);
         this.previews.finish(change.dragSessionId);
         this.store.remotePreviews.clear();
         if (this.store.localMutations.has(change.mutationId)) {

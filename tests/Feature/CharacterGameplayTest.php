@@ -12,6 +12,7 @@ use App\Models\Handout;
 use App\Models\SceneProp;
 use App\Models\Token;
 use App\Models\User;
+use App\Services\AbilityGeometry;
 use App\Services\D20Roller;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
@@ -342,5 +343,96 @@ class CharacterGameplayTest extends TestCase
         $this->assertSame(4, $this->hero->fresh()->resources[0]['current']);
         $command['clientMutationId'] = (string) Str::uuid();
         $this->runAbility($command)->assertForbidden();
+    }
+
+    public function test_hotbar_is_owned_persistent_sparse_and_scoped_to_player_and_character(): void
+    {
+        $url = '/api/campaigns/'.$this->campaign->id.'/characters/'.$this->hero->id.'/hotbar';
+        $this->actingAs($this->player)->getJson($url)->assertOk()->assertJsonPath('slots.0', $this->ability['id'])->assertJsonCount(12, 'slots');
+        $slots = array_fill(0, 12, null);
+        $slots[5] = $this->ability['id'];
+        $this->putJson($url, ['slots' => $slots])->assertOk()->assertJsonPath('slots.0', null)->assertJsonPath('slots.5', $this->ability['id']);
+        $this->getJson($url)->assertOk()->assertJsonPath('slots', $slots);
+        $this->actingAs($this->other)->getJson($url)->assertForbidden();
+        $this->putJson($url, ['slots' => $slots])->assertForbidden();
+        $this->actingAs($this->gm)->getJson($url)->assertOk()->assertJsonPath('slots.0', $this->ability['id']);
+        $slots[0] = (string) Str::uuid();
+        $this->putJson($url, ['slots' => $slots])->assertUnprocessable();
+        $slots[0] = $this->ability['id'];
+        $this->putJson($url, ['slots' => $slots])->assertUnprocessable();
+    }
+
+    public function test_scene_range_is_authoritative_and_rejected_attacks_never_spend_or_roll(): void
+    {
+        $this->scene->update(['grid_size' => 60, 'distance_per_cell' => 5]);
+        $a = $this->ability;
+        $a['range'] = ['normal' => 5, 'long' => null];
+        $this->hero->update(['abilities' => [$a]]);
+        $this->runAbility($this->command())->assertUnprocessable();
+        $this->assertSame(6, $this->hero->fresh()->resources[0]['current']);
+        $this->assertDatabaseCount('ability_executions', 0);
+        $a['range'] = ['normal' => 10, 'long' => 30];
+        $this->hero->update(['abilities' => [$a]]);
+        $this->roll(16);
+        $this->runAbility($this->command() + ['range' => 99999])->assertOk();
+        $this->enemy->update(['is_hidden' => true]);
+        $this->runAbility($this->command())->assertForbidden();
+    }
+
+    public function test_area_derives_visible_victims_and_one_cost_damage_roll_survives_retry(): void
+    {
+        $this->scene->update(['grid_size' => 60, 'distance_per_cell' => 5]);
+        $a = $this->ability;
+        $a['category'] = 'effect';
+        $a['target'] = 'point';
+        $a['check'] = null;
+        $a['range'] = ['normal' => 60, 'long' => null];
+        $a['area'] = ['shape' => 'circle', 'size' => 20, 'width' => 20];
+        $this->hero->update(['abilities' => [$a]]);
+        $inside = $this->scene->tokens()->create(['name' => 'Inside', 'x' => 580, 'y' => 200, 'hp' => 30, 'max_hp' => 30]);
+        $hidden = $this->scene->tokens()->create(['name' => 'Secret', 'x' => 450, 'y' => 200, 'hp' => 30, 'max_hp' => 30, 'is_hidden' => true]);
+        $outside = $this->scene->tokens()->create(['name' => 'Outside', 'x' => 800, 'y' => 200, 'hp' => 30, 'max_hp' => 30]);
+        $command = $this->command();
+        $command['target'] = ['kind' => 'point', 'x' => 400, 'y' => 200];
+        $result = $this->runAbility($command)->assertOk()->assertJsonCount(2, 'execution.outcomes')->json('execution');
+        $this->assertEquals(30 - $result['damage']['total'], $inside->fresh()->hp);
+        $this->assertEquals(30, $hidden->fresh()->hp);
+        $this->assertEquals(30, $outside->fresh()->hp);
+        DB::table('scene_mutation_receipts')->delete();
+        $this->runAbility($command)->assertOk()->assertJsonPath('execution', $result);
+        $this->assertSame(4, $this->hero->fresh()->resources[0]['current']);
+        $this->assertEquals(30 - $result['damage']['total'], $inside->fresh()->hp);
+        $command['clientMutationId'] = (string) Str::uuid();
+        $command['target']['x'] = 1000;
+        $a['range']['normal'] = 5;
+        $this->hero->update(['abilities' => [$a]]);
+        $this->runAbility($command)->assertUnprocessable();
+        $this->assertSame(4, $this->hero->fresh()->resources[0]['current']);
+    }
+
+    public function test_cone_line_rectangle_geometry_and_authoring_are_bounded(): void
+    {
+        $geometry = app(AbilityGeometry::class);
+        $origin = ['x' => 0, 'y' => 0];
+        $aim = ['x' => 15, 'y' => 0];
+        foreach (['cone', 'line', 'rectangle'] as $shape) {
+            $a = ['shape' => $shape, 'size' => 15, 'width' => 5];
+            $this->assertTrue($geometry->contains($a, $origin, $aim, ['x' => 10, 'y' => 1], 1));
+            $this->assertFalse($geometry->contains($a, $origin, $aim, ['x' => 10, 'y' => 10], 1));
+        }
+        $url = '/api/campaigns/'.$this->campaign->id.'/characters';
+        $a = $this->ability;
+        $a['range'] = ['normal' => 60, 'long' => 30];
+        $this->actingAs($this->gm)->postJson($url, ['id' => $this->hero->id, 'name' => 'Керн', 'abilities' => [$a]])->assertUnprocessable();
+        $a['range'] = ['normal' => 15, 'long' => null];
+        $a['area'] = ['shape' => 'cone', 'size' => 15, 'width' => 5];
+        $this->postJson($url, ['id' => $this->hero->id, 'name' => 'Керн', 'abilities' => [$a]])->assertUnprocessable();
+        $a['category'] = 'effect';
+        $a['target'] = 'point';
+        $a['check'] = null;
+        $this->postJson($url, ['id' => $this->hero->id, 'name' => 'Керн', 'abilities' => [$a]])->assertOk();
+        $command = $this->command();
+        $command['target'] = ['kind' => 'point', 'x' => $this->actor->x, 'y' => $this->actor->y];
+        $this->runAbility($command)->assertUnprocessable();
     }
 }

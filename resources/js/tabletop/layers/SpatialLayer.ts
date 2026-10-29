@@ -1,7 +1,8 @@
+import { drawSpatialShape } from '../utils/drawSpatialShape';
 import { Container, Graphics, Text } from 'pixi.js';
 import type { SpatialState } from '../state/SpatialState';
 import type { GridSettings } from '../types/scene';
-import { cone, distance, measureLabel, rectangle } from '../utils/spatialGeometry';
+import { distance, measureLabel, rectangle } from '../utils/spatialGeometry';
 
 export class SpatialLayer extends Container {
     private views = new Map<
@@ -53,36 +54,14 @@ export class SpatialLayer extends Container {
                     alpha: 1 - pulse * 0.7,
                 });
                 ink.circle(e.start.x, e.start.y, 4 / zoom).fill(color);
-            } else if (e.kind === 'ruler') {
-                ink.moveTo(e.start.x, e.start.y)
-                    .lineTo(e.end.x, e.end.y)
-                    .stroke({ color, width: 2 / zoom });
-                text = measureLabel(length, grid);
-            } else if (e.kind === 'circle') {
-                ink.circle(e.start.x, e.start.y, length)
-                    .fill({ color, alpha: 0.14 })
-                    .stroke({ color, width: 2 / zoom });
-                text = `Radius ${measureLabel(length, grid)}`;
-            } else if (e.kind === 'rectangle') {
-                const r = rectangle(e.start, e.end);
-                ink.rect(r.x, r.y, r.width, r.height)
-                    .fill({ color, alpha: 0.14 })
-                    .stroke({ color, width: 2 / zoom });
-                text = `${measureLabel(r.width, grid)} × ${measureLabel(r.height, grid)}`;
             } else {
-                const c = cone(e.start, e.end);
-                ink.moveTo(e.start.x, e.start.y)
-                    .arc(
-                        e.start.x,
-                        e.start.y,
-                        c.length,
-                        c.angle - c.aperture / 2,
-                        c.angle + c.aperture / 2,
-                    )
-                    .closePath()
-                    .fill({ color, alpha: 0.14 })
-                    .stroke({ color, width: 2 / zoom });
-                text = `${measureLabel(length, grid)} · 60°`;
+                drawSpatialShape(ink, e.kind, e.start, e.end, color, zoom);
+                if (e.kind === 'ruler') text = measureLabel(length, grid);
+                else if (e.kind === 'circle') text = `Radius ${measureLabel(length, grid)}`;
+                else if (e.kind === 'rectangle') {
+                    const r = rectangle(e.start, e.end);
+                    text = `${measureLabel(r.width, grid)} × ${measureLabel(r.height, grid)}`;
+                } else text = `${measureLabel(length, grid)} · 60°`;
             }
             if (e.kind !== 'ping') {
                 ink.circle(e.start.x, e.start.y, 3 / zoom).fill(color);

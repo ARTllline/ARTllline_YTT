@@ -14,6 +14,13 @@ export interface CharacterResource {
     player_adjustable: boolean;
 }
 export interface Ability {
+    attack_type?: 'melee' | 'ranged' | 'spell' | 'check' | 'utility';
+    range?: { normal: number; long: number | null } | null;
+    area?: {
+        shape: 'none' | 'circle' | 'cone' | 'line' | 'rectangle';
+        size: number;
+        width: number;
+    } | null;
     id: string;
     name: string;
     icon: string;
@@ -65,6 +72,7 @@ export interface AbilityResult {
         selectedDie: number;
     };
     success: boolean;
+    outcomes?: { tokenId: string; damage: number }[];
     damage: null | { expression: string; rawDice: number[]; modifier: number; total: number };
     healing: number | null;
     mutationId: string;

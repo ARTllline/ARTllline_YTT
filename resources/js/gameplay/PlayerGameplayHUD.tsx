@@ -1,13 +1,9 @@
+import type { RollMode } from '../workspace/interactions/actingToken';
+import { AbilityHotbar } from './AbilityHotbar';
+import { useHotbar } from './useHotbar';
+import { abilityPreview } from './geometry';
 import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
-import {
-    ChevronUp,
-    MoreHorizontal,
-    CircleUserRound,
-    Heart,
-    Shield,
-    Footprints,
-    X,
-} from 'lucide-react';
+import { ChevronUp, CircleUserRound, Heart, Shield, Footprints, X } from 'lucide-react';
 import { ApiError } from '../api/client';
 import { currentTokenId } from '../tabletop/types/combat';
 import { api, commandId } from '../api/workspace';
@@ -132,6 +128,8 @@ function CharacterHUD({
         window.addEventListener('ytt:character-panel', open);
         return () => window.removeEventListener('ytt:character-panel', open);
     }, []);
+    const [rollMode, setRollMode] = useState<RollMode>('normal');
+    const [browserRequest, setBrowserRequest] = useState(0);
     const [targeting, setTargeting] = useState<Ability | null>(null);
     const [invocation, setInvocation] = useState<AbilityInvocation | null>(null);
     const [error, setError] = useState('');
@@ -145,6 +143,11 @@ function CharacterHUD({
     const abilities = (character.abilities ?? [])
         .filter((a) => a.enabled)
         .sort((a, b) => a.sort_order - b.sort_order);
+    const hotbar = useHotbar(
+        scene.campaignId!,
+        character.id,
+        abilities.map((a) => a.id),
+    );
     const refresh = () => {
         void api
             .snapshot(scene.id!)
@@ -161,17 +164,25 @@ function CharacterHUD({
         if (disabled) return;
         setPanel(false);
         setError('');
+        if (!canAfford(ability, resources)) {
+            setError('Недостаточно ресурса.');
+            return;
+        }
+        if (!actor && ['token', 'prop', 'point'].includes(ability.target)) {
+            setError('Нужен токен персонажа на этой сцене.');
+            return;
+        }
         if (pending) {
             setError('Сначала восстановите ответ предыдущего действия.');
             return;
         }
         if (['token', 'prop', 'point'].includes(ability.target)) setTargeting(ability);
-        else setInvocation({ ability, target: null });
+        else setInvocation({ ability, target: null, auto: true, mode: rollMode });
     };
     const shortcut = useRef<(index: number) => void>(() => {});
     useEffect(() => {
         shortcut.current = (index) => {
-            const ability = abilities[index];
+            const ability = abilities.find((a) => a.id === hotbar.slots[index]);
             if (
                 !ability ||
                 !canAfford(ability, resources) ||
@@ -205,8 +216,49 @@ function CharacterHUD({
         window.addEventListener('keydown', key);
         return () => window.removeEventListener('keydown', key);
     }, []);
+    const radialRequest = useRef<(event: CustomEvent) => void>(() => {});
+    useEffect(() => {
+        radialRequest.current = (event) => {
+            if (event.detail?.browser) {
+                setBrowserRequest((n) => n + 1);
+                return;
+            }
+            const ability = abilities.find((a) => a.id === event.detail?.abilityId);
+            if (!ability || disabled || pending || !canAfford(ability, resources)) return;
+            const target = event.detail.target;
+            if (
+                target &&
+                ability.target === 'token' &&
+                abilityPreview(ability, scene, actor, target).valid
+            ) {
+                setInvocation({
+                    ability,
+                    target,
+                    targetName: event.detail.targetName,
+                    auto: true,
+                    mode: rollMode,
+                });
+            } else choose(ability);
+        };
+    });
+    useEffect(() => {
+        const listener = (e: Event) => radialRequest.current(e as CustomEvent);
+        window.addEventListener('ytt:ability-invoke', listener);
+        return () => window.removeEventListener('ytt:ability-invoke', listener);
+    }, []);
     const accepted = (r: AbilityResult) => {
         refresh();
+        if (r.outcomes?.length) {
+            for (const outcome of r.outcomes) {
+                renderer.current?.respondToObject('token', outcome.tokenId);
+                renderer.current?.gameplay.feedback({
+                    tokenId: outcome.tokenId,
+                    text: `−${outcome.damage}`,
+                    tone: 'damage',
+                });
+            }
+            return;
+        }
         const target = r.target?.kind === 'token' ? r.target.id : actor?.id;
         if (!target) return;
         renderer.current?.respondToObject('token', target);
@@ -427,6 +479,21 @@ function CharacterHUD({
                                     {r.current}
                                     <small>/{r.max}</small>
                                 </span>
+                                <span
+                                    className={`resource-visual ${r.max <= 10 ? 'is-pips' : 'is-bar'}`}
+                                    aria-hidden="true"
+                                >
+                                    {r.max <= 10 ? (
+                                        Array.from({ length: r.max }, (_, i) => (
+                                            <i
+                                                className={i < r.current ? 'is-filled' : ''}
+                                                key={i}
+                                            />
+                                        ))
+                                    ) : (
+                                        <i style={{ width: `${(r.current / r.max) * 100}%` }} />
+                                    )}
+                                </span>
                             </button>
                         );
                     })}
@@ -437,57 +504,27 @@ function CharacterHUD({
                     </div>
                 )}
             </div>
-            {!!abilities.length && (
-                <div
-                    className="ability-actionbar"
-                    role="toolbar"
-                    aria-label="Способности персонажа"
-                >
-                    {abilities.slice(0, 8).map((a, i) => {
-                        const Icon = gameplayIcon(a.icon),
-                            affordable = canAfford(a, resources),
-                            noActor = !actor && ['token', 'prop', 'point'].includes(a.target);
-                        return (
-                            <div className="ability-slot" key={a.id}>
-                                <button
-                                    aria-label={a.name}
-                                    aria-pressed={targeting?.id === a.id}
-                                    disabled={disabled || !affordable || noActor || !!pending}
-                                    onClick={() => choose(a)}
-                                >
-                                    <Icon size={23} strokeWidth={1.5} />
-                                    <small>{i + 1}</small>
-                                    {!!a.costs.length && <i className="ability-cost-dot" />}
-                                </button>
-                                <div className="ability-tooltip" role="tooltip">
-                                    <strong>{a.name}</strong>
-                                    <span>{a.description}</span>
-                                    <small>
-                                        {a.costs
-                                            .map(
-                                                (c) =>
-                                                    `${resources.find((r) => r.key === c.key)?.label ?? c.key} −${c.amount}`,
-                                            )
-                                            .join(' · ') || 'Без затрат'}
-                                    </small>
-                                    {!affordable && <em>Недостаточно ресурса</em>}
-                                    {noActor && <em>Нужен токен на этой сцене</em>}
-                                </div>
-                            </div>
-                        );
-                    })}
-                    {abilities.length > 8 && (
-                        <button
-                            className="ability-more"
-                            aria-label="Все способности"
-                            onClick={() => setPanel(true)}
-                        >
-                            <MoreHorizontal size={22} />
-                            <small>+{abilities.length - 8}</small>
-                        </button>
-                    )}
-                </div>
-            )}
+            <AbilityHotbar
+                abilities={abilities}
+                resources={resources}
+                slots={hotbar.slots}
+                onLayout={(next) =>
+                    hotbar.change(
+                        next.map((id) => (abilities.some((a) => a.id === id) ? id : null)),
+                    )
+                }
+                onChoose={choose}
+                selected={targeting?.id}
+                disabled={disabled || !!pending || (!actor && !!targeting)}
+                editable={hotbar.loaded}
+                saving={hotbar.saving}
+                error={hotbar.error}
+                onRetry={hotbar.retry}
+                openRequest={browserRequest}
+                rollMode={rollMode}
+                onRollMode={setRollMode}
+                worldAvailable={!!actor}
+            />
             {pending && !invocation && (
                 <button
                     className="ability-recover"
@@ -540,7 +577,13 @@ function CharacterHUD({
                     renderer={renderer}
                     onCancel={() => setTargeting(null)}
                     onSelect={(target, targetName) => {
-                        setInvocation({ ability: targeting, target, targetName });
+                        setInvocation({
+                            ability: targeting,
+                            target,
+                            targetName,
+                            auto: true,
+                            mode: rollMode,
+                        });
                         setTargeting(null);
                     }}
                 />

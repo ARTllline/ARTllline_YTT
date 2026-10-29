@@ -22,15 +22,23 @@ class CharacterGameplay
             'resources.*.key' => 'required|string|max:48|regex:/^[a-z][a-z0-9_]*$/|distinct',
             'resources.*.label' => 'required|string|max:40',
             'resources.*.current' => 'required|integer|between:0,9999', 'resources.*.max' => 'required|integer|between:1,9999',
-            'resources.*.icon' => 'required|in:spark,focus,flame,heart,shield,bolt,sword,eye,potion,footprints',
+            'resources.*.icon' => 'required|in:spark,focus,flame,heart,shield,bolt,sword,eye,potion,footprints,bow',
             'resources.*.accent' => 'required|in:violet,blue,amber,green,red',
             'resources.*.sort_order' => 'required|integer|between:0,100', 'resources.*.player_adjustable' => 'required|boolean',
             'abilities' => 'sometimes|present|array|list|max:24',
-            'abilities.*' => 'required|array:id,name,icon,description,category,target,check,costs,damage,result,sort_order,enabled',
+            'abilities.*' => 'required|array:id,name,icon,description,category,target,check,costs,damage,result,sort_order,enabled,attack_type,range,area',
             'abilities.*.id' => 'required|uuid|distinct', 'abilities.*.name' => 'required|string|max:60',
-            'abilities.*.icon' => 'required|in:spark,focus,flame,heart,shield,bolt,sword,eye,potion,footprints',
+            'abilities.*.icon' => 'required|in:spark,focus,flame,heart,shield,bolt,sword,eye,potion,footprints,bow',
             'abilities.*.description' => 'present|nullable|string|max:800',
             'abilities.*.category' => 'required|in:utility,check,attack,effect',
+            'abilities.*.attack_type' => 'sometimes|in:melee,ranged,spell,check,utility',
+            'abilities.*.range' => 'sometimes|nullable|array:normal,long',
+            'abilities.*.range.normal' => 'required_with:abilities.*.range|numeric|between:0,10000',
+            'abilities.*.range.long' => 'sometimes|nullable|numeric|between:0,10000',
+            'abilities.*.area' => 'sometimes|nullable|array:shape,size,width',
+            'abilities.*.area.shape' => 'required_with:abilities.*.area|in:none,circle,cone,line,rectangle',
+            'abilities.*.area.size' => 'required_with:abilities.*.area|numeric|between:0.1,10000',
+            'abilities.*.area.width' => 'required_with:abilities.*.area|numeric|between:0.1,10000',
             'abilities.*.target' => 'required|in:self,token,prop,point,none',
             'abilities.*.check' => 'present|nullable|array:stat_key,modifier,dc,dc_visible,defense',
             'abilities.*.costs' => 'present|array|list|max:12',
@@ -70,7 +78,18 @@ class CharacterGameplay
             if ($ability['category'] === 'attack' && $ability['target'] !== 'token') {
                 $this->invalid('Атака должна выбирать токен.');
             }
-            if ($ability['damage'] && $ability['category'] !== 'attack') {
+            $area = $ability['area'] ?? null;
+            if ($area && $area['shape'] !== 'none' && ($ability['target'] !== 'point' || $ability['category'] === 'attack')) {
+                $this->invalid('Для области выберите точку мира и тип «Эффект» или «Проверка».');
+            }
+            $range = $ability['range'] ?? null;
+            if ($range && ($range['long'] ?? $range['normal']) < $range['normal']) {
+                $this->invalid('Дальняя дистанция не может быть меньше обычной.');
+            }
+            if ($area && in_array($area['shape'], ['cone', 'line']) && (! $range || $area['size'] > ($range['long'] ?? $range['normal']))) {
+                $this->invalid('Дальность должна вмещать длину области.');
+            }
+            if ($ability['damage'] && $ability['category'] !== 'attack' && ! ($area && $area['shape'] !== 'none')) {
                 $this->invalid('Урон доступен у атаки.');
             }
             $keys = [];
@@ -109,7 +128,7 @@ class CharacterGameplay
         }
 
         return $abilities->where('enabled', true)->map(function ($a) {
-            $safe = array_intersect_key($a, array_flip(['id', 'name', 'icon', 'description', 'category', 'target', 'costs', 'sort_order', 'enabled']));
+            $safe = array_intersect_key($a, array_flip(['id', 'name', 'icon', 'description', 'category', 'target', 'costs', 'sort_order', 'enabled', 'attack_type', 'range', 'area']));
             $safe['check'] = $a['check'] ? ['stat_key' => $a['check']['stat_key']] : null;
 
             return $safe;

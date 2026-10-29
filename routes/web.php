@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CharacterController;
+use App\Http\Controllers\CharacterHotbarController;
 use App\Http\Controllers\CombatController;
 use App\Http\Controllers\CueController;
 use App\Http\Controllers\FogController;
@@ -48,6 +49,8 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
     });
     Route::middleware('auth')->group(function () {
+        Route::get('/campaigns/{campaign}/characters/{character}/hotbar', [CharacterHotbarController::class, 'show']);
+        Route::put('/campaigns/{campaign}/characters/{character}/hotbar', [CharacterHotbarController::class, 'update']);
         Route::post('/scenes/{scene}/abilities/execute', [AbilityController::class, 'execute'])->name('scene.ability')->middleware([IdempotentMutation::class, 'throttle:60,1']);
         Route::post('/campaigns/{campaign}/resources/adjust', [AbilityController::class, 'resource'])->name('campaign.resource')->middleware(IdempotentMutation::class);
         Route::get('/campaigns/{campaign}/characters', [CharacterController::class, 'index']);

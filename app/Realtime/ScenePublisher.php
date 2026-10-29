@@ -93,6 +93,10 @@ class ScenePublisher
                     $payload = array_key_exists('combat', $result) ? ['combat' => $playerCombat] : [];
                 }
             }
+            if (! empty($result['gameplayFeedbacks'])) {
+                $visible = $scene->tokens()->where('is_hidden', false)->pluck('id')->map(strval(...))->all();
+                $payload['gameplayFeedbacks'] = array_values(array_filter($result['gameplayFeedbacks'], fn ($f) => in_array($f['tokenId'], $visible, true)));
+            }
             if (! empty($result['gameplayFeedback']) && $scene->tokens()->where('is_hidden', false)->whereKey($result['gameplayFeedback']['tokenId'])->exists()) {
                 $payload['gameplayFeedback'] = $result['gameplayFeedback'];
             }

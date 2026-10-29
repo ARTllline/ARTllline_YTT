@@ -15,9 +15,11 @@ existing selective reveal path. Saving rejects broken resource/result references
 Player: select the active character above the HUD. Click the portrait for HP,
 resources, AC/speed, visible conditions, modifiers and the ability list. Click an
 action icon (or keys **1–8** outside text fields/dialogs), choose a highlighted
-world target, then roll/confirm. **Escape** cancels targeting. A target selector is
-also available for keyboard use. The first eight actions occupy the bar; additional
-actions are available through **Все способности**. Touch uses the same action bar
+world target to execute. **Escape/right click** cancels targeting; **Tab/arrows +
+Enter** provide keyboard targeting without a target select. The twelve hotbar slots
+have persistent Player/Character layouts; the ability browser restores or assigns
+actions. See [PLAYER_TACTICS.md](PLAYER_TACTICS.md) for range, area, visual authoring
+and the current QA scenario. Touch uses the same action bar
 and preserves long-press object menus. Owned character radial menus open abilities
 or character details without copying the action bar.
 

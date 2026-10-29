@@ -27,6 +27,7 @@ export interface SceneEvent {
         | 'deletedRegionId'
     > & {
         scene?: Partial<Scene>;
+        gameplayFeedbacks?: import('../gameplay/model').GameplayFeedback[];
         gameplayFeedback?: import('../gameplay/model').GameplayFeedback;
     };
 }

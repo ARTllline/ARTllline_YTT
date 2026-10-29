@@ -1,3 +1,5 @@
+import { gameplayIcons } from './icons';
+import { RpgDice } from './RpgDice';
 import { useEffect, useRef, useState } from 'react';
 import { Dices, X } from 'lucide-react';
 import { ApiError } from '../api/client';
@@ -19,6 +21,8 @@ export interface AbilityInvocation {
     target: AbilityTarget | null;
     targetName?: string;
     retained?: PendingAbility;
+    auto?: boolean;
+    mode?: RollMode;
 }
 export function AbilityDialog({
     invocation,
@@ -46,14 +50,18 @@ export function AbilityDialog({
         () => invocation.retained ?? readPendingAbility(slot),
     );
     const pending = useRef<PendingAbility | null>(retained);
-    const [mode, setMode] = useState<RollMode>(retained?.command.rollMode ?? 'normal');
-    const [phase, setPhase] = useState<'ready' | 'rolling' | 'settle' | 'outcome'>('ready');
+    const [mode, setMode] = useState<RollMode>(
+        retained?.command.rollMode ?? invocation.mode ?? 'normal',
+    );
+    const [phase, setPhase] = useState<
+        'ready' | 'rolling' | 'settle' | 'total' | 'outcome' | 'damage'
+    >('ready');
     const [result, setResult] = useState<AbilityResult | null>(null);
     const [error, setError] = useState('');
     const lock = useRef(false),
         alive = useRef(true);
     const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-    const busy = phase === 'rolling' || phase === 'settle';
+    const busy = !['ready', 'damage'].includes(phase) && !(phase === 'outcome' && !result?.damage);
     useEffect(() => {
         alive.current = true;
         dialog.current?.showModal();
@@ -97,10 +105,24 @@ export function AbilityDialog({
                 setPhase('settle');
                 timer.current = setTimeout(
                     () => {
-                        setPhase('outcome');
-                        lock.current = false;
+                        setPhase('total');
+                        timer.current = setTimeout(
+                            () => {
+                                setPhase('outcome');
+                                if (response.execution.damage)
+                                    timer.current = setTimeout(
+                                        () => {
+                                            setPhase('damage');
+                                            lock.current = false;
+                                        },
+                                        reduced ? 0 : 480,
+                                    );
+                                else lock.current = false;
+                            },
+                            reduced ? 0 : 260,
+                        );
                     },
-                    reduced ? 0 : 260,
+                    reduced ? 0 : 200,
                 );
             };
             timer.current = setTimeout(
@@ -119,11 +141,20 @@ export function AbilityDialog({
             setError((e as Error).message);
         }
     };
+    const autoExecute = useRef(execute);
+    useEffect(() => {
+        autoExecute.current = execute;
+    });
+    useEffect(() => {
+        if (invocation.auto) queueMicrotask(() => void autoExecute.current());
+    }, [invocation.auto]);
     const close = () => {
         if (result) onAccepted(result);
         onClose();
     };
     const roll = result?.roll;
+    const ActionIcon =
+        gameplayIcons[ability.icon as keyof typeof gameplayIcons] ?? gameplayIcons.spark;
     const naturalClass =
         roll?.natural === 20 ? 'natural-high' : roll?.natural === 1 ? 'natural-low' : '';
     const label =
@@ -139,7 +170,7 @@ export function AbilityDialog({
     return (
         <dialog
             ref={dialog}
-            className={`check-dialog ability-dialog phase-${phase} ${naturalClass} ${phase === 'outcome' ? (result?.success ? 'is-success' : 'is-failure') : ''}`}
+            className={`check-dialog ability-dialog rpg-dice-dialog phase-${phase} ${naturalClass} ${phase === 'outcome' ? (result?.success ? 'is-success' : 'is-failure') : ''}`}
             aria-labelledby="ability-roll-title"
             onCancel={(e) => {
                 e.preventDefault();
@@ -176,53 +207,53 @@ export function AbilityDialog({
                 {invocation.targetName ??
                     (ability.target === 'self' ? 'На себя' : ability.description)}
             </p>
-            {ability.check && (
-                <label className="check-mode">
-                    Режим броска
-                    <select
-                        aria-label="Режим броска способности"
-                        value={mode}
-                        disabled={busy || !!result || !!retained}
-                        onChange={(e) => setMode(e.target.value as RollMode)}
-                    >
-                        {Object.entries(rollModes).map(([k, v]) => (
-                            <option value={k} key={k}>
-                                {v}
-                            </option>
-                        ))}
-                    </select>
-                </label>
+            {ability.check && !invocation.auto && phase === 'ready' && (
+                <div className="roll-mode-chips" aria-label="Режим броска способности">
+                    {Object.entries(rollModes).map(([k, v]) => (
+                        <button
+                            key={k}
+                            disabled={!!retained}
+                            aria-pressed={mode === k}
+                            onClick={() => setMode(k as RollMode)}
+                        >
+                            {v}
+                        </button>
+                    ))}
+                </div>
             )}
-            <div className={`check-dice ${mode !== 'normal' && ability.check ? 'is-pair' : ''}`}>
-                {(
-                    roll?.rawDice ?? (mode === 'normal' || !ability.check ? [null] : [null, null])
-                ).map((die, i) => (
-                    <div
-                        key={i}
-                        className={`check-die ${roll ? (i === roll.selectedDie ? 'is-used' : 'is-discarded') : ''}`}
-                    >
-                        <svg viewBox="0 0 160 176" fill="none" aria-hidden="true">
-                            <path d="M80 4 150 45 150 128 80 172 10 128 10 45Z M80 4 38 62 10 128 M80 4 122 62 150 128 M10 45 38 62 80 145 122 62 150 45 M10 128 80 145 150 128 M80 145 80 172 M38 62 122 62" />
-                        </svg>
-                        <strong>{die ?? (ability.check ? 'd20' : '✦')}</strong>
-                    </div>
-                ))}
-            </div>
+            {ability.check ? (
+                <RpgDice
+                    dice={roll?.rawDice}
+                    selected={roll?.selectedDie}
+                    mode={mode}
+                    phase={phase}
+                />
+            ) : (
+                <div className="ability-sigil" aria-hidden="true">
+                    <ActionIcon size={76} strokeWidth={1} />
+                </div>
+            )}
             <div className="check-equation" aria-live="polite">
-                {roll ? (
+                {roll && ['total', 'outcome', 'damage'].includes(phase) ? (
                     <span>
                         {roll.natural} {roll.modifier < 0 ? '−' : '+'} {Math.abs(roll.modifier)}{' '}
                         <span className="check-equals">=</span> <strong>{roll.total}</strong>
                     </span>
                 ) : (
                     <span className="check-hint">
-                        {busy ? 'Мир ждёт исхода…' : 'Ваш следующий ход'}
+                        {busy
+                            ? 'Мир ждёт исхода…'
+                            : result
+                              ? 'Действие принято'
+                              : 'Ваш следующий ход'}
                     </span>
                 )}
             </div>
-            {roll?.dc !== undefined && <span className="check-dc">ПРОТИВ {roll.dc}</span>}
+            {roll?.dc !== undefined && ['total', 'outcome', 'damage'].includes(phase) && (
+                <span className="check-dc">ПРОТИВ {roll.dc}</span>
+            )}
             <div className="check-outcome" role="status">
-                {phase === 'outcome' && (
+                {['outcome', 'damage'].includes(phase) && (
                     <>
                         <strong>{label}</strong>
                         <small>
@@ -235,17 +266,24 @@ export function AbilityDialog({
                     </>
                 )}
             </div>
-            {phase === 'outcome' && result?.damage && (
+            {phase === 'damage' && result?.damage && (
                 <div className="ability-damage">
                     <span>
                         {result.damage.expression} · [{result.damage.rawDice.join(', ')}]
                     </span>
+                    <div className="damage-cubes">
+                        {result.damage.rawDice.map((die, i) => (
+                            <b key={i} style={{ animationDelay: `${i * 65}ms` }}>
+                                {die}
+                            </b>
+                        ))}
+                    </div>
                     <strong>
                         {result.damage.total} <small>УРОНА</small>
                     </strong>
                 </div>
             )}
-            {phase === 'outcome' && !!result?.healing && (
+            {['outcome', 'damage'].includes(phase) && !!result?.healing && (
                 <div className="ability-damage is-heal">
                     <strong>
                         +{result.healing} <small>HP</small>

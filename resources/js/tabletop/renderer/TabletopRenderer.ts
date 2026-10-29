@@ -43,8 +43,14 @@ export class TabletopRenderer {
     private overlay = new InteractionLayer();
     private response = new Graphics();
     readonly gameplay = new GameplayLayer();
-    setGameplayTarget(kind?: 'token' | 'prop' | 'point') {
+    setGameplayTarget(
+        kind?: 'token' | 'prop' | 'point',
+        ability?: import('../../gameplay/model').Ability,
+        actorId?: string,
+    ) {
         this.gameplay.targetKind = kind;
+        this.gameplay.ability = ability;
+        this.gameplay.actorId = actorId;
     }
     hoverGameplayTarget(target?: {
         kind: string;
@@ -290,6 +296,13 @@ export class TabletopRenderer {
         if (prop) return { kind: 'prop' as const, id: prop };
         const region = this.regions?.hit(point);
         if (region) return { kind: 'region' as const, id: region };
+    }
+    screenPoint(point: import('../types/scene').Point) {
+        const bounds = this.host.getBoundingClientRect();
+        return {
+            x: bounds.left + this.camera.state.x + point.x * this.camera.state.zoom,
+            y: bounds.top + this.camera.state.y + point.y * this.camera.state.zoom,
+        };
     }
     selectedContextPoint() {
         const state = this.store.getSnapshot();

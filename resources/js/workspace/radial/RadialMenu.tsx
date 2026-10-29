@@ -1,3 +1,7 @@
+import { canAfford } from '../../gameplay/model';
+import { abilityPreview } from '../../gameplay/geometry';
+import { gameplayIcon } from '../../gameplay/icons';
+import type { LucideIcon } from 'lucide-react';
 import { actingToken, eligibleActors } from '../interactions/actingToken';
 import {
     useEffect,
@@ -159,7 +163,10 @@ export function RadialMenu({
         };
     }, [renderer, store]);
     useEffect(() => {
-        if (target) menu.current?.querySelector<HTMLButtonElement>('[role=menuitem]')?.focus();
+        if (target)
+            menu.current
+                ?.querySelector<HTMLButtonElement>('[role=menuitem]:not(:disabled)')
+                ?.focus();
     }, [target]);
     const { entity, actions: gmActions } = buildRadialActions(
         target,
@@ -171,7 +178,13 @@ export function RadialMenu({
         entity && 'interactions' in entity && !entity.isHidden
             ? (entity.interactions ?? []).filter((a) => a.enabled !== false)
             : [];
-    const actions =
+    const actions: {
+        label: string;
+        Icon: LucideIcon;
+        tone?: string;
+        disabled?: boolean;
+        run: () => void | Promise<void>;
+    }[] =
         interactionMode && target && target.kind !== 'region'
             ? configured.map((action) => ({
                   label: action.label,
@@ -243,6 +256,53 @@ export function RadialMenu({
             },
         });
     }
+    const character = snapshot.scene.characters?.find(
+        (c) => c.id === snapshot.scene.activeCharacterId,
+    );
+    if (
+        store.role === 'player' &&
+        target?.kind === 'token' &&
+        entity &&
+        character &&
+        'characterId' in entity &&
+        entity.characterId !== character.id
+    ) {
+        const tokenTarget = { kind: 'token' as const, id: target.id };
+        for (const ability of (character.abilities ?? [])
+            .filter((a) => a.enabled && a.target === 'token')
+            .slice(0, 3)) {
+            actions.push({
+                label: ability.name,
+                Icon: gameplayIcon(ability.icon),
+                tone: 'interaction',
+                disabled:
+                    !canAfford(ability, character.resources ?? []) ||
+                    !abilityPreview(ability, snapshot.scene, actor, tokenTarget).valid,
+                run: async () => {
+                    window.dispatchEvent(
+                        new CustomEvent('ytt:ability-invoke', {
+                            detail: {
+                                abilityId: ability.id,
+                                target: tokenTarget,
+                                targetName: entity.name,
+                            },
+                        }),
+                    );
+                },
+            });
+        }
+        if (character.abilities?.some((a) => a.attack_type === 'spell'))
+            actions.push({
+                label: 'Заклинания',
+                Icon: Sparkles,
+                tone: 'interaction',
+                run: async () => {
+                    window.dispatchEvent(
+                        new CustomEvent('ytt:ability-invoke', { detail: { browser: true } }),
+                    );
+                },
+            });
+    }
     const position = target
         ? radialPosition(target.x, target.y, window.innerWidth, window.innerHeight)
         : null;
@@ -272,7 +332,7 @@ export function RadialMenu({
                 position &&
                 createPortal(
                     <div
-                        className="radial-scrim"
+                        className={`radial-scrim ${store.role === 'player' ? 'player-rpg-radial' : ''}`}
                         onPointerDownCapture={() => {
                             holdClick.current = false;
                         }}
@@ -387,28 +447,35 @@ export function RadialMenu({
                                     <X size={14} />
                                 </button>
                             </div>
-                            {actions.map(({ label, Icon, run, tone }, index) => (
-                                <button
-                                    role="menuitem"
-                                    key={`${index}:${label}`}
-                                    className={`radial-action ${tone ?? ''}`}
-                                    style={radialSlot(index, actions.length)}
-                                    disabled={disabled || busy || save.status !== 'saved'}
-                                    onClick={() => {
-                                        setBusy(true);
-                                        setError('');
-                                        void Promise.resolve()
-                                            .then(run)
-                                            .then(() => queue.flush())
-                                            .then(close)
-                                            .catch((e) => setError((e as Error).message))
-                                            .finally(() => setBusy(false));
-                                    }}
-                                >
-                                    <Icon size={20} strokeWidth={1.6} />
-                                    <span>{label}</span>
-                                </button>
-                            ))}
+                            {actions.map(
+                                ({ label, Icon, run, tone, disabled: actionDisabled }, index) => (
+                                    <button
+                                        role="menuitem"
+                                        key={`${index}:${label}`}
+                                        className={`radial-action ${tone ?? ''}`}
+                                        style={radialSlot(index, actions.length)}
+                                        disabled={
+                                            disabled ||
+                                            actionDisabled ||
+                                            busy ||
+                                            save.status !== 'saved'
+                                        }
+                                        onClick={() => {
+                                            setBusy(true);
+                                            setError('');
+                                            void Promise.resolve()
+                                                .then(run)
+                                                .then(() => queue.flush())
+                                                .then(close)
+                                                .catch((e) => setError((e as Error).message))
+                                                .finally(() => setBusy(false));
+                                        }}
+                                    >
+                                        <Icon size={20} strokeWidth={1.6} />
+                                        <span>{label}</span>
+                                    </button>
+                                ),
+                            )}
                             {error && (
                                 <p className="radial-error" role="alert">
                                     {error}

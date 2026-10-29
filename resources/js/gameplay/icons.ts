@@ -1,5 +1,6 @@
 import {
     Swords,
+    Crosshair as Bow,
     Flame,
     Sparkles,
     Heart,
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react';
 export const gameplayIcons = {
     sword: Swords,
+    bow: Bow,
     flame: Flame,
     spark: Sparkles,
     heart: Heart,
@@ -28,6 +30,7 @@ export function gameplayIcon(key: string) {
 
 export const iconLabels: Record<string, string> = {
     sword: 'Меч',
+    bow: 'Лук',
     flame: 'Пламя',
     spark: 'Искра',
     heart: 'Сердце',

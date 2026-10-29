@@ -4,6 +4,7 @@ import { api } from '../api/workspace';
 import type { Character } from '../tabletop/types/scene';
 import { interactions, type InteractionResources } from '../workspace/interactions/model';
 import { gameplayIcons, gameplayIcon, iconLabels } from './icons';
+import { AbilityGeometryEditor } from './AbilityGeometryEditor';
 import { newAbility, targetLabels, type Ability } from './model';
 
 export function AbilityEditor({
@@ -53,7 +54,7 @@ export function AbilityEditor({
         onChange(next.map((a, n) => ({ ...a, sort_order: n })));
     };
     return (
-        <section className="gameplay-editor-section">
+        <section className="gameplay-editor-section visual-ability-editor">
             <header>
                 <div>
                     <span className="eyebrow">ДЕЙСТВИЯ ПЕРСОНАЖА</span>
@@ -62,35 +63,60 @@ export function AbilityEditor({
                 <small>{abilities.length} / 24</small>
             </header>
             <div className="ability-presets">
-                {(['attack', 'check', 'effect', 'utility'] as const).map((category) => (
+                {(['melee', 'ranged', 'spell', 'check', 'utility'] as const).map((type) => (
                     <button
-                        key={category}
                         type="button"
                         className="secondary-button"
+                        key={type}
                         disabled={abilities.length >= 24}
                         onClick={() => {
+                            const category =
+                                type === 'spell'
+                                    ? 'effect'
+                                    : type === 'check'
+                                      ? 'check'
+                                      : type === 'utility'
+                                        ? 'utility'
+                                        : 'attack';
                             const a = newAbility(category, abilities.length);
-                            if (category === 'effect') {
-                                a.name = 'Лечение';
-                                a.icon = 'heart';
-                                a.result = { type: 'heal', target: null, amount: 6 };
+                            a.attack_type = type;
+                            a.icon =
+                                type === 'ranged' ? 'bow' : type === 'spell' ? 'flame' : a.icon;
+                            a.name = {
+                                melee: 'Удар',
+                                ranged: 'Выстрел',
+                                spell: 'Новое заклинание',
+                                check: 'Новая проверка',
+                                utility: 'Новое действие',
+                            }[type];
+                            if (type === 'melee' || type === 'ranged')
+                                a.range = {
+                                    normal: type === 'melee' ? 5 : 60,
+                                    long: type === 'ranged' ? 120 : null,
+                                };
+                            if (type === 'spell') {
+                                a.target = 'point';
+                                a.area = { shape: 'circle', size: 20, width: 20 };
+                                a.range = { normal: 150, long: null };
+                                a.damage = '2d6';
                             }
                             onChange([...abilities, a]);
                         }}
                     >
                         {
                             {
-                                attack: '＋ Атака',
+                                melee: '＋ Ближняя',
+                                ranged: '＋ Выстрел',
+                                spell: '＋ Заклинание',
                                 check: '＋ Проверка',
-                                effect: '＋ Лечение',
                                 utility: '＋ Действие',
-                            }[category]
+                            }[type]
                         }
                     </button>
                 ))}
             </div>
             {error && (
-                <p role="alert" className="error">
+                <p className="error" role="alert">
                     {error}
                 </p>
             )}
@@ -98,114 +124,199 @@ export function AbilityEditor({
                 const Icon = gameplayIcon(a.icon),
                     result = a.result!;
                 return (
-                    <details className="ability-editor-card" key={a.id} open={undefined}>
-                        <summary>
-                            <Icon size={18} />
+                    <details
+                        key={a.id}
+                        className="ability-editor-card"
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                            const value = e.dataTransfer.getData('application/ytt-ability-order');
+                            if (!value) return;
+                            const from = Number(value);
+                            if (
+                                !Number.isInteger(from) ||
+                                from < 0 ||
+                                from >= abilities.length ||
+                                from === i
+                            )
+                                return;
+                            const next = [...abilities];
+                            next.splice(i, 0, next.splice(from, 1)[0]);
+                            onChange(next.map((a, n) => ({ ...a, sort_order: n })));
+                        }}
+                    >
+                        <summary
+                            draggable
+                            onDragStart={(e) =>
+                                e.dataTransfer.setData('application/ytt-ability-order', String(i))
+                            }
+                        >
+                            <Icon size={20} />
                             <strong>{a.name}</strong>
-                            <small>{targetLabels[a.target]}</small>
+                            <small>
+                                {a.range
+                                    ? `${a.range.normal}${a.range.long ? ` / ${a.range.long}` : ''}`
+                                    : targetLabels[a.target]}
+                            </small>
                         </summary>
                         <div className="ability-editor-body">
-                            <div className="gameplay-form-row">
-                                <label>
-                                    Название
-                                    <input
-                                        value={a.name}
-                                        aria-label="Название способности"
-                                        maxLength={60}
-                                        onChange={(e) => patch(i, { name: e.target.value })}
-                                    />
-                                </label>
-                                <label>
-                                    Значок
-                                    <select
-                                        value={a.icon}
-                                        onChange={(e) => patch(i, { icon: e.target.value })}
-                                    >
-                                        {Object.keys(gameplayIcons).map((k) => (
-                                            <option key={k} value={k}>
-                                                {iconLabels[k]}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
-                            </div>
                             <label>
-                                Описание
-                                <textarea
-                                    aria-label="Описание способности"
-                                    rows={2}
-                                    value={a.description ?? ''}
-                                    maxLength={800}
-                                    onChange={(e) => patch(i, { description: e.target.value })}
+                                Название
+                                <input
+                                    aria-label="Название способности"
+                                    maxLength={60}
+                                    value={a.name}
+                                    onChange={(e) => patch(i, { name: e.target.value })}
                                 />
                             </label>
-                            <div className="gameplay-form-row">
-                                <label>
-                                    Тип
-                                    <select
-                                        value={a.category}
-                                        onChange={(e) => {
-                                            const category = e.target.value as Ability['category'];
-                                            const preset = newAbility(category, i);
-                                            patch(i, {
-                                                category,
-                                                check: preset.check,
-                                                target: preset.target,
-                                                damage: preset.damage,
-                                            });
-                                        }}
+                            <div className="ability-icon-choices">
+                                {Object.entries(gameplayIcons).map(([key, Choice]) => (
+                                    <button
+                                        type="button"
+                                        key={key}
+                                        title={iconLabels[key]}
+                                        aria-label={`Значок: ${iconLabels[key]}`}
+                                        aria-pressed={a.icon === key}
+                                        onClick={() => patch(i, { icon: key })}
                                     >
-                                        <option value="utility">Действие</option>
-                                        <option value="check">Проверка</option>
-                                        <option value="attack">Атака</option>
-                                        <option value="effect">Эффект</option>
-                                    </select>
-                                </label>
-                                <label>
-                                    Цель
-                                    <select
-                                        value={a.target}
-                                        onChange={(e) =>
-                                            patch(i, {
-                                                target: e.target.value as Ability['target'],
-                                            })
-                                        }
-                                    >
-                                        {Object.entries(targetLabels).map(([k, v]) => (
-                                            <option value={k} key={k}>
-                                                {v}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
+                                        <Choice size={19} />
+                                    </button>
+                                ))}
                             </div>
-                            {a.check && (
-                                <div className="ability-check-fields">
-                                    <label>
-                                        Модификатор персонажа
-                                        <select
-                                            value={a.check.stat_key ?? ''}
-                                            onChange={(e) =>
-                                                patch(i, {
-                                                    check: {
-                                                        ...a.check!,
-                                                        stat_key: e.target.value || null,
-                                                    },
-                                                })
+                            <div
+                                className="ability-type-chips"
+                                role="group"
+                                aria-label="Тип способности"
+                            >
+                                {(['melee', 'ranged', 'spell', 'check', 'utility'] as const).map(
+                                    (type) => (
+                                        <button
+                                            type="button"
+                                            key={type}
+                                            aria-pressed={a.attack_type === type}
+                                            onClick={() => {
+                                                if (type === 'melee' || type === 'ranged')
+                                                    patch(i, {
+                                                        attack_type: type,
+                                                        category: 'attack',
+                                                        target: 'token',
+                                                        area: null,
+                                                        range: {
+                                                            normal: type === 'melee' ? 5 : 60,
+                                                            long: type === 'ranged' ? 120 : null,
+                                                        },
+                                                        check: a.check ?? {
+                                                            stat_key: null,
+                                                            modifier: 0,
+                                                            dc: 10,
+                                                            dc_visible: true,
+                                                            defense: 'ac',
+                                                        },
+                                                        damage: a.damage ?? '1d8+3',
+                                                    });
+                                                else if (type === 'spell')
+                                                    patch(i, {
+                                                        attack_type: type,
+                                                        category: 'effect',
+                                                        target: 'point',
+                                                        range: { normal: 150, long: null },
+                                                        area: {
+                                                            shape: 'circle',
+                                                            size: 20,
+                                                            width: 20,
+                                                        },
+                                                        check: null,
+                                                        damage: a.damage ?? '2d6',
+                                                    });
+                                                else
+                                                    patch(i, {
+                                                        attack_type: type,
+                                                        category:
+                                                            type === 'check' ? 'check' : 'utility',
+                                                        target: type === 'check' ? 'none' : 'self',
+                                                        range: null,
+                                                        area: null,
+                                                        damage: null,
+                                                        check:
+                                                            type === 'check'
+                                                                ? {
+                                                                      stat_key: null,
+                                                                      modifier: 0,
+                                                                      dc: 10,
+                                                                      dc_visible: true,
+                                                                      defense: 'fixed',
+                                                                  }
+                                                                : null,
+                                                    });
+                                            }}
+                                        >
+                                            {
+                                                {
+                                                    melee: 'Ближняя',
+                                                    ranged: 'Дальняя',
+                                                    spell: 'Заклинание',
+                                                    check: 'Проверка',
+                                                    utility: 'Действие',
+                                                }[type]
+                                            }
+                                        </button>
+                                    ),
+                                )}
+                            </div>
+                            <AbilityGeometryEditor
+                                ability={a}
+                                onChange={(data) => patch(i, data)}
+                            />
+                            {(!a.area || a.area.shape === 'none') && (
+                                <div className="ability-target-chips">
+                                    {Object.entries(targetLabels).map(([key, label]) => (
+                                        <button
+                                            type="button"
+                                            key={key}
+                                            aria-pressed={a.target === key}
+                                            onClick={() =>
+                                                patch(i, { target: key as Ability['target'] })
                                             }
                                         >
-                                            <option value="">Фиксированная поправка</option>
-                                            {character.checkStats.map((s) => (
-                                                <option key={s.key} value={s.key}>
-                                                    {s.label} ({s.modifier >= 0 ? '+' : ''}
-                                                    {s.modifier})
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </label>
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {a.check && (
+                                <section className="ability-check-fields">
+                                    <span className="eyebrow">БРОСОК</span>
+                                    <div className="stat-chips">
+                                        {character.checkStats.map((stat) => (
+                                            <button
+                                                type="button"
+                                                key={stat.key}
+                                                aria-pressed={a.check?.stat_key === stat.key}
+                                                onClick={() =>
+                                                    patch(i, {
+                                                        check: { ...a.check!, stat_key: stat.key },
+                                                    })
+                                                }
+                                            >
+                                                {stat.label}{' '}
+                                                <b>
+                                                    {stat.modifier >= 0 ? '+' : ''}
+                                                    {stat.modifier}
+                                                </b>
+                                            </button>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            aria-pressed={!a.check.stat_key}
+                                            onClick={() =>
+                                                patch(i, { check: { ...a.check!, stat_key: null } })
+                                            }
+                                        >
+                                            Свой модификатор
+                                        </button>
+                                    </div>
                                     {!a.check.stat_key && (
                                         <label>
-                                            Поправка
+                                            Модификатор
                                             <input
                                                 type="number"
                                                 min={-100}
@@ -223,28 +334,34 @@ export function AbilityEditor({
                                         </label>
                                     )}
                                     {a.category === 'attack' && (
-                                        <label>
-                                            Защита
-                                            <select
-                                                value={a.check.defense}
-                                                onChange={(e) =>
+                                        <div className="stat-chips">
+                                            <button
+                                                type="button"
+                                                aria-pressed={a.check.defense === 'ac'}
+                                                onClick={() =>
                                                     patch(i, {
-                                                        check: {
-                                                            ...a.check!,
-                                                            defense: e.target.value as
-                                                                'ac' | 'fixed',
-                                                        },
+                                                        check: { ...a.check!, defense: 'ac' },
                                                     })
                                                 }
                                             >
-                                                <option value="ac">AC цели</option>
-                                                <option value="fixed">Заданная защита</option>
-                                            </select>
-                                        </label>
+                                                AC цели
+                                            </button>
+                                            <button
+                                                type="button"
+                                                aria-pressed={a.check.defense === 'fixed'}
+                                                onClick={() =>
+                                                    patch(i, {
+                                                        check: { ...a.check!, defense: 'fixed' },
+                                                    })
+                                                }
+                                            >
+                                                Своя защита
+                                            </button>
+                                        </div>
                                     )}
                                     {(a.category !== 'attack' || a.check.defense === 'fixed') && (
                                         <label>
-                                            Сложность
+                                            Сложность / защита
                                             <input
                                                 type="number"
                                                 min={0}
@@ -274,125 +391,153 @@ export function AbilityEditor({
                                                 })
                                             }
                                         />{' '}
-                                        Показывать защиту / сложность после броска
+                                        Показывать сложность после броска
                                     </label>
-                                </div>
+                                </section>
                             )}
-                            {a.category === 'attack' && (
-                                <label>
-                                    Урон при попадании
+                            {(a.category === 'attack' || a.area) && (
+                                <section>
+                                    <span className="eyebrow">УРОН</span>
+                                    <div className="range-presets">
+                                        {['1d6', '1d8+3', '2d6', '3d6+2'].map((d) => (
+                                            <button
+                                                type="button"
+                                                key={d}
+                                                aria-pressed={a.damage === d}
+                                                onClick={() => patch(i, { damage: d })}
+                                            >
+                                                {d}
+                                            </button>
+                                        ))}
+                                    </div>
                                     <input
-                                        placeholder="1d8+3 (необязательно)"
+                                        aria-label="Формула урона"
+                                        placeholder="Без урона"
                                         value={a.damage ?? ''}
                                         onChange={(e) =>
                                             patch(i, { damage: e.target.value || null })
                                         }
                                     />
-                                </label>
+                                </section>
                             )}
-                            <div className="ability-costs">
-                                <span className="eyebrow">СТОИМОСТЬ</span>
-                                {(character.resources ?? []).map((r) => {
-                                    const cost = a.costs.find((c) => c.key === r.key);
-                                    return (
-                                        <label key={r.key}>
-                                            {r.label}
-                                            <input
-                                                type="number"
-                                                min={0}
-                                                max={9999}
-                                                value={cost?.amount ?? 0}
-                                                onChange={(e) =>
-                                                    patch(i, {
-                                                        costs: [
-                                                            ...a.costs.filter(
-                                                                (c) => c.key !== r.key,
-                                                            ),
-                                                            ...(Number(e.target.value) > 0
-                                                                ? [
-                                                                      {
-                                                                          key: r.key,
-                                                                          amount: Number(
-                                                                              e.target.value,
-                                                                          ),
-                                                                      },
-                                                                  ]
-                                                                : []),
-                                                        ],
-                                                    })
-                                                }
-                                            />
-                                        </label>
-                                    );
-                                })}
-                            </div>
-                            <label>
-                                Результат при успехе
-                                <select
-                                    value={result.type}
-                                    onChange={(e) =>
-                                        patch(i, {
-                                            result: {
-                                                type: e.target.value as typeof result.type,
-                                                target: null,
-                                                amount: e.target.value === 'heal' ? 6 : 0,
-                                            },
-                                        })
-                                    }
-                                >
-                                    <option value="nothing">Только действие / бросок</option>
-                                    <option value="heal">Восстановить HP</option>
-                                    <option value="handout">Показать материал игроку</option>
-                                    <option value="cue">Запустить событие Cue</option>
-                                </select>
-                            </label>
-                            {result.type === 'heal' && (
+                            {!!character.resources?.length && (
+                                <section className="ability-costs">
+                                    <span className="eyebrow">СТОИМОСТЬ</span>
+                                    {character.resources.map((r) => {
+                                        const amount =
+                                            a.costs.find((c) => c.key === r.key)?.amount ?? 0;
+                                        return (
+                                            <label key={r.key}>
+                                                {r.label} <b>{amount}</b>
+                                                <input
+                                                    type="range"
+                                                    aria-label={`Стоимость: ${r.label}`}
+                                                    min={0}
+                                                    max={r.max}
+                                                    value={amount}
+                                                    onChange={(e) =>
+                                                        patch(i, {
+                                                            costs: [
+                                                                ...a.costs.filter(
+                                                                    (c) => c.key !== r.key,
+                                                                ),
+                                                                ...(Number(e.target.value) > 0
+                                                                    ? [
+                                                                          {
+                                                                              key: r.key,
+                                                                              amount: Number(
+                                                                                  e.target.value,
+                                                                              ),
+                                                                          },
+                                                                      ]
+                                                                    : []),
+                                                            ],
+                                                        })
+                                                    }
+                                                />
+                                            </label>
+                                        );
+                                    })}
+                                </section>
+                            )}
+                            <details className="ability-precise">
+                                <summary>Описание и дополнительные результаты</summary>
                                 <label>
-                                    Восстановление
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        max={9999}
-                                        value={result.amount}
-                                        onChange={(e) =>
-                                            patch(i, {
-                                                result: {
-                                                    ...result,
-                                                    amount: Number(e.target.value),
-                                                },
-                                            })
-                                        }
+                                    Описание
+                                    <textarea
+                                        aria-label="Описание способности"
+                                        rows={2}
+                                        maxLength={800}
+                                        value={a.description ?? ''}
+                                        onChange={(e) => patch(i, { description: e.target.value })}
                                     />
                                 </label>
-                            )}
-                            {(result.type === 'cue' || result.type === 'handout') && (
                                 <label>
-                                    {result.type === 'cue'
-                                        ? 'Событие (только на своей сцене)'
-                                        : 'Материал'}
+                                    Результат при успехе
                                     <select
-                                        value={result.target ?? ''}
+                                        value={result.type}
                                         onChange={(e) =>
                                             patch(i, {
                                                 result: {
-                                                    ...result,
-                                                    target: Number(e.target.value) || null,
+                                                    type: e.target.value as typeof result.type,
+                                                    target: null,
+                                                    amount: e.target.value === 'heal' ? 6 : 0,
                                                 },
                                             })
                                         }
                                     >
-                                        <option value="">Выберите…</option>
-                                        {(result.type === 'cue'
-                                            ? options.cues
-                                            : options.handouts
-                                        ).map((o) => (
-                                            <option key={o.id} value={o.id}>
-                                                {o.name}
-                                            </option>
-                                        ))}
+                                        <option value="nothing">Только действие / бросок</option>
+                                        <option value="heal">Восстановить HP</option>
+                                        <option value="handout">Показать материал</option>
+                                        <option value="cue">Запустить Cue</option>
                                     </select>
                                 </label>
-                            )}
+                                {result.type === 'heal' && (
+                                    <label>
+                                        Восстановить HP
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            max={9999}
+                                            value={result.amount}
+                                            onChange={(e) =>
+                                                patch(i, {
+                                                    result: {
+                                                        ...result,
+                                                        amount: Number(e.target.value),
+                                                    },
+                                                })
+                                            }
+                                        />
+                                    </label>
+                                )}
+                                {(result.type === 'cue' || result.type === 'handout') && (
+                                    <label>
+                                        Материал / событие
+                                        <select
+                                            value={result.target ?? ''}
+                                            onChange={(e) =>
+                                                patch(i, {
+                                                    result: {
+                                                        ...result,
+                                                        target: Number(e.target.value) || null,
+                                                    },
+                                                })
+                                            }
+                                        >
+                                            <option value="">Выберите…</option>
+                                            {(result.type === 'cue'
+                                                ? options.cues
+                                                : options.handouts
+                                            ).map((o) => (
+                                                <option key={o.id} value={o.id}>
+                                                    {o.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                )}
+                            </details>
                             <footer>
                                 <label className="gameplay-checkbox">
                                     <input

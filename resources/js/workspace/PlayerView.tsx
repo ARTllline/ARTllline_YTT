@@ -257,7 +257,7 @@ function PlayerTabletop({
                 </div>
             )}
             <div
-                className={`player-help ${selected?.id === actor?.id && snapshot.scene.activeCharacterId ? 'is-own-active' : ''}`}
+                className={`player-help ${snapshot.scene.activeCharacterId && ((!selected && !selectedProp) || selected?.id === actor?.id) ? 'is-own-active' : ''}`}
             >
                 {selected ? (
                     <>

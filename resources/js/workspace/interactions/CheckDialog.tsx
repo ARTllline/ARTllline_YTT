@@ -1,3 +1,4 @@
+import { RpgDice } from '../../gameplay/RpgDice';
 import { useEffect, useRef, useState } from 'react';
 import { Dices, X } from 'lucide-react';
 import { ApiError } from '../../api/client';
@@ -139,7 +140,7 @@ export function CheckDialog({
     return (
         <dialog
             ref={dialog}
-            className={`check-dialog phase-${phase} ${phase === 'outcome' ? (result?.success ? 'is-success' : 'is-failure') : ''}`}
+            className={`check-dialog rpg-dice-dialog phase-${phase} ${phase === 'outcome' ? (result?.success ? 'is-success' : 'is-failure') : ''}`}
             aria-labelledby="check-title"
             aria-describedby="check-label"
             onCancel={(e) => {
@@ -221,28 +222,12 @@ export function CheckDialog({
             {check.dc !== undefined && check.dc_visible !== false && (
                 <span className="check-dc">DC {check.dc}</span>
             )}
-            <div
-                className={`check-dice ${(result?.rawDice.length ?? (mode === 'normal' ? 1 : 2)) > 1 ? 'is-pair' : ''}`}
-            >
-                {(result?.rawDice ?? (mode === 'normal' ? [null] : [null, null])).map(
-                    (die, index) => (
-                        <div
-                            key={index}
-                            className={`check-die ${result ? (index === result.selectedDie ? 'is-used' : 'is-discarded') : ''}`}
-                        >
-                            <svg viewBox="0 0 160 176" fill="none" aria-hidden="true">
-                                <path d="M80 4 150 45 150 128 80 172 10 128 10 45Z M80 4 38 62 10 128 M80 4 122 62 150 128 M10 45 38 62 80 145 122 62 150 45 M10 128 80 145 150 128 M80 145 80 172 M38 62 122 62" />
-                            </svg>
-                            <strong>{die ?? 'd20'}</strong>
-                            {result && (
-                                <small>
-                                    {index === result.selectedDie ? 'В зачёт' : 'Отброшен'}
-                                </small>
-                            )}
-                        </div>
-                    ),
-                )}
-            </div>
+            <RpgDice
+                dice={result?.rawDice}
+                selected={result?.selectedDie}
+                mode={mode}
+                phase={phase}
+            />
             <div className="check-equation" aria-live="polite">
                 {showTotal && result ? (
                     <span>

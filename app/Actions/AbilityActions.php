@@ -10,6 +10,7 @@ use App\Models\Scene;
 use App\Models\Token;
 use App\Models\User;
 use App\Realtime\CommandContext;
+use App\Services\AbilityGeometry;
 use App\Services\CheckRoller;
 use App\Services\DamageRoller;
 use App\Services\SceneSnapshotBuilder;
@@ -95,6 +96,8 @@ class AbilityActions
             $author = $campaign->members()->wherePivot('role', 'gm')->orderBy('users.id')->firstOrFail();
             $actor = $scene->tokens()->where('character_id', $character->id)->where('is_hidden', false)->first();
             $target = $this->target($scene, $ability['target'], $data['target'] ?? null, $character, $actor);
+            $areaTargets = app(AbilityGeometry::class)->validate($scene, $ability, $actor, $target, $data['target'] ?? null);
+            $isArea = ! empty($ability['area']) && $ability['area']['shape'] !== 'none';
             $resources = $character->resources ?? [];
             foreach ($ability['costs'] as $cost) {
                 $index = collect($resources)->search(fn ($r) => $r['key'] === $cost['key']);
@@ -113,10 +116,19 @@ class AbilityActions
             $success = $roll['success'] ?? true;
             $damage = null;
             $feedback = null;
+            $feedbacks = [];
+            $outcomes = [];
             if ($success && $ability['damage']) {
                 $damage = app(DamageRoller::class)->roll($ability['damage']);
-                app(TokenCombatActions::class)->adjustHp($author, $target, -$damage['total']);
-                $feedback = ['tokenId' => (string) $target->id, 'text' => '−'.$damage['total'], 'tone' => 'damage'];
+                foreach ($isArea ? $areaTargets : [$target] as $victim) {
+                    app(TokenCombatActions::class)->adjustHp($author, $victim, -$damage['total']);
+                    $item = ['tokenId' => (string) $victim->id, 'text' => '−'.$damage['total'], 'tone' => 'damage'];
+                    $feedbacks[] = $item;
+                    $outcomes[] = ['tokenId' => (string) $victim->id, 'damage' => $damage['total']];
+                }
+                if (! $isArea) {
+                    $feedback = $feedbacks[0] ?? null;
+                }
             } elseif (! $success && $ability['category'] === 'attack') {
                 $feedback = ['tokenId' => (string) $target->id, 'text' => 'Промах', 'tone' => 'miss'];
             }
@@ -134,18 +146,22 @@ class AbilityActions
             $character = $character->fresh(); // Healing a linked actor may already have updated HP.
             $character->update(['resources' => $resources]);
             app(CharacterActions::class)->publish($author, $character, $scene->id);
-            app(SceneTransaction::class)->run($scene, function ($locked) use ($user, $target, $feedback) {
+            app(SceneTransaction::class)->run($scene, function ($locked) use ($user, $target, $feedback, $feedbacks, $isArea, $areaTargets) {
+                if ($isArea) {
+                    return ['charactersChanged' => true, 'gameplayFeedbacks' => $feedbacks,
+                        'tokens' => array_values(array_map(fn ($token) => app(SceneSnapshotBuilder::class)->token($token->fresh(), true, $user), $areaTargets))];
+                }
                 $token = $target instanceof Token ? $target->fresh() : null;
 
                 return ['charactersChanged' => true, 'gameplayFeedback' => $feedback]
                     + ($token ? ['token' => app(SceneSnapshotBuilder::class)->token($token, true, $user), '_wasVisible' => true] : []);
-            }, 'ability.resolved');
+            }, $isArea ? 'objects.changed' : 'ability.resolved');
             // Persist the full authoritative roll; redact DC only in the player response below.
             $execution = $this->record($user, $character, $ability['id'], $context, [
                 'abilityId' => $ability['id'], 'abilityName' => $ability['name'], 'category' => $ability['category'],
                 'actorId' => (string) $character->id, 'actorName' => $character->name,
                 'target' => $data['target'] ?? null, 'roll' => $roll, 'success' => $success,
-                'damage' => $damage, 'healing' => $success && $ability['result']['type'] === 'heal' ? $ability['result']['amount'] : null,
+                'damage' => $damage, 'outcomes' => $outcomes, 'healing' => $success && $ability['result']['type'] === 'heal' ? $ability['result']['amount'] : null,
                 'dcVisible' => $ability['check']['dc_visible'] ?? false,
                 'mutationId' => app(CommandContext::class)->id(), 'resolvedAt' => now()->toIso8601String(),
             ]);
