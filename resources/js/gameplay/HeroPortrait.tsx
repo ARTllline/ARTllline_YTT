@@ -95,6 +95,12 @@ export function HeroPortrait({
                     </span>
                 )}
             </button>
+            {multiple && (
+                <span className="portrait-party-count" aria-hidden="true">
+                    {heroes.length}
+                    <span>▴</span>
+                </span>
+            )}
             {open && (
                 <div
                     className="hero-roster"

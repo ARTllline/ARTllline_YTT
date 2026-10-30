@@ -61,27 +61,19 @@ export const inventoryApi = {
             clientMutationId: commandId(),
         }),
 };
-export function fits(
-    items: InventoryItem[],
-    def: Pick<ItemDefinition, 'width' | 'height'>,
-    x: number,
-    y: number,
-    ignore: string[] = [],
-) {
+export function fits(items: InventoryItem[], x: number, y: number, ignore: string[] = []) {
     return (
         x >= 0 &&
         y >= 0 &&
-        x + def.width <= 10 &&
-        y + def.height <= 6 &&
+        x < 10 &&
+        y < 6 &&
         !items.some(
             (i) =>
                 i.quantity > 0 &&
                 !i.equipped_slot &&
                 !ignore.includes(i.id) &&
-                x < i.x! + i.definition.width &&
-                x + def.width > i.x! &&
-                y < i.y! + i.definition.height &&
-                y + def.height > i.y!,
+                x === i.x &&
+                y === i.y,
         )
     );
 }

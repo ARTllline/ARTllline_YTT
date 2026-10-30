@@ -13,7 +13,7 @@ export function ResourceRail({
             {resources.map((r) => (
                 <button
                     key={r.key}
-                    className={`hud-resource accent-${r.accent}`}
+                    className={`hud-resource accent-${r.accent} ${r.current === 0 ? 'is-depleted' : ''}`}
                     onClick={onDetails}
                     title={`${r.label}: ${r.current} / ${r.max}`}
                     aria-label={`${r.label}: ${r.current} из ${r.max}`}

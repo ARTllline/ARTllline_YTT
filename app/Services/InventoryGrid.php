@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-/** Fixed rectangles, no rotations. Placement is shared by move, unequip, split and grants. */
+/** Every item instance occupies one cell, including legacy definitions. */
 class InventoryGrid
 {
     public const WIDTH = 10;
@@ -11,14 +11,14 @@ class InventoryGrid
 
     public function fits(array $items, array $definition, int $x, int $y, array $ignore = []): bool
     {
-        if ($x < 0 || $y < 0 || $x + $definition['width'] > self::WIDTH || $y + $definition['height'] > self::HEIGHT) {
+        if ($x < 0 || $y < 0 || $x >= self::WIDTH || $y >= self::HEIGHT) {
             return false;
         }
         foreach ($items as $item) {
             if ($item['quantity'] < 1 || $item['equipped_slot'] || in_array($item['id'], $ignore, true)) {
                 continue;
             }
-            if ($x < $item['x'] + $item['definition']['width'] && $x + $definition['width'] > $item['x'] && $y < $item['y'] + $item['definition']['height'] && $y + $definition['height'] > $item['y']) {
+            if ($x === $item['x'] && $y === $item['y']) {
                 return false;
             }
         }

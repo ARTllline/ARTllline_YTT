@@ -47,6 +47,18 @@ export function SpellbookView({
     return (
         <div className={`spellbook-layout ${selected ? 'has-selection' : ''}`}>
             <section className="spellbook-catalog">
+                <header className="spellbook-heading">
+                    <div>
+                        <span className="rpg-kicker">
+                            {classes.join(' · ') || 'ИСКУССТВО ГЕРОЯ'}
+                        </span>
+                        <h2>Книга способностей</h2>
+                    </div>
+                    <span className="spellbook-count">
+                        <strong>{available.filter((a) => a.spell?.prepared).length}</strong>{' '}
+                        подготовлено <span> / {available.length} известно</span>
+                    </span>
+                </header>
                 <div className="rpg-filterbar">
                     <div className="rpg-chips">
                         {[
@@ -117,11 +129,41 @@ export function SpellbookView({
                     {groups.map((group) => (
                         <section className="spellbook-section" key={group}>
                             <h2>
-                                {group < 0
-                                    ? 'Умения и действия'
-                                    : group === 0
-                                      ? 'Заговоры'
-                                      : `${group} круг`}
+                                <span className="spell-level-seal" aria-hidden="true">
+                                    {group < 0
+                                        ? '✦'
+                                        : group === 0
+                                          ? '∞'
+                                          : ([
+                                                '',
+                                                'I',
+                                                'II',
+                                                'III',
+                                                'IV',
+                                                'V',
+                                                'VI',
+                                                'VII',
+                                                'VIII',
+                                                'IX',
+                                            ][group] ?? group)}
+                                </span>
+                                <span>
+                                    {group < 0
+                                        ? 'Умения и действия'
+                                        : group === 0
+                                          ? 'Заговоры'
+                                          : `${group} круг`}
+                                </span>
+                                <small>
+                                    {
+                                        shown.filter(
+                                            (a) =>
+                                                (a.spell?.level ??
+                                                    (a.attack_type === 'spell' ? 0 : -1)) === group,
+                                        ).length
+                                    }{' '}
+                                    в книге
+                                </small>
                             </h2>
                             <div className="spell-tiles">
                                 {shown
@@ -134,6 +176,7 @@ export function SpellbookView({
                                         <button
                                             key={a.id}
                                             className={`spell-tile ${selected?.id === a.id ? 'is-selected' : ''} ${a.spell && !a.spell.prepared ? 'is-unprepared' : ''} ${drag.active?.sourceId === a.id ? 'is-lifted' : ''}`}
+                                            aria-pressed={selected?.id === a.id}
                                             aria-label={`Изучить: ${a.name}`}
                                             {...drag.source(abilityBinding(a.id))}
                                             onClick={() => {
@@ -155,6 +198,14 @@ export function SpellbookView({
                                             )}
                                             <span className="rpg-tooltip">
                                                 <strong>{a.name}</strong>
+                                                <small>
+                                                    {a.spell?.school} ·{' '}
+                                                    {a.spell
+                                                        ? a.spell.prepared
+                                                            ? 'Подготовлено'
+                                                            : 'Известно'
+                                                        : 'Действие'}
+                                                </small>
                                                 <span>{a.description}</span>
                                                 <small>Перетащите в панель действий</small>
                                             </span>
@@ -180,7 +231,10 @@ export function SpellbookView({
                         >
                             ← К книге
                         </button>
-                        <RpgIcon icon={selected.icon} size={100} />
+                        <div className="inspection-art">
+                            <RpgIcon icon={selected.icon} size={100} />
+                            <span aria-hidden="true">✦</span>
+                        </div>
                         <span className="rpg-kicker">
                             {selected.spell
                                 ? `${selected.spell.level === 0 ? 'Заговор' : `${selected.spell.level} круг`} · ${selected.spell.school}`
@@ -240,23 +294,28 @@ export function SpellbookView({
                             )}
                         </dl>
                         <AbilityCost ability={selected} resources={resources} />
-                        <button
-                            className="rpg-gold-button"
-                            disabled={
-                                !canAfford(selected, resources) ||
-                                selected.spell?.prepared === false
-                            }
-                            onClick={() => onChoose(selected)}
-                        >
-                            Применить
-                        </button>
-                        <button className="rpg-quiet-button" onClick={() => onBind(selected)}>
-                            В панель действий
-                        </button>
+                        <div className="inspection-actions">
+                            <button
+                                className="rpg-gold-button"
+                                disabled={
+                                    !canAfford(selected, resources) ||
+                                    selected.spell?.prepared === false
+                                }
+                                onClick={() => onChoose(selected)}
+                            >
+                                Применить
+                            </button>
+                            <button className="rpg-quiet-button" onClick={() => onBind(selected)}>
+                                В панель действий
+                            </button>
+                        </div>
                     </>
                 ) : (
                     <>
-                        <RpgIcon icon="book" size={90} />
+                        <div className="inspection-art is-arcane">
+                            <RpgIcon icon="book" size={90} />
+                            <span aria-hidden="true">✦</span>
+                        </div>
                         <h2>Знание — ваша сила</h2>
                         <p>Выберите способность. Здесь будут её свойства, стоимость и описание.</p>
                         <small>Перетащите любую иконку на панель действий.</small>

@@ -11,22 +11,19 @@ const sword = {
     definition: { width: 1, height: 3 },
 } as InventoryItem;
 describe('spatial inventory and shared bindings', () => {
-    it('rejects overlapping footprints and boundary overflow while preserving equipment space', () => {
-        expect(fits([sword], { width: 2, height: 2 }, 0, 1)).toBe(false);
-        expect(fits([sword], { width: 2, height: 2 }, 1, 1)).toBe(true);
-        expect(fits([], { width: 2, height: 2 }, 9, 0)).toBe(false);
-        expect(fits([], { width: 1, height: 3 }, 0, 4)).toBe(false);
-        expect(
-            fits([{ ...sword, equipped_slot: 'main_hand' }], { width: 2, height: 2 }, 0, 0),
-        ).toBe(true);
+    it('uses one cell even for legacy large definitions, including the last cell', () => {
+        expect(fits([sword], 0, 0)).toBe(false);
+        expect(fits([sword], 0, 1)).toBe(true);
+        expect(fits([], 9, 5)).toBe(true);
+        expect(fits([], 10, 5)).toBe(false);
+        expect(fits([], 9, 6)).toBe(false);
+        expect(fits([], -1, 0)).toBe(false);
+        expect(fits([{ ...sword, equipped_slot: 'main_hand' }], 0, 0)).toBe(true);
     });
-    it('allows moving the source rectangle through its own old cells but not another item', () => {
-        expect(fits([sword], { width: 1, height: 3 }, 0, 1, ['sword'])).toBe(true);
-        expect(
-            fits([sword, { ...sword, id: 'other', y: 3 }], { width: 1, height: 3 }, 0, 1, [
-                'sword',
-            ]),
-        ).toBe(false);
+    it('ignores the moving instance and consumed stacks, but rejects occupied cells', () => {
+        expect(fits([sword], 0, 0, ['sword'])).toBe(true);
+        expect(fits([sword, { ...sword, id: 'other', y: 1 }], 0, 1, ['sword'])).toBe(false);
+        expect(fits([{ ...sword, quantity: 0 }], 0, 0)).toBe(true);
     });
     it('keeps ability and inventory namespaces distinct and roundtrips the same drop protocol', () => {
         const item = itemBinding('same-id'),

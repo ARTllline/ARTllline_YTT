@@ -12,6 +12,7 @@ import { PAGE_SIZE, type HotbarSlots } from './hotbarModel';
 import { GAMEPLAY_ENTRY_MIME } from './gameplayDrag';
 import { useGameplayDrag } from './useGameplayDrag';
 import { DeckSlot } from './DeckSlot';
+import { deckBanks } from './deckPresentation';
 import { AbilityBrowser } from './AbilityBrowser';
 
 function readView(key: string): { page: number; expanded: boolean } {
@@ -44,6 +45,7 @@ export function AbilityHotbar({
     itemAbilities = [],
     onChooseItem,
     onOpenWindow,
+    openWindow,
 }: {
     abilities: Ability[];
     resources: CharacterResource[];
@@ -66,6 +68,7 @@ export function AbilityHotbar({
     itemAbilities?: Ability[];
     onChooseItem?: (i: InventoryItem) => void;
     onOpenWindow?: (kind: RpgWindowKind) => void;
+    openWindow?: RpgWindowKind | null;
 }) {
     const [view, setView] = useState(() => readView(preferencesKey));
     const [browser, setBrowser] = useState(false),
@@ -163,9 +166,6 @@ export function AbilityHotbar({
         window.addEventListener('keydown', key);
         return () => window.removeEventListener('keydown', key);
     }, []);
-    const visible = slots
-        .map((binding, index) => ({ binding, index }))
-        .filter(({ index }) => view.expanded || Math.floor(index / PAGE_SIZE) === view.page);
     return (
         <>
             {browser && (
@@ -192,10 +192,57 @@ export function AbilityHotbar({
                 className={`hotbar-shell action-deck ${view.expanded ? 'is-expanded' : ''} ${edit ? 'is-editing' : ''}`}
                 aria-label="Панель действий"
             >
-                <ResourceRail resources={resources} onDetails={onResourceDetails} />
+                <div className="deck-upper-strip">
+                    <ResourceRail resources={resources} onDetails={onResourceDetails} />
+                    <div className="deck-tools">
+                        <div className="hotbar-roll-stance" role="group" aria-label="Режим броска">
+                            {(['normal', 'advantage', 'disadvantage'] as const).map((mode, i) => (
+                                <button
+                                    key={mode}
+                                    aria-pressed={rollMode === mode}
+                                    title={['Обычный бросок', 'С преимуществом', 'С помехой'][i]}
+                                    aria-label={
+                                        ['Обычный бросок', 'С преимуществом', 'С помехой'][i]
+                                    }
+                                    onClick={() => onRollMode(mode)}
+                                >
+                                    {['•', '+', '−'][i]}
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            className="deck-edit icon-button"
+                            aria-label="Настроить панель способностей"
+                            aria-pressed={edit}
+                            disabled={!editable}
+                            onClick={() => setEdit(!edit)}
+                        >
+                            <Settings2 size={17} />
+                        </button>
+                        <button
+                            className="deck-expand icon-button"
+                            aria-label={
+                                view.expanded
+                                    ? 'Свернуть панель действий'
+                                    : 'Развернуть все 32 ячейки'
+                            }
+                            aria-expanded={view.expanded}
+                            onClick={toggleExpanded}
+                        >
+                            {view.expanded ? <ChevronsDown size={18} /> : <ChevronsUp size={18} />}
+                        </button>
+                    </div>
+                </div>
                 <div className="deck-action-space" ref={actionSpace}>
                     <div className="deck-heading">
-                        <span>ДЕЙСТВИЯ</span>
+                        <span>
+                            {view.expanded
+                                ? 'ПОЛНАЯ ПАНЕЛЬ'
+                                : view.page === 0
+                                  ? 'ОСНОВНОЕ'
+                                  : 'РЕЗЕРВ'}
+                            <i aria-hidden="true">✦</i>
+                        </span>
                         <small aria-live="polite">
                             {saving
                                 ? 'Сохраняем…'
@@ -213,50 +260,77 @@ export function AbilityHotbar({
                         ref={belt}
                         key={view.page}
                     >
-                        {visible.map(({ binding, index }) => (
-                            <DeckSlot
-                                key={index}
-                                index={index}
-                                shortcutActive={Math.floor(index / PAGE_SIZE) === view.page}
-                                ability={abilities.find(
-                                    (a) =>
-                                        binding?.sourceType === 'ability' &&
-                                        a.id === binding.sourceId,
-                                )}
-                                binding={binding}
-                                item={
-                                    binding?.sourceType === 'inventory_item'
-                                        ? items.find((i) => i.id === binding.sourceId)
-                                        : undefined
-                                }
-                                itemAbility={
-                                    binding?.sourceType === 'inventory_item'
-                                        ? itemAbilities.find(
-                                              (a) =>
-                                                  a.id ===
-                                                  items.find((i) => i.id === binding.sourceId)
-                                                      ?.definition.use_ability_id,
-                                          )
-                                        : undefined
-                                }
-                                onChooseItem={onChooseItem}
-                                resources={resources}
-                                drag={drag}
-                                edit={edit}
-                                selected={selected}
-                                disabled={disabled}
-                                worldAvailable={worldAvailable}
-                                onClear={() => {
-                                    if (editable)
-                                        onLayout(slots.map((s, i) => (i === index ? null : s)));
-                                }}
-                                onPick={() => {
-                                    setDestination(index);
-                                    setInitialFilter(undefined);
-                                    setBrowser(true);
-                                }}
-                                onChoose={choose}
-                            />
+                        {deckBanks(view.page, view.expanded).map((bank) => (
+                            <div
+                                className="deck-bank"
+                                key={bank.key}
+                                role="group"
+                                aria-label={bank.label}
+                            >
+                                <span className="deck-bank-seal" aria-hidden="true">
+                                    {bank.label}
+                                </span>
+                                <div className="deck-bank-slots">
+                                    {bank.indices.map((index) => {
+                                        const binding = slots[index];
+                                        return (
+                                            <DeckSlot
+                                                key={index}
+                                                index={index}
+                                                shortcutActive={
+                                                    Math.floor(index / PAGE_SIZE) === view.page
+                                                }
+                                                ability={abilities.find(
+                                                    (a) =>
+                                                        binding?.sourceType === 'ability' &&
+                                                        a.id === binding.sourceId,
+                                                )}
+                                                binding={binding}
+                                                item={
+                                                    binding?.sourceType === 'inventory_item'
+                                                        ? items.find(
+                                                              (i) => i.id === binding.sourceId,
+                                                          )
+                                                        : undefined
+                                                }
+                                                itemAbility={
+                                                    binding?.sourceType === 'inventory_item'
+                                                        ? itemAbilities.find(
+                                                              (a) =>
+                                                                  a.id ===
+                                                                  items.find(
+                                                                      (i) =>
+                                                                          i.id === binding.sourceId,
+                                                                  )?.definition.use_ability_id,
+                                                          )
+                                                        : undefined
+                                                }
+                                                onChooseItem={onChooseItem}
+                                                resources={resources}
+                                                drag={drag}
+                                                edit={edit}
+                                                selected={selected}
+                                                disabled={disabled}
+                                                worldAvailable={worldAvailable}
+                                                onClear={() => {
+                                                    if (editable)
+                                                        onLayout(
+                                                            slots.map((s, i) =>
+                                                                i === index ? null : s,
+                                                            ),
+                                                        );
+                                                }}
+                                                onPick={() => {
+                                                    setDestination(index);
+                                                    setInitialFilter(undefined);
+                                                    setBrowser(true);
+                                                }}
+                                                onChoose={choose}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -275,6 +349,9 @@ export function AbilityHotbar({
                                         page(i);
                                 }}
                             >
+                                <span className="deck-tab-mark" aria-hidden="true">
+                                    {i === 0 ? 'I' : 'II'}
+                                </span>
                                 {label}{' '}
                                 <small>
                                     {i * 16 + 1}–{(i + 1) * 16}
@@ -285,7 +362,8 @@ export function AbilityHotbar({
                     <button
                         className="hotbar-browser-button"
                         aria-label="Способности"
-                        aria-expanded={browser}
+                        aria-pressed={openWindow === 'spellbook'}
+                        aria-expanded={onOpenWindow ? openWindow === 'spellbook' : browser}
                         onClick={() => {
                             if (onOpenWindow) {
                                 onOpenWindow('spellbook');
@@ -297,60 +375,32 @@ export function AbilityHotbar({
                         }}
                     >
                         <RpgIcon icon="book" size={17} />
-                        <span>Способности</span>
+                        <span>Книга</span>
                     </button>
                     {onOpenWindow && (
                         <>
                             <button
-                                className="deck-edit icon-button"
+                                className="deck-window-tab"
+                                aria-pressed={openWindow === 'inventory'}
                                 aria-label="Инвентарь"
                                 title="Инвентарь · I"
                                 onClick={() => onOpenWindow('inventory')}
                             >
-                                <Backpack size={18} />
+                                <Backpack size={16} />
+                                <span>Предметы</span>
                             </button>
                             <button
-                                className="deck-edit icon-button"
+                                className="deck-window-tab"
+                                aria-pressed={openWindow === 'character'}
                                 aria-label="Открыть персонажа"
                                 title="Персонаж · C"
                                 onClick={() => onOpenWindow('character')}
                             >
-                                <UserRound size={18} />
+                                <UserRound size={16} />
+                                <span>Герой</span>
                             </button>
                         </>
                     )}
-                    <div className="hotbar-roll-stance" role="group" aria-label="Режим броска">
-                        {(['normal', 'advantage', 'disadvantage'] as const).map((mode, i) => (
-                            <button
-                                key={mode}
-                                aria-pressed={rollMode === mode}
-                                title={['Обычный бросок', 'С преимуществом', 'С помехой'][i]}
-                                aria-label={['Обычный бросок', 'С преимуществом', 'С помехой'][i]}
-                                onClick={() => onRollMode(mode)}
-                            >
-                                {['•', '+', '−'][i]}
-                            </button>
-                        ))}
-                    </div>
-                    <button
-                        className="deck-edit icon-button"
-                        aria-label="Настроить панель способностей"
-                        aria-pressed={edit}
-                        disabled={!editable}
-                        onClick={() => setEdit(!edit)}
-                    >
-                        <Settings2 size={17} />
-                    </button>
-                    <button
-                        className="deck-expand icon-button"
-                        aria-label={
-                            view.expanded ? 'Свернуть панель действий' : 'Развернуть все 32 ячейки'
-                        }
-                        aria-expanded={view.expanded}
-                        onClick={toggleExpanded}
-                    >
-                        {view.expanded ? <ChevronsDown size={18} /> : <ChevronsUp size={18} />}
-                    </button>
                 </footer>
                 {error && (
                     <div className="hotbar-save-error" role="alert">

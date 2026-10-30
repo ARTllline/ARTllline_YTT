@@ -72,8 +72,17 @@ export function DeckSlot({
     const key = shortcutActive ? `${index % 16 >= 8 ? '⇧' : ''}${(index % 8) + 1}` : `${index + 1}`;
     return (
         <div
-            className={`rpg-slot ${drag.over === index ? 'is-drop-target' : ''} ${binding && drag.lifted === binding.sourceId ? 'is-lifted' : ''} ${drag.dropped === index ? 'is-settling' : ''}`}
+            className={`rpg-slot ${drag.over === index ? 'is-drop-target' : ''} ${drag.rejected === index ? 'is-drop-rejected' : ''} ${binding && drag.lifted === binding.sourceId ? 'is-lifted' : ''} ${drag.dropped === index ? 'is-settling' : ''}`}
             data-hotbar-slot={index}
+            data-entry-kind={
+                item
+                    ? 'item'
+                    : a?.spell || a?.attack_type === 'spell'
+                      ? 'spell'
+                      : a
+                        ? 'action'
+                        : 'empty'
+            }
             {...drag.destination(index)}
         >
             <button

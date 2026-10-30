@@ -10,7 +10,11 @@ export function InventoryGridView({
     busy,
     compact = false,
     onInspect,
+    selectedId,
+    search = '',
 }: {
+    selectedId?: string | null;
+    search?: string;
     state: InventoryState;
     send: InventoryHook['send'];
     busy: boolean;
@@ -23,29 +27,12 @@ export function InventoryGridView({
     const accepted = (id: string, x: number, y: number) => {
         const item = state.items.find((i) => i.id === id && i.quantity > 0);
         if (!item || busy) return false;
-        const hits = bag.filter(
-            (i) =>
-                i.id !== id &&
-                x < i.x! + i.definition.width &&
-                x + item.definition.width > i.x! &&
-                y < i.y! + i.definition.height &&
-                y + item.definition.height > i.y!,
-        );
-        return (
-            fits(state.items, item.definition, x, y, [id]) ||
-            (hits.length === 1 &&
-                !item.equipped_slot &&
-                ((hits[0].definition.id === item.definition.id &&
-                    hits[0].quantity < item.definition.max_stack) ||
-                    (fits(state.items, item.definition, x, y, [id, hits[0].id]) &&
-                        fits(state.items, hits[0].definition, item.x!, item.y!, [id, hits[0].id]) &&
-                        !(
-                            x < item.x! + hits[0].definition.width &&
-                            x + item.definition.width > item.x! &&
-                            y < item.y! + hits[0].definition.height &&
-                            y + item.definition.height > item.y!
-                        ))))
-        );
+        const target = bag.find((i) => i.id !== id && i.x === x && i.y === y);
+        if (!target) return fits(state.items, x, y, [id]);
+        if (item.equipped_slot) return false;
+        if (target.definition.id === item.definition.id && item.definition.max_stack > 1)
+            return target.quantity < item.definition.max_stack;
+        return true;
     };
     return (
         <div className={`inventory-board-wrap ${compact ? 'is-compact' : ''}`}>
@@ -72,10 +59,11 @@ export function InventoryGridView({
                 {bag.map((item) => (
                     <button
                         key={item.id}
-                        className={`inventory-object rarity-${item.definition.rarity} ${drag.active?.sourceId === item.id ? 'is-lifted' : ''} ${drag.over?.key === `object:${item.id}` ? (drag.over.valid ? 'drop-valid' : 'drop-invalid') : ''}`}
+                        aria-pressed={selectedId === item.id}
+                        className={`inventory-object ${selectedId === item.id ? 'is-selected' : ''} ${search && !item.definition.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()) ? 'is-filtered' : ''} rarity-${item.definition.rarity} ${drag.active?.sourceId === item.id ? 'is-lifted' : ''} ${drag.over?.key === `object:${item.id}` ? (drag.over.valid ? 'drop-valid' : 'drop-invalid') : ''}`}
                         style={{
-                            gridColumn: `${item.x! + 1} / span ${item.definition.width}`,
-                            gridRow: `${item.y! + 1} / span ${item.definition.height}`,
+                            gridColumn: item.x! + 1,
+                            gridRow: item.y! + 1,
                         }}
                         aria-label={`${item.definition.name}, ${item.quantity} шт.`}
                         data-item-icon={item.definition.icon}
@@ -119,10 +107,7 @@ export function InventoryGridView({
                         <span className="rpg-tooltip">
                             <strong>{item.definition.name}</strong>
                             <span>{item.definition.description}</span>
-                            <small>
-                                {item.definition.width} × {item.definition.height} · {item.quantity}{' '}
-                                шт.
-                            </small>
+                            <small>1 × 1 · {item.quantity} шт.</small>
                         </span>
                     </button>
                 ))}
@@ -229,7 +214,10 @@ export function ItemDetails({
         )[d.category] ?? d.category;
     return (
         <aside className={`item-inspection rarity-${d.rarity}`}>
-            <RpgIcon icon={d.icon} size={110} />
+            <div className="inspection-art">
+                <RpgIcon icon={d.icon} size={110} />
+                <span aria-hidden="true">✦</span>
+            </div>
             <span className="rpg-kicker">
                 {rarity} · {category}
             </span>
@@ -237,10 +225,8 @@ export function ItemDetails({
             <p>{d.description}</p>
             <dl>
                 <div>
-                    <dt>Размер</dt>
-                    <dd>
-                        {d.width} × {d.height}
-                    </dd>
+                    <dt>Ячейка</dt>
+                    <dd>1 × 1</dd>
                 </div>
                 <div>
                     <dt>Количество</dt>

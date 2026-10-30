@@ -38,6 +38,10 @@ export function useGameplayDrag(
             engine.over?.key.startsWith('deck:') && engine.over.valid
                 ? Number(engine.over.key.slice(5))
                 : null,
+        rejected:
+            engine.over?.key.startsWith('deck:') && !engine.over.valid
+                ? Number(engine.over.key.slice(5))
+                : null,
         dropped,
         ghost: null,
         consumeClick: engine.consumeClick,

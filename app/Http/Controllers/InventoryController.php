@@ -61,6 +61,9 @@ class InventoryController extends Controller
             'modifiers' => 'present|array:ac,speed,checks', 'modifiers.ac' => 'sometimes|integer|between:-20,20', 'modifiers.speed' => 'sometimes|integer|between:-100,100',
             'modifiers.checks' => 'sometimes|array|max:30', 'modifiers.checks.*' => 'integer|between:-20,20', 'use_ability_id' => 'nullable|uuid']);
 
+        // Accept old clients' size fields, but all newly saved definitions are single-cell.
+        $data['width'] = $data['height'] = 1;
+
         return DB::transaction(function () use ($campaign, $data, $r) {
             Campaign::whereKey($campaign->id)->lockForUpdate()->firstOrFail();
             if (! empty($data['use_ability_id'])) {

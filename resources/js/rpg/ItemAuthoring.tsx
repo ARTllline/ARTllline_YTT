@@ -36,7 +36,7 @@ const empty: Omit<ItemDefinition, 'id'> = {
     category: 'weapon',
     rarity: 'common',
     width: 1,
-    height: 3,
+    height: 1,
     max_stack: 1,
     equipment_slots: ['main_hand'],
     modifiers: {},
@@ -221,13 +221,13 @@ export function ItemAuthoring({
                         ))}
                     </div>
                     <div className="gameplay-form-row">
-                        {(['width', 'height', 'max_stack'] as const).map((key, i) => (
+                        {(['max_stack'] as const).map((key) => (
                             <label key={key}>
-                                {['Ширина', 'Высота', 'В стопке'][i]}
+                                В стопке
                                 <input
                                     type="number"
                                     min={1}
-                                    max={key === 'max_stack' ? 99 : 4}
+                                    max={99}
                                     value={draft[key] ?? 1}
                                     onChange={(e) => patch({ [key]: Number(e.target.value) })}
                                 />

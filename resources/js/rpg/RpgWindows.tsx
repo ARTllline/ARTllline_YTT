@@ -4,7 +4,7 @@ import type { Ability } from '../gameplay/model';
 import type { Character, Token } from '../tabletop/types/scene';
 import { RpgWindow, type RpgWindowKind } from './RpgWindow';
 import { InventoryGridView, ItemDetails } from './InventoryView';
-import { CharacterView } from './CharacterView';
+import { CharacterView, HeroEquipment } from './CharacterView';
 import { SpellbookView } from './SpellbookView';
 import type { InventoryHook } from './useInventory';
 import type { InventoryItem } from './model';
@@ -40,7 +40,15 @@ export function RpgWindows({
     const { data, error, busy, send } = inventory;
     const item = data?.items.find((i) => i.id === inspected);
     return (
-        <RpgWindow kind={kind} name={character.name} onChange={onChange} onClose={onClose}>
+        <RpgWindow
+            kind={kind}
+            name={character.name}
+            onChange={(next) => {
+                setInspected(null);
+                onChange(next);
+            }}
+            onClose={onClose}
+        >
             {error && (
                 <div className="rpg-window-error" role="alert">
                     {error}
@@ -100,11 +108,17 @@ export function RpgWindows({
                 </>
             ) : (
                 <div className="inventory-layout">
+                    <HeroEquipment
+                        state={data}
+                        send={send}
+                        busy={busy}
+                        onInspect={(i) => setInspected(i.id)}
+                    />
                     <section className="inventory-pack">
                         <header className="inventory-title">
                             <div>
                                 <span className="rpg-kicker">ЛИЧНЫЕ ВЕЩИ</span>
-                                <h2>Рюкзак</h2>
+                                <h2>Походный рюкзак</h2>
                             </div>
                             <button
                                 className="rpg-quiet-button"
@@ -114,38 +128,41 @@ export function RpgWindows({
                                 <ArrowDownWideNarrow size={16} /> Упорядочить
                             </button>
                         </header>
+                        <label className="inventory-search">
+                            <Search size={15} />
+                            <input
+                                aria-label="Поиск предмета"
+                                value={search}
+                                placeholder="Найти среди вещей…"
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </label>
                         <InventoryGridView
                             state={data}
                             send={send}
                             busy={busy}
+                            selectedId={inspected}
+                            search={search}
                             onInspect={(i) => setInspected(i.id)}
                         />
-                        <details className="inventory-find">
-                            <summary>
-                                <Search size={14} /> Найти предмет
-                            </summary>
-                            <input
-                                aria-label="Поиск предмета"
-                                value={search}
-                                placeholder="Название…"
-                                onChange={(e) => setSearch(e.target.value)}
+                        <div className="inventory-capacity">
+                            <span>МЕСТО В РЮКЗАКЕ</span>
+                            <strong>
+                                {
+                                    data.items.filter((i) => i.quantity > 0 && !i.equipped_slot)
+                                        .length
+                                }
+                                <small> / 60</small>
+                            </strong>
+                            <meter
+                                min={0}
+                                max={60}
+                                value={
+                                    data.items.filter((i) => i.quantity > 0 && !i.equipped_slot)
+                                        .length
+                                }
                             />
-                            <div className="rpg-chips">
-                                {data.items
-                                    .filter(
-                                        (i) =>
-                                            i.quantity > 0 &&
-                                            i.definition.name
-                                                .toLocaleLowerCase()
-                                                .includes(search.toLocaleLowerCase()),
-                                    )
-                                    .map((i) => (
-                                        <button key={i.id} onClick={() => setInspected(i.id)}>
-                                            {i.definition.name}
-                                        </button>
-                                    ))}
-                            </div>
-                        </details>
+                        </div>
                         <p className="inventory-help">
                             Двойной щелчок — надеть или использовать · Правая кнопка — действия
                         </p>

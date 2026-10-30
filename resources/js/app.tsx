@@ -22,6 +22,7 @@ createRoot(document.getElementById('root')!).render(
 );
 import '../css/player-rpg.css';
 import '../css/player-cinematic.css';
-import '../css/player-hud.css';
 import '../css/player-dice.css';
 import '../css/rpg-windows.css';
+import '../css/rpg-folio.css';
+import '../css/player-hud.css';

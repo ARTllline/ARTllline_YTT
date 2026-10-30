@@ -93,7 +93,8 @@ class PlayerInventoryTest extends TestCase
     {
         $sword = $this->give($this->definition());
         $shield = $this->give($this->definition(['name' => 'Shield', 'width' => 2, 'height' => 2, 'equipment_slots' => ['off_hand']]));
-        $this->command(['action' => 'move', 'itemId' => $shield->id, 'x' => 9, 'y' => 0])->assertUnprocessable();
+        $this->command(['action' => 'move', 'itemId' => $shield->id, 'x' => 10, 'y' => 0])->assertUnprocessable();
+        $this->command(['action' => 'move', 'itemId' => $shield->id, 'x' => 9, 'y' => 5])->assertOk();
         $this->command(['action' => 'move', 'itemId' => $sword->id, 'x' => 5, 'y' => 0])->assertOk();
         $potion = $this->give($this->definition(['name' => 'Potion', 'width' => 1, 'height' => 1, 'max_stack' => 10, 'equipment_slots' => [], 'use_ability_id' => $this->heal['id']]), 3);
         $this->command(['action' => 'split', 'itemId' => $potion->id, 'quantity' => 1])->assertOk();
@@ -189,7 +190,7 @@ class PlayerInventoryTest extends TestCase
         $this->assertSame(6, $item->fresh()->x);
     }
 
-    public function test_valid_swap_and_collision_rollback_and_definition_resize(): void
+    public function test_single_cell_swaps_and_legacy_definition_sizes_are_normalized(): void
     {
         $sword = $this->give($this->definition());
         $shield = $this->give($this->definition(['name' => 'Shield', 'width' => 2, 'height' => 2]));
@@ -199,14 +200,30 @@ class PlayerInventoryTest extends TestCase
         $this->assertSame(5, $sword->fresh()->x);
         $scroll = $this->give($this->definition(['name' => 'Scroll', 'width' => 1, 'height' => 1]));
         $this->command(['action' => 'move', 'itemId' => $scroll->id, 'x' => 6, 'y' => 0])->assertOk();
-        $this->command(['action' => 'move', 'itemId' => $sword->id, 'x' => 1, 'y' => 0])->assertUnprocessable();
-        $this->assertSame(5, $sword->fresh()->x);
+        $this->command(['action' => 'move', 'itemId' => $sword->id, 'x' => 1, 'y' => 0])->assertOk();
+        $this->assertSame(1, $sword->fresh()->x);
         $d = $shield->definition->toArray();
         unset($d['campaign_id'], $d['created_at'], $d['updated_at']);
         $d['width'] = 4;
         $this->command(['action' => 'move', 'itemId' => $sword->id, 'x' => 3, 'y' => 0])->assertOk();
-        $this->actingAs($this->gm)->postJson('/api/campaigns/'.$this->campaign->id.'/items', ['clientMutationId' => (string) Str::uuid(), ...$d])->assertUnprocessable();
-        $this->assertSame(2, $shield->definition->fresh()->width);
+        $this->actingAs($this->gm)->postJson('/api/campaigns/'.$this->campaign->id.'/items', ['clientMutationId' => (string) Str::uuid(), ...$d])->assertOk()->assertJsonPath('definition.width', 1)->assertJsonPath('definition.height', 1);
+        $this->assertSame(1, $shield->definition->fresh()->width);
+    }
+
+    public function test_single_cell_migration_preserves_instances_quantities_and_positions(): void
+    {
+        $definition = $this->definition(['width' => 2, 'height' => 3, 'max_stack' => 10]);
+        $item = $this->give($definition, 4);
+        $this->command(['action' => 'move', 'itemId' => $item->id, 'x' => 7, 'y' => 2])->assertOk();
+        $migration = require database_path('migrations/2026_10_30_120000_normalize_inventory_cells.php');
+        $migration->up();
+        $this->assertSame(1, $definition->fresh()->width);
+        $this->assertSame(1, $definition->fresh()->height);
+        $this->assertSame(4, $item->fresh()->quantity);
+        $this->assertSame(7, $item->fresh()->x);
+        $this->assertSame(2, $item->fresh()->y);
+        $this->assertSame($definition->id, $item->fresh()->item_definition_id);
+        $this->command(['action' => 'move', 'itemId' => $item->id, 'x' => 9, 'y' => 5])->assertOk();
     }
 
     public function test_equipped_items_swap_between_compatible_slots(): void

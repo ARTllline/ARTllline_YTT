@@ -21,6 +21,7 @@ import { AbilityDialog, type AbilityInvocation } from './AbilityDialog';
 import { AbilityTargeting } from './AbilityTargeting';
 import { abilitySlot, readPendingAbility } from './pendingAbility';
 import { HeroPortrait } from './HeroPortrait';
+import { CombatSupport } from './CombatSupport';
 import { usePlayerDice } from './PlayerDiceProvider';
 
 export function PlayerGameplayHUD({
@@ -300,7 +301,10 @@ function CharacterHUD({
                     onBindItem={(i) => bind(itemBinding(i.id))}
                 />
             )}
-            <div className="character-hud" key={character.id}>
+            <div
+                className={`character-hud ${actor && currentTokenId(scene.combat) === actor.id ? 'is-current-turn' : ''}`}
+                key={character.id}
+            >
                 <HeroPortrait
                     store={store}
                     actors={actors}
@@ -312,6 +316,7 @@ function CharacterHUD({
                 <div className="hud-identity">
                     <button
                         className="hud-character-details"
+                        title={character.name}
                         aria-label={`Подробнее: ${character.name}`}
                         aria-expanded={panel === 'character'}
                         onClick={() => setPanel(panel === 'character' ? null : 'character')}
@@ -361,6 +366,7 @@ function CharacterHUD({
                 itemAbilities={inventory.data?.useAbilities ?? []}
                 onChooseItem={chooseItem}
                 onOpenWindow={setPanel}
+                openWindow={panel}
                 resources={resources}
                 slots={hotbar.slots}
                 onLayout={(next) =>
@@ -384,6 +390,13 @@ function CharacterHUD({
                 worldAvailable={!!actor}
                 onResourceDetails={() => setPanel('character')}
                 preferencesKey={`ytt:deck:${userId}:${scene.campaignId}:${character.id}`}
+            />
+            <CombatSupport
+                character={character}
+                actor={actor}
+                combat={scene.combat}
+                disabled={disabled}
+                onDetails={() => setPanel('character')}
             />
             {pending && !invocation && (
                 <button

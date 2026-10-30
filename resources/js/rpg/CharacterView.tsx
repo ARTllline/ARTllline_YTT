@@ -7,8 +7,8 @@ import { itemBinding, type InventoryItem, type InventoryState } from './model';
 import type { InventoryHook } from './useInventory';
 import { InventoryGridView } from './InventoryView';
 const positions: Record<string, [number, number]> = {
-    head: [2, 1],
-    amulet: [3, 1],
+    head: [1, 1],
+    amulet: [4, 1],
     cloak: [1, 2],
     armor: [4, 2],
     gloves: [1, 3],
@@ -49,113 +49,10 @@ export function CharacterView({
     campaign: string;
     onResourceChange: () => void;
 }) {
-    const drag = useRpgDrag(),
-        c = state.character;
+    const c = state.character;
     return (
         <div className="character-equipment-layout">
-            <section className="hero-paperdoll">
-                <div className="paperdoll-grid">
-                    <div className="paperdoll-portrait">
-                        {c.portrait ? (
-                            <img src={c.portrait.url} alt={c.name} />
-                        ) : (
-                            <UserRound size={140} />
-                        )}
-                        <strong>{c.name}</strong>
-                        <span>ГЕРОЙ КАМПАНИИ</span>
-                    </div>
-                    {Object.entries(state.slots).map(([key, label], index) => {
-                        const equipped = state.items.find(
-                                (i) => i.quantity > 0 && i.equipped_slot === key,
-                            ),
-                            pos = positions[key] ?? [(index % 4) + 1, Math.floor(index / 4) + 6],
-                            target = `equipment:${key}`,
-                            over = drag.over?.key === target;
-                        return (
-                            <div
-                                key={key}
-                                className={`equipment-slot ${equipped ? 'has-item' : ''} ${over ? (drag.over!.valid ? 'drop-valid' : 'drop-invalid') : ''}`}
-                                style={{ gridColumn: pos[0], gridRow: pos[1] }}
-                                {...drag.destination(
-                                    target,
-                                    (b) =>
-                                        !busy &&
-                                        b.sourceType === 'inventory_item' &&
-                                        !!state.items.find(
-                                            (i) =>
-                                                i.id === b.sourceId &&
-                                                i.quantity === 1 &&
-                                                i.definition.equipment_slots.includes(key),
-                                        ),
-                                    (b) =>
-                                        void send({
-                                            action: 'equip',
-                                            itemId: b.sourceId,
-                                            slot: key,
-                                        }),
-                                )}
-                            >
-                                <button
-                                    aria-label={`${label}: ${equipped?.definition.name ?? 'пусто'}`}
-                                    {...(equipped
-                                        ? drag.source(itemBinding(equipped.id), !busy)
-                                        : {})}
-                                    onClick={() => {
-                                        if (equipped && !drag.consumeClick()) onInspect(equipped);
-                                    }}
-                                    onDoubleClick={() => {
-                                        if (equipped)
-                                            void send({ action: 'unequip', itemId: equipped.id });
-                                    }}
-                                >
-                                    <RpgIcon
-                                        icon={
-                                            equipped?.definition.icon ??
-                                            slotIcons[key] ??
-                                            'item_ring'
-                                        }
-                                        size={52}
-                                    />
-                                    <span>{label}</span>
-                                    <span className="rpg-tooltip">
-                                        <strong>{equipped?.definition.name ?? label}</strong>
-                                        <small>
-                                            {equipped
-                                                ? 'Перетащите в рюкзак · Двойной щелчок — снять'
-                                                : 'Перетащите совместимый предмет'}
-                                        </small>
-                                    </span>
-                                </button>
-                            </div>
-                        );
-                    })}
-                </div>
-                <div className="hero-stat-tiles">
-                    <span>
-                        <Heart size={18} />
-                        <strong>
-                            {c.hp}
-                            <small> / {c.maxHp}</small>
-                        </strong>
-                        <label>Здоровье</label>
-                    </span>
-                    <span>
-                        <Shield size={18} />
-                        <strong>{c.ac ?? '—'}</strong>
-                        <label>
-                            Защита{' '}
-                            {c.ac != null && state.base.ac != null && c.ac !== state.base.ac
-                                ? `(${c.ac - state.base.ac >= 0 ? '+' : ''}${c.ac - state.base.ac})`
-                                : ''}
-                        </label>
-                    </span>
-                    <span>
-                        <Footprints size={18} />
-                        <strong>{c.speed ?? '—'}</strong>
-                        <label>Скорость</label>
-                    </span>
-                </div>
-            </section>
+            <HeroEquipment state={state} send={send} busy={busy} onInspect={onInspect} />
             <section className="character-satchel">
                 <header>
                     <span className="rpg-kicker">СНАРЯЖЕНИЕ И ПРИПАСЫ</span>
@@ -172,6 +69,7 @@ export function CharacterView({
             <section className="rpg-character-vitals">
                 <span className="rpg-kicker">СОСТОЯНИЕ ГЕРОЯ</span>
                 <ResourceControls campaign={campaign} character={c} onChanged={onResourceChange} />
+                <h2>Характеристики</h2>
                 <div className="character-checks">
                     {c.checkStats.map((s) => (
                         <span key={s.key}>
@@ -183,6 +81,7 @@ export function CharacterView({
                         </span>
                     ))}
                 </div>
+                <h3>Состояния</h3>
                 <div className="character-conditions">
                     {actor?.conditions?.length ? (
                         actor.conditions.map((s) => <span key={s.id}>{s.label}</span>)
@@ -192,5 +91,124 @@ export function CharacterView({
                 </div>
             </section>
         </div>
+    );
+}
+
+export function HeroEquipment({
+    state,
+    send,
+    busy,
+    onInspect,
+}: {
+    state: InventoryState;
+    send: InventoryHook['send'];
+    busy: boolean;
+    onInspect: (i: InventoryItem) => void;
+}) {
+    const drag = useRpgDrag(),
+        c = state.character;
+    return (
+        <section className="hero-paperdoll">
+            <div className="paperdoll-grid">
+                <div className="paperdoll-portrait">
+                    {c.portrait ? (
+                        <img src={c.portrait.url} alt={c.name} />
+                    ) : (
+                        <UserRound size={140} />
+                    )}
+                    <strong>{c.name}</strong>
+                    <span>ГЕРОЙ КАМПАНИИ</span>
+                </div>
+                {Object.entries(state.slots).map(([key, label], index) => {
+                    const equipped = state.items.find(
+                            (i) => i.quantity > 0 && i.equipped_slot === key,
+                        ),
+                        pos = positions[key] ?? [(index % 4) + 1, Math.floor(index / 4) + 6],
+                        target = `equipment:${key}`,
+                        over = drag.over?.key === target;
+                    return (
+                        <div
+                            key={key}
+                            className={`equipment-slot ${equipped ? `has-item rarity-${equipped.definition.rarity}` : ''} ${drag.active?.sourceType === 'inventory_item' && state.items.some((i) => i.id === drag.active?.sourceId && i.quantity === 1 && i.definition.equipment_slots.includes(key)) ? 'is-compatible' : ''} ${over ? (drag.over!.valid ? 'drop-valid' : 'drop-invalid') : ''}`}
+                            style={{ gridColumn: pos[0], gridRow: pos[1] }}
+                            {...drag.destination(
+                                target,
+                                (b) =>
+                                    !busy &&
+                                    b.sourceType === 'inventory_item' &&
+                                    !!state.items.find(
+                                        (i) =>
+                                            i.id === b.sourceId &&
+                                            i.quantity === 1 &&
+                                            i.definition.equipment_slots.includes(key),
+                                    ),
+                                (b) =>
+                                    void send({
+                                        action: 'equip',
+                                        itemId: b.sourceId,
+                                        slot: key,
+                                    }),
+                            )}
+                        >
+                            <button
+                                className={
+                                    drag.active?.sourceId === equipped?.id ? 'is-lifted' : ''
+                                }
+                                aria-label={`${label}: ${equipped?.definition.name ?? 'пусто'}`}
+                                {...(equipped ? drag.source(itemBinding(equipped.id), !busy) : {})}
+                                onClick={() => {
+                                    if (equipped && !drag.consumeClick()) onInspect(equipped);
+                                }}
+                                onDoubleClick={() => {
+                                    if (equipped)
+                                        void send({ action: 'unequip', itemId: equipped.id });
+                                }}
+                            >
+                                <RpgIcon
+                                    icon={
+                                        equipped?.definition.icon ?? slotIcons[key] ?? 'item_ring'
+                                    }
+                                    size={52}
+                                />
+                                <span>{label}</span>
+                                <span className="rpg-tooltip">
+                                    <strong>{equipped?.definition.name ?? label}</strong>
+                                    <small>
+                                        {equipped
+                                            ? 'Перетащите в рюкзак · Двойной щелчок — снять'
+                                            : 'Перетащите совместимый предмет'}
+                                    </small>
+                                </span>
+                            </button>
+                        </div>
+                    );
+                })}
+            </div>
+            <div className="hero-stat-tiles">
+                <span>
+                    <Heart size={18} />
+                    <strong>
+                        {c.hp}
+                        <small> / {c.maxHp}</small>
+                    </strong>
+                    <label>Здоровье</label>
+                </span>
+                <span>
+                    <Shield size={18} />
+                    <strong>{c.ac ?? '—'}</strong>
+                    <label>
+                        Защита{' '}
+                        {c.ac != null && state.base.ac != null && c.ac !== state.base.ac
+                            ? `(${c.ac - state.base.ac >= 0 ? '+' : ''}${c.ac - state.base.ac})`
+                            : ''}
+                    </label>
+                </span>
+                <span>
+                    <Footprints size={18} />
+                    <strong>{c.speed ?? '—'}</strong>
+                    <label>Скорость</label>
+                </span>
+            </div>
+        </section>
     );
 }

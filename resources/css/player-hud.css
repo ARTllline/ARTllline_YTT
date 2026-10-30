@@ -1,14 +1,14 @@
-/* Action deck: a portrait anchor, a readable resource rail, and an expandable action grid. */
+/* Player control deck: interlocking bronze modules around two stable slot banks. */
 .player-view .player-gameplay {
-    --deck-slot: 78px;
-    --deck-gap: 6px;
-    display: flex;
-    flex-direction: row;
-    align-items: flex-end;
-    gap: 26px;
+    --deck-slot: 64px;
+    --deck-gap: 3px;
+    display: grid;
+    grid-template-columns: 174px auto 126px;
+    align-items: end;
+    gap: 10px;
     width: max-content;
-    max-width: calc(100% - 110px);
-    bottom: 0;
+    max-width: calc(100% - 96px);
+    bottom: 8px;
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -16,19 +16,35 @@
     box-shadow: none;
     filter: none;
     isolation: isolate;
+    color: #eadabe;
+}
+.player-view .player-gameplay::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    left: 22px;
+    right: 0;
+    bottom: 29px;
+    height: 40px;
+    background: linear-gradient(#312a1d, #161512 65%, #695137 68%, #1c1812 80%);
+    border: 1px solid #917347;
+    border-radius: 5px 5px 10px 10px;
+    box-shadow:
+        inset 0 0 0 3px #0c0c0b,
+        0 8px 30px #0008;
+    pointer-events: none;
 }
 .player-view .character-hud {
     position: relative;
-    flex: 0 0 132px;
-    width: 132px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-end;
-    gap: 0;
+    width: 174px;
     min-height: 0;
-    padding: 0 0 18px;
-    margin-bottom: 16px;
+    gap: 0;
+    padding: 0 0 5px;
+    margin: 0 0 31px;
     border: 0;
     background: none;
     box-shadow: none;
@@ -37,42 +53,65 @@
     content: '';
     position: absolute;
     z-index: -1;
-    inset: auto -7px 0;
-    height: 80px;
-    background: linear-gradient(#493a26, #201910);
-    clip-path: polygon(10% 0, 90% 0, 100% 100%, 0 100%);
-    border-block: 1px solid #ad8951;
-    box-shadow: inset 0 -4px #0c0906;
+    inset: auto 0 0;
+    height: 54px;
+    background: linear-gradient(#453824, #171511 75%);
+    clip-path: polygon(8% 0, 92% 0, 100% 85%, 90% 100%, 10% 100%, 0 85%);
+    border-block: 1px solid #ac8956;
 }
 .player-view .hero-portrait-anchor {
+    position: relative;
     flex: none;
-    width: 108px;
-    height: 108px;
-    margin-bottom: 12px;
+    width: 132px;
+    height: 132px;
+    margin: 0 0 10px;
 }
 .player-view .hud-portrait {
     position: relative;
+    width: 132px;
+    height: 132px;
     z-index: 1;
-    width: 108px;
-    height: 108px;
-    border: 2px solid #ab8750;
+    padding: 4px;
     border-radius: 50%;
-    outline: 1px solid #dcc08355;
-    outline-offset: 3px;
+    border: 2px solid #bd995e;
+    outline: 1px solid #d1b27b80;
+    outline-offset: 4px;
+    background: radial-gradient(circle at 40% 30%, #756345, #161711 80%);
     box-shadow:
-        0 0 0 5px #17120b,
-        0 0 0 6px #81643c,
-        inset 0 0 20px #000;
-    background: radial-gradient(circle at 40% 30%, #59482f, #17130f 80%);
+        0 0 0 4px #17140e,
+        0 0 0 7px #80623a,
+        0 0 0 9px #100f0c,
+        0 5px 16px #000a;
+    overflow: hidden;
 }
 .player-view .hud-portrait img {
     border-radius: 50%;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.player-view .hud-portrait::after {
+    content: '';
+    position: absolute;
+    inset: 55% 0 0;
+    border-radius: 0 0 50% 50%;
+    background: linear-gradient(transparent, #080b0bdb);
+    pointer-events: none;
 }
 .player-view .hud-portrait:hover {
-    border-color: #d4b479;
+    border-color: #f1d9a4;
     box-shadow:
-        0 0 0 5px #17120b,
-        0 0 0 6px #ac8950;
+        0 0 0 4px #17140e,
+        0 0 0 7px #ab8c52,
+        0 0 0 9px #100f0c;
+}
+.player-view .is-current-turn .hud-portrait {
+    border-color: #e1d397;
+    box-shadow:
+        0 0 0 4px #17140e,
+        0 0 0 7px #baa26b,
+        0 0 0 9px #100f0c,
+        0 0 26px #bea85e4d;
 }
 .portrait-stack-marks {
     position: absolute;
@@ -81,93 +120,129 @@
 }
 .portrait-stack-marks i {
     position: absolute;
-    width: 100px;
-    height: 100px;
-    border: 1px solid #a0804a77;
-    border-radius: 50%;
-    background: #221b13;
-    left: -8px;
+    width: 125px;
+    height: 125px;
+    left: -12px;
     top: -5px;
-    rotate: -7deg;
+    border: 1px solid #9c824d;
+    border-radius: 50%;
+    background: #242016;
 }
 .portrait-stack-marks i + i {
-    left: 9px;
-    top: -8px;
-    rotate: 5deg;
+    left: 12px;
+    top: -5px;
+}
+.portrait-party-count {
+    position: absolute;
+    right: -6px;
+    bottom: 3px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 7px;
+    border: 1px solid #b39760;
+    border-radius: 20px;
+    background: #211d15;
+    color: #ead7ac;
+    font-size: 11px;
+    pointer-events: none;
+}
+.portrait-party-count > span {
+    font-size: 10px;
 }
 .player-view .hud-identity {
-    width: 132px;
-    max-width: 132px;
+    width: 174px;
+    max-width: 174px;
     text-align: center;
     min-width: 0;
 }
 .player-view .hud-character-details {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     width: 100%;
-    display: block;
-    font:
-        19px Georgia,
-        serif;
-    text-align: center;
-    white-space: nowrap;
+    padding: 0 8px;
+    white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: #f0dfbc;
+    font:
+        16px/1.15 Georgia,
+        serif;
+    text-align: center;
+    color: #f1e0b9;
 }
 .player-view .hud-character-details > svg {
     display: none;
 }
 .player-view .hud-hp {
-    position: static;
+    position: absolute;
+    z-index: 2;
+    top: 102px;
+    left: 0;
+    width: 100%;
     justify-content: center;
-    font-size: 17px;
-    gap: 5px;
-    margin: 5px 0 0;
-    color: #f1debd;
-    text-shadow: 0 1px 2px #000;
+    font:
+        17px Georgia,
+        serif;
+    gap: 4px;
+    margin: 0;
+    pointer-events: none;
+    text-shadow: 0 1px 3px #000;
+    color: #fff0d5;
 }
 .player-view .hud-hp small {
-    font-size: 13px;
-    color: #c7b596;
+    font-size: 12px;
+    color: #e5d1b0;
 }
 .player-view .hud-hp > svg {
-    width: 14px;
-    height: 14px;
+    display: none;
 }
 .player-view .hud-hp-track {
-    height: 5px;
-    width: 110px;
-    margin: 8px auto 0;
+    position: absolute;
+    z-index: 2;
+    top: 124px;
+    left: calc(50% - 42px);
+    width: 84px;
+    height: 3px;
+    margin: 0;
+    border: 0;
+    background: #0d0a09;
+    pointer-events: none;
+}
+.player-view .hud-hp-track i {
+    background: linear-gradient(90deg, #813e39, #c8785d);
 }
 .player-view .hud-turn,
 .player-view .hud-offscene {
     position: absolute;
     left: 50%;
+    bottom: calc(100% + 14px);
     transform: translateX(-50%);
-    bottom: calc(100% + 15px);
     white-space: nowrap;
-    padding: 5px 10px;
-    border: 1px solid #8d744577;
-    background: #201911ed;
-    font-size: 11px;
-    border-radius: 2px;
+    border: 1px solid #947e4b;
+    background: #1b1b14f5;
+    border-radius: 12px 12px 3px 3px;
+    padding: 4px 10px;
+    font-size: 10px;
+    color: #c1b598;
 }
 .player-view .hud-turn.is-current {
-    color: #f5d788;
-    border-color: #b29350;
+    color: #fff0b8;
+    border-color: #c9af71;
 }
 .player-view .hud-conditions {
     position: absolute;
-    right: calc(100% + 10px);
-    bottom: 44px;
-    max-width: 100px;
+    right: calc(100% + 8px);
+    bottom: 45px;
+    max-width: 90px;
 }
 .player-view .action-deck {
     position: relative;
-    flex: 0 1 auto;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    width: calc(var(--deck-slot) * 8 + var(--deck-gap) * 7 + 22px);
+    gap: 0;
+    width: calc(var(--deck-slot) * 8 + var(--deck-gap) * 6 + 36px);
     min-width: 0;
     padding: 0;
     border: 0;
@@ -175,137 +250,212 @@
     background: none;
     box-shadow: none;
 }
-.player-view .action-deck .hud-resources {
-    width: 100%;
-    max-width: none;
-    flex: 0 0 auto;
-    align-self: stretch;
+.player-view .deck-upper-strip {
     display: flex;
-    flex-wrap: wrap;
-    align-items: stretch;
-    gap: 7px;
-    max-height: none;
-    padding: 0 8px;
+    align-items: center;
+    gap: 10px;
+    margin: 0 16px -1px;
+    padding: 3px 7px;
+    min-height: 38px;
+    border: 1px solid #95784b;
+    border-radius: 9px 9px 0 0;
+    background: linear-gradient(#373629, #171b18);
+    box-shadow:
+        inset 0 0 0 2px #10120f,
+        0 -5px 12px #0003;
+}
+.player-view .action-deck .hud-resources {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #917347 #171911;
+    padding: 0;
     margin: 0;
+    width: auto;
+    max-width: none;
+    max-height: none;
 }
 .player-view .action-deck .hud-resource {
     display: grid;
-    grid-template-columns: 28px minmax(0, 1fr);
+    flex: 0 0 auto;
+    grid-template-columns: 20px auto;
     grid-template-rows: auto auto;
     align-items: center;
-    column-gap: 8px;
-    row-gap: 6px;
-    flex: 1 1 140px;
-    min-width: 0;
-    padding: 9px 10px;
-    min-height: 59px;
+    gap: 2px 4px;
+    padding: 4px 6px;
+    min-height: 30px;
+    border: 0;
+    border-right: 1px solid #9d825044;
+    border-radius: 0;
+    background: none;
     text-align: left;
-    background: linear-gradient(140deg, #31291ff2, #19150fed);
-    border: 1px solid #8a70424d;
-    border-top-color: #c4a05a66;
-    border-radius: 3px 3px 0 0;
 }
-.player-view .action-deck .hud-resource:hover:not(:disabled) {
-    background: #423624;
-    border-color: #a68b57;
+.player-view .action-deck .hud-resource:hover {
+    background: #8c7d3e20;
+    filter: brightness(1.15);
 }
 .player-view .action-deck .hud-resource > .rpg-icon {
-    width: 28px;
-    height: 28px;
+    width: 20px;
+    height: 20px;
     grid-row: 1/3;
 }
 .player-view .resource-heading {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 9px;
+    gap: 4px;
     width: 100%;
 }
 .player-view .action-deck .resource-name {
     display: block;
-    font-size: 12px;
-    color: #d7c4a3;
+    font-size: 10px;
+    color: #bbaf91;
 }
 .player-view .resource-value {
-    white-space: nowrap;
-    font-size: 16px;
+    color: #f1e4c4;
+    font-size: 15px;
+    line-height: 1;
     font-weight: 600;
-    color: #f0dfbc;
     font-variant-numeric: tabular-nums;
 }
 .player-view .resource-value > small {
-    font-size: 11px;
-    font-weight: 400;
-    color: #baa483;
+    color: #968e76;
+    font-size: 9px;
+    font-weight: normal;
     margin-left: 2px;
 }
 .player-view .action-deck .resource-visual {
     display: flex;
     grid-column: 2;
     justify-content: flex-start;
-    gap: 5px;
-    width: auto;
+    gap: 3px;
     min-width: 0;
-    height: 9px;
+    width: auto;
     max-width: none;
+    height: 5px;
 }
 .player-view .action-deck .resource-visual i {
-    flex: 0 0 8px;
-    width: 8px;
-    height: 8px;
-    min-width: 0;
-    background: #15100b;
-    border: 1px solid #a794745e;
+    flex: 0 0 4px;
+    width: 4px;
+    height: 5px;
+    border: 1px solid #998d7055;
+    background: #080d0c;
     box-shadow: none;
 }
 .player-view .action-deck .resource-visual.is-pips i {
     border-radius: 50%;
 }
-.player-view .action-deck .resource-visual.is-segments {
-    gap: 4px;
-}
 .player-view .action-deck .resource-visual.is-segments i {
-    width: 7px;
-    height: 7px;
-    flex-basis: 7px;
-    transform: rotate(45deg);
     border-radius: 0;
+    transform: rotate(45deg);
 }
 .player-view .action-deck .resource-visual i.is-filled {
-    background: var(--resource-accent, #d9b86e);
-    border-color: var(--resource-accent, #d9b86e);
-    box-shadow: inset 0 1px #ffffff33;
+    border-color: var(--resource-accent, #bba16c);
+    background: var(--resource-accent, #bba16c);
+    box-shadow: 0 0 4px #d5c99420;
+}
+.player-view .action-deck .hud-resource.is-depleted .resource-value {
+    color: #df9d84;
+}
+.player-view .deck-tools {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+}
+.player-view .deck-tools .icon-button {
+    width: 24px;
+    height: 26px;
+    min-height: 26px;
+    border: 0;
+    padding: 3px;
+    background: none;
+    color: #bda87f;
+}
+.player-view .hotbar-roll-stance {
+    margin: 0;
+    display: flex;
+    gap: 2px;
+}
+.player-view .hotbar-roll-stance button {
+    width: 21px;
+    height: 24px;
+    min-height: 24px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid #8f78484d;
+    background: #151a15;
+    color: #aa9877;
+    font-size: 14px;
+}
+.player-view .hotbar-roll-stance button[aria-pressed='true'] {
+    border-color: #c7aa6b;
+    background: #51452b;
+    color: #f1dda8;
 }
 .player-view .deck-action-space {
     position: relative;
-    padding: 0 10px 10px;
-    border: 1px solid #8b6c3d;
+    padding: 0 9px 9px;
+    border: 1px solid #a78a55;
     border-bottom-width: 3px;
-    background: linear-gradient(#2d2419e8, #14110eeb);
+    border-radius: 7px 7px 2px 2px;
+    background: linear-gradient(#313126, #121714 35%, #171b17);
     box-shadow:
-        inset 0 0 0 2px #100d09,
-        0 8px 25px #0007;
+        inset 0 0 0 2px #11100c,
+        inset 0 0 0 3px #bfa36926,
+        0 8px 24px #0006;
+}
+.player-view .deck-action-space::before,
+.player-view .deck-action-space::after {
+    content: '';
+    position: absolute;
+    top: 7px;
+    width: 12px;
+    height: 12px;
+    border-top: 2px solid #b7995e;
+    pointer-events: none;
+}
+.player-view .deck-action-space::before {
+    left: 6px;
+    border-left: 2px solid #b7995e;
+}
+.player-view .deck-action-space::after {
+    right: 6px;
+    border-right: 2px solid #b7995e;
 }
 .player-view .deck-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 27px;
-    color: #d9c08c;
+    height: 24px;
+    padding: 0 6px;
+    color: #c2ab7b;
 }
 .player-view .deck-heading > span {
-    font-size: 10px;
-    letter-spacing: 0.18em;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+}
+.player-view .deck-heading i {
+    color: #a3854f;
+    font-size: 8px;
+    font-style: normal;
 }
 .player-view .deck-heading > small {
-    font-size: 11px;
-    color: #b6a080;
+    font-size: 10px;
+    color: #a49c83;
 }
 .player-view .rpg-hotbar {
     display: grid;
-    grid-template-columns: repeat(8, var(--deck-slot));
-    grid-auto-rows: var(--deck-slot);
-    gap: var(--deck-gap);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -314,116 +464,173 @@
     overflow: visible;
     animation: deck-page-in 120ms ease-out;
 }
+.player-view .deck-bank {
+    position: relative;
+    min-width: 0;
+}
+.player-view .deck-bank + .deck-bank::before {
+    content: '';
+    position: absolute;
+    left: -9px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(#b09256, #4c4931 45%, #b09256);
+    box-shadow: 1px 0 #050907;
+}
+.player-view .deck-bank-seal {
+    display: none;
+}
+.player-view .deck-bank-slots {
+    display: grid;
+    grid-template-columns: repeat(4, var(--deck-slot));
+    grid-template-rows: repeat(2, var(--deck-slot));
+    gap: var(--deck-gap);
+}
 .player-view .rpg-slot {
     width: var(--deck-slot);
     height: var(--deck-slot);
+    position: relative;
+    transition: transform 110ms;
 }
 .player-view .rpg-slot > button:first-child {
     width: 100%;
     height: 100%;
     padding: 3px;
-    border-radius: 2px;
-    border: 1px solid #8e754d80;
-    background: #211a12;
+    border: 1px solid #968967;
+    border-radius: 1px;
+    background: radial-gradient(ellipse at 50% 25%, #3c4436, #101611 80%);
     box-shadow:
-        inset 0 0 0 2px #0b0907,
-        inset 0 0 9px #0008;
+        inset 0 0 0 2px #070b08,
+        inset 0 0 0 3px #a4915c30,
+        0 2px 3px #0008;
     transition:
-        transform 110ms ease-out,
-        border-color 110ms,
-        background 110ms;
+        border-color 100ms,
+        box-shadow 100ms,
+        transform 100ms;
+}
+.player-view .rpg-slot[data-entry-kind='spell'] > button {
+    border-color: #7c8b88;
+}
+.player-view .rpg-slot[data-entry-kind='item'] > button {
+    border-color: #b29a64;
 }
 .player-view .rpg-slot > button > .rpg-icon {
     width: calc(var(--deck-slot) - 8px);
     height: calc(var(--deck-slot) - 8px);
-    filter: saturate(0.9) drop-shadow(0 2px 2px #000);
+    filter: saturate(0.85) drop-shadow(0 3px 2px #000b);
 }
 .player-view .rpg-slot > button:hover:not(:disabled) {
-    border-color: #c2a46c;
-    transform: translateY(-2px);
-    background: #443420;
+    border-color: #e9d9a3;
+    transform: translateY(-1px);
+    background: #363c2b;
+    box-shadow:
+        inset 0 0 0 2px #625334,
+        0 0 12px #c6ae6933;
 }
 .player-view .rpg-slot > button[aria-pressed='true'] {
-    border-color: #f2d28a;
+    border-color: #f7df9a;
     box-shadow:
-        inset 0 0 0 2px #aa8037,
-        0 2px #e5bc70;
+        inset 0 0 0 2px #b29953,
+        0 0 12px #dac78840;
 }
 .player-view .rpg-slot > button:active {
     transform: translateY(1px);
 }
-.player-view .rpg-slot > button[aria-label^='Пустая'] {
-    background: linear-gradient(145deg, #100d09, #29201688);
-    border-color: #94764b55;
-    color: #a88a564d;
+.player-view .rpg-slot[data-entry-kind='empty'] > button {
+    background: linear-gradient(135deg, #0c120f, #242c21);
+    border-color: #766e4f66;
+    color: #8a84544d;
+    box-shadow:
+        inset 0 0 0 2px #060a08,
+        inset 0 4px 12px #0008;
+}
+.player-view .rpg-slot[data-entry-kind='empty'] > button > svg {
+    width: 12px;
+    opacity: 0.5;
 }
 .player-view .slot-key {
     font:
-        11px ui-monospace,
+        9px ui-monospace,
         monospace;
-    top: 4px;
-    left: 4px;
-    color: #f5e2b6;
-    z-index: 1;
-    background: #120d08c9;
+    top: 2px;
+    left: 2px;
+    color: #e9d8ad;
+    background: #0c100dd9;
+    border-radius: 0 0 3px;
     padding: 1px 3px;
-    min-width: 15px;
+    min-width: 13px;
     text-align: center;
-    text-shadow: 0 1px #000;
-}
-.player-view .slot-cost {
-    font-size: 14px;
-    gap: 5px;
-    color: #efe1c2;
-}
-.player-view .slot-cost > span {
-    gap: 3px;
-    color: #f4e1bf;
+    z-index: 1;
 }
 .player-view .rpg-slot > button > .slot-cost {
     bottom: 2px;
     right: 2px;
-    border-radius: 1px;
-    padding: 2px 4px;
-    background: #130c07ed;
-    line-height: 18px;
-    border-top: 1px solid #b0935a55;
+    padding: 0 3px;
+    background: #0b100de8;
+    border-top: 1px solid #a58b4d66;
+    font-size: 11px;
+    line-height: 16px;
+    gap: 2px;
+}
+.player-view .rpg-slot .slot-cost > span {
+    gap: 2px;
+}
+.player-view .rpg-slot .slot-cost .rpg-icon {
+    width: 13px;
+    height: 13px;
+}
+.player-view .rpg-slot .slot-quantity {
+    font-size: 13px;
+    right: 3px;
+    bottom: 2px;
 }
 .player-view .rpg-slot > button.is-unavailable > .rpg-icon {
-    filter: saturate(0.35) brightness(0.65);
+    filter: saturate(0.3) brightness(0.58);
+}
+.player-view .rpg-slot > button.is-unavailable {
+    border-color: #725848;
+    cursor: not-allowed;
 }
 .player-view .slot-unavailable-mark {
     position: absolute;
-    top: 3px;
-    right: 5px;
-    color: #e4b39a;
+    top: 2px;
+    right: 4px;
+    color: #edb296;
     font-size: 17px;
-    text-shadow: 0 1px 2px #000;
-}
-.player-view .rpg-slot > button.is-unavailable {
-    cursor: not-allowed;
-    border-color: #715745;
-}
-.player-view .rpg-slot.is-drop-target {
-    transform: translateY(-3px);
+    text-shadow: 0 1px 3px #000;
 }
 .player-view .rpg-slot.is-drop-target > button {
-    border: 2px solid #e4c27c;
-    background: #59482f;
-    box-shadow: inset 0 0 0 2px #8c6e37;
+    border-color: #e6d397;
+    background: #6d5f36;
+    box-shadow:
+        inset 0 0 0 2px #d0b86d,
+        0 0 14px #c7b5665e;
+}
+.player-view .rpg-slot.is-drop-rejected > button {
+    border-color: #d88c72;
+    background: repeating-linear-gradient(
+        45deg,
+        #5a342c80,
+        #5a342c80 5px,
+        #181811 5px,
+        #181811 10px
+    );
+    box-shadow: inset 0 0 0 1px #bb6c59;
 }
 .player-view .rpg-slot.is-lifted {
-    opacity: 0.35;
+    opacity: 0.3;
 }
 .player-view .rpg-slot.is-settling {
-    animation: deck-settle 200ms ease-out;
+    animation: deck-settle 160ms ease-out;
 }
 .player-view .rpg-slot-tooltip {
     width: 250px;
-    padding: 14px;
-    gap: 8px;
+    padding: 12px;
+    gap: 7px;
     border-radius: 3px;
     z-index: 30;
+    background: linear-gradient(#2c2c22, #10150ffb);
 }
 .player-view .rpg-slot-tooltip strong {
     font-size: 15px;
@@ -435,131 +642,221 @@
     color: #edb59c;
     font-size: 12px;
 }
-.player-view .rpg-slot:nth-child(8n) .rpg-slot-tooltip {
-    left: auto;
-    right: 0;
-    transform: none;
-}
 .player-view .deck-navigation {
     display: flex;
     align-items: center;
-    gap: 8px;
-    min-height: 40px;
-    padding: 0 5px 5px;
-    background: linear-gradient(90deg, transparent, #251b10ed 6%, #251b10ed 94%, transparent);
+    justify-content: center;
+    gap: 5px;
+    min-height: 35px;
+    padding: 3px 8px 0;
+    background: none;
 }
 .player-view .deck-pages {
     display: flex;
-    gap: 4px;
+    gap: 5px;
 }
 .player-view .deck-pages button,
-.player-view .hotbar-browser-button {
-    min-height: 32px;
-    padding: 5px 12px;
-    font-size: 12px;
-    color: #d5bd8c;
-    border: 1px solid #83663b77;
-    border-radius: 4px 4px 10px 10px;
-    background: linear-gradient(#372a1a, #1a140d);
-}
-.player-view .deck-pages button small {
-    font-size: 10px;
-    color: #ae9775;
-    margin-left: 4px;
-}
-.player-view .deck-pages button[aria-pressed='true'] {
-    border-color: #c9a86d;
-    color: #f5e5be;
-    background: linear-gradient(#5b472b, #2a1e11);
-}
-.player-view .deck-pages button:hover:not(:disabled),
-.player-view .hotbar-browser-button:hover:not(:disabled) {
-    background: #58462b;
-    border-color: #cfb37e;
-}
-.player-view .hotbar-browser-button {
-    margin-left: auto;
-    gap: 6px;
+.player-view .hotbar-browser-button,
+.player-view .deck-window-tab {
     display: flex;
     align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 29px;
+    padding: 3px 12px;
+    border: 1px solid #866c3f;
+    border-radius: 15px;
+    background: linear-gradient(#343326, #131710 50%, #29281d);
+    color: #c8b793;
+    font-size: 11px;
+    box-shadow:
+        inset 0 0 0 2px #0c100b,
+        0 2px 3px #0008;
+    margin: 0;
 }
-.player-view .deck-navigation .icon-button {
-    width: 30px;
-    height: 30px;
-    min-height: 30px;
-    padding: 5px;
-    color: #cdb58d;
-    border: 1px solid #876b3f66;
-    border-radius: 3px;
-    background: #241b10;
-}
-.player-view .deck-navigation .icon-button:hover:not(:disabled),
-.player-view .deck-navigation .icon-button[aria-pressed='true'] {
-    background: #554027;
-    border-color: #cfb37e;
-}
-.player-view .deck-navigation .hotbar-roll-stance {
-    margin-left: 0;
-}
-.player-view .hotbar-roll-stance button {
-    width: 24px;
-    height: 25px;
-    font-size: 14px;
-}
-.player-view .hotbar-save-error {
-    position: static;
-    font-size: 12px;
-}
-.player-view .hero-roster {
-    left: -4px;
-    bottom: calc(100% + 19px);
-    width: 115px;
-    max-width: none;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: none;
-    box-shadow: none;
-}
-.player-view .hero-roster > .eyebrow {
+.player-view .deck-pages button small {
     display: none;
 }
-.player-view .hero-roster > div {
+.player-view .deck-tab-mark {
+    color: #ad9561;
+    font:
+        12px Georgia,
+        serif;
+}
+.player-view .deck-pages button[aria-pressed='true'],
+.player-view .deck-navigation button[aria-pressed='true'] {
+    color: #f9e8bc;
+    border-color: #c7a971;
+    background: linear-gradient(#635836, #2b3020 60%, #443e27);
+    box-shadow:
+        inset 0 0 0 2px #17190e,
+        0 0 9px #ac914c29;
+}
+.player-view .deck-navigation button:hover {
+    border-color: #d3b87d;
+    color: #f1e0b7;
+}
+.player-view .hotbar-save-error {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    right: 0;
+    max-width: 400px;
+    font-size: 12px;
+    background: #33221df5;
+    padding: 8px;
+    border: 1px solid #bc8662;
+    z-index: 4;
+}
+.player-view .deck-combat-support {
+    display: flex;
     flex-direction: column;
-    overflow: visible;
-    margin: 0;
-    gap: 12px;
     align-items: center;
+    width: 126px;
+    margin: 0 0 34px;
+    padding: 9px 8px 7px;
+    border: 1px solid #92784d;
+    border-radius: 5px 18px 4px 4px;
+    background: linear-gradient(120deg, #353127, #171a14 70%);
+    box-shadow:
+        inset 0 0 0 3px #0c100b,
+        inset 0 0 0 4px #a88c5026;
+}
+.player-view .combat-context-heading {
+    color: #ab9d78;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+}
+.player-view .combat-defense {
+    position: relative;
+    width: 78px;
+    height: 88px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    padding: 0;
+    background: none;
+    color: #eadbb4;
+}
+.player-view .combat-defense > svg {
+    position: absolute;
+    width: 70px;
+    height: 78px;
+    fill: #26261b;
+    stroke: #ab8d53;
+    stroke-width: 0.9px;
+    filter: drop-shadow(0 3px 2px #000a);
+}
+.player-view .combat-defense > span {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding-bottom: 8px;
+}
+.player-view .combat-defense small {
+    font-size: 8px;
+    color: #b7a786;
+    letter-spacing: 0.07em;
+}
+.player-view .combat-defense strong {
+    font:
+        32px/1 Georgia,
+        serif;
+    color: #f3e7cb;
+}
+.player-view .combat-movement {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 2px 0 10px;
+    color: #c3b28c;
+}
+.player-view .combat-movement strong {
+    font:
+        16px Georgia,
+        serif;
+}
+.player-view .combat-movement small {
+    font-size: 9px;
+}
+.player-view .combat-context-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: 100%;
+    padding-top: 7px;
+    border-top: 1px solid #a48b4d4d;
+    color: #afba9c;
+    font-size: 10px;
+    min-height: 26px;
+    text-align: center;
+}
+.player-view .deck-combat-support.is-current {
+    border-color: #ccba75;
+}
+.player-view .deck-combat-support.is-current .combat-context-state {
+    color: #f1dfa5;
+}
+.player-view .hero-roster {
+    left: -16px;
+    bottom: calc(100% + 20px);
+    width: 164px;
+    max-width: min(220px, 100vw);
+    padding: 8px;
+    border: 1px solid #917448;
+    border-radius: 7px;
+    background: #191c15fa;
+    box-shadow: 0 10px 30px #000b;
+}
+.player-view .hero-roster > .eyebrow {
+    display: block;
+    font-size: 9px;
+    text-align: center;
+    color: #bda579;
+}
+.player-view .hero-roster > div {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: auto;
+    max-height: 40vh;
+    margin-top: 8px;
 }
 .player-view .hero-roster [role='menuitemradio'] {
-    width: 92px;
-    padding: 0 0 6px;
-    gap: 3px;
-    background: linear-gradient(transparent 58%, #21170ef5 58%);
-    border-color: transparent;
-    border-radius: 0;
-    box-shadow: none;
+    display: grid;
+    grid-template-columns: 42px 1fr;
+    width: 100%;
+    padding: 5px;
+    gap: 3px 7px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    text-align: left;
 }
 .player-view .hero-roster [role='menuitemradio'] > img,
 .player-view .hero-roster [role='menuitemradio'] > span {
-    width: 58px;
-    height: 65px;
-    border: 1px solid #a4834a;
-    outline: 3px solid #16110b;
-    border-radius: 30% 30% 18% 18%;
-    font-size: 28px;
+    width: 42px;
+    height: 42px;
+    grid-row: 1/3;
+    border: 1px solid #a58d57;
+    outline: 2px solid #0b100a;
+    border-radius: 50%;
+    object-fit: cover;
+    font-size: 22px;
 }
-.player-view .hero-roster [aria-checked='true'] > img,
-.player-view .hero-roster [aria-checked='true'] > span {
-    border-color: #ecd18b;
-    outline-color: #604b2b;
+.player-view .hero-roster [aria-checked='true'] {
+    border-color: #ad955d;
+    background: #5b57332b;
 }
 .player-view .hero-roster strong {
-    font-size: 13px;
-    margin-top: 5px;
+    font-size: 11px;
+    overflow-wrap: anywhere;
 }
 .player-view .hero-roster small {
-    font-size: 11px;
+    font-size: 10px;
+    color: #b7a785;
 }
 .player-view .character-compact-panel,
 .player-view .ability-browser {
@@ -567,53 +864,34 @@
 }
 .player-view .ability-browser {
     width: min(660px, calc(100vw - 36px));
-    max-height: min(490px, calc(100dvh - 360px));
+    max-height: min(490px, calc(100dvh - 300px));
 }
 .player-view .ability-browser .ability-filters {
     gap: 6px;
 }
-.player-view .ability-browser > header {
-    position: relative;
-    background-image: none;
-}
-.player-view .ability-browser > header::after {
-    content: '';
-    position: absolute;
-    bottom: -6px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 110px;
-    height: 12px;
-    pointer-events: none;
-    background: #a98a54;
-    mask: url('/assets/player/frames/divider.png') center / contain no-repeat;
-}
 .player-view .ability-browser .ability-filters button {
-    font-size: 12px;
     padding: 6px 10px;
+    font-size: 12px;
 }
 .player-view .ability-browser-grid > button {
     padding: 12px;
     gap: 8px;
     touch-action: none;
 }
-.player-view .ability-browser-grid > button > strong {
-    font-size: 13px;
-}
-.player-view .ability-browser-grid .slot-cost .rpg-icon {
-    width: 17px;
-    height: 17px;
-}
-.player-view .ability-browser-grid .browser-drag-hint {
-    font-size: 10px;
-}
 .player-view .ability-browser-grid > button.is-lifted {
     opacity: 0.35;
 }
+.player-view .ability-browser-grid > button > strong {
+    font-size: 13px;
+}
+.player-view .player-gameplay :is(button, [role='menuitemradio']):focus-visible {
+    outline: 2px solid #ead39b;
+    outline-offset: 2px;
+}
 @keyframes deck-page-in {
     from {
-        opacity: 0.45;
-        transform: translateY(3px);
+        opacity: 0.5;
+        transform: translateY(2px);
     }
     to {
         opacity: 1;
@@ -622,158 +900,280 @@
 }
 @keyframes deck-settle {
     from {
-        transform: translateY(-5px);
+        transform: translateY(-3px);
     }
     to {
         transform: none;
     }
 }
-@media (max-width: 1200px) and (min-width: 761px) {
+@media (min-width: 1600px) {
     .player-view .player-gameplay {
-        --deck-slot: 67px;
-        gap: 20px;
-        max-width: calc(100% - 88px);
+        --deck-slot: 70px;
+        grid-template-columns: 184px auto 134px;
+        gap: 12px;
     }
-    .player-view .character-hud {
-        flex-basis: 115px;
-        width: 115px;
+    .player-view .character-hud,
+    .player-view .hud-identity {
+        width: 184px;
+        max-width: 184px;
     }
-    .player-view .deck-navigation {
-        gap: 5px;
+    .player-view .deck-combat-support {
+        width: 134px;
     }
-    .player-view .deck-pages button {
+}
+@media (max-width: 1100px) and (min-width: 761px) {
+    .player-view .player-gameplay {
+        --deck-slot: 51px;
+        grid-template-columns: 126px auto 100px;
+        max-width: calc(100% - 28px);
+        gap: 7px;
+    }
+    .player-view .character-hud,
+    .player-view .hud-identity {
+        width: 126px;
+        max-width: 126px;
+    }
+    .player-view .hero-portrait-anchor,
+    .player-view .hud-portrait {
+        width: 108px;
+        height: 108px;
+    }
+    .portrait-stack-marks i {
+        width: 104px;
+        height: 104px;
+    }
+    .player-view .hud-hp {
+        top: 80px;
+        font-size: 16px;
+    }
+    .player-view .hud-hp-track {
+        top: 100px;
+        width: 70px;
+        left: calc(50% - 35px);
+    }
+    .player-view .hud-character-details {
+        font-size: 14px;
+    }
+    .player-view .deck-combat-support {
+        width: 100px;
+        padding-inline: 5px;
+    }
+    .player-view .deck-upper-strip {
+        margin-inline: 5px;
+        gap: 4px;
+        padding-inline: 3px;
+    }
+    .player-view .deck-pages button,
+    .player-view .hotbar-browser-button,
+    .player-view .deck-window-tab {
         padding-inline: 8px;
+        gap: 4px;
     }
 }
 @media (max-width: 760px) {
     .player-view .player-gameplay {
-        --deck-slot: 60px;
+        --deck-slot: 50px;
         width: calc(100% - 12px);
         max-width: none;
-        gap: 12px;
-        bottom: 0;
-        padding: 0;
-        align-items: flex-end;
+        grid-template-columns: 70px minmax(0, 1fr);
+        gap: 4px 8px;
+        bottom: 4px;
+    }
+    .player-view .player-gameplay::before {
+        left: 0;
+        bottom: 30px;
+        height: 32px;
     }
     .player-view .character-hud {
-        flex: 0 0 70px;
+        grid-column: 1;
+        grid-row: 1/3;
         width: 70px;
-        margin-bottom: 8px;
-        padding-bottom: 12px;
+        padding: 0 0 8px;
+        margin-bottom: 33px;
     }
     .player-view .character-hud::after {
+        height: 50px;
         inset-inline: -3px;
-        height: 58px;
+    }
+    .player-view .hero-portrait-anchor,
+    .player-view .hud-portrait {
+        width: 62px;
+        height: 62px;
     }
     .player-view .hero-portrait-anchor {
-        width: 60px;
-        height: 60px;
         margin-bottom: 8px;
     }
     .player-view .hud-portrait {
-        width: 60px;
-        height: 60px;
+        padding: 2px;
         outline-offset: 2px;
         box-shadow:
-            0 0 0 3px #17120b,
-            0 0 0 4px #81643c;
+            0 0 0 3px #15140e,
+            0 0 0 4px #977a46;
     }
     .portrait-stack-marks i {
-        width: 55px;
-        height: 55px;
-        left: -5px;
-        top: -3px;
+        width: 58px;
+        height: 58px;
+        left: -4px;
+        top: -4px;
     }
     .portrait-stack-marks i + i {
-        left: 5px;
+        left: 4px;
         top: -5px;
+    }
+    .portrait-party-count {
+        right: -3px;
+        bottom: -6px;
+        font-size: 9px;
+        padding: 1px 4px;
     }
     .player-view .hud-identity {
         width: 70px;
         max-width: 70px;
     }
     .player-view .hud-character-details {
-        font-size: 14px;
+        font-size: 11px;
+        line-height: 1.2;
+        padding: 0 2px;
     }
     .player-view .hud-hp {
-        font-size: 13px;
-        margin-top: 5px;
+        top: 42px;
+        font-size: 12px;
         gap: 2px;
     }
     .player-view .hud-hp small {
-        font-size: 10px;
-    }
-    .player-view .hud-hp > svg {
-        display: none;
+        font-size: 9px;
     }
     .player-view .hud-hp-track {
-        width: 62px;
-        height: 3px;
-        margin-top: 6px;
+        top: 57px;
+        left: calc(50% - 21px);
+        width: 42px;
+        height: 2px;
     }
     .player-view .hud-turn,
     .player-view .hud-offscene {
         font-size: 9px;
         padding: 3px 5px;
-        bottom: calc(100% + 11px);
+        bottom: calc(100% + 10px);
+    }
+    .player-view .hud-conditions {
+        display: none;
     }
     .player-view .action-deck {
-        flex: 1 1 0;
-        width: 0;
-        gap: 5px;
+        grid-column: 2;
+        grid-row: 2;
+        width: 100%;
     }
-    .player-view .action-deck .hud-resources {
-        padding: 0;
+    .player-view .deck-combat-support {
+        grid-column: 2;
+        grid-row: 1;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        width: 100%;
+        margin: 0;
+        padding: 3px 8px;
+        min-height: 28px;
+        border-radius: 8px 8px 2px 2px;
+        gap: 8px;
+    }
+    .player-view .combat-context-heading {
+        display: none;
+    }
+    .player-view .combat-defense {
+        width: auto;
+        height: 20px;
+        display: flex;
         gap: 4px;
     }
-    .player-view .action-deck .hud-resource {
-        flex: 1 1 calc(50% - 4px);
-        min-height: 39px;
-        padding: 5px 6px;
-        grid-template-columns: 19px 1fr;
-        gap: 3px 5px;
-    }
-    .player-view .action-deck .hud-resource > .rpg-icon {
+    .player-view .combat-defense > svg {
+        position: static;
         width: 19px;
-        height: 19px;
+        height: 20px;
+        stroke-width: 1.5px;
     }
-    .player-view .action-deck .resource-name {
+    .player-view .combat-defense > span {
+        padding: 0;
+    }
+    .player-view .combat-defense small {
+        display: none;
+    }
+    .player-view .combat-defense strong {
+        font-size: 17px;
+    }
+    .player-view .combat-movement {
+        margin: 0;
+        gap: 3px;
+    }
+    .player-view .combat-movement strong {
+        font-size: 13px;
+    }
+    .player-view .combat-movement small {
+        display: none;
+    }
+    .player-view .combat-context-state {
+        min-height: 0;
+        padding: 0;
+        border: 0;
+        width: auto;
         font-size: 10px;
     }
-    .player-view .resource-heading {
-        gap: 4px;
+    .player-view .deck-upper-strip {
+        min-height: 32px;
+        margin-inline: 4px;
+        padding: 2px;
+        gap: 3px;
+        border-radius: 3px 3px 0 0;
+    }
+    .player-view .action-deck .hud-resource {
+        padding: 2px 6px;
+        min-height: 27px;
+        grid-template-columns: 17px auto;
+        gap: 2px 4px;
+    }
+    .player-view .action-deck .hud-resource > .rpg-icon {
+        width: 17px;
+        height: 17px;
+    }
+    .player-view .action-deck .resource-name {
+        font-size: 9px;
     }
     .player-view .resource-value {
         font-size: 12px;
     }
     .player-view .resource-value > small {
-        font-size: 9px;
+        font-size: 8px;
     }
     .player-view .action-deck .resource-visual {
-        height: 6px;
-        gap: 3px;
+        gap: 2px;
+        height: 4px;
     }
     .player-view .action-deck .resource-visual i {
-        flex-basis: 6px;
-        width: 6px;
-        height: 6px;
+        width: 4px;
+        height: 4px;
+        flex-basis: 4px;
     }
-    .player-view .action-deck .resource-visual.is-segments {
-        gap: 3px;
+    .player-view .deck-tools {
+        gap: 0;
     }
-    .player-view .action-deck .resource-visual.is-segments i {
-        flex-basis: 5px;
-        width: 5px;
-        height: 5px;
+    .player-view .deck-tools .icon-button {
+        width: 23px;
+    }
+    .player-view .action-deck:not(.is-expanded) .hotbar-roll-stance {
+        display: none;
+    }
+    .player-view .action-deck.is-expanded .deck-upper-strip {
+        flex-wrap: wrap;
     }
     .player-view .deck-action-space {
-        padding: 0 5px 6px;
+        padding: 0 6px 6px;
     }
     .player-view .deck-heading {
         height: 22px;
+        padding: 0 2px;
     }
     .player-view .deck-heading > span {
         font-size: 8px;
+        gap: 4px;
     }
     .player-view .deck-heading > small {
         font-size: 9px;
@@ -783,114 +1183,90 @@
         flex-wrap: nowrap;
         overflow-x: auto;
         overflow-y: hidden;
-        scrollbar-width: none;
-        overscroll-behavior-x: contain;
+        gap: 12px;
+        scrollbar-width: thin;
+        scrollbar-color: #917347 #121711;
+        /* The shared touch engine scrolls in pointer increments; snapping would
+           pull each small increment back to the bank's start. */
         scroll-snap-type: none;
+        overscroll-behavior-x: contain;
+        padding-bottom: 4px;
     }
-    .player-view .rpg-hotbar::-webkit-scrollbar {
-        display: none;
+    .player-view .deck-bank {
+        flex: 0 0 auto;
     }
-    .player-view .rpg-slot {
-        flex: 0 0 var(--deck-slot);
+    .player-view .deck-bank-slots {
+        grid-template-columns: repeat(4, var(--deck-slot));
+        grid-template-rows: repeat(2, var(--deck-slot));
+    }
+    .player-view .deck-bank + .deck-bank::before {
+        left: -7px;
     }
     .player-view .slot-key {
-        font-size: 9px;
-        top: 3px;
-        left: 3px;
-    }
-    .player-view .slot-cost {
-        font-size: 12px;
+        font-size: 8px;
+        min-width: 11px;
+        padding: 0 2px;
     }
     .player-view .rpg-slot > button > .slot-cost {
+        font-size: 10px;
+        line-height: 13px;
         padding: 0 2px;
-        line-height: 16px;
     }
-    .player-view .slot-cost .rpg-icon {
-        width: 14px;
-        height: 14px;
+    .player-view .rpg-slot .slot-cost .rpg-icon {
+        width: 11px;
+        height: 11px;
     }
     .player-view .deck-navigation {
-        flex-wrap: wrap;
-        gap: 4px;
-        padding: 0 0 5px;
+        padding: 3px 0 0;
+        gap: 3px;
+        min-height: 32px;
+        justify-content: space-between;
     }
     .player-view .deck-pages {
-        flex: 1 1 auto;
+        gap: 3px;
     }
     .player-view .deck-pages button {
-        padding: 4px 7px;
-        font-size: 11px;
-        min-height: 30px;
+        padding: 3px 7px;
+        min-height: 28px;
+        font-size: 10px;
+        gap: 4px;
     }
-    .player-view .deck-pages button small {
+    .player-view .deck-tab-mark {
         display: none;
     }
-    .player-view .hotbar-browser-button {
-        padding: 5px 7px;
-        min-height: 30px;
+    .player-view .hotbar-browser-button,
+    .player-view .deck-window-tab {
+        width: 28px;
+        height: 28px;
+        min-height: 28px;
+        padding: 4px;
     }
-    .player-view .hotbar-browser-button > span {
+    .player-view .hotbar-browser-button > span,
+    .player-view .deck-window-tab > span {
         display: none;
-    }
-    .player-view .deck-navigation .icon-button {
-        width: 29px;
-        height: 29px;
-        min-height: 29px;
-    }
-    .player-view .deck-navigation .hotbar-roll-stance {
-        order: 5;
-        margin-left: auto;
-    }
-    .player-view .action-deck:not(.is-expanded) .hotbar-roll-stance {
-        display: none;
-    }
-    .player-view .action-deck.is-expanded {
-        --deck-slot: 60px;
     }
     .player-view .action-deck.is-expanded .rpg-hotbar {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        grid-auto-rows: var(--deck-slot);
-        max-height: 280px;
-        overflow-y: auto;
-    }
-    .player-view .action-deck.is-expanded .rpg-slot {
-        width: 100%;
-    }
-    .player-view .action-deck.is-expanded .rpg-slot > button > .rpg-icon {
-        max-width: 100%;
+        display: flex;
+        max-height: none;
+        overflow-x: auto;
+        overflow-y: hidden;
     }
     .player-view .hero-roster {
-        left: -2px;
-        width: 65px;
-        bottom: calc(100% + 16px);
-    }
-    .player-view .hero-roster [role='menuitemradio'] {
-        width: 66px;
-    }
-    .player-view .hero-roster > div {
-        gap: 12px;
-    }
-    .player-view .hero-roster strong {
-        font-size: 12px;
-    }
-    .player-view .hero-roster small {
-        font-size: 9px;
-    }
-    .player-view .player-controls {
-        bottom: 245px;
+        left: 0;
+        width: 190px;
+        max-width: calc(100vw - 20px);
+        bottom: calc(100% + 15px);
     }
     .player-view .ability-browser {
         position: fixed;
-        bottom: 250px;
         left: auto;
         right: 0;
+        bottom: 280px;
         width: min(370px, calc(100vw - 12px));
-        max-height: calc(100dvh - 355px);
+        max-height: calc(100dvh - 380px);
     }
-    .player-view .character-compact-panel {
-        bottom: calc(100% + 20px);
-        max-height: calc(100dvh - 345px);
+    .player-view .player-controls {
+        bottom: 268px;
     }
 }
 @media (prefers-reduced-motion: reduce) {

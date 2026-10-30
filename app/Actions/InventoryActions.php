@@ -78,7 +78,7 @@ class InventoryActions
                     $remaining -= $amount;
                 }
             } elseif ($op === 'arrange') {
-                $bag = collect($items())->filter(fn ($i) => $i['quantity'] > 0 && ! $i['equipped_slot'])->sortByDesc(fn ($i) => $i['definition']['width'] * $i['definition']['height']);
+                $bag = collect($items())->filter(fn ($i) => $i['quantity'] > 0 && ! $i['equipped_slot'])->sortBy(fn ($i) => $i['definition']['category'].'|'.$i['definition']['name'].'|'.$i['id']);
                 $placed = [];
                 foreach ($bag as $i) {
                     $p = $grid->free($placed, $i['definition']);
@@ -97,7 +97,7 @@ class InventoryActions
                     $x = $data['x'];
                     $y = $data['y'];
                     abort_unless($grid->fits([], $item->definition->toArray(), $x, $y), 422, 'Предмет выходит за границы рюкзака.');
-                    $hits = collect($all)->filter(fn ($i) => $i['id'] !== $item->id && $i['quantity'] > 0 && ! $i['equipped_slot'] && $x < $i['x'] + $i['definition']['width'] && $x + $item->definition->width > $i['x'] && $y < $i['y'] + $i['definition']['height'] && $y + $item->definition->height > $i['y'])->values();
+                    $hits = collect($all)->filter(fn ($i) => $i['id'] !== $item->id && $i['quantity'] > 0 && ! $i['equipped_slot'] && $x === $i['x'] && $y === $i['y'])->values();
                     if ($hits->count() === 1 && ! $item->equipped_slot && $hits[0]['item_definition_id'] === $item->item_definition_id && $item->definition->max_stack > 1) {
                         $target = InventoryItem::findOrFail($hits[0]['id']);
                         $amount = min($item->quantity, $item->definition->max_stack - $target->quantity);
@@ -110,7 +110,7 @@ class InventoryActions
                             $target = $hits[0];
                             $ignore[] = $target['id'];
                             abort_unless($grid->fits($all, $target['definition'], $item->x, $item->y, $ignore), 422, 'Для обмена не хватает места.');
-                            abort_if($x < $item->x + $target['definition']['width'] && $x + $item->definition->width > $item->x && $y < $item->y + $target['definition']['height'] && $y + $item->definition->height > $item->y, 422, 'Предметы пересекаются при обмене.');
+                            abort_if($x === $item->x && $y === $item->y, 422, 'Предметы пересекаются при обмене.');
                             InventoryItem::whereKey($target['id'])->update(['x' => $item->x, 'y' => $item->y]);
                         }
                         abort_unless($hits->count() <= 1 && $grid->fits($all, $item->definition->toArray(), $x, $y, $ignore), 422, 'Предмет не помещается здесь.');
