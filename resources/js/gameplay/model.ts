@@ -38,6 +38,8 @@ export interface Ability {
     category: 'utility' | 'check' | 'attack' | 'effect';
     target: 'self' | 'token' | 'prop' | 'point' | 'none';
     check: {
+        proficient?: boolean;
+        bonus?: number;
         stat_key: string | null;
         modifier?: number;
         dc?: number;
@@ -65,6 +67,7 @@ export interface AbilityCommand {
     rollMode: RollMode;
 }
 export interface AbilityResult {
+    provenance?: import('../workspace/interactions/model').CheckResult['provenance'] | null;
     id: string;
     abilityId: string;
     abilityName: string;

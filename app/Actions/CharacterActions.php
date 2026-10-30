@@ -9,6 +9,7 @@ use App\Models\Character;
 use App\Models\Token;
 use App\Models\User;
 use App\Services\CharacterGameplay;
+use App\Services\CharacterRules;
 use App\Services\SceneSnapshotBuilder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -74,7 +75,9 @@ class CharacterActions
 
     public function projection(Character $character, bool $gm = true): array
     {
-        return ['id' => (string) $character->id, 'name' => $character->name,
+        return ['rules' => $character->rules, 'derived' => app(CharacterRules::class)->derived($character),
+            ...($gm ? ['rulesSuggestion' => app(CharacterRules::class)->suggestion($character)] : []),
+            'id' => (string) $character->id, 'name' => $character->name,
             'portrait' => app(SceneSnapshotBuilder::class)->asset($character->portraitAsset),
             'ownerUserId' => $character->owner_user_id ? (string) $character->owner_user_id : null,
             'kind' => $character->kind, 'disposition' => $character->disposition,

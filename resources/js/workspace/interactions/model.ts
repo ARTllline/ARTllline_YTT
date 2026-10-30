@@ -57,7 +57,7 @@ export interface CheckResult {
     rawDice: number[];
     selectedDie: number;
     provenance: {
-        source: 'token_stat' | 'character_stat' | 'legacy_interaction';
+        source: 'token_stat' | 'character_stat' | 'character_rules' | 'legacy_interaction';
         characterId?: string;
         characterName?: string;
         tokenId: string | null;
@@ -66,6 +66,7 @@ export interface CheckResult {
         statLabel: string;
         baseModifier: number;
         otherModifiers: { label: string; modifier: number }[];
+        breakdown?: import('../../rpg/rules').ModifierPart[];
         finalModifier: number;
     };
 }

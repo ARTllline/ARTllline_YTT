@@ -338,6 +338,58 @@ export function AbilityEditor({
                                             />
                                         </label>
                                     )}
+                                    {character.rules && a.check.stat_key && (
+                                        <div className="gameplay-form-row">
+                                            {[
+                                                'str',
+                                                'dex',
+                                                'con',
+                                                'int',
+                                                'wis',
+                                                'cha',
+                                                'strength',
+                                                'dexterity',
+                                                'constitution',
+                                                'intelligence',
+                                                'wisdom',
+                                                'charisma',
+                                            ].includes(a.check.stat_key) && (
+                                                <label>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={a.check.proficient ?? false}
+                                                        onChange={(e) =>
+                                                            patch(i, {
+                                                                check: {
+                                                                    ...a.check!,
+                                                                    proficient: e.target.checked,
+                                                                },
+                                                            })
+                                                        }
+                                                    />
+                                                    Добавить бонус владения
+                                                </label>
+                                            )}
+                                            <label>
+                                                Дополнительный бонус действия
+                                                <input
+                                                    aria-label="Дополнительный бонус действия"
+                                                    type="number"
+                                                    min={-100}
+                                                    max={100}
+                                                    value={a.check.bonus ?? 0}
+                                                    onChange={(e) =>
+                                                        patch(i, {
+                                                            check: {
+                                                                ...a.check!,
+                                                                bonus: Number(e.target.value),
+                                                            },
+                                                        })
+                                                    }
+                                                />
+                                            </label>
+                                        </div>
+                                    )}
                                     {a.category === 'attack' && (
                                         <div className="stat-chips">
                                             <button

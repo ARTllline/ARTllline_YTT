@@ -1,4 +1,5 @@
 import { rollModes } from './actingToken';
+import { breakdownLabel } from '../../rpg/rules';
 import {
     interactions,
     type CheckHistory,
@@ -220,6 +221,9 @@ export function CheckHistoryList({
                         {check.provenance.finalModifier} · {rollModes[check.rollMode]} [
                         {check.rawDice.join(', ')}]
                     </span>
+                    {check.provenance.breakdown && (
+                        <span>{breakdownLabel(check.provenance.breakdown)}</span>
+                    )}
                     <time dateTime={check.rolledAt}>
                         {new Date(check.rolledAt).toLocaleString()}
                     </time>

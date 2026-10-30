@@ -21,6 +21,8 @@ export interface CheckStat {
     modifier: number;
 }
 export interface Token extends Point {
+    baseAc?: number | null;
+    baseSpeed?: number | null;
     characterId?: string | null;
     checkStats?: CheckStat[];
     interactions?: import('../../workspace/interactions/model').ObjectInteraction[];
@@ -75,6 +77,9 @@ export interface Scene {
     tokens: readonly Token[];
 }
 export interface Character {
+    rules?: import('../../rpg/rules').CharacterRules | null;
+    rulesSuggestion?: import('../../rpg/rules').CharacterRules;
+    derived?: import('../../rpg/rules').DerivedCharacter;
     resources?: import('../../gameplay/model').CharacterResource[];
     abilities?: import('../../gameplay/model').Ability[];
     ac?: number | null;

@@ -1,0 +1,12 @@
+{
+  "index": "perception",
+  "name": "Perception",
+  "description": "Using a combination of senses, notice something that’s easy to miss.",
+  "ability_score": {
+    "index": "wis",
+    "name": "WIS",
+    "url": "/api/2024/ability-scores/wis"
+  },
+  "url": "/api/2024/skills/perception",
+  "updated_at": "2026-04-23T07:06:28.346Z"
+}

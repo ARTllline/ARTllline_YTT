@@ -50,7 +50,7 @@ class CharacterGameplay
             'abilities.*.area.size' => 'required_with:abilities.*.area|numeric|between:0.1,10000',
             'abilities.*.area.width' => 'required_with:abilities.*.area|numeric|between:0.1,10000',
             'abilities.*.target' => 'required|in:self,token,prop,point,none',
-            'abilities.*.check' => 'present|nullable|array:stat_key,modifier,dc,dc_visible,defense',
+            'abilities.*.check' => 'present|nullable|array:stat_key,modifier,dc,dc_visible,defense,proficient,bonus',
             'abilities.*.costs' => 'present|array|list|max:12',
             'abilities.*.costs.*' => 'required|array:key,amount',
             'abilities.*.costs.*.key' => 'required|string|max:48',
@@ -83,6 +83,7 @@ class CharacterGameplay
             $check = $ability['check'];
             if ($check !== null) {
                 $ability['check'] = Validator::make($check, [
+                    'proficient' => 'sometimes|boolean', 'bonus' => 'sometimes|integer|between:-100,100',
                     'stat_key' => 'present|nullable|string|max:48|regex:/^[a-z][a-z0-9_]*$/',
                     'modifier' => 'required|integer|between:-100,100', 'dc' => 'required|integer|between:0,999',
                     'dc_visible' => 'required|boolean', 'defense' => ['required', Rule::in(['ac', 'fixed'])],

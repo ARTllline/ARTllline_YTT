@@ -6,6 +6,7 @@ import { useRpgDrag } from './RpgDrag';
 import { itemBinding, type InventoryItem, type InventoryState } from './model';
 import type { InventoryHook } from './useInventory';
 import { InventoryGridView } from './InventoryView';
+import { RulesSummary } from './RulesSummary';
 const positions: Record<string, [number, number]> = {
     head: [1, 1],
     amulet: [4, 1],
@@ -70,17 +71,7 @@ export function CharacterView({
                 <span className="rpg-kicker">СОСТОЯНИЕ ГЕРОЯ</span>
                 <ResourceControls campaign={campaign} character={c} onChanged={onResourceChange} />
                 <h2>Характеристики</h2>
-                <div className="character-checks">
-                    {c.checkStats.map((s) => (
-                        <span key={s.key}>
-                            <small>{s.label}</small>
-                            <strong>
-                                {s.modifier >= 0 ? '+' : ''}
-                                {s.modifier}
-                            </strong>
-                        </span>
-                    ))}
-                </div>
+                <RulesSummary character={c} />
                 <h3>Состояния</h3>
                 <div className="character-conditions">
                     {actor?.conditions?.length ? (

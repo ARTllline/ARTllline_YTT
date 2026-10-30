@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Services\EquipmentStats;
+use App\Services\CharacterRules;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -18,14 +18,18 @@ class Character extends Model
     {
         $value = parent::getAttribute($key);
 
-        return in_array($key, ['ac', 'speed', 'check_stats'], true) ? app(EquipmentStats::class)->apply($this, $key, $value) : $value;
+        return match ($key) {
+            'ac', 'speed' => app(CharacterRules::class)->core($this, $key, $value),
+            'check_stats' => app(CharacterRules::class)->checks($this),
+            default => $value,
+        };
     }
 
     protected $guarded = ['id', 'campaign_id'];
 
     protected function casts(): array
     {
-        return ['check_stats' => 'array', 'resources' => 'array', 'abilities' => 'array', 'ac' => 'integer', 'speed' => 'integer', 'hp' => 'integer', 'max_hp' => 'integer', 'owner_user_id' => 'integer'];
+        return ['rules' => 'array', 'check_stats' => 'array', 'resources' => 'array', 'abilities' => 'array', 'ac' => 'integer', 'speed' => 'integer', 'hp' => 'integer', 'max_hp' => 'integer', 'owner_user_id' => 'integer'];
     }
 
     public function campaign(): BelongsTo

@@ -1,4 +1,5 @@
 import { RpgDice } from './RpgDice';
+import { breakdownLabel } from '../rpg/rules';
 import { RpgIcon } from './RpgIcon';
 import { usePlayerDice } from './PlayerDiceProvider';
 import { useEffect, useRef, useState } from 'react';
@@ -286,6 +287,9 @@ export function AbilityDialog({
             </div>
             {roll?.dc !== undefined && ['total', 'outcome', 'damage'].includes(phase) && (
                 <span className="check-dc">ПРОТИВ {roll.dc}</span>
+            )}
+            {result?.provenance?.breakdown && ['total', 'outcome', 'damage'].includes(phase) && (
+                <p className="hint">{breakdownLabel(result.provenance.breakdown)}</p>
             )}
             <div className="check-outcome" role="status">
                 {['outcome', 'damage'].includes(phase) && (

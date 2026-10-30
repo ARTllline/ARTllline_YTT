@@ -6,7 +6,7 @@ use App\Models\Character;
 use App\Models\Token;
 use Illuminate\Validation\ValidationException;
 
-/** Small, system-agnostic named modifiers. No derived attributes or rules engine. */
+/** Character rules first; standalone tokens and fixed legacy configurations remain supported. */
 class TokenCheckStats
 {
     public static function rules(): array
@@ -24,6 +24,19 @@ class TokenCheckStats
     {
         $key = $config['stat_key'] ?? null;
         if ($key) {
+            $character = $token instanceof Character ? $token : $token?->character;
+            if ($character) {
+                $stat = app(CharacterRules::class)->stat($character, $key, $config['proficient'] ?? false, $config['bonus'] ?? 0);
+                if (! $stat) {
+                    throw ValidationException::withMessages(['actorTokenId' => 'У персонажа не настроена эта проверка.']);
+                }
+
+                return ['source' => $character->rules ? 'character_rules' : 'character_stat', 'characterId' => (string) $character->id,
+                    'characterName' => $character->name, 'tokenId' => $token instanceof Token ? (string) $token->id : null,
+                    'tokenName' => $token->name, 'statKey' => $key, 'statLabel' => $stat['label'],
+                    'baseModifier' => $stat['breakdown'][0]['value'] ?? 0, 'otherModifiers' => array_map(fn ($p) => ['label' => $p['label'], 'modifier' => $p['value']], array_slice($stat['breakdown'], 1)),
+                    'breakdown' => $stat['breakdown'], 'finalModifier' => $stat['modifier']];
+            }
             $stat = collect($token?->check_stats ?? [])->firstWhere('key', $key);
             if (! $stat) {
                 throw ValidationException::withMessages(['actorTokenId' => 'У персонажа не настроена эта проверка. Попросите GM добавить модификатор.']);

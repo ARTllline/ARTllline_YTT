@@ -246,14 +246,14 @@ export function Inspector({
                             <div className="field-row">
                                 <NumberField
                                     label="AC"
-                                    value={token.ac ?? 0}
+                                    value={(token.characterId ? token.baseAc : token.ac) ?? 0}
                                     min={0}
                                     max={99}
                                     onChange={(ac) => store.updateToken(token.id, { ac })}
                                 />
                                 <NumberField
                                     label={t('Speed')}
-                                    value={token.speed ?? 0}
+                                    value={(token.characterId ? token.baseSpeed : token.speed) ?? 0}
                                     min={0}
                                     max={999}
                                     onChange={(speed) => store.updateToken(token.id, { speed })}

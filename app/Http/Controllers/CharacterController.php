@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\CharacterActions;
 use App\Models\Campaign;
 use App\Services\CharacterGameplay;
+use App\Services\CharacterRules;
 use App\Services\TokenCheckStats;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -27,9 +28,21 @@ class CharacterController extends Controller
             'owner_user_id' => 'sometimes|nullable|integer|min:1',
             'kind' => 'sometimes|in:player_character,npc', 'disposition' => 'sometimes|in:friendly,neutral,hostile',
             'hp' => 'sometimes|integer|between:0,9999', 'max_hp' => 'sometimes|integer|between:1,9999',
-        ] + TokenCheckStats::rules() + CharacterGameplay::rules());
+        ] + TokenCheckStats::rules() + CharacterGameplay::rules() + CharacterRules::validation());
 
         return $actions->save($request->user(), $campaign, $data);
+    }
+
+    public function preview(Request $request, Campaign $campaign): array
+    {
+        Gate::authorize('update', $campaign);
+        $data = $request->validate(['id' => 'required|integer|min:1', 'ac' => 'nullable|integer|between:0,99',
+            'speed' => 'nullable|integer|between:0,999'] + CharacterRules::validation() + TokenCheckStats::rules());
+        $character = $campaign->characters()->findOrFail($data['id']);
+        unset($data['id']);
+        $character->fill($data);
+
+        return ['derived' => app(CharacterRules::class)->derived($character)];
     }
 
     public function select(Request $request, Campaign $campaign, CharacterActions $actions): array

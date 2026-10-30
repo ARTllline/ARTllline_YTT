@@ -85,6 +85,9 @@ class SceneSnapshotBuilder
             $data['isOwner'] = $token->owner_user_id === $user->id;
         }
         if ($gm) {
+            if ($token->character_id) {
+                $data += ['baseAc' => $token->character->getRawOriginal('ac'), 'baseSpeed' => $token->character->getRawOriginal('speed')];
+            }
             $data += ['hp' => $token->hp, 'maxHp' => $token->max_hp, 'ac' => $token->ac, 'speed' => $token->speed,
                 'isHidden' => $token->is_hidden, 'isLocked' => $token->is_locked,
                 'ownerUserId' => $token->owner_user_id ? (string) $token->owner_user_id : null];

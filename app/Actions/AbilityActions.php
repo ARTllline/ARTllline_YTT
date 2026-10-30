@@ -107,6 +107,7 @@ class AbilityActions
                 $resources[$index]['current'] -= $cost['amount'];
             }
             $roll = null;
+            $provenance = null;
             if ($ability['check']) {
                 $config = $ability['check'];
                 $provenance = app(TokenCheckStats::class)->resolve($actor ?? $character, $config + ['label' => $ability['name']]);
@@ -163,6 +164,7 @@ class AbilityActions
                 'abilityId' => $ability['id'], 'abilityName' => $ability['name'], 'category' => $ability['category'],
                 'actorId' => (string) $character->id, 'actorName' => $character->name,
                 'target' => $data['target'] ?? null, 'roll' => $roll, 'success' => $success,
+                'provenance' => $provenance,
                 'damage' => $damage, 'outcomes' => $outcomes, 'healing' => $success && $ability['result']['type'] === 'heal' ? $ability['result']['amount'] : null,
                 'dcVisible' => $ability['check']['dc_visible'] ?? false,
                 'mutationId' => app(CommandContext::class)->id(), 'resolvedAt' => now()->toIso8601String(),

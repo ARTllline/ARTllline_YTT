@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
     ArrowLeft,
     Box,
+    BookOpen,
     CircleUserRound,
     Hexagon,
     Package,
@@ -15,8 +16,10 @@ import { AssetLibrary } from '../assets/LazyAssets';
 import { TemplateLibrary } from '../objects/TemplateLibrary';
 import { presets, tokenDraft, type Placement, type TokenDraft } from './model';
 import { CharacterBrowser } from './CharacterBrowser';
+import { CompendiumBrowser } from '../../compendium/CompendiumBrowser';
 
 const categories = [
+    ['compendium', 'Компендий', BookOpen],
     ['characters', 'Персонажи', CircleUserRound],
     ['creatures', 'Существа', Skull],
     ['props', 'Объекты', Box],
@@ -181,57 +184,78 @@ export function CreationHub({
                         ))}
                     </nav>
                     <div className="creation-content">
-                        {category === 'characters' && (
-                            <CharacterBrowser campaignId={campaignId} onPlace={onPlace} />
-                        )}
-                        <div className="creation-section-title">
-                            <h3>{categories.find((c) => c[0] === category)?.[1]}</h3>
-                            {token && (
-                                <button
-                                    className="text-button"
-                                    onClick={() =>
-                                        setDraft(tokenDraft(undefined, category === 'characters'))
-                                    }
-                                >
-                                    <Plus size={14} /> Без портрета
-                                </button>
-                            )}
-                        </div>
-                        <p className="hint">
-                            {category === 'characters'
-                                ? 'Или создайте нового героя из портрета. Он сохранится в кампании.'
-                                : token
-                                  ? 'Выберите портрет для быстрого токена или перетащите его на карту.'
-                                  : category === 'props'
-                                    ? 'Выберите объект. Ставьте копии кликами, пока не нажмёте Esc.'
-                                    : 'Выберите группу и укажите её место на карте.'}
-                        </p>
-                        {(token || category === 'props') && (
-                            <AssetLibrary
-                                key={category}
-                                campaignId={campaignId}
-                                pickerKind={token ? 'token' : 'prop'}
-                                creationKind={
-                                    token ? (category === 'characters' ? 'hero' : 'enemy') : 'prop'
-                                }
-                                onUse={(asset) =>
-                                    token
-                                        ? setDraft(tokenDraft(asset, category === 'characters'))
-                                        : onPlace({ type: 'prop', asset, name: asset.name })
-                                }
-                            />
-                        )}
-                        {(category === 'prefab' || category === 'encounter') && (
-                            <TemplateLibrary
-                                key={category}
-                                campaignId={campaignId}
-                                kind={category}
-                                refresh={refresh}
-                                placement
-                                onUse={(template) =>
-                                    onPlace({ type: 'template', template, name: template.name })
-                                }
-                            />
+                        {category === 'compendium' ? (
+                            <CompendiumBrowser campaignId={campaignId} />
+                        ) : (
+                            <>
+                                {category === 'characters' && (
+                                    <CharacterBrowser campaignId={campaignId} onPlace={onPlace} />
+                                )}
+                                <div className="creation-section-title">
+                                    <h3>{categories.find((c) => c[0] === category)?.[1]}</h3>
+                                    {token && (
+                                        <button
+                                            className="text-button"
+                                            onClick={() =>
+                                                setDraft(
+                                                    tokenDraft(
+                                                        undefined,
+                                                        category === 'characters',
+                                                    ),
+                                                )
+                                            }
+                                        >
+                                            <Plus size={14} /> Без портрета
+                                        </button>
+                                    )}
+                                </div>
+                                <p className="hint">
+                                    {category === 'characters'
+                                        ? 'Или создайте нового героя из портрета. Он сохранится в кампании.'
+                                        : token
+                                          ? 'Выберите портрет для быстрого токена или перетащите его на карту.'
+                                          : category === 'props'
+                                            ? 'Выберите объект. Ставьте копии кликами, пока не нажмёте Esc.'
+                                            : 'Выберите группу и укажите её место на карте.'}
+                                </p>
+                                {(token || category === 'props') && (
+                                    <AssetLibrary
+                                        key={category}
+                                        campaignId={campaignId}
+                                        pickerKind={token ? 'token' : 'prop'}
+                                        creationKind={
+                                            token
+                                                ? category === 'characters'
+                                                    ? 'hero'
+                                                    : 'enemy'
+                                                : 'prop'
+                                        }
+                                        onUse={(asset) =>
+                                            token
+                                                ? setDraft(
+                                                      tokenDraft(asset, category === 'characters'),
+                                                  )
+                                                : onPlace({ type: 'prop', asset, name: asset.name })
+                                        }
+                                    />
+                                )}
+                                {(category === 'prefab' || category === 'encounter') && (
+                                    <TemplateLibrary
+                                        key={category}
+                                        campaignId={campaignId}
+                                        kind={category}
+                                        refresh={refresh}
+                                        placement
+                                        onUse={(template) =>
+                                            onPlace({
+                                                type: 'template',
+                                                template,
+                                                name: template.name,
+                                            })
+                                        }
+                                    />
+                                )}
+                            </>
                         )}
                     </div>
                 </>

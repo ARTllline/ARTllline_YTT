@@ -1,0 +1,37 @@
+{
+  "index": "dragons-breath",
+  "casting_time": "Bonus Action",
+  "classes": [
+    {
+      "index": "sorcerer",
+      "name": "Sorcerer",
+      "url": "/api/2024/classes/sorcerer"
+    },
+    {
+      "index": "wizard",
+      "name": "Wizard",
+      "url": "/api/2024/classes/wizard"
+    }
+  ],
+  "components": [
+    "V",
+    "S",
+    "M"
+  ],
+  "concentration": true,
+  "description": "You touch one willing creature, and choose Acid, Cold, Fire, Lightning, or Poison. Until the spell ends, the target can take a Magic action to exhale a 15-foot Cone. Each creature in that area makes a Dexterity saving throw, taking 3d6 damage of the chosen type on a failed save or half as much damage on a successful one.   Using a Higher-Level Spell Slot. The damage increases by 1d6 for each spell slot level above 2.",
+  "duration": "up to 1 minute",
+  "level": 2,
+  "material": "a hot pepper",
+  "name": "Dragon's Breath",
+  "range": "Touch",
+  "ritual": false,
+  "school": {
+    "index": "transmutation",
+    "name": "Transmutation",
+    "url": "/api/2024/magic-schools/transmutation"
+  },
+  "updated_at": "2026-09-12T22:42:40.696Z",
+  "url": "/api/2024/spells/dragons-breath",
+  "subclasses": []
+}

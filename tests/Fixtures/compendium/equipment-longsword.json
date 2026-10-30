@@ -1,0 +1,69 @@
+{
+  "description": [],
+  "notes": [],
+  "index": "longsword",
+  "name": "Longsword",
+  "equipment_categories": [
+    {
+      "index": "martial-melee-weapons",
+      "name": "Martial Melee Weapons",
+      "url": "/api/2024/equipment-categories/martial-melee-weapons"
+    },
+    {
+      "index": "martial-weapons",
+      "name": "Martial Weapons",
+      "url": "/api/2024/equipment-categories/martial-weapons"
+    },
+    {
+      "index": "melee-weapons",
+      "name": "Melee Weapons",
+      "url": "/api/2024/equipment-categories/melee-weapons"
+    },
+    {
+      "index": "weapons",
+      "name": "Weapons",
+      "url": "/api/2024/equipment-categories/weapons"
+    }
+  ],
+  "cost": {
+    "quantity": 15,
+    "unit": "gp"
+  },
+  "damage": {
+    "damage_dice": "1d8",
+    "damage_type": {
+      "index": "slashing",
+      "name": "Slashing",
+      "url": "/api/2024/damage-types/slashing"
+    }
+  },
+  "range": {
+    "normal": 5
+  },
+  "weight": 3,
+  "properties": [
+    {
+      "index": "versatile",
+      "name": "Versatile",
+      "url": "/api/2024/weapon-properties/versatile"
+    }
+  ],
+  "mastery": {
+    "index": "sap",
+    "name": "Sap",
+    "url": "/api/2024/weapon-mastery-properties/sap"
+  },
+  "two_handed_damage": {
+    "damage_dice": "1d10",
+    "damage_type": {
+      "index": "slashing",
+      "name": "Slashing",
+      "url": "/api/2024/damage-types/slashing"
+    }
+  },
+  "url": "/api/2024/equipment/longsword",
+  "updated_at": "2026-04-23T07:06:26.985Z",
+  "contents": [],
+  "craft": [],
+  "utilize": []
+}

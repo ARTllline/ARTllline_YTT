@@ -7,6 +7,8 @@ import { api } from '../../api/workspace';
 import { charactersApi } from '../../api/characters';
 import type { Character } from '../../tabletop/types/scene';
 import { CheckStatsEditor } from '../interactions/TokenCheckEditor';
+import { RulesEditor } from '../../rpg/RulesEditor';
+import type { DerivedCharacter } from '../../rpg/rules';
 import type { Placement } from './model';
 
 export function CharacterBrowser({
@@ -22,6 +24,34 @@ export function CharacterBrowser({
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
+    const [preview, setPreview] = useState<DerivedCharacter>();
+    const [previewError, setPreviewError] = useState('');
+    const [previewBusy, setPreviewBusy] = useState(false);
+    useEffect(() => {
+        if (!draft?.rules) return;
+        const abort = new AbortController();
+        const timer = setTimeout(() => {
+            setPreviewBusy(true);
+            void charactersApi
+                .preview(campaignId, draft, abort.signal)
+                .then(({ derived }) => {
+                    if (!abort.signal.aborted) {
+                        setPreview(derived);
+                        setPreviewError('');
+                    }
+                })
+                .catch((e) => {
+                    if (!abort.signal.aborted) setPreviewError(e.message);
+                })
+                .finally(() => {
+                    if (!abort.signal.aborted) setPreviewBusy(false);
+                });
+        }, 200);
+        return () => {
+            abort.abort();
+            clearTimeout(timer);
+        };
+    }, [campaignId, draft]);
     useEffect(() => {
         const abort = new AbortController();
         void Promise.all([
@@ -98,7 +128,11 @@ export function CharacterBrowser({
                         className="icon-button"
                         aria-label={`Настроить ${c.name}`}
                         disabled={busy}
-                        onClick={() => setDraft(c)}
+                        onClick={() => {
+                            setPreview(c.derived);
+                            setPreviewError('');
+                            setDraft(c);
+                        }}
                     >
                         <Settings2 size={15} />
                     </button>
@@ -156,6 +190,17 @@ export function CharacterBrowser({
                         </select>
                     </label>
                     <fieldset disabled={busy} className="character-gameplay-fields">
+                        <RulesEditor
+                            character={draft}
+                            derived={preview}
+                            onChange={(rules) => setDraft({ ...draft, rules })}
+                        />
+                        {previewBusy && <p role="status">Расчёт на сервере…</p>}
+                        {previewError && (
+                            <p role="alert" className="form-error">
+                                {previewError}
+                            </p>
+                        )}
                         <div className="gameplay-form-row">
                             <label>
                                 Защита / AC
@@ -199,17 +244,35 @@ export function CharacterBrowser({
                             onChange={(resources) => setDraft({ ...draft, resources })}
                         />
                         <AbilityEditor
-                            character={draft}
+                            character={{
+                                ...draft,
+                                checkStats: draft.rules
+                                    ? (preview?.checks ?? [])
+                                    : draft.checkStats,
+                            }}
                             campaignId={campaignId}
                             onChange={(abilities) => setDraft({ ...draft, abilities })}
                         />
                     </fieldset>
-                    <CheckStatsEditor
-                        stats={draft.checkStats}
-                        save={(checkStats) => setDraft({ ...draft, checkStats })}
-                        disabled={busy}
+                    <details>
+                        <summary>Совместимость · особые модификаторы</summary>
+                        <p className="hint">
+                            При включённых правилах знакомые ключи берутся из характеристик, навыков
+                            и спасбросков. Здесь остаются только особые проверки.
+                        </p>
+                        <CheckStatsEditor
+                            stats={draft.checkStats}
+                            save={(checkStats) => setDraft({ ...draft, checkStats })}
+                            disabled={busy}
+                        />
+                    </details>
+                    <ItemAuthoring
+                        campaignId={campaignId}
+                        character={{
+                            ...draft,
+                            checkStats: draft.rules ? (preview?.checks ?? []) : draft.checkStats,
+                        }}
                     />
-                    <ItemAuthoring campaignId={campaignId} character={draft} />
                     <p className="hint">
                         Портрет и состояние меняются в Inspector размещённого токена; HP — через
                         существующие действия Combat.

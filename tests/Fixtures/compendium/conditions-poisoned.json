@@ -1,0 +1,7 @@
+{
+  "index": "poisoned",
+  "name": "Poisoned",
+  "description": "While you have the Poisoned condition, you experience the following effect.\n**Ability Checks and Attacks Affected.** You have Disadvantage on attack rolls and ability checks.",
+  "url": "/api/2024/conditions/poisoned",
+  "updated_at": "2026-04-23T07:06:26.48Z"
+}

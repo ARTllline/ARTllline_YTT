@@ -1,0 +1,64 @@
+.compendium-browser {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+.compendium-filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.compendium-filters select {
+    width: 100%;
+    min-width: 0;
+}
+.compendium-results {
+    display: grid;
+    gap: 5px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+.compendium-results button {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    text-align: left;
+    gap: 4px;
+}
+.compendium-results small {
+    opacity: 0.65;
+}
+.compendium-results button[aria-pressed='true'] {
+    border-color: var(--accent, #a78bfa);
+}
+.compendium-detail {
+    border-top: 1px solid #ffffff20;
+    padding-top: 12px;
+    display: grid;
+    gap: 12px;
+}
+.compendium-detail h3,
+.compendium-detail p {
+    margin: 0;
+}
+.compendium-description {
+    white-space: pre-wrap;
+    font-size: 13px;
+    line-height: 1.6;
+}
+.compendium-detail pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 11px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+.compendium-detail summary {
+    cursor: pointer;
+    font-size: 13px;
+}
+.compendium-detail details p {
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 10px;
+}

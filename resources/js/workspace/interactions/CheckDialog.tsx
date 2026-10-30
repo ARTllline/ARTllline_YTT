@@ -1,4 +1,5 @@
 import { RpgDice } from '../../gameplay/RpgDice';
+import { breakdownLabel } from '../../rpg/rules';
 import { usePlayerDice } from '../../gameplay/PlayerDiceProvider';
 import { useEffect, useRef, useState } from 'react';
 import { Dices, X } from 'lucide-react';
@@ -263,6 +264,9 @@ export function CheckDialog({
                     </span>
                 )}
             </div>
+            {showTotal && result?.provenance.breakdown && (
+                <p className="hint">{breakdownLabel(result.provenance.breakdown)}</p>
+            )}
             <div className="check-outcome" role="status">
                 {phase === 'outcome' && result && (
                     <>

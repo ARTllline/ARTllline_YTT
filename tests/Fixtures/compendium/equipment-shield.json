@@ -1,0 +1,35 @@
+{
+  "description": [],
+  "notes": [],
+  "index": "shield",
+  "name": "Shield",
+  "equipment_categories": [
+    {
+      "index": "armor",
+      "name": "Armor",
+      "url": "/api/2024/equipment-categories/armor"
+    },
+    {
+      "index": "shields",
+      "name": "Shields",
+      "url": "/api/2024/equipment-categories/shields"
+    }
+  ],
+  "armor_class": {
+    "base": 2,
+    "dex_bonus": false
+  },
+  "cost": {
+    "quantity": 10,
+    "unit": "gp"
+  },
+  "stealth_disadvantage": false,
+  "str_minimum": 0,
+  "weight": 6,
+  "url": "/api/2024/equipment/shield",
+  "updated_at": "2026-04-23T07:06:26.985Z",
+  "contents": [],
+  "craft": [],
+  "properties": [],
+  "utilize": []
+}

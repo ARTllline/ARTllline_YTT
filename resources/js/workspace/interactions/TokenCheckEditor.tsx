@@ -19,6 +19,27 @@ export function TokenCheckEditor({
     store: SceneStore;
     disabled: boolean;
 }) {
+    if (token.characterId)
+        return (
+            <details className="inspector-section">
+                <summary>Проверки персонажа</summary>
+                <p className="hint">
+                    Настройте характеристики и особые проверки в «Создать → Персонажи». Здесь
+                    показаны итоговые значения с экипировкой.
+                </p>
+                <div className="character-checks">
+                    {token.checkStats?.map((s) => (
+                        <span key={s.key}>
+                            <small>{s.label}</small>
+                            <strong>
+                                {s.modifier >= 0 ? '+' : ''}
+                                {s.modifier}
+                            </strong>
+                        </span>
+                    ))}
+                </div>
+            </details>
+        );
     return (
         <CheckStatsEditor
             stats={token.checkStats ?? []}
