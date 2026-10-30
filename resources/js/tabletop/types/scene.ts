@@ -21,8 +21,9 @@ export interface CheckStat {
     modifier: number;
 }
 export interface Token extends Point {
+    loot?: import('../../rpg/loot').LootSummary;
     abilities?: import('../../gameplay/model').Ability[];
-    combatProfile?: Record<string,unknown>;
+    combatProfile?: Record<string, unknown>;
     baseAc?: number | null;
     baseSpeed?: number | null;
     characterId?: string | null;
@@ -125,6 +126,7 @@ export interface SceneNote extends Point {
     icon: 'note' | 'warning' | 'secret' | 'encounter' | 'clue';
 }
 export interface SceneProp extends Point {
+    loot?: import('../../rpg/loot').LootSummary;
     interactions?: import('../../workspace/interactions/model').ObjectInteraction[];
     id: string;
     name: string | null;

@@ -53,15 +53,19 @@ export function DeckSlot({
     const missing =
         a?.costs.filter((c) => (resources.find((r) => r.key === c.key)?.current ?? 0) < c.amount) ??
         [];
+    const missingItem = binding?.sourceType === 'inventory_item' && !item;
     const unavailable =
-        a &&
-        (disabled ||
-            !!combatReason(a, combatBudget) ||
-            (item && item.quantity < 1) ||
-            a.spell?.prepared === false ||
-            !canAfford(a, resources) ||
-            (!worldAvailable && ['token', 'prop', 'point'].includes(a.target)));
+        missingItem ||
+        (a &&
+            (disabled ||
+                !!combatReason(a, combatBudget) ||
+                (item && (item.quantity < 1 || (item.action && !item.action.available))) ||
+                a.spell?.prepared === false ||
+                !canAfford(a, resources) ||
+                (!worldAvailable && ['token', 'prop', 'point'].includes(a.target))));
     const reason =
+        (missingItem ? 'Предмет больше не принадлежит персонажу' : '') ||
+        (item?.action && !item.action.available ? item.action.reason : '') ||
         (a && combatReason(a, combatBudget)) ||
         (item && item.quantity < 1
             ? 'Предмет закончился'
@@ -91,7 +95,9 @@ export function DeckSlot({
             {...drag.destination(index)}
         >
             <button
-                aria-label={a?.name ?? `Пустая ячейка ${index + 1}`}
+                aria-label={
+                    a?.name ?? (missingItem ? 'Недоступный предмет' : `Пустая ячейка ${index + 1}`)
+                }
                 aria-pressed={!!a && selected === a.id}
                 aria-disabled={!edit && !!unavailable}
                 className={!edit && unavailable ? 'is-unavailable' : ''}
@@ -106,6 +112,7 @@ export function DeckSlot({
                 }}
                 onClick={() => {
                     if (drag.consumeClick()) return;
+                    if (missingItem && !edit) return;
                     if (!a || edit) onPick();
                     else if (!unavailable) {
                         if (item) onChooseItem?.(item);
@@ -144,7 +151,9 @@ export function DeckSlot({
                 </button>
             )}
             <div className="rpg-slot-tooltip" role="tooltip" id={`deck-tip-${index}`}>
-                <strong>{a?.name ?? `Ячейка ${index + 1}`}</strong>
+                <strong>
+                    {a?.name ?? (missingItem ? 'Недоступный предмет' : `Ячейка ${index + 1}`)}
+                </strong>
                 {a ? (
                     <>
                         <span>{a.description}</span>
@@ -153,7 +162,11 @@ export function DeckSlot({
                         <small>Удерживайте и перетащите · Delete убирает из панели</small>
                     </>
                 ) : (
-                    <span>Перетащите способность сюда или нажмите для выбора.</span>
+                    <span>
+                        {missingItem
+                            ? reason
+                            : 'Перетащите способность сюда или нажмите для выбора.'}
+                    </span>
                 )}
             </div>
         </div>

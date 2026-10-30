@@ -1,3 +1,4 @@
+import { LootSetup } from '../rpg/loot';
 import { TokenCheckEditor } from './interactions/TokenCheckEditor';
 import { t } from '../i18n';
 import { PropInspector } from './objects/PropInspector';
@@ -238,6 +239,7 @@ export function Inspector({
                                     }}
                                 />
                             </div>
+                            <LootSetup store={store} kind="token" id={token.id} loot={token.loot} />
                             <TokenCombatControls
                                 token={token}
                                 store={store}

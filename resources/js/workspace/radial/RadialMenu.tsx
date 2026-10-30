@@ -1,3 +1,4 @@
+import { openLoot } from '../../rpg/loot';
 import { canAfford } from '../../gameplay/model';
 import { abilityPreview } from '../../gameplay/geometry';
 import { gameplayIcon } from '../../gameplay/icons';
@@ -266,6 +267,15 @@ export function RadialMenu({
                     window.dispatchEvent(new CustomEvent('ytt:character-panel')),
                 );
             },
+        });
+    }
+    if (entity && 'loot' in entity && entity.loot) {
+        const lootId = entity.loot.id;
+        actions.unshift({
+            label: 'Открыть добычу',
+            Icon: Sparkles,
+            tone: 'interaction',
+            run: () => openLoot(lootId),
         });
     }
     const character = snapshot.scene.characters?.find(

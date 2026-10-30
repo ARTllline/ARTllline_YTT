@@ -7,6 +7,7 @@ use App\Actions\ObjectInteractionActions;
 use App\Combat\CombatStats;
 use App\Models\Asset;
 use App\Models\Campaign;
+use App\Models\LootContainer;
 use App\Models\Scene;
 use App\Models\SceneNote;
 use App\Models\SceneProp;
@@ -69,7 +70,8 @@ class SceneSnapshotBuilder
 
     public function token(Token $token, bool $gm, User $user): array
     {
-        $data = ['id' => (string) $token->id, 'name' => $token->name,
+        $loot = LootContainer::where('token_id', $token->id)->first();
+        $data = [...($loot && ($gm || $token->hp <= 0) ? ['loot' => $loot->summary($gm)] : []), 'id' => (string) $token->id, 'name' => $token->name,
             'characterId' => $token->character_id ? (string) $token->character_id : null,
             'interactions' => app(ObjectInteractionActions::class)->projection($token, $gm),
             'x' => (float) $token->x, 'y' => (float) $token->y, 'rotation' => (float) $token->rotation,

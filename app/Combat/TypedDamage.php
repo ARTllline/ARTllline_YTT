@@ -11,6 +11,8 @@ class TypedDamage
     {
         return array_map(function ($c) use ($critical) {
             $roll = app(DamageRoller::class)->roll($c['dice'], $critical);
+            $roll['modifier'] += ($c['flat_bonus'] ?? 0);
+            $roll['total'] = max(0, $roll['total'] + ($c['flat_bonus'] ?? 0));
 
             return ['type' => $c['type'] ?? null, 'roll' => $roll, 'amount' => $roll['total']];
         }, $components);

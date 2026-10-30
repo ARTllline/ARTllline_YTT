@@ -1,3 +1,4 @@
+import { ItemOperations } from './ItemOperations';
 import { useState } from 'react';
 import { ArrowDownWideNarrow, Search } from 'lucide-react';
 import type { Ability } from '../gameplay/model';
@@ -88,6 +89,7 @@ export function RpgWindows({
                             >
                                 × Закрыть
                             </button>
+                            <ItemOperations item={item} state={data} send={send} busy={busy} />
                             <ItemDetails
                                 item={item}
                                 onUse={onUse}
@@ -167,18 +169,23 @@ export function RpgWindows({
                             Двойной щелчок — надеть или использовать · Правая кнопка — действия
                         </p>
                     </section>
-                    <ItemDetails
-                        item={item}
-                        onUse={onUse}
-                        onBind={onBindItem}
-                        onEquip={(i) =>
-                            void send({
-                                action: i.equipped_slot ? 'unequip' : 'equip',
-                                itemId: i.id,
-                                slot: i.definition.equipment_slots[0],
-                            })
-                        }
-                    />
+                    <div className="item-details-column">
+                        <ItemDetails
+                            item={item}
+                            onUse={onUse}
+                            onBind={onBindItem}
+                            onEquip={(i) =>
+                                void send({
+                                    action: i.equipped_slot ? 'unequip' : 'equip',
+                                    itemId: i.id,
+                                    slot: i.definition.equipment_slots[0],
+                                })
+                            }
+                        />
+                        {item && (
+                            <ItemOperations item={item} state={data} send={send} busy={busy} />
+                        )}
+                    </div>
                 </div>
             )}
         </RpgWindow>

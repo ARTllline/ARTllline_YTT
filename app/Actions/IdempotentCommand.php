@@ -2,6 +2,8 @@
 
 namespace App\Actions;
 
+use App\Http\Controllers\AbilityController;
+use App\Items\LootActions;
 use App\Models\Campaign;
 use App\Models\Scene;
 use App\Models\Token;
@@ -57,9 +59,12 @@ class IdempotentCommand
                         $result['token'] = array_intersect_key($result['token'], $safe);
                         $result['token']['canMove'] = $safe['canMove'];
                         $result['token']['conditions'] = array_values(array_filter($result['token']['conditions'] ?? [], fn ($condition) => in_array($condition['id'], array_column($safe['conditions'], 'id'), true)));
+                    } elseif ($operation === 'campaign.loot') {
+                        app(LootActions::class)->authorize($user, $campaign, $payload);
+                        app(LootActions::class)->assertReceiptReadable($user, $campaign, $result);
                     } elseif ($operation === 'campaign.inventory.command') {
                         app(AbilityActions::class)->authorize($user, $campaign, $payload['_routeCharacterId']);
-                        if (in_array($payload['action'] ?? '', ['give', 'remove'])) {
+                        if (in_array($payload['action'] ?? '', ['give', 'remove', 'put']) || (($payload['action'] ?? '') === 'configure' && array_key_exists('weapon_proficient', $payload))) {
                             Gate::forUser($user)->authorize('update', $campaign);
                         }
                     } elseif (in_array($operation, ['scene.ability', 'campaign.resource', 'scene.inventory.use'])) {
@@ -76,6 +81,10 @@ class IdempotentCommand
                         abort_if(isset($result['handout']) && $campaign->roleFor($user) !== 'gm', 403);
                     } else {
                         Gate::forUser($user)->authorize('update', $campaign);
+                    }
+
+                    if (in_array($operation, ['scene.ability', 'scene.inventory.use']) && $campaign->roleFor($user) !== 'gm') {
+                        $result = AbilityController::present($result);
                     }
 
                     return new JsonResponse($result, $receipt->status, ['Idempotent-Replay' => 'true']);

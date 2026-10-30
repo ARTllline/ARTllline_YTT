@@ -3,6 +3,8 @@ import { commandId } from '../api/workspace';
 import type { Character } from '../tabletop/types/scene';
 import type { Ability } from '../gameplay/model';
 export interface ItemDefinition {
+    gameplay?: import('./itemGameplay').ItemGameplay | null;
+    compendium_entry_id?: number | null;
     id: string;
     name: string;
     icon: string;
@@ -17,6 +19,16 @@ export interface ItemDefinition {
     use_ability_id: string | null;
 }
 export interface InventoryItem {
+    grip?: 'one' | 'two';
+    attack_ability?: 'auto' | 'str' | 'dex';
+    weapon_proficient?: boolean;
+    action?: {
+        ability: Ability | null;
+        secondary?: Ability | null;
+        available: boolean;
+        reason: string;
+        ammunition?: number | null;
+    };
     id: string;
     character_id: number;
     quantity: number;
@@ -26,6 +38,7 @@ export interface InventoryItem {
     definition: ItemDefinition;
 }
 export interface InventoryState {
+    recipients?: { id: string; name: string }[];
     items: InventoryItem[];
     useAbilities: Ability[];
     width: number;

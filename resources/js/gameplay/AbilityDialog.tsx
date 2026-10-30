@@ -20,6 +20,7 @@ import {
 
 export interface AbilityInvocation {
     inventoryItemId?: string;
+    itemAction?: 'use' | 'throw';
     ability: Ability;
     target: AbilityTarget | null;
     targetName?: string;
@@ -91,7 +92,10 @@ export function AbilityDialog({
                 clientMutationId: commandId(),
                 characterId: character.id,
                 ...(invocation.inventoryItemId
-                    ? { inventoryItemId: invocation.inventoryItemId }
+                    ? {
+                          inventoryItemId: invocation.inventoryItemId,
+                          itemAction: invocation.itemAction ?? 'use',
+                      }
                     : {}),
                 abilityId: ability.id,
                 epoch,
@@ -248,7 +252,8 @@ export function AbilityDialog({
                     </strong>
                 </div>
             )}
-            {((ability.check || ability.attack) && !roll?.automaticFailure) || showingDamage ? (
+            {((roll || ability.check || ability.attack) && !roll?.automaticFailure) ||
+            showingDamage ? (
                 <RpgDice
                     dice={showingDamage ? result!.damage!.rawDice : roll?.rawDice}
                     sides={
@@ -311,19 +316,21 @@ export function AbilityDialog({
                         .join(' · ')}
                 </p>
             )}
-            {result?.outcomes && ['outcome', 'damage'].includes(phase) && (
-                <div className="ability-target-results">
-                    {result.outcomes.map((o, i) => (
-                        <p key={o.tokenId}>
-                            Цель {i + 1}
-                            {o.save
-                                ? ` · Спасбросок: ${o.save.success ? 'успех' : 'провал'}${o.save.automaticFailure ? ' (автоматически)' : ''}`
-                                : ''}{' '}
-                            · Урон {o.damage}
-                        </p>
-                    ))}
-                </div>
-            )}
+            {result?.outcomes &&
+                result.healing === null &&
+                ['outcome', 'damage'].includes(phase) && (
+                    <div className="ability-target-results">
+                        {result.outcomes.map((o, i) => (
+                            <p key={o.tokenId}>
+                                Цель {i + 1}
+                                {o.save
+                                    ? ` · Спасбросок: ${o.save.success ? 'успех' : 'провал'}${o.save.automaticFailure ? ' (автоматически)' : ''}`
+                                    : ''}{' '}
+                                · Урон {o.damage}
+                            </p>
+                        ))}
+                    </div>
+                )}
             <div className="check-outcome" role="status">
                 {['outcome', 'damage'].includes(phase) && (
                     <>

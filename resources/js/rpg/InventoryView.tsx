@@ -1,3 +1,4 @@
+import { ItemFacts, itemCategories } from './itemGameplay';
 import { useState } from 'react';
 import { RpgIcon } from '../gameplay/RpgIcon';
 import type { InventoryItem, InventoryState } from './model';
@@ -12,7 +13,11 @@ export function InventoryGridView({
     onInspect,
     selectedId,
     search = '',
+    externalItems = [],
+    onExternalDrop,
 }: {
+    externalItems?: InventoryItem[];
+    onExternalDrop?: (i: InventoryItem) => void;
     selectedId?: string | null;
     search?: string;
     state: InventoryState;
@@ -25,6 +30,8 @@ export function InventoryGridView({
     const [menu, setMenu] = useState<InventoryItem | null>(null);
     const bag = state.items.filter((i) => i.quantity > 0 && !i.equipped_slot);
     const accepted = (id: string, x: number, y: number) => {
+        if (onExternalDrop && externalItems.some((i) => i.id === id) && !busy)
+            return fits(state.items, x, y);
         const item = state.items.find((i) => i.id === id && i.quantity > 0);
         if (!item || busy) return false;
         const target = bag.find((i) => i.id !== id && i.x === x && i.y === y);
@@ -51,7 +58,11 @@ export function InventoryGridView({
                                 key,
                                 (b) =>
                                     b.sourceType === 'inventory_item' && accepted(b.sourceId, x, y),
-                                (b) => void send({ action: 'move', itemId: b.sourceId, x, y }),
+                                (b) => {
+                                    const ext = externalItems.find((i) => i.id === b.sourceId);
+                                    if (ext && onExternalDrop) onExternalDrop(ext);
+                                    else void send({ action: 'move', itemId: b.sourceId, x, y });
+                                },
                             )}
                         />
                     );
@@ -106,6 +117,7 @@ export function InventoryGridView({
                         {item.quantity > 1 && <b className="inventory-quantity">{item.quantity}</b>}
                         <span className="rpg-tooltip">
                             <strong>{item.definition.name}</strong>
+                            <ItemFacts definition={item.definition} item={item} />
                             <span>{item.definition.description}</span>
                             <small>1 × 1 · {item.quantity} шт.</small>
                         </span>
@@ -143,7 +155,7 @@ export function InventoryGridView({
                                 setMenu(null);
                             }}
                         >
-                            Использовать
+                            {menu.definition.gameplay?.weapon ? 'Атаковать' : 'Использовать'}
                         </button>
                     )}
                     {menu.quantity > 1 && (
@@ -203,6 +215,7 @@ export function ItemDetails({
             } as Record<string, string>
         )[d.rarity] ?? d.rarity;
     const category =
+        itemCategories[d.category] ??
         (
             {
                 weapon: 'Оружие',
@@ -211,7 +224,8 @@ export function ItemDetails({
                 scroll: 'Свиток',
                 trinket: 'Артефакт',
             } as Record<string, string>
-        )[d.category] ?? d.category;
+        )[d.category] ??
+        d.category;
     return (
         <aside className={`item-inspection rarity-${d.rarity}`}>
             <div className="inspection-art">
@@ -223,6 +237,8 @@ export function ItemDetails({
             </span>
             <h2>{d.name}</h2>
             <p>{d.description}</p>
+            <ItemFacts definition={d} item={item} />
+            {item.action?.reason && <p className="hint">{item.action.reason}</p>}
             <dl>
                 <div>
                     <dt>Ячейка</dt>
@@ -262,19 +278,34 @@ export function ItemDetails({
                     </div>
                 ))}
             </dl>
+            {item.action?.secondary && (
+                <button
+                    className="rpg-quiet-button"
+                    disabled={!item.action.available}
+                    onClick={() =>
+                        window.dispatchEvent(
+                            new CustomEvent('ytt:inventory-use', {
+                                detail: { id: item.id, mode: 'throw' },
+                            }),
+                        )
+                    }
+                >
+                    Метнуть оружие
+                </button>
+            )}
             {d.equipment_slots.length > 0 && (
                 <button className="rpg-gold-button" onClick={() => onEquip(item)}>
                     {item.equipped_slot ? 'Снять' : 'Надеть'}
                 </button>
             )}
-            {d.use_ability_id && (
+            {(d.use_ability_id || item.action?.ability) && (
                 <>
                     <button
                         className="rpg-gold-button"
-                        disabled={item.quantity < 1}
+                        disabled={item.quantity < 1 || (item.action && !item.action.available)}
                         onClick={() => onUse(item)}
                     >
-                        Использовать
+                        {d.gameplay?.weapon ? 'Атаковать' : 'Использовать'}
                     </button>
                     <button className="rpg-quiet-button" onClick={() => onBind(item)}>
                         В панель действий

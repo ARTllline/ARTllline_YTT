@@ -1,3 +1,4 @@
+import { LootSetup } from '../../rpg/loot';
 import { t } from '../../i18n';
 import { X, Layers } from 'lucide-react';
 import type { SceneStore } from '../../tabletop/state/SceneStore';
@@ -51,6 +52,7 @@ export function PropInspector({
                             }}
                         />
                     </label>
+                    <LootSetup store={store} kind="prop" id={prop.id} loot={prop.loot} />
                     <InteractionEditor
                         key={prop.id}
                         store={store}

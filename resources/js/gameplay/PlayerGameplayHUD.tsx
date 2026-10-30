@@ -113,6 +113,7 @@ function CharacterHUD({
     const [targeting, setTargeting] = useState<Ability | null>(null);
     const [invocation, setInvocation] = useState<AbilityInvocation | null>(null);
     const [error, setError] = useState('');
+    const itemMode = useRef<'use' | 'throw'>('use');
     const itemSource = useRef<string | undefined>(undefined);
     const { scene } = store.getSnapshot();
     const slot = abilitySlot(userId, scene.campaignId!, character.id);
@@ -169,12 +170,25 @@ function CharacterHUD({
             return;
         }
         if (['token', 'prop', 'point'].includes(ability.target)) setTargeting(ability);
-        else setInvocation({ ability, target: null, auto: true, mode: rollMode, inventoryItemId });
+        else
+            setInvocation({
+                ability,
+                target: null,
+                auto: true,
+                mode: rollMode,
+                inventoryItemId,
+                itemAction: itemMode.current,
+            });
     };
-    const chooseItem = (item: InventoryItem) => {
-        const ability = inventory.data?.useAbilities.find(
-            (a) => a.id === item.definition.use_ability_id,
-        );
+    const chooseItem = (item: InventoryItem, mode: 'use' | 'throw' = 'use') => {
+        itemMode.current = mode;
+        if (item.action && !item.action.available) {
+            setError(item.action.reason);
+            return;
+        }
+        const ability =
+            (mode === 'throw' ? item.action?.secondary : item.action?.ability) ??
+            inventory.data?.useAbilities.find((a) => a.id === item.definition.use_ability_id);
         if (!ability || item.quantity < 1) {
             setError('Предмет недоступен или закончился.');
             return;
@@ -215,9 +229,12 @@ function CharacterHUD({
             }
         };
         const item = (e: Event) => {
-            const id = (e as CustomEvent<string>).detail;
+            const detail = (e as CustomEvent<string | { id: string; mode: 'use' | 'throw' }>)
+                .detail;
+            const id = typeof detail === 'string' ? detail : detail.id;
             const candidate = inventory.data?.items.find((i) => i.id === id);
-            if (candidate) windowHandlers.current(candidate);
+            if (candidate)
+                windowHandlers.current(candidate, typeof detail === 'string' ? 'use' : detail.mode);
         };
         window.addEventListener('keydown', key);
         window.addEventListener('ytt:inventory-use', item);
@@ -419,6 +436,13 @@ function CharacterHUD({
                     disabled={disabled}
                     onClick={() => {
                         const ability = abilities.find((a) => a.id === pending.command.abilityId) ??
+                            inventory.data?.items
+                                .map((i) =>
+                                    pending.command.itemAction === 'throw'
+                                        ? i.action?.secondary
+                                        : i.action?.ability,
+                                )
+                                .find((a) => a?.id === pending.command.abilityId) ??
                             inventory.data?.useAbilities.find(
                                 (a) => a.id === pending.command.abilityId,
                             ) ?? {
@@ -436,6 +460,7 @@ function CharacterHUD({
                         setInvocation({
                             ability,
                             inventoryItemId: pending.command.inventoryItemId,
+                            itemAction: pending.command.itemAction,
                             target: pending.command.target,
                             retained: pending,
                         });
@@ -463,6 +488,7 @@ function CharacterHUD({
                             auto: true,
                             mode: rollMode,
                             inventoryItemId: itemSource.current,
+                            itemAction: itemMode.current,
                         });
                         setTargeting(null);
                     }}

@@ -1,3 +1,4 @@
+import { LootOverlay } from '../rpg/loot';
 import { CreationHub } from './creation/CreationHub';
 import { PlacementOverlay } from './creation/PlacementOverlay';
 import { SceneCreation } from './creation/SceneCreation';
@@ -667,6 +668,7 @@ export function Workspace({
                             ✓ {placed}
                         </div>
                     )}
+                    <LootOverlay store={store} />
                     {scene.id && !placement && (
                         <RadialMenu
                             store={store}

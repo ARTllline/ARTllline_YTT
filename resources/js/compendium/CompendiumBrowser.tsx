@@ -1,3 +1,5 @@
+import { ItemDelivery } from '../rpg/ItemDelivery';
+import type { ItemDefinition } from '../rpg/model';
 import { useEffect, useState } from 'react';
 import { request } from '../api/client';
 import { commandId } from '../api/workspace';
@@ -60,6 +62,7 @@ export function CompendiumBrowser({ campaignId }: { campaignId: string }) {
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState('');
+    const [copiedItem, setCopiedItem] = useState<ItemDefinition | null>(null);
     useEffect(() => {
         const abort = new AbortController();
         void charactersApi
@@ -119,6 +122,7 @@ export function CompendiumBrowser({ campaignId }: { campaignId: string }) {
     const reset = () => {
         setPage(1);
         setLoading(true);
+        setCopiedItem(null);
         setSelected(null);
         setEntry(null);
         setMessage('');
@@ -129,11 +133,16 @@ export function CompendiumBrowser({ campaignId }: { campaignId: string }) {
         setError('');
         setMessage('');
         try {
-            const copied = await request<{ character?: Character }>(`${base}/copy`, 'POST', {
-                entry_id: entry.id,
-                character_id: entry.entity_type === 'spells' ? Number(character) : null,
-                clientMutationId: commandId(),
-            });
+            const copied = await request<{ character?: Character; definition?: ItemDefinition }>(
+                `${base}/copy`,
+                'POST',
+                {
+                    entry_id: entry.id,
+                    character_id: entry.entity_type === 'spells' ? Number(character) : null,
+                    clientMutationId: commandId(),
+                },
+            );
+            setCopiedItem(copied.definition ?? null);
             if (copied.character) {
                 const npc = copied.character;
                 setCharacters((all) => [...all, npc]);
@@ -224,6 +233,7 @@ export function CompendiumBrowser({ campaignId }: { campaignId: string }) {
                                 aria-pressed={selected === e.id}
                                 disabled={busy}
                                 onClick={() => {
+                                    setCopiedItem(null);
                                     setSelected(e.id);
                                     setEntry(null);
                                     setDetailLoading(true);
@@ -316,6 +326,13 @@ export function CompendiumBrowser({ campaignId }: { campaignId: string }) {
                                     ? 'Создать способность / заклинание'
                                     : 'Создать предмет кампании'}
                         </button>
+                    )}
+                    {copiedItem && (
+                        <ItemDelivery
+                            campaign={campaignId}
+                            definition={copiedItem}
+                            characters={characters}
+                        />
                     )}
                     {message && <p role="status">{message}</p>}
                     <details>

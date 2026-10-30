@@ -13,12 +13,16 @@ export function RpgWindow({
     onChange,
     onClose,
     children,
+    title,
+    hideTabs = false,
 }: {
     kind: RpgWindowKind;
     name: string;
     onChange: (v: RpgWindowKind) => void;
     onClose: () => void;
     children: ReactNode;
+    title?: string;
+    hideTabs?: boolean;
 }) {
     const [closing, setClosing] = useState(false);
     const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined),
@@ -36,10 +40,10 @@ export function RpgWindow({
     }, []);
     return createPortal(
         <section
-            className={`rpg-window window-${kind} ${closing ? 'is-closing' : ''}`}
+            className={`rpg-window window-${kind} ${closing ? 'is-closing' : ''} ${title ? 'window-loot' : ''}`}
             role="dialog"
             aria-modal="false"
-            aria-label={nav.find((v) => v.key === kind)!.label}
+            aria-label={title ?? nav.find((v) => v.key === kind)!.label}
             tabIndex={-1}
             ref={host}
             onKeyDown={(e) => {
@@ -51,25 +55,33 @@ export function RpgWindow({
         >
             <header className="rpg-window-header">
                 <div className="rpg-window-identity">
-                    <span>YTT · ГЕРОЙ</span>
+                    <span>{title ? 'YTT · ' + title.toUpperCase() : 'YTT · ГЕРОЙ'}</span>
                     <strong>{name}</strong>
                 </div>
-                <nav aria-label="Окна персонажа">
-                    {nav.map(({ key, label, keycap, Icon }) => (
-                        <button key={key} aria-pressed={kind === key} onClick={() => onChange(key)}>
-                            <Icon size={19} />
-                            <span>{label}</span>
-                            <kbd>{keycap}</kbd>
-                        </button>
-                    ))}
-                </nav>
+                {!hideTabs && (
+                    <nav aria-label="Окна персонажа">
+                        {nav.map(({ key, label, keycap, Icon }) => (
+                            <button
+                                key={key}
+                                aria-pressed={kind === key}
+                                onClick={() => onChange(key)}
+                            >
+                                <Icon size={19} />
+                                <span>{label}</span>
+                                <kbd>{keycap}</kbd>
+                            </button>
+                        ))}
+                    </nav>
+                )}
                 <button className="rpg-window-close" aria-label="Закрыть RPG окно" onClick={close}>
                     <X size={22} />
                 </button>
             </header>
             <div className="rpg-window-body">{children}</div>
             <div className="rpg-window-footnote">
-                Перетащите на панель действий · Удерживайте на сенсорном экране · Esc — закрыть
+                {title
+                    ? 'Перетащите добычу в рюкзак · Esc — закрыть'
+                    : 'Перетащите на панель действий · Удерживайте на сенсорном экране · Esc — закрыть'}
             </div>
         </section>,
         document.body,

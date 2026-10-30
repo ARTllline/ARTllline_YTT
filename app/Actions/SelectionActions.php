@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Models\Combat;
+use App\Models\LootContainer;
 use App\Models\Scene;
 use App\Models\Token;
 use App\Models\User;
@@ -20,6 +21,7 @@ class SelectionActions
             [$tokens, $props] = $selection->resolve($scene, $data);
             $previous = $selection->visible($tokens, $props);
             if ($data['action'] === 'delete') {
+                abort_if(LootContainer::where(fn ($q) => $q->whereIn('token_id', $tokens->modelKeys())->orWhereIn('prop_id', $props->modelKeys()))->whereHas('items', fn ($q) => $q->where('quantity', '>', 0))->exists(), 422, 'Сначала переместите содержимое добычи.');
                 $deleted = ['deletedIds' => $tokens->pluck('id')->map(strval(...))->all(), 'deletedPropIds' => $props->pluck('id')->map(strval(...))->all()];
                 $combat = Combat::where('scene_id', $scene->id)->whereIn('status', ['preparing', 'active'])->first();
                 foreach ($tokens as $token) {

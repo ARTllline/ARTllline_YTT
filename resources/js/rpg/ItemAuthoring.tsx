@@ -1,3 +1,6 @@
+import { request } from '../api/client';
+import { ItemGameplayEditor } from './ItemGameplayEditor';
+import { itemCategories } from './itemGameplay';
 import { useEffect, useState } from 'react';
 import type { Character } from '../tabletop/types/scene';
 import { RpgIcon } from '../gameplay/RpgIcon';
@@ -49,6 +52,8 @@ export function ItemAuthoring({
     campaignId: string;
     character: Character;
 }) {
+    const [containers, setContainers] = useState<{ id: string; name: string }[]>([]),
+        [container, setContainer] = useState('');
     const [catalog, setCatalog] = useState<ItemDefinition[]>([]),
         [draft, setDraft] = useState<Partial<ItemDefinition> | null>(null),
         [quantity, setQuantity] = useState(1),
@@ -57,6 +62,13 @@ export function ItemAuthoring({
     const inventory = useInventory(campaignId, character, () => {});
     useEffect(() => {
         let alive = true;
+        void request<{ containers: { id: string; name: string }[] }>(
+            `/campaigns/${campaignId}/loot/catalog`,
+        )
+            .then((r) => {
+                if (alive) setContainers(r.containers);
+            })
+            .catch(() => {});
         void inventoryApi
             .definitions(campaignId)
             .then((r) => {
@@ -137,12 +149,56 @@ export function ItemAuthoring({
             <button type="button" onClick={() => setDraft({ ...empty })}>
                 ＋ Создать предмет
             </button>
+            <label>
+                Контейнер для переноса
+                <select value={container} onChange={(e) => setContainer(e.target.value)}>
+                    <option value="">Выберите контейнер</option>
+                    {containers.map((c) => (
+                        <option key={c.id} value={c.id}>
+                            {c.name}
+                        </option>
+                    ))}
+                </select>
+            </label>
             <div className="gm-held-items">
                 {inventory.data?.items
                     .filter((i) => i.quantity > 0)
                     .map((i) => (
                         <span key={i.id}>
                             {i.definition.name} ×{i.quantity}
+                            {container && (
+                                <button
+                                    type="button"
+                                    disabled={inventory.busy}
+                                    onClick={() =>
+                                        void inventory.send({
+                                            action: 'put',
+                                            containerId: Number(container),
+                                            itemId: i.id,
+                                            quantity: Math.min(quantity, i.quantity),
+                                        })
+                                    }
+                                >
+                                    В контейнер
+                                </button>
+                            )}
+                            {i.definition.gameplay?.weapon && (
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        checked={i.weapon_proficient ?? false}
+                                        disabled={inventory.busy}
+                                        onChange={(e) =>
+                                            void inventory.send({
+                                                action: 'configure',
+                                                itemId: i.id,
+                                                weapon_proficient: e.target.checked,
+                                            })
+                                        }
+                                    />
+                                    Владение оружием
+                                </label>
+                            )}
                             <button
                                 type="button"
                                 disabled={inventory.busy}
@@ -195,18 +251,16 @@ export function ItemAuthoring({
                         ))}
                     </div>
                     <div className="ability-type-chips">
-                        {['weapon', 'armor', 'consumable', 'scroll', 'trinket'].map(
-                            (category, i) => (
-                                <button
-                                    type="button"
-                                    key={category}
-                                    aria-pressed={draft.category === category}
-                                    onClick={() => patch({ category })}
-                                >
-                                    {['Оружие', 'Броня', 'Расходник', 'Свиток', 'Артефакт'][i]}
-                                </button>
-                            ),
-                        )}
+                        {Object.keys(itemCategories).map((category) => (
+                            <button
+                                type="button"
+                                key={category}
+                                aria-pressed={draft.category === category}
+                                onClick={() => patch({ category })}
+                            >
+                                {itemCategories[category]}
+                            </button>
+                        ))}
                     </div>
                     <div className="ability-type-chips">
                         {['common', 'uncommon', 'rare', 'epic', 'legendary'].map((rarity, i) => (
@@ -234,6 +288,12 @@ export function ItemAuthoring({
                             </label>
                         ))}
                     </div>
+                    <ItemGameplayEditor
+                        draft={draft}
+                        patch={patch}
+                        character={character}
+                        campaignId={campaignId}
+                    />
                     <details>
                         <summary>Совместимость и бонусы</summary>
                         <div className="ability-type-chips">

@@ -14,7 +14,7 @@ class CharacterHotbarController extends Controller
     private function available(Character $character): array
     {
         return ['ability' => collect($character->abilities ?? [])->where('enabled', true)->filter(fn ($a) => ! ($a['item_only'] ?? false) && (! isset($a['spell']) || $a['spell']['known']))->sortBy('sort_order')->pluck('id')->all(),
-            'inventory_item' => $character->inventory()->with('definition')->get()->filter(fn ($i) => $i->definition->use_ability_id && collect($character->abilities ?? [])->where('enabled', true)->contains('id', $i->definition->use_ability_id))->pluck('id')->all()];
+            'inventory_item' => $character->inventory()->with('definition')->get()->filter(fn ($i) => $i->quantity > 0 && (isset($i->definition->gameplay['weapon']) || isset($i->definition->gameplay['use']) || ($i->definition->use_ability_id && collect($character->abilities ?? [])->where('enabled', true)->contains('id', $i->definition->use_ability_id))))->pluck('id')->all()];
     }
 
     public function show(Request $request, Campaign $campaign, Character $character): array

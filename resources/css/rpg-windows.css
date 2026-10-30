@@ -1468,3 +1468,255 @@
     color: #aaa;
     font-size: 10px;
 }
+
+/* Item gameplay and shared loot retain the one-cell RPG window vocabulary. */
+.item-gameplay-facts {
+    display: grid;
+    gap: 5px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: #d4c3a1;
+}
+.item-gameplay-facts strong {
+    color: #eedbb2;
+}
+.item-gameplay-facts small {
+    color: #a79b82;
+}
+.item-operations,
+.item-delivery,
+.item-gameplay-editor {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid #9d835042;
+    border-radius: 6px;
+    background: #191d19;
+}
+.item-operations label,
+.item-delivery label,
+.item-gameplay-editor label {
+    display: grid;
+    gap: 5px;
+    font-size: 12px;
+}
+.item-operations details {
+    display: grid;
+    gap: 8px;
+}
+.item-operations details > * {
+    margin-top: 8px;
+}
+.item-details-column {
+    min-width: 0;
+    overflow: auto;
+    max-height: 100%;
+    background: #151a16;
+}
+.item-details-column .item-inspection {
+    max-height: none;
+    overflow: visible;
+}
+.loot-toolbar {
+    display: flex;
+    align-items: end;
+    gap: 12px;
+    padding: 14px;
+    flex-wrap: wrap;
+}
+.loot-toolbar label {
+    display: grid;
+    gap: 4px;
+    font-size: 12px;
+}
+.loot-toolbar select {
+    max-width: 260px;
+}
+.loot-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(300px, 1.2fr);
+    gap: 18px;
+    padding: 0 18px 18px;
+}
+.loot-source,
+.loot-destination {
+    min-width: 0;
+    border: 1px solid #aa8d5350;
+    padding: 12px;
+    border-radius: 7px;
+    background: linear-gradient(#292b21, #161c17);
+}
+.loot-status {
+    font-size: 12px;
+    color: #ccba94;
+    margin-bottom: 12px;
+}
+.loot-item-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+    gap: 10px;
+}
+.loot-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    text-align: center;
+    font-size: 12px;
+}
+.loot-item > button:first-child {
+    position: relative;
+    background: #242b20;
+    border: 1px solid #b59a6066;
+    min-width: 74px;
+    min-height: 74px;
+    overflow: visible;
+}
+.loot-item > button:first-child > b {
+    position: absolute;
+    bottom: 3px;
+    right: 5px;
+    color: #f2dfb5;
+}
+.loot-item .rpg-tooltip {
+    display: none;
+    position: absolute;
+    z-index: 20;
+    bottom: 100%;
+    left: 0;
+    width: 250px;
+    padding: 12px;
+    background: #171e19;
+    border: 1px solid #bda16b;
+    text-align: left;
+    box-shadow: 0 7px 24px #000a;
+    pointer-events: none;
+}
+.loot-item > button:first-child:hover .rpg-tooltip,
+.loot-item > button:first-child:focus-visible .rpg-tooltip {
+    display: grid;
+    gap: 7px;
+}
+.loot-destination .inventory-board-wrap {
+    max-width: 100%;
+}
+.loot-destination.drop-valid {
+    border-color: #b7d9a3;
+    box-shadow: inset 0 0 20px #86be5b22;
+}
+.loot-authoring {
+    padding: 12px 18px;
+    border-top: 1px solid #a68d5444;
+}
+.loot-authoring > select {
+    max-width: 280px;
+    margin: 8px;
+}
+.loot-authoring > input {
+    width: 75px;
+    margin: 8px;
+}
+.item-delivery {
+    margin-top: 14px;
+}
+.gm-held-items label {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.rpg-tooltip .item-gameplay-facts {
+    font-size: 11px;
+}
+.rpg-tooltip .item-gameplay-facts span {
+    color: #d4c3a1;
+}
+@media (max-width: 760px) {
+    .loot-layout {
+        grid-template-columns: 1fr;
+        padding: 0 10px 12px;
+    }
+    .loot-toolbar {
+        gap: 7px;
+        padding: 10px;
+    }
+    .loot-item-grid {
+        grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
+    }
+    .loot-destination .inventory-board-wrap {
+        --inventory-cell: 26px;
+    }
+    .item-delivery {
+        padding: 9px;
+    }
+    .loot-layout .inventory-board {
+        max-width: 100%;
+    }
+}
+
+.loot-item > input {
+    width: 64px;
+    text-align: center;
+    padding: 3px;
+}
+.loot-item-detail {
+    margin-top: 12px;
+    padding: 10px;
+    border-top: 1px solid #a68e5355;
+}
+.loot-destination {
+    --inventory-cell: 34px;
+}
+.loot-item > button:first-child:hover .rpg-tooltip,
+.loot-item > button:first-child:focus-visible .rpg-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+}
+
+.rpg-window.window-loot {
+    width: min(1080px, calc(100vw - 48px));
+    height: auto;
+    min-height: 0;
+    max-height: calc(100dvh - 112px);
+}
+.window-loot .rpg-window-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.window-loot .rpg-window-identity {
+    display: block;
+    min-width: 0;
+    flex: 1;
+}
+.window-loot .rpg-window-identity strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.window-loot .rpg-window-close {
+    margin-left: auto;
+}
+.window-loot .rpg-window-body {
+    max-height: calc(100dvh - 220px);
+}
+.window-loot .inventory-board-wrap {
+    --inventory-cell: clamp(22px, 3.1vw, 38px);
+}
+@media (max-width: 600px) {
+    .rpg-window.window-loot {
+        width: calc(100vw - 16px);
+    }
+    .window-loot .rpg-window-identity {
+        display: block;
+    }
+    .window-loot .rpg-window-identity span {
+        display: block;
+        font-size: 9px;
+    }
+    .window-loot .rpg-window-identity strong {
+        font-size: 16px;
+    }
+}

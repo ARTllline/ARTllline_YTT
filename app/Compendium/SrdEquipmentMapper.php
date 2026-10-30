@@ -23,6 +23,7 @@ class SrdEquipmentMapper
         },
             'equipment_categories' => $categories, 'description' => SrdKeys::description($r),
             'damage' => isset($r['damage']) ? ['expression' => $r['damage']['damage_dice'] ?? null, 'damage_type' => SrdKeys::key($r['damage']['damage_type']['index'])] : null,
+            'ammunition' => isset($r['ammunition']) ? SrdKeys::key($r['ammunition']['index']) : null,
             'two_handed_damage' => $r['two_handed_damage'] ?? null,
             'weapon_properties' => SrdKeys::refs($r['properties'] ?? []), 'weapon_mastery' => isset($r['mastery']) ? SrdKeys::key($r['mastery']['index']) : null,
             'range' => isset($r['range']) ? ['normal' => $r['range']['normal'], 'long' => $r['range']['long'] ?? null, 'unit' => 'ft'] : null,

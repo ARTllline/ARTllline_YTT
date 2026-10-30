@@ -58,9 +58,10 @@ class CharacterGameplay
             'abilities.*.costs.*.key' => 'required|string|max:48',
             'abilities.*.costs.*.amount' => 'required|integer|between:1,9999',
             'abilities.*.damage' => ['present', 'nullable', 'string', 'max:12', 'regex:'.DamageRoller::PATTERN],
-            'abilities.*.result' => 'required|array:type,target,amount',
+            'abilities.*.result' => 'required|array:type,target,amount,dice',
             'abilities.*.result.type' => 'required|in:nothing,heal,cue,handout',
             'abilities.*.result.target' => 'present|nullable|integer|min:1',
+            'abilities.*.result.dice' => ['sometimes', 'nullable', 'string', 'max:12', 'regex:'.DamageRoller::PATTERN],
             'abilities.*.result.amount' => 'required|integer|between:0,9999',
             'abilities.*.sort_order' => 'required|integer|between:0,100', 'abilities.*.enabled' => 'required|boolean',
         ] + CombatMetadata::abilityRules();
@@ -130,7 +131,7 @@ class CharacterGameplay
             $result = $ability['result'];
             $valid = match ($result['type']) {
                 'nothing' => true,
-                'heal' => in_array($ability['target'], ['self', 'token']) && $result['amount'] > 0,
+                'heal' => in_array($ability['target'], ['self', 'token']) && ($result['amount'] > 0 || ! empty($result['dice'])),
                 'handout' => Handout::where('campaign_id', $campaign->id)->whereKey($result['target'])->exists(),
                 'cue' => Cue::whereHas('scene', fn ($q) => $q->where('campaign_id', $campaign->id))->whereKey($result['target'])->exists(),
             };

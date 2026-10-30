@@ -3,7 +3,7 @@ import { ApiError } from '../api/client';
 import { commandId } from '../api/workspace';
 import type { Character } from '../tabletop/types/scene';
 import { inventoryApi, type InventoryState } from './model';
-export function useInventory(campaign: string, character: Character, onChanged: () => void) {
+export function useInventory(campaign: string, character: Character | null, onChanged: () => void) {
     const [data, setData] = useState<InventoryState | null>(null),
         [error, setError] = useState(''),
         [busy, setBusy] = useState(false);
@@ -15,19 +15,22 @@ export function useInventory(campaign: string, character: Character, onChanged: 
         changed.current = onChanged;
     });
     const refresh = () =>
-        inventoryApi
-            .read(campaign, character.id)
-            .then((v) => {
-                if (alive.current) {
-                    setData(v);
-                    if (!pending.current) setError('');
-                }
-            })
-            .catch((e) => {
-                if (alive.current) setError(e.message);
-            });
+        character
+            ? inventoryApi
+                  .read(campaign, character.id)
+                  .then((v) => {
+                      if (alive.current) {
+                          setData(v);
+                          if (!pending.current) setError('');
+                      }
+                  })
+                  .catch((e) => {
+                      if (alive.current) setError(e.message);
+                  })
+            : Promise.resolve();
     useEffect(() => {
         alive.current = true;
+        if (!character) return;
         const abort = new AbortController();
         void inventoryApi
             .read(campaign, character.id, abort.signal)
@@ -46,6 +49,7 @@ export function useInventory(campaign: string, character: Character, onChanged: 
         };
     }, [campaign, character]);
     const send = async (command: Record<string, unknown>) => {
+        if (!character) return;
         if (lock.current) return;
         lock.current = true;
         setBusy(true);

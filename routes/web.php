@@ -15,6 +15,7 @@ use App\Http\Controllers\GameSessionController;
 use App\Http\Controllers\HandoutController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InviteController;
+use App\Http\Controllers\LootController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\MovePreviewController;
 use App\Http\Controllers\NoteController;
@@ -63,6 +64,9 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::put('/campaigns/{campaign}/characters/{character}/hotbar', [CharacterHotbarController::class, 'update']);
         Route::post('/scenes/{scene}/abilities/execute', [AbilityController::class, 'execute'])->name('scene.ability')->middleware([IdempotentMutation::class, 'throttle:60,1']);
         Route::post('/campaigns/{campaign}/resources/adjust', [AbilityController::class, 'resource'])->name('campaign.resource')->middleware(IdempotentMutation::class);
+        Route::get('/campaigns/{campaign}/loot/catalog', [LootController::class, 'catalog']);
+        Route::get('/campaigns/{campaign}/loot', [LootController::class, 'show']);
+        Route::post('/campaigns/{campaign}/loot', [LootController::class, 'command'])->name('campaign.loot')->middleware(IdempotentMutation::class);
         Route::get('/campaigns/{campaign}/characters', [CharacterController::class, 'index']);
         Route::get('/campaigns/{campaign}/character-rules/catalog', [CharacterController::class, 'catalog']);
         Route::post('/campaigns/{campaign}/character-rules/preview', [CharacterController::class, 'preview']);

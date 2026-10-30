@@ -166,3 +166,8 @@ SRD attribution and API provenance remain in [COMPENDIUM.md](COMPENDIUM.md).
 The combat contexts, turn budgets, movement, typed damage and focused condition
 mechanics described as future work above are now implemented in
 [COMBAT_GAMEPLAY.md](COMBAT_GAMEPLAY.md). Persistent CharacterRules ownership is unchanged.
+
+## Task 28 equipment formulas
+
+[Items & Loot](ITEMS_LOOT.md) adds typed armor/shield formulas and weapon attack/
+damage scopes to this resolver while retaining legacy manual bases and modifiers.

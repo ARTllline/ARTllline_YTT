@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Items\ItemRules;
 use App\Models\Character;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -131,7 +132,7 @@ class CharacterRules
             }
             $mods = $item->definition->modifiers ?? [];
             // checks.str is a raw STR check bonus, not an ability score increase.
-            $amount = in_array($key, ['ac', 'speed']) ? ($mods[$key] ?? 0) : array_sum(array_filter($mods['checks'] ?? [], fn ($k) => $this->canonical($k) === $key, ARRAY_FILTER_USE_KEY));
+            $amount = in_array($key, ['ac', 'speed', 'weapon_attack', 'weapon_damage']) ? ($mods[$key] ?? 0) : array_sum(array_filter($mods['checks'] ?? [], fn ($k) => $this->canonical($k) === $key, ARRAY_FILTER_USE_KEY));
             if ($amount) {
                 $parts[] = ['source' => 'equipment', 'label' => $item->definition->name, 'value' => $amount, 'itemId' => (string) $item->id];
             }
@@ -211,10 +212,39 @@ class CharacterRules
         return array_values(array_filter(array_map(fn ($k) => $this->stat($character, $k), $keys)));
     }
 
+    public function weaponStat(Character $c, string $ability, bool $proficient, int $bonus = 0, bool $damage = false): array
+    {
+        $r = $this->state($c);
+        $parts = [];
+        if ($r) {
+            $parts[] = ['source' => 'ability', 'label' => self::ABILITIES[$ability], 'value' => $this->abilityModifier($r['scores'][$ability])];
+        } else {
+            $legacy = $this->stat($c, $ability);
+            abort_unless($legacy, 422, 'Настройте характеристику оружия у персонажа.');
+            $parts = $legacy['breakdown'];
+        }
+        if (! $damage && $proficient) {
+            abort_unless($r, 422, 'Настройте бонус владения в характеристиках персонажа.');
+            $parts[] = ['source' => 'proficiency', 'label' => 'Владение оружием', 'value' => $r['proficiency_bonus']];
+        }
+        $parts = [...$parts, ...$this->equipment($c, $damage ? 'weapon_damage' : 'weapon_attack')];
+        if ($bonus) {
+            $parts[] = ['source' => 'custom', 'label' => 'Бонус оружия', 'value' => $bonus];
+        }
+
+        return $this->total($ability, self::ABILITIES[$ability], $parts, ['proficient' => $proficient]);
+    }
+
     public function coreStat(Character $character, string $key, mixed $base): array
     {
         $base = $base === null ? null : (int) $base;
         $parts = [['source' => 'base', 'label' => $key === 'ac' ? 'Базовая AC' : 'Базовая скорость', 'value' => $base ?? 0]];
+        $armor = app(ItemRules::class)->armorParts($character, $key);
+        if ($armor['base'] !== null) {
+            $parts = $armor['base'];
+            $base = 0;
+        }
+        $parts = [...$parts, ...$armor['parts']];
         $bonus = $character->rules['modifiers'][$key] ?? 0;
         if ($bonus) {
             $parts[] = ['source' => 'custom', 'label' => 'Дополнительный бонус', 'value' => $bonus];

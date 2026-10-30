@@ -303,14 +303,17 @@ export function AbilityHotbar({
                                                 }
                                                 itemAbility={
                                                     binding?.sourceType === 'inventory_item'
-                                                        ? itemAbilities.find(
+                                                        ? (items.find(
+                                                              (i) => i.id === binding.sourceId,
+                                                          )?.action?.ability ??
+                                                          itemAbilities.find(
                                                               (a) =>
                                                                   a.id ===
                                                                   items.find(
                                                                       (i) =>
                                                                           i.id === binding.sourceId,
                                                                   )?.definition.use_ability_id,
-                                                          )
+                                                          ))
                                                         : undefined
                                                 }
                                                 onChooseItem={onChooseItem}

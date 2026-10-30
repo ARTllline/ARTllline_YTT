@@ -28,9 +28,11 @@ class SceneProp extends Model
 
     public function projection(bool $gm): array
     {
-        return ['id' => (string) $this->id, 'name' => $this->name,
+        $loot = LootContainer::where('prop_id', $this->id)->first();
+
+        return [...($loot ? ['loot' => $loot->summary($gm)] : []), 'id' => (string) $this->id, 'name' => $this->name,
             'interactions' => app(ObjectInteractionActions::class)->projection($this, $gm),
-            'image' => app(SceneSnapshotBuilder::class)->asset($this->asset),
+            'image' => app(SceneSnapshotBuilder::class)->asset($this->asset) ?? ['id' => 'loot', 'url' => '/assets/player/utility/loot.svg', 'width' => 96, 'height' => 96],
             'x' => (float) $this->x, 'y' => (float) $this->y, 'rotation' => (float) $this->rotation,
             'scaleX' => (float) $this->scale_x, 'scaleY' => (float) $this->scale_y, 'zIndex' => $this->z_index,
             ...($gm ? ['isHidden' => $this->is_hidden, 'isLocked' => $this->is_locked] : [])];

@@ -30,6 +30,11 @@ class Scene extends Model
         return $this->hasMany(FogAction::class)->orderBy('sequence');
     }
 
+    public function props(): HasMany
+    {
+        return $this->hasMany(SceneProp::class);
+    }
+
     public function tokens(): HasMany
     {
         return $this->hasMany(Token::class);

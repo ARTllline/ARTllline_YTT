@@ -73,6 +73,7 @@ export interface Ability {
         type: 'nothing' | 'heal' | 'cue' | 'handout';
         target: number | null;
         amount: number;
+        dice?: string | null;
     };
     sort_order: number;
     enabled: boolean;
@@ -81,6 +82,7 @@ export type AbilityTarget = { kind: 'token' | 'prop'; id: string } | ({ kind: 'p
 export interface AbilityCommand {
     actorTokenId?: string;
     inventoryItemId?: string;
+    itemAction?: 'use' | 'throw';
     clientMutationId: string;
     characterId?: string;
     abilityId: string;

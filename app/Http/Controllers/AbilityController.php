@@ -46,7 +46,7 @@ class AbilityController extends Controller
                 $response['execution']['roll']['context'][$kind] = array_map(fn ($r) => ($r['visibility'] ?? 'public') === 'gm_only' ? ['label' => 'Модификатор ГМ'] : $r, $response['execution']['roll']['context'][$kind] ?? []);
             }
         }
-        if (! $response['execution']['dcVisible'] && isset($response['execution']['roll'])) {
+        if (! ($response['execution']['dcVisible'] ?? false) && isset($response['execution']['roll'])) {
             unset($response['execution']['roll']['dc']);
         }
         unset($response['execution']['dcVisible']);

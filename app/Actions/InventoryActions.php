@@ -2,6 +2,10 @@
 
 namespace App\Actions;
 
+use App\Items\ItemActions;
+use App\Items\ItemRules;
+use App\Items\ItemTransfers;
+use App\Items\LootActions;
 use App\Models\AbilityExecution;
 use App\Models\Campaign;
 use App\Models\Character;
@@ -23,10 +27,11 @@ class InventoryActions
     {
         $c = $c->fresh();
 
-        return ['items' => $c->inventory()->with('definition')->orderBy('id')->get()->toArray(),
+        return ['items' => $c->inventory()->with('definition')->orderBy('id')->get()->map(fn ($i) => array_replace($i->toArray(), ['definition' => $i->definition->projection(false)]) + ['action' => app(ItemActions::class)->describe($c, $i)])->all(),
             'useAbilities' => app(CharacterGameplay::class)->abilities($c, false, true),
             'width' => InventoryGrid::WIDTH, 'height' => InventoryGrid::HEIGHT, 'slots' => self::SLOTS,
             'character' => app(CharacterActions::class)->projection($c, false),
+            'recipients' => app(LootActions::class)->recipients(auth()->user(), $c->campaign, $c),
             'base' => ['ac' => $c->getRawOriginal('ac'), 'speed' => $c->getRawOriginal('speed')]];
     }
 
@@ -57,7 +62,7 @@ class InventoryActions
                 return $r;
             }
             $op = $data['action'];
-            if (in_array($op, ['give', 'remove'])) {
+            if (in_array($op, ['give', 'remove', 'put']) || ($op === 'configure' && array_key_exists('weapon_proficient', $data))) {
                 Gate::forUser($user)->authorize('update', $campaign);
             }
             $grid = app(InventoryGrid::class);
@@ -74,7 +79,7 @@ class InventoryActions
                     $position = $grid->free($items(), $def->toArray());
                     abort_unless($position, 422, 'В рюкзаке нет места.');
                     $amount = min($remaining, $def->max_stack);
-                    $c->inventory()->create(['item_definition_id' => $def->id, 'quantity' => $amount, ...$position]);
+                    $c->inventory()->create(['item_definition_id' => $def->id, 'quantity' => $amount, 'weapon_proficient' => (bool) ($data['weapon_proficient'] ?? false), ...$position]);
                     $remaining -= $amount;
                 }
             } elseif ($op === 'arrange') {
@@ -91,7 +96,31 @@ class InventoryActions
             } else {
                 $item = $c->inventory()->with('definition')->where('quantity', '>', 0)->findOrFail($data['itemId']);
                 $all = $items();
-                if ($op === 'remove') {
+                if ($op === 'configure') {
+                    $w = $item->definition->gameplay['weapon'] ?? null;
+                    abort_unless($w, 422, 'Настройки хвата доступны для боевого оружия.');
+                    $patch = array_intersect_key($data, array_flip(['grip', 'attack_ability', 'weapon_proficient']));
+                    abort_if(isset($patch['attack_ability']) && $patch['attack_ability'] !== 'auto' && ! in_array('finesse', $w['properties']), 422, 'Выбор характеристики разрешён только для Finesse.');
+                    if (isset($patch['grip']) && $patch['grip'] === 'two') {
+                        abort_unless(in_array('two_handed', $w['properties']) || in_array('versatile', $w['properties']), 422, 'Оружие не поддерживает двуручный хват.');
+                    }
+                    $item->update($patch);
+                } elseif ($op === 'transfer') {
+                    $recipient = $campaign->characters()->findOrFail($data['recipientId']);
+                    abort_if($recipient->id === $c->id, 422, 'Выберите другого персонажа.');
+                    abort_unless(app(LootActions::class)->canReceive($user, $campaign, $recipient), 403);
+                    abort_if($data['quantity'] > $item->quantity, 409, 'Количество изменилось.');
+                    app(ItemTransfers::class)->add($recipient, $item->definition, $data['quantity'], $item);
+                    app(CharacterActions::class)->publish($user, $recipient->fresh());
+                } elseif ($op === 'put') {
+                    $loot = app(LootActions::class)->authorize($user, $campaign, ['action' => 'read', 'containerId' => $data['containerId']]);
+                    abort_if($data['quantity'] > $item->quantity, 409, 'Количество изменилось.');
+                    app(ItemTransfers::class)->add($loot, $item->definition, $data['quantity'], $item);
+                    app(LootActions::class)->changed($user, $loot);
+                } elseif ($op === 'drop') {
+                    abort_if($data['quantity'] > $item->quantity, 409, 'Количество изменилось.');
+                    app(LootActions::class)->drop($user, $campaign, $c, $item, $data['quantity']);
+                } elseif ($op === 'remove') {
                     $item->update(['quantity' => 0, 'equipped_slot' => null, 'x' => null, 'y' => null]);
                 } elseif ($op === 'move') {
                     $x = $data['x'];
@@ -131,7 +160,7 @@ class InventoryActions
                             $other->update([...$p, 'equipped_slot' => null]);
                         }
                     }
-                    $item->update(['equipped_slot' => $slot, 'x' => null, 'y' => null]);
+                    $item->update(['equipped_slot' => $slot, 'x' => null, 'y' => null, 'grip' => in_array('two_handed', $item->definition->gameplay['weapon']['properties'] ?? []) ? 'two' : $item->grip]);
                 } elseif ($op === 'unequip') {
                     abort_unless($item->equipped_slot, 422);
                     $p = $grid->free($all, $item->definition->toArray(), [$item->id]);
@@ -145,6 +174,7 @@ class InventoryActions
                     $c->inventory()->create(['item_definition_id' => $item->item_definition_id, 'quantity' => $data['quantity'], ...$p]);
                 }
             }
+            app(ItemRules::class)->validateEquipment($c->fresh());
             app(CharacterActions::class)->publish($user, $c->fresh());
 
             return $this->record($user, $c, $data, $this->snapshot($c));
@@ -161,9 +191,9 @@ class InventoryActions
             }
             abort_if(AbilityExecution::where('user_id', $user->id)->where('mutation_id', app(CommandContext::class)->id())->exists(), 409);
             $item = $c->inventory()->with('definition')->where('quantity', '>', 0)->findOrFail($data['inventoryItemId']);
-            abort_unless($item->definition->use_ability_id, 422, 'Предмет нельзя использовать.');
-            $response = app(AbilityActions::class)->execute($user, $scene, [...$data, 'abilityId' => $item->definition->use_ability_id], true);
-            $item->decrement('quantity');
+            abort_unless(($item->definition->use_ability_id || isset($item->definition->gameplay['weapon']) || isset($item->definition->gameplay['use'])), 422, 'Предмет нельзя использовать.');
+            $response = app(AbilityActions::class)->execute($user, $scene, [...$data, 'abilityId' => app(ItemActions::class)->key($item->id, $data['itemAction'] ?? 'use')], true);
+            app(ItemActions::class)->consume($user, $c, $item, $data['itemAction'] ?? 'use', $scene, $data['target'] ?? null);
             app(CharacterActions::class)->publish($user, $c->fresh());
 
             return $this->record($user, $c, $data, $response);

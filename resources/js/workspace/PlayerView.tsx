@@ -1,3 +1,4 @@
+import { LootOverlay } from '../rpg/loot';
 import { PlayerGameplayHUD } from '../gameplay/PlayerGameplayHUD';
 import { PlayerDiceProvider } from '../gameplay/PlayerDiceProvider';
 import { charactersApi } from '../api/characters';
@@ -232,6 +233,7 @@ function PlayerTabletop({
                 actorError={actorError}
             />
             <Tabletop store={store} rendererRef={renderer} onZoom={setZoom} />
+            <LootOverlay store={store} />
             <RadialMenu
                 store={store}
                 queue={queue}

@@ -4,6 +4,7 @@ namespace App\Compendium;
 
 use App\Actions\CharacterActions;
 use App\Combat\CombatStats;
+use App\Items\ItemRules;
 use App\Models\Campaign;
 use App\Models\CompendiumCopy;
 use App\Models\CompendiumEntry;
@@ -42,15 +43,17 @@ class CopyCompendiumEntry
                 $targetKey = $ability['id'];
                 $content = ['ability' => $ability];
             } elseif (in_array($entry->entity_type, ['items', 'weapons', 'armor'])) {
+                $n = array_replace($n, app(SrdEquipmentMapper::class)->map($entry->raw_data));
+                $mapped = ItemRules::fromCompendium($n);
                 $weapon = $n['category'] === 'weapon';
                 $armor = $n['category'] === 'armor';
                 $shield = ($n['armor']['category'] ?? null) === 'shield';
                 $item = (new ItemDefinition)->forceFill(['campaign_id' => $campaign->id,
                     'name' => Str::limit($n['name'], 80, ''), 'description' => Str::limit($n['description'], 1000, ''),
-                    'icon' => $weapon ? 'item_sword' : ($shield ? 'item_shield' : ($armor ? 'item_armor' : 'book')),
-                    'category' => $weapon ? 'weapon' : ($armor ? 'armor' : 'trinket'), 'rarity' => 'common',
-                    'width' => 1, 'height' => 1, 'max_stack' => 1,
-                    'equipment_slots' => $weapon ? ['main_hand'] : ($shield ? ['off_hand'] : ($armor ? ['armor'] : [])),
+                    'icon' => $weapon ? (($mapped['gameplay']['weapon']['kind'] ?? '') === 'ranged' ? 'bow' : 'item_sword') : ($shield ? 'item_shield' : ($armor ? 'item_armor' : ($mapped['category'] === 'consumable' ? 'item_potion' : ($mapped['category'] === 'ammunition' ? 'bow' : 'book')))),
+                    'category' => $mapped['category'], 'rarity' => 'common',
+                    'width' => 1, 'height' => 1, 'max_stack' => $mapped['max_stack'],
+                    'equipment_slots' => $mapped['equipment_slots'], 'gameplay' => $mapped['gameplay'], 'compendium_entry_id' => $entry->id,
                     // Base AC is not an additive modifier. Training/armor rules remain future work.
                     'modifiers' => [], 'use_ability_id' => null]);
                 $item->save();

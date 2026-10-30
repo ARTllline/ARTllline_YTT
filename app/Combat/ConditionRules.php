@@ -2,6 +2,7 @@
 
 namespace App\Combat;
 
+use App\Items\ItemRules;
 use App\Models\Token;
 
 class ConditionRules
@@ -44,7 +45,7 @@ class ConditionRules
         return $this->has($t, ['restrained', 'unconscious']) ? 0 : app(CombatStats::class)->speed($t);
     }
 
-    public function context(?Token $actor, string $kind, string $requested = 'normal', ?Token $target = null, float $distance = 0, ?string $saveAbility = null, bool $sight = false): array
+    public function context(?Token $actor, string $kind, string $requested = 'normal', ?Token $target = null, float $distance = 0, ?string $saveAbility = null, bool $sight = false, ?string $statKey = null): array
     {
         $adv = $requested === 'advantage' ? [['label' => 'Выбранное преимущество', 'visibility' => 'public']] : [];
         $dis = $requested === 'disadvantage' ? [['label' => 'Выбранная помеха', 'visibility' => 'public']] : [];
@@ -62,8 +63,14 @@ class ConditionRules
         } elseif ($kind === 'save' && $saveAbility === 'dex') {
             $dis = [...$dis, ...$this->reasons($actor, ['restrained'])];
         }
+        if ($kind === 'check') {
+            $dis = [...$dis, ...app(ItemRules::class)->checkReasons($actor, $statKey)];
+        }
         $automatic = ($kind === 'save' && in_array($saveAbility, ['str', 'dex'])) ? $this->reasons($actor, ['stunned', 'unconscious']) : [];
         if ($kind === 'check' && $sight) {
+            if ($kind === 'check') {
+                $dis = [...$dis, ...app(ItemRules::class)->checkReasons($actor, $statKey)];
+            }
             $automatic = $this->reasons($actor, ['blinded']);
         }
 

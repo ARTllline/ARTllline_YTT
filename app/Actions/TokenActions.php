@@ -6,6 +6,7 @@ use App\Combat\TurnBudget;
 use App\Models\Asset;
 use App\Models\CampaignMember;
 use App\Models\Combat;
+use App\Models\LootContainer;
 use App\Models\Scene;
 use App\Models\Token;
 use App\Models\User;
@@ -130,6 +131,7 @@ class TokenActions
             if ($combat && ($entry = $combat->combatants()->where('token_id', $token->id)->first())) {
                 app(CombatActions::class)->remove($combat, (string) $entry->id);
             }
+            abort_if(LootContainer::where('token_id', $token->id)->whereHas('items', fn ($q) => $q->where('quantity', '>', 0))->exists(), 422, 'Сначала переместите содержимое добычи.');
             $token->delete();
 
             return ['deletedId' => (string) $token->id, 'tokens' => $scene->tokens()->get()->map(fn ($t) => $this->snapshots->token($t, true, $user))->all(), '_wasVisible' => ! $token->is_hidden, '_combatChanged' => true];

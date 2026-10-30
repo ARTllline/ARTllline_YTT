@@ -158,3 +158,9 @@ rest systems, cover, terrain, opportunity attacks and AI are separate future wor
 
 Canonical reference: local `B:/DnD/Reference and Resource/DND_SRD_5.2.1/`.
 SRD attribution and structured import provenance: [COMPENDIUM.md](COMPENDIUM.md).
+
+## Task 28 item actions
+
+[Items & Loot](ITEMS_LOOT.md) now supplies current equipped-weapon descriptors,
+weapon-specific CharacterRules scopes, ammunition and physical thrown-item loot.
+Its property support table distinguishes implemented and deferred behavior.

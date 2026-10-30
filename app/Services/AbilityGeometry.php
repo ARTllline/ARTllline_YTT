@@ -9,6 +9,14 @@ use App\Models\Token;
 /** World-space geometry, measured with the scene ruler's Euclidean distance convention. */
 class AbilityGeometry
 {
+    public function distance(Scene $scene, Token $a, Token|array $b): float
+    {
+        $x = $b instanceof Token ? $b->x : $b['x'];
+        $y = $b instanceof Token ? $b->y : $b['y'];
+
+        return hypot($x - $a->x, $y - $a->y) * (float) $scene->distance_per_cell / (float) $scene->grid_size;
+    }
+
     public function validate(Scene $scene, array $ability, ?Token $actor, mixed $target, ?array $input): array
     {
         $area = $ability['area'] ?? null;
@@ -27,7 +35,7 @@ class AbilityGeometry
         }
         abort_unless(isset($point['x'], $point['y']) && is_finite((float) $point['x']) && is_finite((float) $point['y']), 422);
         $units = (float) $scene->distance_per_cell / (float) $scene->grid_size;
-        $distance = hypot($point['x'] - $actor->x, $point['y'] - $actor->y) * $units;
+        $distance = $this->distance($scene, $actor, $point);
         $limit = $range['long'] ?? $range['normal'] ?? null;
         if ($limit !== null) {
             abort_if($distance > $limit + 0.00001, 422, 'Цель вне дальности способности.');

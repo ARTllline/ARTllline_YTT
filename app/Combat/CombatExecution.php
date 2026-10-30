@@ -3,10 +3,12 @@
 namespace App\Combat;
 
 use App\Actions\TokenCombatActions;
+use App\Items\ItemActions;
 use App\Models\Character;
 use App\Models\Scene;
 use App\Models\Token;
 use App\Models\User;
+use App\Services\AbilityGeometry;
 use App\Services\CharacterRules;
 use App\Services\CheckRoller;
 use App\Services\TokenCheckStats;
@@ -33,7 +35,7 @@ class CombatExecution
         $success = true;
         $critical = false;
         $first = $targets[0] ?? null;
-        $distance = $actor && $first ? hypot($actor->x - $first->x, $actor->y - $first->y) * (float) $scene->distance_per_cell / (float) $scene->grid_size : 0;
+        $distance = $actor && $first ? app(AbilityGeometry::class)->distance($scene, $actor, $first) : 0;
         $save = $ability['save'] ?? null;
         if (! $save && ($ability['check'] || ! empty($ability['attack']))) {
             $config = $ability['check'] ?? ['dc' => 0, 'dc_visible' => false, 'defense' => 'ac'];
@@ -43,6 +45,9 @@ class CombatExecution
                 $config = ['stat_key' => $a['ability'] === 'spellcasting' ? 'spell_attack' : $a['ability'], 'modifier' => 0, 'proficient' => $a['proficient'], 'bonus' => $a['bonus'], 'defense' => 'ac', 'dc' => 0];
             }
             $provenance = ! empty($ability['attack']) && $actor && ! $actor->character_id ? app(CombatStats::class)->attack($actor, $ability['attack']) : app(TokenCheckStats::class)->resolve($actor ?? $subject, $config + ['label' => $ability['name']]);
+            if (isset($ability['_weapon'])) {
+                $provenance = $ability['_weapon']['provenance'];
+            }
             if (! empty($ability['attack']) && $ability['attack']['ability'] === 'spellcasting' && ! $ability['attack']['proficient'] && $subject instanceof Character && $subject->rules) {
                 $provenance['breakdown'] = array_values(array_filter($provenance['breakdown'], fn ($p) => $p['source'] !== 'proficiency'));
                 $provenance['finalModifier'] = array_sum(array_column($provenance['breakdown'], 'value'));
@@ -51,7 +56,11 @@ class CombatExecution
             $dc = $attack && ($config['defense'] ?? 'ac') === 'ac' ? $first?->ac : $config['dc'];
             abort_if($dc === null, 422, 'GM ещё не настроил защиту цели.');
             $saveAbility = str_starts_with($provenance['statKey'] ?? '', 'save_') ? substr($provenance['statKey'], 5) : null;
-            $context = app(ConditionRules::class)->context($actor, $attack ? 'attack' : ($saveAbility ? 'save' : 'check'), $requested, $first, $distance, $saveAbility, $ability['requires_sight'] ?? false);
+            $context = app(ConditionRules::class)->context($actor, $attack ? 'attack' : ($saveAbility ? 'save' : 'check'), $requested, $first, $distance, $saveAbility, $ability['requires_sight'] ?? false, $provenance['statKey'] ?? null);
+            if (isset($ability['_weapon']) && $subject instanceof Character) {
+                $context['disadvantage'] = [...$context['disadvantage'], ...app(ItemActions::class)->reasons($subject, $ability, $scene, $actor, $first)];
+                $context['mode'] = ($context['advantage'] && $context['disadvantage']) ? 'normal' : ($context['advantage'] ? 'advantage' : ($context['disadvantage'] ? 'disadvantage' : 'normal'));
+            }
             $roll = $this->roll($provenance, $dc, $context, $attack);
             $success = $roll['success'];
             $critical = $attack && $success && ($roll['natural'] === 20 || ($first && $distance <= 5 && app(ConditionRules::class)->has($first, ['unconscious'])));

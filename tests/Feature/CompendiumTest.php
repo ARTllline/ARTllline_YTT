@@ -125,6 +125,9 @@ class CompendiumTest extends TestCase
     public function test_copy_flows_are_editable_offline_and_resync_never_updates_campaign_content_or_provenance(): void
     {
         $this->import();
+        $damageRecords = array_values(array_filter(json_decode(file_get_contents(base_path('tests/Fixtures/compendium/character-catalog.json')), true), fn ($r) => $r['endpoint'] === 'damage-types'));
+        app(CompendiumSync::class)->import(CompendiumSource::firstOrFail(), $damageRecords, ['rules']);
+
         [$gm, $campaign, $base] = $this->campaign();
         $hero = $campaign->characters()->create(['name' => 'Hero']);
         Http::preventStrayRequests();

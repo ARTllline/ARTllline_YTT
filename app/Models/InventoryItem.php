@@ -14,7 +14,7 @@ class InventoryItem extends Model
 
     protected function casts(): array
     {
-        return ['x' => 'integer', 'y' => 'integer', 'quantity' => 'integer'];
+        return ['weapon_proficient' => 'boolean', 'x' => 'integer', 'y' => 'integer', 'quantity' => 'integer'];
     }
 
     public function definition(): BelongsTo

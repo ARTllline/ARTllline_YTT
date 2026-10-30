@@ -1,3 +1,4 @@
+import { equipmentDropReason } from './itemGameplay';
 import { Shield, Footprints, Heart, UserRound } from 'lucide-react';
 import { RpgIcon } from '../gameplay/RpgIcon';
 import { ResourceControls } from './ResourceControls';
@@ -117,9 +118,12 @@ export function HeroEquipment({
                         pos = positions[key] ?? [(index % 4) + 1, Math.floor(index / 4) + 6],
                         target = `equipment:${key}`,
                         over = drag.over?.key === target;
+                    const lifted = state.items.find((i) => i.id === drag.active?.sourceId);
+                    const dropReason = lifted ? equipmentDropReason(lifted, key, state.items) : '';
                     return (
                         <div
                             key={key}
+                            title={dropReason || label}
                             className={`equipment-slot ${equipped ? `has-item rarity-${equipped.definition.rarity}` : ''} ${drag.active?.sourceType === 'inventory_item' && state.items.some((i) => i.id === drag.active?.sourceId && i.quantity === 1 && i.definition.equipment_slots.includes(key)) ? 'is-compatible' : ''} ${over ? (drag.over!.valid ? 'drop-valid' : 'drop-invalid') : ''}`}
                             style={{ gridColumn: pos[0], gridRow: pos[1] }}
                             {...drag.destination(
@@ -131,7 +135,7 @@ export function HeroEquipment({
                                         (i) =>
                                             i.id === b.sourceId &&
                                             i.quantity === 1 &&
-                                            i.definition.equipment_slots.includes(key),
+                                            !equipmentDropReason(i, key, state.items),
                                     ),
                                 (b) =>
                                     void send({

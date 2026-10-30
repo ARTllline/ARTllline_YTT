@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Combat\CombatExecution;
 use App\Combat\TurnBudget;
+use App\Items\ItemActions;
 use App\Models\AbilityExecution;
 use App\Models\Campaign;
 use App\Models\CampaignMember;
@@ -13,6 +14,7 @@ use App\Models\Token;
 use App\Models\User;
 use App\Realtime\CommandContext;
 use App\Services\AbilityGeometry;
+use App\Services\DamageRoller;
 use App\Services\SceneSnapshotBuilder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -103,10 +105,13 @@ class AbilityActions
             if ($character instanceof Character && $campaign->roleFor($user) !== 'gm') {
                 abort_unless((int) CampaignMember::where('campaign_id', $campaign->id)->where('user_id', $user->id)->value('active_character_id') === $character->id, 409, 'Выберите этого персонажа как действующего.');
             }
-            $ability = collect($character->abilities ?? [])->firstWhere('id', $data['abilityId']);
+            $ability = $fromItem && isset($data['inventoryItemId']) && $character instanceof Character ?
+                app(ItemActions::class)->resolve($character, $character->inventory()->with('definition')->findOrFail($data['inventoryItemId']), $data['itemAction'] ?? 'use') :
+                collect($character->abilities ?? [])->firstWhere('id', $data['abilityId']);
+
             abort_unless($ability && $ability['enabled'], 403, 'Способность больше недоступна.');
             abort_if(($ability['item_only'] ?? false) && ! $fromItem, 403, 'Это действие доступно только через предмет.');
-            abort_if(isset($ability['spell']) && (! $ability['spell']['known'] || ! $ability['spell']['prepared']), 403, 'Заклинание не подготовлено.');
+            abort_if(! $fromItem && isset($ability['spell']) && (! $ability['spell']['known'] || ! $ability['spell']['prepared']), 403, 'Заклинание не подготовлено.');
             // A result runs with a current GM's authority, never a player-forged author ID.
             $author = $campaign->members()->wherePivot('role', 'gm')->orderBy('users.id')->firstOrFail();
             $actor = $character instanceof Token ? $character : $scene->tokens()->where('character_id', $character->id)->where('is_hidden', false)->first();
@@ -130,12 +135,14 @@ class AbilityActions
             $outcomes = $resolved['outcomes'];
             $feedbacks = $resolved['feedbacks'];
             $feedback = $feedbacks[0] ?? null;
+            $healing = null;
             if ($success) {
                 $result = $ability['result'];
                 if ($result['type'] === 'heal') {
-                    app(TokenCombatActions::class)->adjustHp($author, $target, $result['amount']);
+                    $healing = isset($result['dice']) ? app(DamageRoller::class)->roll($result['dice'])['total'] : $result['amount'];
+                    app(TokenCombatActions::class)->adjustHp($author, $target, $healing);
                     if ($target instanceof Token) {
-                        $feedback = ['tokenId' => (string) $target->id, 'text' => '+'.$result['amount'], 'tone' => 'heal'];
+                        $feedback = ['tokenId' => (string) $target->id, 'text' => '+'.$healing, 'tone' => 'heal'];
                     }
                 } elseif (in_array($result['type'], ['cue', 'handout'])) {
                     app(ObjectInteraction::class)->result($user, $scene, $author->id, ['result_type' => $result['type'], 'result_target' => $result['target']]);
@@ -162,7 +169,7 @@ class AbilityActions
                 'actorId' => (string) $character->id, 'actorName' => $character->name,
                 'target' => $data['target'] ?? null, 'roll' => $roll, 'success' => $success,
                 'provenance' => $provenance,
-                'damage' => $damage, 'damageRolls' => $resolved['damageRolls'], 'critical' => $resolved['critical'], 'outcomes' => $outcomes, 'healing' => $success && $ability['result']['type'] === 'heal' ? $ability['result']['amount'] : null,
+                'damage' => $damage, 'damageRolls' => $resolved['damageRolls'], 'critical' => $resolved['critical'], 'outcomes' => $outcomes, 'healing' => $healing,
                 'dcVisible' => $ability['check']['dc_visible'] ?? false,
                 'mutationId' => app(CommandContext::class)->id(), 'resolvedAt' => now()->toIso8601String(),
             ]);
