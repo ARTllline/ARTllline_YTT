@@ -4,27 +4,16 @@ A self-hostable tabletop built around the Game Master's workspace. React owns
 the interface, PixiJS draws the table, and Laravel is authoritative for saved
 state. The product contract is `AGENTS.md`.
 
-## Local testing with Docker (Windows)
+## Local development (Windows)
 
-For double-click launch, open Docker Desktop and run **YTT-Start.bat** from the
-project root. It waits for the application to be ready and opens the browser.
-Run **YTT-Stop.bat** to shut down; campaign data and uploads stay in Docker volumes.
+Run PHP, Composer, Artisan and Node directly. Use the local MySQL service; Redis
+is optional with file cache/sessions. **YTT-Start.bat** builds assets and starts
+Laravel, Reverb, the Cue worker and scheduler; **YTT-Stop.bat** stops those processes.
+The prepared campaign and accounts are preserved at **http://localhost:8090**.
 
-Start Docker Desktop (Linux containers), then run in PowerShell:
-
-```powershell
-cd B:\DnD\YTT
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\docker.ps1 up
-```
-
-Open **http://localhost:8090** and register an account. The command builds the
-application, runs migrations and starts MySQL, Redis, Reverb, the Cue worker and
-scheduler. Docker data is separate from the existing local `.env`, database and
-uploads. Run the same command after code changes to rebuild the test version.
-
-Replace `up` with `down` to shut down (data stays), `status` to inspect services,
-`logs` to follow logs, `doctor` for diagnostics, or `test` to run isolated tests.
-See [the Russian Docker tutorial and command reference](docs/DOCKER.md).
+See [local setup and direct commands](docs/LOCAL_DEVELOPMENT.md),
+[data migration evidence](docs/LOCAL_MIGRATION.md) and
+[the permanent QA fixture](docs/TEST_PLAYGROUND.md).
 
 ## Current status
 

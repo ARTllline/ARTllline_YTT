@@ -1,3 +1,5 @@
+> Historical validation used the former container runtime. Current local commands: [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md); data migration: [LOCAL_MIGRATION.md](LOCAL_MIGRATION.md).
+
 # Task 31 — GM Combat Console
 
 Локальная реализация 2026-10-30. Существующий правый dock стал runtime-пультом:

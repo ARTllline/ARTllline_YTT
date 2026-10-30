@@ -1,3 +1,5 @@
+> Historical validation used the former container runtime. Current local commands: [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md); data migration: [LOCAL_MIGRATION.md](LOCAL_MIGRATION.md).
+
 # Combat Gameplay — Task 27
 
 ## Ownership and execution

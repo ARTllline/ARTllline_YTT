@@ -1,3 +1,13 @@
+# Native local runtime — 2026-10-30
+
+The active setup now runs directly on Windows with local MySQL. Data preservation,
+251 PHP tests / 3763 assertions, 202 frontend tests, build, Vite, browser auth,
+uploads, actual WebSocket delivery, queue and scheduler checks passed with all
+former containers stopped. See [migration evidence](LOCAL_MIGRATION.md) and
+[current local commands](LOCAL_DEVELOPMENT.md).
+
+The records below describe previous environments and retain their original evidence.
+
 # Existing test data restored into Docker — 2026-10-29
 
 At the user's request, copied the original local `ytt` MySQL database and its
@@ -31,7 +41,7 @@ Credentials are not recorded in this document or Git.
 # Docker local test environment — 2026-10-29
 
 Windows Docker Desktop, Linux Engine 27.0.3 / Compose 2.28.1. See
-[the Russian Docker guide](DOCKER.md) for setup and explanation.
+the historical evidence below. Current setup is in [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md).
 
 - Built PHP 8.4.27/Apache with GD/WebP, MySQL/SQLite PDO, Redis, PCNTL and FFprobe
   5.1.9; built the frontend with Node 22. No host `.env`, uploads, vendor or

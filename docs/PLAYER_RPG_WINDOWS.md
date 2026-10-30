@@ -1,3 +1,5 @@
+> Historical validation used the former container runtime. Current local commands: [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md); data migration: [LOCAL_MIGRATION.md](LOCAL_MIGRATION.md).
+
 # Player RPG windows
 
 Inventory, Character / Equipment and Spellbook share `RpgWindow` with a charcoal/teal folio, aged-bronze framing and iconic medallion tabs. The window is rendered through a React portal so HUD transforms cannot move its viewport coordinates. One major window is open at a time. The Action Deck remains reachable for drops. HUD buttons and I / K / C open the windows; Esc closes them. Inputs suspend shortcuts and reduced-motion preferences disable window animation.

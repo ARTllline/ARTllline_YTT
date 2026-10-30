@@ -1,3 +1,5 @@
+> Historical validation used the former container runtime. Current local commands: [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md); data migration: [LOCAL_MIGRATION.md](LOCAL_MIGRATION.md).
+
 # Persistent Characters — 2026-10-29
 
 ## Model and migration

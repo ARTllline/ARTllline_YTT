@@ -1,3 +1,5 @@
+> Historical validation used the former container runtime. Current local commands: [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md); data migration: [LOCAL_MIGRATION.md](LOCAL_MIGRATION.md).
+
 # Local SRD compendium
 
 YTT stores imported definitions separately from campaign content. Gameplay, search,
@@ -7,12 +9,12 @@ execution is introduced.
 
 ## Sync
 
-Run from the repository root, after rebuilding with `scripts/docker.ps1 up`:
+Run directly from the repository root in the local PHP environment:
 
 ```powershell
-docker compose --env-file .env.docker exec --user www-data app php artisan compendium:sync srd-2024
-docker compose --env-file .env.docker exec --user www-data app php artisan compendium:sync srd-2024 --type=spells --dry-run
-docker compose --env-file .env.docker exec --user www-data app php artisan compendium:sync srd-2024 --type=equipment --type=monsters
+php artisan compendium:sync srd-2024
+php artisan compendium:sync srd-2024 --type=spells --dry-run
+php artisan compendium:sync srd-2024 --type=equipment --type=monsters
 ```
 
 Types: `spells`, `items`, `weapons`, `armor`, `monsters`, `conditions`, `skills`,
@@ -30,8 +32,8 @@ when a source removes them: investigate source removals before retiring definiti
 For reproducible/offline imports, export the fetched API responses:
 
 ```powershell
-docker compose --env-file .env.docker exec --user www-data app php artisan compendium:sync srd-2024 --export=storage/app/compendium-srd-2024-snapshot.json
-docker compose --env-file .env.docker exec --user www-data app php artisan compendium:sync srd-2024 --snapshot=storage/app/compendium-srd-2024-snapshot.json
+php artisan compendium:sync srd-2024 --export=storage/app/compendium-srd-2024-snapshot.json
+php artisan compendium:sync srd-2024 --snapshot=storage/app/compendium-srd-2024-snapshot.json
 ```
 
 Snapshots include format version, source key, fetch time, endpoint coverage and

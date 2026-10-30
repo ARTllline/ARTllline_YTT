@@ -35,7 +35,7 @@ return [
             'key' => env('REVERB_APP_KEY'),
             'secret' => env('REVERB_APP_SECRET'),
             'app_id' => env('REVERB_APP_ID'),
-            // Browser addresses can differ from Docker's internal service DNS.
+            // Browser and backend addresses may differ behind a reverse proxy.
             'public' => [
                 'host' => env('REVERB_PUBLIC_HOST', env('REVERB_HOST')),
                 'port' => env('REVERB_PUBLIC_PORT', env('REVERB_PORT', 443)),

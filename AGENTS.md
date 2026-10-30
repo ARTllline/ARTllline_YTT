@@ -12,125 +12,68 @@ The goal is to build a polished, coherent, enjoyable virtual tabletop that feels
 
 When implementation choices conflict with this document, prefer this document unless the user explicitly overrides it.
 
-## 1.1. Current local runtime — Docker Compose
+## 1.1. Current local runtime — native development
 
-**The project already has a working Docker-based local test environment**, verified
-on Windows with Docker Desktop / Linux containers on 2026-10-29. Use this environment
-for local application runs and integration checks. Inspect its current state rather
-than assuming containers are still running. A separate host PHP/MySQL/Redis/Node
-installation is not required for the Docker workflow.
+**Local development does not use Docker.** Run PHP, Composer, Artisan, Node and
+npm directly from the local Windows environment (or a configured WSL environment).
+Do not use containers or Docker commands for normal development tasks.
+This replaces the former Compose workflow as of 2026-10-30.
 
-Read [docs/DOCKER.md](docs/DOCKER.md) for the Russian user guide and
-[docs/VALIDATION.md](docs/VALIDATION.md) for verification evidence and limits.
-The Docker configuration is a local test setup; public VPS deployment remains
-documented separately in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Read [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md) for setup and commands,
+[docs/LOCAL_MIGRATION.md](docs/LOCAL_MIGRATION.md) for migration evidence, and
+[docs/VALIDATION.md](docs/VALIDATION.md) for historical checks.
+Production remains independently documented in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Do not change production configuration as part of local setup.
 
-### Launch, stop and verify
+### Launch and verify
 
-Docker Desktop must be running with the Linux Engine ready. From the project root:
+- PHP 8.3+, Composer 2, Node 20.19+ and MySQL 8.0+ are required.
+- The current machine uses Open Server's PHP 8.3 and MySQL 8.0 on 127.0.0.1:3306.
+- MySQL is a local service. If Redis is enabled, it must also be a local service.
+  Current local cache and sessions use their original file drivers; Redis and
+  the PHP Redis extension are optional. Reverb scaling remains disabled.
+- The private .env preserves APP_KEY, database password and Reverb keys.
+  Current working database: ytt_local; the older host database ytt is retained.
+  MySQL sessions use DB_TIMEZONE="+00:00" to preserve timestamp semantics.
+- User launchers remain **YTT-Start.bat** and **YTT-Stop.bat**. Start builds assets,
+  applies normal migrations, then launches native PHP processes; stop terminates
+  only those processes and leaves MySQL and data intact.
+- Manual helper: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local.ps1 start.
+  Other actions: stop, status, doctor, test. -SkipBuild reuses current assets.
+  Process state and logs are ignored under artifacts/local-runtime/.
+- Current application: **http://localhost:8090**; Reverb: **ws://localhost:8085**.
+  Read .env for configured endpoints; bind local listeners to loopback.
+- Direct commands: composer install, php artisan migrate, php artisan test,
+  npm install, npm run dev, npm run build, npm run test.
+  PHP edits are used directly; frontend edits need Vite or a new build.
 
-```powershell
-# Build the current code and start the complete environment.
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\docker.ps1 up
+### Services and data contracts
 
-# Inspect containers, application dependencies, or run isolated automated tests.
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\docker.ps1 status
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\docker.ps1 doctor
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\docker.ps1 test
+Run Reverb with php artisan reverb:start; the Cue worker with
+php artisan queue:work tabletop --queue=cues --sleep=0.1 --tries=3 --timeout=60;
+and the scheduler with php artisan schedule:work. The launcher starts all three.
+Cue jobs must retain the tabletop database queue on the **same MySQL connection**
+as application state; do not switch them to Redis.
 
-# Stop and remove the environment's containers while preserving its data volumes.
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\docker.ps1 down
-```
-
-For the user, prefer the existing double-click entry points in the repository root:
-
-- `YTT-Start.bat`: runs `up -OpenBrowser`, waits for readiness, then opens the site.
-- `YTT-Stop.bat`: runs `down`, preserving campaign data and uploaded files.
-
-Default application URL: **http://localhost:8090**. Default browser WebSocket:
-**ws://localhost:8085**. Both ports bind only to loopback. Respect configured values
-in `.env.docker` if the user changes them. No shared accounts or demo campaign are
-seeded; users register through the application.
-
-The current local Docker volumes are **not empty**: on 2026-10-29 the existing
-host test dataset was copied into Docker at the user's request, preserving account
-password hashes, relationships, private files and the matching source APP_KEY.
-The restore contained 17 users, 13 campaigns, 34 scenes and 414 asset records;
-43 tables and 1014 private files were verified. Treat this as existing prepared
-data. Fresh installations still start without seeded accounts. The original host
-database/files and the Docker copy are independent after the transfer.
-
-For direct Compose commands, always specify the Docker environment file, for example:
-
-```powershell
-docker compose --env-file .env.docker ps --all
-docker compose --env-file .env.docker logs --tail 100 app reverb queue scheduler
-```
-
-**Source code is copied into images, not bind-mounted.** After code changes, run
-`up` to rebuild before validating in the browser or running image-based PHP tests.
-Restarting an existing container alone does not load edited source. The interface
-is served from `public/build`; this setup does not run Vite HMR.
-
-### Services and application contracts
-
-- Compose project: `ytt-test`; application image: `ytt-local:dev`.
-- `app`: PHP 8.4 / Apache, Laravel and the built React/PixiJS interface.
-- `mysql`: MySQL 8.4; `redis`: Redis 7.4 for sessions and cache.
-- `reverb`: WebSocket service; `queue`: Cue worker; `scheduler`: Laravel scheduler.
-- `init`: prepares writable storage and applies normal migrations before startup.
-  Its `Exited (0)` state is expected, not a service failure.
-- `frontend`: optional Node 22 tools image (`ytt-frontend:dev`) for frontend checks.
-
-Containers reach MySQL at `mysql:3306`, Redis at `redis:6379`, and Reverb at
-`reverb:8080`. Browser clients use the separate `REVERB_PUBLIC_*` configuration.
-Preserve this separation; Docker service names are not browser hostnames.
-
-The Cue worker uses the existing `tabletop` database queue on the **same MySQL
-connection as application state**. Do not switch that queue to Redis. Preserve
-`SIGTERM` for PHP CLI services; the Apache image's default `SIGWINCH` is used by
-the web service and does not correctly stop the CLI workers.
-
-The `test` helper runs PHP tests in a disposable container with SQLite in memory,
-temporary storage and explicit test environment overrides, then frontend tests.
-Use it instead of running migration-based tests against the persistent Docker MySQL.
-Health checks and `doctor` complement, but do not replace, real browser/realtime
-verification for changes that affect multiplayer behavior.
-
-### Configuration and persistent data
-
-`scripts/docker.ps1` generates `.env.docker` from `.env.docker.example` only on first
-startup, including random APP_KEY, MySQL passwords and Reverb credentials. Preserve
-that file and its keys; do not print secrets, commit it, or regenerate it on updates.
-The host `.env`, database and uploaded files are separate from the Docker test data.
-The current Docker APP_KEY was deliberately matched to the imported host dataset;
-preserve it on subsequent launches. Restore evidence and backups are under ignored
-`artifacts/docker-transfer-20261029-restore/`; environment backups there are encrypted
-with Windows user DPAPI. See `docs/VALIDATION.md` for the transfer checks.
-
-Persistent volumes: `ytt-test_mysql`, `ytt-test_storage`, `ytt-test_redis`.
-Normal `down` preserves them. Do not add `--volumes`, `migrate:fresh`, automatic
-seeding, Docker factory resets, or global pruning to routine launch/update/stop
-workflows. Treat removal of persistent data as a separate destructive operation.
-Old untagged images can remain after rebuilds; they are distinct from campaign
-data volumes. The current Compose configuration repeats the shared image build
-across services and can produce extra untagged images; that optimization is pending.
+PHP tests use the isolated SQLite in-memory configuration in phpunit.xml.
+Do not point migration-based tests at persistent MySQL. Run php artisan config:clear
+before tests if configuration was cached. Real browser/realtime checks complement tests.
+Uploaded files live in storage/app/campaigns-private; do not expose them publicly.
+Backups with actual data and DPAPI-protected environments are ignored under
+artifacts/local-migration-20261030/. Never commit or print their contents.
+The former runtime's stopped containers/volumes are retained as rollback data,
+not development dependencies. Do not reset databases, delete volumes or run pruning
+as part of normal launch, updates or QA.
 
 ### Permanent local QA fixture — reuse it
 
-At the user's explicit request on 2026-10-30, routine local QA must reuse the
-single prepared campaign, scene, game session and three existing test accounts.
-See [docs/TEST_PLAYGROUND.md](docs/TEST_PLAYGROUND.md) for current IDs, URLs and
-the location of the ignored local credentials file. Read it before live-data QA.
-
-Do not register more accounts or create new test campaigns, scenes or game
-sessions for each task, browser run or viewport. Sign into the existing accounts
-using isolated browser contexts. Reuse and restore the prepared scene's state
-after checks. Add only content genuinely needed by the requested feature.
-If a test requires separate records, prefer the disposable isolated test database.
-Persistent fixture expansion or replacement requires an explicit user request.
-Never run the old cleanup/preparation scripts as an ordinary verification step.
-Never copy credentials into tracked documentation, source code, logs or memory.
+Read [docs/TEST_PLAYGROUND.md](docs/TEST_PLAYGROUND.md) before live-data QA.
+Reuse its existing three accounts, campaign, scene and game session with isolated
+browser contexts. Do not register accounts or create campaigns/scenes/sessions for
+each task or viewport. Restore changes after checks. Add only feature-required
+content; use isolated SQLite tests for separate records. Fixture expansion or
+replacement requires an explicit user request. Never run old cleanup/preparation
+scripts as ordinary verification. Never put credentials in tracked files or memory.
 
 ---
 

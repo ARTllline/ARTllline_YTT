@@ -1,3 +1,5 @@
+> Historical validation used the former container runtime. Current local commands: [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md); data migration: [LOCAL_MIGRATION.md](LOCAL_MIGRATION.md).
+
 # Character Rules — SRD 5.2.1 foundation
 
 `CharacterRules` is the authoritative calculation layer for Character checks,
@@ -26,7 +28,7 @@ The existing nullable `characters.rules` JSON uses `schema_version: 2`:
 Before enabling rules, install the local skills with the existing sync command:
 
 ```powershell
-docker compose --env-file .env.docker exec --user www-data app php artisan compendium:sync srd-2024 --type=skills --type=conditions
+php artisan compendium:sync srd-2024 --type=skills --type=conditions
 ```
 
 Missing/incomplete skill data produces an explicit readiness state and blocks

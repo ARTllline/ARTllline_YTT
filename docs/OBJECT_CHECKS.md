@@ -1,3 +1,5 @@
+> Historical validation used the former container runtime. Current local commands: [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md); data migration: [LOCAL_MIGRATION.md](LOCAL_MIGRATION.md).
+
 # Object checks and acting characters
 
 Checks use authoritative Token modifiers. This is a minimal, system-agnostic
@@ -99,6 +101,6 @@ retained actor/mode, private DC and existing Task 16B branches/policies.
 2026-10-29 implementation check: 141 frontend tests, typecheck, ESLint, production build and changed-file Pint passed.
 The restricted Windows runtime needs `preserveSymlinks` and a workspace-local
 TEMP for Vitest; its ignored verification configuration is in
-`artifacts/acting-token/`. Backend/browser verification requires rebuilding Docker;
+`artifacts/acting-token/`. At that time backend/browser verification required rebuilding Docker;
 automatic approval review was unavailable (model capacity), so these checks and
 the new migration have not yet run in Docker. Screenshot capture was also blocked by the browser approval review (model capacity); no screenshot is claimed. Do not treat this as deployment approval.

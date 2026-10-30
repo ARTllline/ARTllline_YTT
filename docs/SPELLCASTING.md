@@ -1,3 +1,5 @@
+> Historical validation used the former container runtime. Current local commands: [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md); data migration: [LOCAL_MIGRATION.md](LOCAL_MIGRATION.md).
+
 # Spellcasting — Task 29
 
 Compendium → deliberate independent Character Ability copy → current access/slots → existing AbilityActions → CombatExecution. No runtime remote API, natural-language rules parser, classes or automatic progression. `SpellProjection` contains reviewed keyed recipes; `SpellMetadata` extends the bounded Ability contract. Existing campaign copies remain editable and are not silently refreshed.

@@ -1,3 +1,5 @@
+> Historical validation used the former container runtime. Current local commands: [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md); data migration: [LOCAL_MIGRATION.md](LOCAL_MIGRATION.md).
+
 # Task 15 — Creation Hub & Token Identity
 
 Локальная реализация, 29 октября 2026. Публикация на VPS не выполнялась.

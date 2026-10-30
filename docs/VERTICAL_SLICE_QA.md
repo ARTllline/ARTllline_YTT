@@ -1,3 +1,5 @@
+> Historical validation used the former container runtime. Current local commands: [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md); data migration: [LOCAL_MIGRATION.md](LOCAL_MIGRATION.md).
+
 # Task 30 — игровой вертикальный срез
 
 Дата: 2026-10-30. Локальный Docker `ytt-test`, Chromium, три независимых
@@ -42,11 +44,11 @@ DC10 у припасов. DC скрыты от Players. У каждого гер
 
 ## Сброс и восстановление
 
-После изменения исходников сначала пересобрать Docker:
+Текущий native runtime: PHP использует исходники напрямую; после изменения frontend собрать assets:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/docker.ps1 up
-docker compose --env-file .env.docker exec --user www-data app php artisan qa:townhouse
+npm run build
+php artisan qa:townhouse
 ```
 
 Первый осознанный перевод старого полигона: тот же вызов с `--install`.
