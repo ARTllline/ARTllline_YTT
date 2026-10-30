@@ -22,10 +22,13 @@ export function ConditionList({
                 <span
                     className={`condition-chip ${condition.visibility === 'gm_only' ? 'secret' : ''}`}
                     key={condition.id}
-                    title={`${conditionLabel(condition)}${condition.remainingRounds ? ` · ${condition.remainingRounds} раунд.` : condition.durationMode && condition.durationMode !== 'until_removed' ? ` · ${durationOptions.find(([v]) => v === condition.durationMode)?.[1] ?? condition.durationMode}` : ''}`}
+                    title={`${conditionLabel(condition)}${condition.description ? '\n' + condition.description : ''}${condition.sourceTokenId && store ? ' · Источник: ' + (store.getSnapshot().scene.tokens.find((t) => t.id === condition.sourceTokenId)?.name ?? 'удалён') : ''}${condition.remainingRounds ? ` · ${condition.remainingRounds} раунд.` : condition.durationMode && condition.durationMode !== 'until_removed' ? ` · ${durationOptions.find(([v]) => v === condition.durationMode)?.[1] ?? condition.durationMode}` : ''}`}
                 >
                     <ConditionIcon name={condition.key} />
-                    <span>{conditionLabel(condition)}</span>
+                    <span>
+                        {conditionLabel(condition)}
+                        {condition.remainingRounds ? ` · ${condition.remainingRounds} р.` : ''}
+                    </span>
                     {store && (
                         <>
                             <button
@@ -88,18 +91,21 @@ export function TokenCombatControls({
 }) {
     const [amount, setAmount] = useState('5');
     const [condition, setCondition] = useState('poisoned');
+    const [search, setSearch] = useState('');
     const [label, setLabel] = useState('');
     const [secret, setSecret] = useState(false);
     const [duration, setDuration] = useState('until_removed');
     const [rounds, setRounds] = useState(1);
     const [source, setSource] = useState('');
-    const [definitions, setDefinitions] = useState<{ key: string; name: string }[]>([]);
+    const [definitions, setDefinitions] = useState<
+        { key: string; name: string; description?: string }[]
+    >([]);
     const [catalogError, setCatalogError] = useState('');
     const campaign = store.getSnapshot().scene.campaignId;
     useEffect(() => {
         if (!campaign) return;
         const abort = new AbortController();
-        void request<{ conditions: { key: string; name: string }[] }>(
+        void request<{ conditions: { key: string; name: string; description?: string }[] }>(
             `/campaigns/${campaign}/character-rules/catalog`,
             'GET',
             undefined,
@@ -118,6 +124,15 @@ export function TokenCombatControls({
     }, [campaign]);
     const value = Number(amount);
     const valid = amount.trim() !== '' && Number.isInteger(value) && Math.abs(value) <= 9999;
+    const apply = (key: string) =>
+        store.tokenCombat(token.id, {
+            action: 'condition-add',
+            key,
+            visibility: secret ? 'gm_only' : 'public',
+            duration_mode: duration,
+            rounds,
+            ...(source ? { source_token_id: source } : {}),
+        });
     const adjust = (delta: number) => {
         if (valid) store.tokenCombat(token.id, { action: 'hp', delta });
     };
@@ -162,6 +177,17 @@ export function TokenCombatControls({
                     {t('Apply signed HP change')}{' '}
                 </button>
             </form>
+            <button
+                className="quiet-button"
+                disabled={disabled || !valid || value < 0}
+                title="Установить HP без поглощения временными HP"
+                onClick={() => {
+                    if (valid && value >= 0)
+                        store.tokenCombat(token.id, { action: 'hp-set', value });
+                }}
+            >
+                Установить HP
+            </button>
             <ConditionList token={token} store={store} disabled={disabled} />
             <details className="condition-disclosure">
                 <summary>Добавить состояние</summary>
@@ -174,6 +200,7 @@ export function TokenCombatControls({
                     className="condition-add"
                     onSubmit={(e) => {
                         e.preventDefault();
+                        if (condition !== 'custom' || !label.trim()) return;
                         store.tokenCombat(token.id, {
                             action: 'condition-add',
                             ...(condition === 'custom'
@@ -186,42 +213,80 @@ export function TokenCombatControls({
                         });
                     }}
                 >
-                    <select
-                        aria-label={t('tokenCondition', { name: token.name })}
-                        value={condition}
-                        onChange={(e) => setCondition(e.target.value)}
-                    >
-                        {definitions.map(({ key, name }) => (
-                            <option key={key} value={key}>
-                                {conditionLabel({ key, label: name })}
-                            </option>
-                        ))}
-                        <option value="concentrating">
-                            {conditionLabel({ key: 'concentrating', label: 'Concentrating' })}
-                        </option>
-                        <option value="custom"> {t('Custom condition…')} </option>
-                    </select>
+                    <input
+                        className="condition-search"
+                        aria-label="Найти состояние"
+                        placeholder="Найти состояние…"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <div className="condition-grid" aria-label="Канонические состояния">
+                        {definitions
+                            .filter((d) =>
+                                `${conditionLabel({ key: d.key, label: d.name })} ${d.name}`
+                                    .toLowerCase()
+                                    .includes(search.toLowerCase()),
+                            )
+                            .sort(
+                                (a, b) =>
+                                    Number(
+                                        [
+                                            'prone',
+                                            'poisoned',
+                                            'restrained',
+                                            'stunned',
+                                            'unconscious',
+                                        ].includes(b.key),
+                                    ) -
+                                    Number(
+                                        [
+                                            'prone',
+                                            'poisoned',
+                                            'restrained',
+                                            'stunned',
+                                            'unconscious',
+                                        ].includes(a.key),
+                                    ),
+                            )
+                            .map(({ key, name, description }) => (
+                                <button
+                                    type="button"
+                                    key={key}
+                                    disabled={disabled}
+                                    title={
+                                        description ||
+                                        'Применить состояние с выбранной длительностью'
+                                    }
+                                    onClick={(e) => {
+                                        apply(key);
+                                        const picker = e.currentTarget.closest('details');
+                                        if (picker) picker.open = false;
+                                    }}
+                                >
+                                    <ConditionIcon name={key} />
+                                    {conditionLabel({ key, label: name })}
+                                </button>
+                            ))}
+                    </div>
                     <button
-                        disabled={
-                            disabled ||
-                            (condition === 'custom'
-                                ? !label.trim()
-                                : condition !== 'concentrating' &&
-                                  !definitions.some((d) => d.key === condition))
-                        }
-                        type="submit"
-                        aria-label={t('addCondition', { name: token.name })}
+                        type="button"
+                        onClick={() => setCondition(condition === 'custom' ? 'poisoned' : 'custom')}
                     >
-                        <Plus size={14} /> {t('Add')}{' '}
+                        Свой маркер…
                     </button>
                     {condition === 'custom' && (
-                        <input
-                            placeholder={t('Condition name')}
-                            aria-label={t('Custom condition name')}
-                            maxLength={40}
-                            value={label}
-                            onChange={(e) => setLabel(e.target.value)}
-                        />
+                        <>
+                            <button disabled={disabled || !label.trim()} type="submit">
+                                Добавить маркер
+                            </button>
+                            <input
+                                placeholder={t('Condition name')}
+                                aria-label={t('Custom condition name')}
+                                maxLength={40}
+                                value={label}
+                                onChange={(e) => setLabel(e.target.value)}
+                            />
+                        </>
                     )}
                     <label className="condition-private">
                         <input

@@ -20,7 +20,9 @@ class CombatController extends Controller
     {
         Gate::authorize('update', $scene);
 
-        return ['events' => DB::table('combat_events')->whereIn('combat_id', Combat::where('scene_id', $scene->id)->select('id'))->orderByDesc('id')->limit(100)->get()->map(fn ($e) => ['id' => (string) $e->id, 'type' => $e->type, 'data' => json_decode($e->data, true), 'createdAt' => $e->created_at])->all()];
+        $combatId = Combat::where('scene_id', $scene->id)->latest('id')->value('id');
+
+        return ['events' => DB::table('combat_events')->where('combat_id', $combatId)->orderByDesc('id')->limit(100)->get()->map(fn ($e) => ['id' => (string) $e->id, 'type' => $e->type, 'data' => json_decode($e->data, true), 'createdAt' => $e->created_at])->all()];
     }
 
     public function combat(Request $request, Scene $scene, CombatActions $actions): array
@@ -50,6 +52,7 @@ class CombatController extends Controller
             Gate::authorize('update', $token);
         }
         $rules = match ($command) {
+            'hp-set' => ['value' => 'required|integer|between:0,9999'],
             'hp' => ['delta' => 'required|integer|between:-9999,9999'],
             'stand-up' => [],
             'condition-add' => ['key' => ['nullable', Rule::in([...array_keys(app(CharacterCatalog::class)->entries('conditions')), 'concentrating'])], 'label' => 'required_without:key|nullable|string|max:40', 'visibility' => 'required|in:public,gm_only', 'duration_mode' => ['sometimes', Rule::in(AppliedConditions::DURATIONS)], 'rounds' => 'sometimes|integer|between:1,100', 'source_token_id' => 'sometimes|nullable|integer'],

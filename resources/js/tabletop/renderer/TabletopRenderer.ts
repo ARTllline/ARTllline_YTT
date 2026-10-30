@@ -297,6 +297,17 @@ export class TabletopRenderer {
         const region = this.regions?.hit(point);
         if (region) return { kind: 'region' as const, id: region };
     }
+    focusToken(id: string) {
+        if (this.camera.directed) return;
+        const token = this.store.getSnapshot().scene.tokens.find((t) => t.id === id);
+        if (!token) return;
+        this.input?.cancel();
+        const center = this.center();
+        this.camera.pan(
+            (center.x - token.x) * this.camera.state.zoom,
+            (center.y - token.y) * this.camera.state.zoom,
+        );
+    }
     screenPoint(point: import('../types/scene').Point) {
         const bounds = this.host.getBoundingClientRect();
         return {

@@ -10,6 +10,7 @@ import type { SceneStore } from '../tabletop/state/SceneStore';
 import { NumberField } from './NumberField';
 import { MapInspector } from './MapInspector';
 import type { Campaign } from '../api/workspace';
+import { CombatProfileEditor } from './combat/CombatProfileEditor';
 import { TokenCombatControls } from './combat/TokenCombatControls';
 export function Inspector({
     store,
@@ -86,6 +87,7 @@ export function Inspector({
                         </span>
                     </div>
                     <TokenCheckEditor token={token} store={store} disabled={combatBusy} />
+                    <CombatProfileEditor key={token.id} token={token} store={store} />
                     <InteractionEditor
                         key={`interactions:${token.id}`}
                         store={store}

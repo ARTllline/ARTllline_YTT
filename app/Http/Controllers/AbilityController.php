@@ -35,8 +35,9 @@ class AbilityController extends Controller
 
             return $response;
         }
+        unset($response['execution']['gmContext'], $response['execution']['resolution']);
         foreach ($response['execution']['outcomes'] ?? [] as $i => $outcome) {
-            unset($response['execution']['outcomes'][$i]['damageDetail'],$response['execution']['outcomes'][$i]['conditionsApplied']);
+            unset($response['execution']['outcomes'][$i]['damageDetail'],$response['execution']['outcomes'][$i]['conditionsApplied'], $response['execution']['outcomes'][$i]['hpBefore'], $response['execution']['outcomes'][$i]['hpAfter']);
             if (isset($outcome['save'])) {
                 $response['execution']['outcomes'][$i]['save'] = array_intersect_key($outcome['save'], array_flip(['success', 'rollMode', 'automaticFailure']));
             }

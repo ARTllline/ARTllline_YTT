@@ -3,7 +3,10 @@ import { CombatActorControls } from './CombatActorControls';
 import { t } from '../../i18n';
 import { tokenAppearance } from '../../tabletop/objects/tokenAppearance';
 import { resourceCache } from '../../preload/ResourceCache';
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
+import type { TabletopRenderer } from '../../tabletop/renderer/TabletopRenderer';
+import { GMResolutionQueue } from './GMResolutionQueue';
+import { GMQuickCheck } from './GMQuickCheck';
 import {
     Swords,
     ChevronDown,
@@ -74,27 +77,34 @@ export function CombatPanel({
     store,
     queue,
     onClose,
+    renderer,
 }: {
     store: SceneStore;
     queue: SaveQueue;
     onClose?: () => void;
+    renderer?: RefObject<TabletopRenderer | null>;
 }) {
     const { scene, selectedIds, combatNotice } = useSyncExternalStore(
         store.subscribe,
         store.getSnapshot,
+        store.getSnapshot,
     );
-    const save = useSyncExternalStore(queue.subscribe, queue.getSnapshot);
+    const save = useSyncExternalStore(queue.subscribe, queue.getSnapshot, queue.getSnapshot);
     const combat = scene.combat;
     const gm = store.role === 'gm';
     const disabled = save.status !== 'saved';
     const [collapsed, setCollapsed] = useState(
         () => !gm && window.matchMedia('(max-width: 600px)').matches,
     );
+    const panelRef = useRef<HTMLElement>(null);
+    const [inspecting, setInspecting] = useState(false);
+    const [selected, setSelected] = useState<{ id: string; turn?: string }>({ id: '' });
     const [picker, setPicker] = useState(false);
     const [ending, setEnding] = useState(false);
     const [dragging, setDragging] = useState<string | null>(null);
     const [drop, setDrop] = useState<string | null>(null);
     const current = currentTokenId(combat);
+    const turnKey = `${combat?.id}:${combat?.round}:${current}`;
     const currentToken = scene.tokens.find((t) => t.id === current);
     const title =
         combat?.status === 'active'
@@ -108,7 +118,7 @@ export function CombatPanel({
             : currentToken?.isOwner
               ? t('yourTurn') + ' · ' + currentToken.name
               : (currentToken?.name ?? t('Choose the first move'));
-    if (!gm && !combat) return null;
+
     const reorder = (id: string, target: string) => {
         if (!combat || id === target || disabled) return;
         const ids = combat.combatants.map((c) => c.id);
@@ -128,8 +138,57 @@ export function CombatPanel({
                     : null,
         });
     };
+    useEffect(() => {
+        if (!gm || combat?.status !== 'active') return;
+        const key = (e: KeyboardEvent) => {
+            if (
+                disabled ||
+                e.repeat ||
+                e.defaultPrevented ||
+                e.ctrlKey ||
+                e.metaKey ||
+                store.abilityTargeting ||
+                document.querySelector('dialog[open], [role="dialog"]')
+            )
+                return;
+            if (
+                e.target instanceof HTMLElement &&
+                e.target.closest(
+                    'input,textarea,select,button,a,[contenteditable="true"],[role="textbox"]',
+                )
+            )
+                return;
+            if (e.key.toLowerCase() === 'n' && !e.altKey) {
+                e.preventDefault();
+                advance(e.shiftKey ? 'previous' : 'next');
+            }
+            if (e.altKey && ['h', 'c'].includes(e.key.toLowerCase())) {
+                e.preventDefault();
+                const row = panelRef.current?.querySelector('.combat-row.expanded');
+                if (e.key.toLowerCase() === 'h')
+                    row?.querySelector<HTMLInputElement>('.hp-actions input')?.focus();
+                else {
+                    const picker = row?.querySelector<HTMLDetailsElement>('.condition-disclosure');
+                    if (picker) {
+                        picker.open = true;
+                        picker.querySelector<HTMLInputElement>('.condition-search')?.focus();
+                    }
+                }
+            }
+        };
+        window.addEventListener('keydown', key);
+        return () => window.removeEventListener('keydown', key);
+    });
+    useEffect(() => {
+        if (gm && current)
+            panelRef.current
+                ?.querySelector(`[data-token-id="${current}"] .combat-row-main`)
+                ?.scrollIntoView({ block: 'nearest' });
+    }, [gm, current]);
+    if (!gm && !combat) return null;
     return (
         <aside
+            ref={panelRef}
             className={`combat-panel ${gm ? 'gm-combat' : 'player-combat'} ${collapsed ? 'collapsed' : ''}`}
             aria-label={t('Combat tracker')}
         >
@@ -180,7 +239,10 @@ export function CombatPanel({
                                     aria-live="polite"
                                 >
                                     <span className="eyebrow">
-                                        СЕЙЧАС ХОДИТ · РАУНД {combat.round}
+                                        РАУНД {combat.round} · ХОД{' '}
+                                        {combat.combatants.findIndex((e) => e.tokenId === current) +
+                                            1}{' '}
+                                        / {combat.combatants.length}
                                     </span>
                                     <strong>{turnName}</strong>
                                     <span>
@@ -210,7 +272,62 @@ export function CombatPanel({
                                     </button>
                                 </div>
                             )}
-                            {gm && scene.id && <CombatHistory sceneId={scene.id} />}
+
+                            {gm && (
+                                <div className="combat-footer">
+                                    {combat.status === 'active' && (
+                                        <span className="combat-turn-status">
+                                            Раунд {combat.round} · {turnName} ·{' '}
+                                            {combat.combatants.findIndex(
+                                                (e) => e.tokenId === current,
+                                            ) + 1}
+                                            /{combat.combatants.length}
+                                        </span>
+                                    )}
+                                    {combat.status === 'preparing' ? (
+                                        <button
+                                            className="primary-button"
+                                            disabled={disabled || !combat.combatants.length}
+                                            onClick={() =>
+                                                store.combatCommand({
+                                                    action: 'begin',
+                                                    combatId: combat.id,
+                                                })
+                                            }
+                                        >
+                                            <Play size={13} /> {t('Begin Combat')}{' '}
+                                        </button>
+                                    ) : (
+                                        <div className="turn-actions">
+                                            <button
+                                                disabled={disabled || !combat.combatants.length}
+                                                aria-label={t('Previous turn')}
+                                                title="Предыдущий ход · Shift+N. Создаёт новые границы хода; не отменяет события."
+                                                onClick={() => advance('previous')}
+                                            >
+                                                <ChevronLeft size={17} />
+                                            </button>
+                                            <button
+                                                className="next-turn"
+                                                title="Следующий ход · N"
+                                                disabled={disabled || !combat.combatants.length}
+                                                onClick={() => advance('next')}
+                                            >
+                                                {' '}
+                                                {t('Next Turn')} <ChevronRight size={16} />
+                                            </button>
+                                        </div>
+                                    )}
+                                    <button
+                                        className="end-combat"
+                                        disabled={disabled}
+                                        onClick={() => setEnding(true)}
+                                    >
+                                        {' '}
+                                        {t('End Combat')}{' '}
+                                    </button>
+                                </div>
+                            )}
                             <div className="combat-rows">
                                 {!combat.combatants.length && (
                                     <p className="combat-empty">
@@ -223,7 +340,11 @@ export function CombatPanel({
                                     const token = scene.tokens.find((t) => t.id === entry.tokenId);
                                     if (!token) return null;
                                     const active = current === token.id;
-                                    const expanded = gm && (selectedIds[0] ?? current) === token.id;
+                                    const expanded =
+                                        gm &&
+                                        (selected.turn === turnKey && selected.id
+                                            ? selected.id
+                                            : (current ?? selectedIds[0])) === token.id;
                                     return (
                                         <div
                                             key={entry.id}
@@ -299,7 +420,14 @@ export function CombatPanel({
                                                 )}
                                                 <button
                                                     className="combat-identity"
-                                                    onClick={() => store.select(token.id)}
+                                                    onClick={() => {
+                                                        setSelected({
+                                                            id: token.id,
+                                                            turn: turnKey,
+                                                        });
+                                                        setInspecting(false);
+                                                        store.select(token.id);
+                                                    }}
                                                     title={t('selectToken', { name: token.name })}
                                                 >
                                                     <span className="combat-portrait">
@@ -326,7 +454,13 @@ export function CombatPanel({
                                                                 <small>
                                                                     {token.hp} / {token.maxHp} HP
                                                                     {token.hp === 0
-                                                                        ? ' · 0 HP'
+                                                                        ? ' · ПОВЕРЖЕН'
+                                                                        : ''}
+                                                                    {gm && token.ac !== undefined
+                                                                        ? ` · AC ${token.ac}`
+                                                                        : ''}
+                                                                    {entry.budget?.incapacitated
+                                                                        ? ' · НЕДЕЕСПОСОБЕН'
                                                                         : ''}
                                                                 </small>
                                                                 <span
@@ -372,10 +506,154 @@ export function CombatPanel({
                                             </div>
                                             {gm && expanded ? (
                                                 <div className="combat-row-detail">
-                                                    <CombatActorControls
+                                                    <div className="combat-quick-strip">
+                                                        <button
+                                                            title="HP · Alt+H"
+                                                            onClick={(e) =>
+                                                                e.currentTarget
+                                                                    .closest('.combat-row-detail')
+                                                                    ?.querySelector<HTMLInputElement>(
+                                                                        '.hp-actions input',
+                                                                    )
+                                                                    ?.focus()
+                                                            }
+                                                        >
+                                                            ± HP
+                                                        </button>
+                                                        <button
+                                                            title="Состояния · Alt+C"
+                                                            onClick={(e) => {
+                                                                const d = e.currentTarget
+                                                                    .closest('.combat-row-detail')
+                                                                    ?.querySelector<HTMLDetailsElement>(
+                                                                        '.condition-disclosure',
+                                                                    );
+                                                                if (d) {
+                                                                    d.open = !d.open;
+                                                                    d.querySelector<HTMLInputElement>(
+                                                                        '.condition-search',
+                                                                    )?.focus();
+                                                                }
+                                                            }}
+                                                        >
+                                                            Состояние
+                                                        </button>
+                                                        <button
+                                                            title="Осмотреть без редактора"
+                                                            aria-pressed={inspecting}
+                                                            onClick={() =>
+                                                                setInspecting(!inspecting)
+                                                            }
+                                                        >
+                                                            Осмотр
+                                                        </button>
+                                                        <button
+                                                            title="Фокус камеры ГМ"
+                                                            onClick={() =>
+                                                                renderer?.current?.focusToken(
+                                                                    token.id,
+                                                                )
+                                                            }
+                                                        >
+                                                            Фокус
+                                                        </button>
+                                                    </div>
+                                                    <TokenCombatControls
+                                                        key={token.id}
                                                         token={token}
                                                         store={store}
+                                                        disabled={disabled}
                                                     />
+                                                    <CombatActorControls
+                                                        key={'actor' + token.id}
+                                                        token={token}
+                                                        store={store}
+                                                        renderer={renderer}
+                                                        disabled={disabled}
+                                                    />
+                                                    {inspecting && (
+                                                        <div className="runtime-inspection">
+                                                            <strong>
+                                                                {token.name} · AC {token.ac ?? '—'}{' '}
+                                                                · {token.speed ?? '—'} ft
+                                                            </strong>
+                                                            <p>
+                                                                {(
+                                                                    scene.characters?.find(
+                                                                        (c) =>
+                                                                            c.id ===
+                                                                            token.characterId,
+                                                                    )?.checkStats ??
+                                                                    token.checkStats ??
+                                                                    []
+                                                                )
+                                                                    .map(
+                                                                        (s) =>
+                                                                            `${s.label} ${s.modifier >= 0 ? '+' : ''}${s.modifier}`,
+                                                                    )
+                                                                    .join(' · ')}
+                                                            </p>
+                                                            {[
+                                                                'saving_throws',
+                                                                'resistances',
+                                                                'vulnerabilities',
+                                                                'immunities',
+                                                                'condition_immunities',
+                                                            ].map((key) => (
+                                                                <p key={key}>
+                                                                    {
+                                                                        (
+                                                                            {
+                                                                                saving_throws:
+                                                                                    'Спасброски',
+                                                                                resistances:
+                                                                                    'Сопротивления',
+                                                                                vulnerabilities:
+                                                                                    'Уязвимости',
+                                                                                immunities:
+                                                                                    'Иммунитеты',
+                                                                                condition_immunities:
+                                                                                    'Иммунитет состояний',
+                                                                            } as Record<
+                                                                                string,
+                                                                                string
+                                                                            >
+                                                                        )[key]
+                                                                    }
+                                                                    :{' '}
+                                                                    {Array.isArray(
+                                                                        token.combatProfile?.[key],
+                                                                    )
+                                                                        ? (
+                                                                              token.combatProfile![
+                                                                                  key
+                                                                              ] as string[]
+                                                                          ).join(', ') || '—'
+                                                                        : token.combatProfile?.[
+                                                                                key
+                                                                            ] &&
+                                                                            typeof token
+                                                                                .combatProfile[
+                                                                                key
+                                                                            ] === 'object'
+                                                                          ? Object.entries(
+                                                                                token.combatProfile[
+                                                                                    key
+                                                                                ] as Record<
+                                                                                    string,
+                                                                                    number
+                                                                                >,
+                                                                            )
+                                                                                .map(
+                                                                                    ([k, v]) =>
+                                                                                        `${k.toUpperCase()} ${v >= 0 ? '+' : ''}${v}`,
+                                                                                )
+                                                                                .join(' · ')
+                                                                          : '—'}
+                                                                </p>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                     <div className="combat-row-actions">
                                                         {combat.status === 'active' && (
                                                             <button
@@ -405,11 +683,6 @@ export function CombatPanel({
                                                             <X size={12} /> {t('Remove')}{' '}
                                                         </button>
                                                     </div>
-                                                    <TokenCombatControls
-                                                        token={token}
-                                                        store={store}
-                                                        disabled={disabled}
-                                                    />
                                                 </div>
                                             ) : (
                                                 <ConditionList token={token} />
@@ -418,50 +691,25 @@ export function CombatPanel({
                                     );
                                 })}
                             </div>
-                            {gm && (
-                                <div className="combat-footer">
-                                    {combat.status === 'preparing' ? (
-                                        <button
-                                            className="primary-button"
-                                            disabled={disabled || !combat.combatants.length}
-                                            onClick={() =>
-                                                store.combatCommand({
-                                                    action: 'begin',
-                                                    combatId: combat.id,
-                                                })
-                                            }
-                                        >
-                                            <Play size={13} /> {t('Begin Combat')}{' '}
-                                        </button>
-                                    ) : (
-                                        <div className="turn-actions">
-                                            <button
-                                                disabled={disabled || !combat.combatants.length}
-                                                aria-label={t('Previous turn')}
-                                                onClick={() => advance('previous')}
-                                            >
-                                                <ChevronLeft size={17} />
-                                            </button>
-                                            <button
-                                                className="next-turn"
-                                                disabled={disabled || !combat.combatants.length}
-                                                onClick={() => advance('next')}
-                                            >
-                                                {' '}
-                                                {t('Next Turn')} <ChevronRight size={16} />
-                                            </button>
-                                        </div>
-                                    )}
-                                    <button
-                                        className="end-combat"
-                                        disabled={disabled}
-                                        onClick={() => setEnding(true)}
-                                    >
-                                        {' '}
-                                        {t('End Combat')}{' '}
-                                    </button>
-                                </div>
-                            )}
+                        </>
+                    )}
+                    {gm && scene.id && (
+                        <>
+                            <GMQuickCheck
+                                store={store}
+                                tokenId={
+                                    selected.turn === turnKey && selected.id
+                                        ? selected.id
+                                        : (current ?? selectedIds[0])
+                                }
+                                disabled={disabled}
+                            />
+                            <GMResolutionQueue store={store} disabled={disabled} />
+                            <CombatHistory
+                                sceneId={scene.id}
+                                revision={scene.revision}
+                                scene={scene}
+                            />
                         </>
                     )}
                     {combatNotice && (
@@ -508,7 +756,7 @@ function CombatPicker({
     close: () => void;
     disabled: boolean;
 }) {
-    const { scene } = useSyncExternalStore(store.subscribe, store.getSnapshot);
+    const { scene } = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
     const [query, setQuery] = useState('');
     const [selected, setSelected] = useState<string[]>([]);
     const available = scene.tokens.filter(

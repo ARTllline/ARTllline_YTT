@@ -172,3 +172,10 @@ cast-level scaling, healing provenance, temporary HP, managed effects and concen
 The 2024 one-slot-per-current-turn restriction is separate from Action/Bonus/Reaction
 budgets. Ending combat preserves slots and converts managed spell durations rather than
 ending ongoing concentration arbitrarily. GM confirms reaction triggers and manual effects.
+
+## Task 31 — GM session workflow
+
+[GM Combat Console](GM_COMBAT_CONSOLE.md) consolidates runtime NPC actions, turn
+controls, HP/conditions, bounded correction undo, secret batch checks, a readable
+structured log and durable manual-spell resolution in the existing editor dock.
+Gameplay engines and coverage classifications remain authoritative and unchanged.

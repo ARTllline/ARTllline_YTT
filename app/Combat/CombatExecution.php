@@ -103,6 +103,7 @@ class CombatExecution
                 $effect = $targetSave['success'] ? $save['on_success'] : $save['on_failure'];
                 app(CombatLog::class)->write($combat, 'save.roll', ['abilityId' => $ability['id'], 'sourceId' => $actor?->id, 'targetId' => (string) $target->id, 'save' => $targetSave]);
             }
+            $hpBefore = $target->hp;
             $damage = $success ? app(TypedDamage::class)->apply($rolled, $target, $effect) : ['total' => 0, 'components' => []];
             if ($damage['total']) {
                 app(TokenCombatActions::class)->adjustHp($author, $target, -$damage['total']);
@@ -118,7 +119,7 @@ class CombatExecution
                     }
                 }
             }
-            $outcomes[] = ['tokenId' => (string) $target->id, 'damage' => $damage['total'], 'damageDetail' => $damage, 'save' => $targetSave, 'conditionsApplied' => $applied];
+            $outcomes[] = ['tokenId' => (string) $target->id, 'damage' => $damage['total'], 'damageDetail' => $damage, 'hpBefore' => $hpBefore, 'hpAfter' => $target->fresh()->hp, 'save' => $targetSave, 'conditionsApplied' => $applied];
             $feedbacks[] = ['tokenId' => (string) $target->id, 'text' => $success ? '−'.$damage['total'] : 'Промах', 'tone' => $success ? 'damage' : 'miss'];
             if ($rolled) {
                 app(CombatLog::class)->write($combat, 'damage', ['abilityId' => $ability['id'], 'abilityName' => $ability['name'], 'sourceId' => $actor?->id, 'targetId' => (string) $target->id, 'rolled' => $rolled, 'damage' => $damage]);

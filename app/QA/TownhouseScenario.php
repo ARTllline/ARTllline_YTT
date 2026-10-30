@@ -16,6 +16,7 @@ use App\Compendium\CopyCompendiumEntry;
 use App\Http\Controllers\CharacterHotbarController;
 use App\Http\Controllers\SpellcastingController;
 use App\Items\LootActions;
+use App\Models\AbilityExecution;
 use App\Models\Asset;
 use App\Models\Campaign;
 use App\Models\Character;
@@ -95,6 +96,12 @@ class TownhouseScenario
             $this->campaign->update(['name' => 'Постоянный полигон · Дом Флинна']);
             foreach (SpellEffect::where('scene_id', $this->scene->id)->whereNull('ended_at')->get() as $effect) {
                 app(SpellEffects::class)->end($effect, 'qa_reset');
+            }
+            // The reset closes old manual work while preserving its cast/history receipt.
+            foreach (AbilityExecution::where('campaign_id', $this->campaign->id)->where('context->sceneId', (string) $this->scene->id)->where('result->manualResolution', 'pending')->get() as $cast) {
+                $result = $cast->result;
+                $result['manualResolution'] = 'dismissed_by_qa_reset';
+                $cast->update(['result' => $result]);
             }
             foreach (Combat::where('scene_id', $this->scene->id)->whereIn('status', ['preparing', 'active'])->get() as $combat) {
                 $this->command(fn () => app(CombatActions::class)->execute($this->gm, $this->scene, 'end', ['combatId' => (string) $combat->id]));

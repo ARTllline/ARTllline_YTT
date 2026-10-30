@@ -162,6 +162,16 @@ export function Workspace({
     );
     const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
     const { scene } = snapshot;
+    useEffect(() => {
+        if (scene.combat?.status === 'active' && !panelGuard.current) {
+            dispatch({
+                type: 'right',
+                panel: 'combat',
+                force: true,
+                compact: window.innerWidth <= 1100,
+            });
+        }
+    }, [scene.combat?.id, scene.combat?.status]);
     const selectionKey = useWorkspaceSelection(store);
     const [hubOpen, setHubOpen] = useState(false);
     const [placement, setPlacement] = useState<Placement | null>(null);
@@ -885,6 +895,7 @@ export function Workspace({
                     <PanelGuard.Provider value={panelGuard}>
                         <WorkspaceDock
                             panel={rightPanel}
+                            renderer={renderer}
                             queue={queue}
                             members={live.members}
                             connection={live.connection}
@@ -1182,6 +1193,10 @@ export function Workspace({
                 <dl>
                     <dt> {t('Select / Pan / Fog / Ruler / Ping')} </dt>
                     <dd>V / H / F / R / P</dd>
+                    <dt>Боевой пульт ГМ · следующий / предыдущий ход</dt>
+                    <dd>N / Shift+N · вне полей ввода и диалогов</dd>
+                    <dt>Боевой пульт ГМ · HP / состояния</dt>
+                    <dd>Alt+H / Alt+C · выбранный участник</dd>
                     <dt> {t('Area templates')} </dt>
                     <dd> {t('Circle toolbar then choose shape')} </dd>
                     <dt> {t('Select / move token')} </dt>

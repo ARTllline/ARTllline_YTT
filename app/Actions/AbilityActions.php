@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Combat\CombatExecution;
+use App\Combat\CombatLog;
 use App\Combat\ConditionRules;
 use App\Combat\TurnBudget;
 use App\Items\ItemActions;
@@ -168,6 +169,14 @@ class AbilityActions
                     $healing = min(max(0, $target->max_hp - $target->hp), $healingRoll['total'] ?? $result['amount']);
                     app(TokenCombatActions::class)->adjustHp($author, $target, $healing);
                     if ($target instanceof Token) {
+                        foreach ($outcomes as &$outcome) {
+                            if ($outcome['tokenId'] === (string) $target->id) {
+                                $outcome['hpAfter'] = $target->fresh()->hp;
+                            }
+                        }
+                        unset($outcome);
+                    }
+                    if ($target instanceof Token) {
                         $feedback = ['tokenId' => (string) $target->id, 'text' => '+'.$healing, 'tone' => 'heal'];
                     }
                 } elseif (in_array($result['type'], ['cue', 'handout'])) {
@@ -191,15 +200,18 @@ class AbilityActions
             }, $isArea ? 'objects.changed' : 'ability.resolved');
             // Persist the full authoritative roll; redact DC only in the player response below.
             $execution = $this->record($user, $character, $ability['id'], $context, [
-                ...(isset($ability['spell']) ? ['castLevel' => $ability['_castLevel'], 'coverage' => $ability['spell']['coverage'] ?? 'PARTIAL', 'manualResolution' => ($ability['spell']['coverage'] ?? 'PARTIAL') !== 'FULL' ? 'pending' : null] : []),
+                ...(isset($ability['spell']) ? ['castLevel' => $ability['_castLevel'], 'coverage' => $ability['spell']['coverage'] ?? 'PARTIAL', 'manualResolution' => ($ability['spell']['coverage'] ?? 'PARTIAL') !== 'FULL' && (! $scrollCheck || $scrollCheck['success']) ? 'pending' : null] : []),
                 'abilityId' => $ability['id'], 'abilityName' => $ability['name'], 'category' => $ability['category'],
                 'actorId' => (string) $character->id, 'actorName' => $character->name,
                 'target' => $data['target'] ?? null, 'roll' => $roll, 'success' => $success,
                 'provenance' => $provenance,
                 'scrollCheck' => $scrollCheck, 'damage' => $damage, 'damageRolls' => $resolved['damageRolls'], 'critical' => $resolved['critical'], 'outcomes' => $outcomes, 'healing' => $healing, 'healingRoll' => $healingRoll,
                 'dcVisible' => $ability['check']['dc_visible'] ?? false,
+                'gmContext' => ['sourceTokenId' => $actor ? (string) $actor->id : null, 'description' => $ability['spell']['reference'] ?? $ability['description'] ?? '', 'remaining' => implode(' · ', $ability['spell']['reasons'] ?? []) ?: 'Разрешите оставшиеся последствия по описанию; автоматические результаты уже применены.', 'activation' => app(TurnBudget::class)->active($scene->id) ? ($ability['activation'] ?? 'action') : 'outside_combat', 'slotSpent' => isset($ability['spell']) && ! $fromItem ? ($ability['_castLevel'] ?? 0) : 0],
                 'mutationId' => app(CommandContext::class)->id(), 'resolvedAt' => now()->toIso8601String(),
             ]);
+
+            app(CombatLog::class)->write(app(TurnBudget::class)->active($scene->id), 'ability.resolved', ['executionId' => $execution['id'], 'abilityName' => $ability['name'], 'actorName' => $character->name, 'sourceId' => $actor ? (string) $actor->id : null, 'result' => $execution]);
 
             return ['execution' => $execution];
         }, 3);

@@ -14,6 +14,7 @@ use App\Models\SceneProp;
 use App\Models\SceneRegion;
 use App\Models\Token;
 use App\Models\User;
+use App\Spells\SpellEffects;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -70,6 +71,11 @@ class SceneSnapshotBuilder
 
     public function token(Token $token, bool $gm, User $user): array
     {
+        return app(SpellEffects::class)->project(fn () => $this->tokenProjection($token, $gm, $user));
+    }
+
+    private function tokenProjection(Token $token, bool $gm, User $user): array
+    {
         $loot = LootContainer::where('token_id', $token->id)->first();
         $data = [...($loot && ($gm || $token->hp <= 0) ? ['loot' => $loot->summary($gm)] : []), 'id' => (string) $token->id, 'name' => $token->name,
             'characterId' => $token->character_id ? (string) $token->character_id : null,
@@ -80,9 +86,9 @@ class SceneSnapshotBuilder
             'canMove' => $gm || ($token->owner_user_id === $user->id && ! $token->is_locked)];
         $data['conditions'] = $token->conditions->filter(fn ($condition) => $gm || $condition->visibility === 'public')->values()->map(fn ($condition) => [
             'id' => (string) $condition->id, 'key' => $condition->key, 'label' => $condition->label,
-            'compendiumEntryId' => $condition->compendium_entry_id,
+            'compendiumEntryId' => $condition->compendium_entry_id, 'description' => app(CharacterCatalog::class)->entries('conditions')[$condition->key]['description'] ?? '',
             'durationMode' => $condition->duration_mode, 'remainingRounds' => $condition->remaining_rounds,
-        ] + ($gm ? ['visibility' => $condition->visibility] : []))->all();
+        ] + ($gm ? ['visibility' => $condition->visibility, 'sourceTokenId' => $condition->source_token_id ? (string) $condition->source_token_id : null] : []))->all();
         if ($gm || $token->owner_user_id === $user->id) {
             $data += ['temporaryHp' => $token->temporary_hp ?? 0, 'hp' => $token->hp, 'maxHp' => $token->max_hp, 'checkStats' => $token->check_stats ?? []];
         }

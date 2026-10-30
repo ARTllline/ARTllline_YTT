@@ -8,12 +8,14 @@ import type { Ability, AbilityTarget } from './model';
 
 export function AbilityTargeting({
     ability,
+    actorTokenId,
     store,
     renderer,
     onSelect,
     onCancel,
 }: {
     ability: Ability;
+    actorTokenId?: string;
     store: SceneStore;
     renderer: RefObject<TabletopRenderer | null>;
     onSelect: (target: AbilityTarget, name: string) => void;
@@ -32,12 +34,14 @@ export function AbilityTargeting({
         callbacks.current = { onSelect, onCancel };
     });
     useEffect(() => {
-        const host = mount.current?.closest('.player-tabletop'),
+        const host = mount.current?.closest('.player-tabletop, .workspace'),
             instance = renderer.current;
         if (!host || !instance) return;
         const actor = () => {
             const s = store.getSnapshot().scene;
-            return s.tokens.find((t) => t.characterId === s.activeCharacterId && t.isOwner);
+            return actorTokenId
+                ? s.tokens.find((t) => t.id === actorTokenId)
+                : s.tokens.find((t) => t.characterId === s.activeCharacterId && t.isOwner);
         };
         instance.cancelGesture();
         store.setAbilityTargeting(true);
@@ -231,7 +235,7 @@ export function AbilityTargeting({
             host.removeEventListener('contextmenu', cancel, true);
             window.removeEventListener('keydown', key, true);
         };
-    }, [ability, store, renderer]);
+    }, [ability, actorTokenId, store, renderer]);
     return (
         <>
             <span ref={mount} />

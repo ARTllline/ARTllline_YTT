@@ -288,3 +288,9 @@ rollback-файл остаётся приватным; его не следуе�
 проверка оставленной подготовки.
 `repeat-core.cjs` — UI-only replay в уже авторизованных независимых контекстах;
 не заменяет постоянный recipe и не содержит учётных данных.
+
+## Task 31 — GM Combat Console
+
+Продолжение того же сценария: [архитектура, приёмка и границы GM-пульта](GM_COMBAT_CONSOLE.md).
+`qa:townhouse` теперь также закрывает старые pending manual resolutions данного
+сценария как `dismissed_by_qa_reset`, сохраняя execution receipts и историю.

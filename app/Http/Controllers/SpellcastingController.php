@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Actions\AbilityActions;
 use App\Actions\CharacterActions;
+use App\Actions\SceneTransaction;
+use App\Combat\GMResolutions;
 use App\Models\AbilityExecution;
 use App\Models\Campaign;
+use App\Models\Scene;
 use App\Models\SpellEffect;
 use App\Spells\SpellCasting;
 use App\Spells\SpellEffects;
@@ -42,9 +45,12 @@ class SpellcastingController extends Controller
                 app(SpellEffects::class)->end($effect, 'voluntary');
             } elseif ($d['action'] === 'resolve') {
                 $cast = AbilityExecution::where('character_id', $c->id)->findOrFail($d['executionId'] ?? '');
-                $result = $cast->result;
-                $result['manualResolution'] = 'resolved_by_gm';
-                $cast->update(['result' => $result]);
+                $scene = Scene::where('campaign_id', $campaign->id)->findOrFail($cast->context['sceneId']);
+                app(SceneTransaction::class)->run($scene, function ($locked) use ($r, $cast) {
+                    app(GMResolutions::class)->resolve($r->user(), $locked, $cast->id, 'resolved', '');
+
+                    return [];
+                }, 'combat.session');
             } else {
                 $state = app(SpellCasting::class)->state($c);
                 if ($d['action'] === 'configure') {

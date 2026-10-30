@@ -21,6 +21,7 @@ const RegionControls = lazy(() =>
 
 export function WorkspaceDock({
     panel,
+    renderer,
     inspector,
     queue,
     members,
@@ -31,6 +32,9 @@ export function WorkspaceDock({
     settings,
 }: {
     panel: RightPanel;
+    renderer?: React.RefObject<
+        import('../tabletop/renderer/TabletopRenderer').TabletopRenderer | null
+    >;
     inspector: ComponentProps<typeof Inspector>;
     queue: SaveQueue;
     members: Member[];
@@ -67,7 +71,12 @@ export function WorkspaceDock({
                     </Panel>
                 )}
                 {panel === 'combat' && (
-                    <CombatPanel store={store} queue={queue} onClose={onClose} />
+                    <CombatPanel
+                        renderer={renderer}
+                        store={store}
+                        queue={queue}
+                        onClose={onClose}
+                    />
                 )}
                 {panel === 'audio' && (
                     <MediaPanel

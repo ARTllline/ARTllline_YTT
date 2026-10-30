@@ -21,7 +21,7 @@ class CharacterCatalog
                 }
 
                 return [$key => ['key' => $key, 'name' => $entry->name, 'ability' => $n['ability'] ?? null,
-                    'compendium_entry_id' => $entry->id, 'source_id' => $entry->source_id]];
+                    'compendium_entry_id' => $entry->id, 'source_id' => $entry->source_id, ...($type === 'conditions' ? ['description' => $n['description'] ?? ''] : [])]];
             })->all();
     }
 

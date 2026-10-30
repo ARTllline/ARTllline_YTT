@@ -17,6 +17,7 @@ it('offers the persistent NPC actions when token projection has no private abili
     const store = new SceneStore(scene);
     const html = renderToStaticMarkup(<CombatActorControls token={token} store={store} />);
     expect(html).toContain('Shortbow');
-    expect(html).toContain('Выберите действие NPC');
-    expect(html).toContain('Применить действие');
+    expect(html).toContain('Действия NPC');
+    expect(html).not.toContain('Цель NPC');
+    expect(html).not.toContain('<select');
 });

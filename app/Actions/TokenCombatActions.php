@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Combat\AppliedConditions;
+use App\Combat\GMCorrections;
 use App\Combat\TurnBudget;
 use App\Models\Character;
 use App\Models\Token;
@@ -24,8 +25,21 @@ class TokenCombatActions
             $token = $scene->tokens()->findOrFail($token->id);
             $token->setRelation('scene', $scene);
             Gate::forUser($user)->authorize($command === 'stand-up' ? 'move' : 'update', $token);
+            $journal = app(GMCorrections::class);
+            $before = $command !== 'stand-up' ? $journal->state($token) : [];
+            $effects = $command !== 'stand-up' ? $journal->effects($scene) : [];
             if ($command === 'hp') {
                 $this->adjustHp($user, $token, $data['delta']);
+            } elseif ($command === 'hp-set') {
+                $hp = ['hp' => min($token->max_hp, $data['value'])];
+                if ($token->character_id) {
+                    app(CharacterActions::class)->updateLinked($user, $token, $hp);
+                    if ($hp['hp'] === 0) {
+                        app(SpellEffects::class)->stop($token->character, 'zero_hp');
+                    }
+                } else {
+                    $token->update($hp);
+                }
             } elseif ($command === 'stand-up') {
                 app(TurnBudget::class)->stand($token);
             } elseif ($command === 'condition-add') {
@@ -34,6 +48,8 @@ class TokenCombatActions
                 if ($definition) {
                     $source = isset($data['source_token_id']) ? $scene->tokens()->findOrFail($data['source_token_id']) : null;
                     app(AppliedConditions::class)->apply($user, $token, $data, $source, null, $data['visibility']);
+
+                    $journal->record($user, $token, $command, $before, $effects);
 
                     return ['token' => $this->snapshots->token($token->fresh(), true, $user), '_wasVisible' => ! $token->is_hidden, '_combatChanged' => true];
                 }
@@ -59,8 +75,12 @@ class TokenCombatActions
                 }
             }
 
-            return ['token' => $this->snapshots->token($token->refresh(), $scene->campaign->roleFor($user) === 'gm', $user), '_combatChanged' => true, 'charactersChanged' => $token->character_id !== null && $command === 'hp', '_wasVisible' => ! $token->is_hidden];
-        }, $command === 'hp' ? 'token.hp_changed' : 'token.conditions_changed');
+            if ($command !== 'stand-up') {
+                $journal->record($user, $token, $command, $before, $effects);
+            }
+
+            return ['token' => $this->snapshots->token($token->refresh(), $scene->campaign->roleFor($user) === 'gm', $user), '_combatChanged' => true, 'charactersChanged' => $token->character_id !== null && in_array($command, ['hp', 'hp-set']), '_wasVisible' => ! $token->is_hidden];
+        }, in_array($command, ['hp', 'hp-set']) ? 'token.hp_changed' : 'token.conditions_changed');
     }
 
     /** Caller holds campaign/scene locks and authorizes the command (GM or configured ability). */

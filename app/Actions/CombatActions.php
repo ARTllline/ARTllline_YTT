@@ -122,7 +122,7 @@ class CombatActions
             case 'override':
                 $entry = $combat->combatants()->findOrFail($data['combatantId']);
                 $entry->update(array_intersect_key($data, array_flip(['action_available', 'bonus_available', 'reaction_available', 'movement_spent'])));
-                app(CombatLog::class)->write($combat, 'budget.override', ['combatantId' => (string) $entry->id]);
+                app(CombatLog::class)->write($combat, 'budget.override', ['combatantId' => (string) $entry->id, 'tokenId' => (string) $entry->token_id, 'changes' => array_intersect_key($data, array_flip(['action_available', 'bonus_available', 'reaction_available', 'movement_spent']))]);
                 break;
             case 'end':
                 app(AppliedConditions::class)->finish($combat);

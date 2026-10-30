@@ -12,6 +12,7 @@ use App\Http\Controllers\CompendiumController;
 use App\Http\Controllers\CueController;
 use App\Http\Controllers\FogController;
 use App\Http\Controllers\GameSessionController;
+use App\Http\Controllers\GMCombatController;
 use App\Http\Controllers\HandoutController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InviteController;
@@ -118,11 +119,13 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/campaigns/{campaign}/handouts', [HandoutController::class, 'store'])->name('campaign.handout.save')->middleware(IdempotentMutation::class);
         Route::post('/campaigns/{campaign}/handouts/show', [HandoutController::class, 'show'])->name('campaign.handout.show')->middleware(IdempotentMutation::class);
         Route::post('/scenes/{scene}/notes', NoteController::class)->name('scene.notes')->middleware(IdempotentMutation::class);
+        Route::get('/scenes/{scene}/combat/session', [GMCombatController::class, 'index']);
+        Route::post('/scenes/{scene}/combat/session', [GMCombatController::class, 'command'])->name('scene.combat.session')->middleware(IdempotentMutation::class);
         Route::get('/scenes/{scene}/combat/history', [CombatController::class, 'history']);
         foreach (['override', 'prepare', 'add', 'remove', 'initiative', 'sort', 'reorder', 'begin', 'next', 'previous', 'current', 'end'] as $command) {
             Route::post('/scenes/{scene}/combat/'.$command, [CombatController::class, 'combat'])->defaults('command', $command)->name('scene.combat.'.$command)->middleware(IdempotentMutation::class);
         }
-        foreach (['stand-up', 'hp', 'condition-add', 'condition-remove', 'condition-visibility'] as $command) {
+        foreach (['stand-up', 'hp', 'hp-set', 'condition-add', 'condition-remove', 'condition-visibility'] as $command) {
             Route::post('/tokens/{token}/'.$command, [CombatController::class, 'token'])->defaults('command', $command)->name('token.'.$command)->middleware(IdempotentMutation::class);
         }
         Route::get('/campaigns/{campaign}/invites', [InviteController::class, 'index']);

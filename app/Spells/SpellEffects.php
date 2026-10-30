@@ -25,6 +25,45 @@ use Illuminate\Support\Str;
 
 class SpellEffects
 {
+    private bool $projecting = false;
+
+    private array $projectionEffects = [];
+
+    private array $projectionTokens = [];
+
+    /** Reuse reads only while assembling one immutable DTO, never across mutations. */
+    public function project(callable $read): mixed
+    {
+        if ($this->projecting) {
+            return $read();
+        }
+        $this->projecting = true;
+        try {
+            return $read();
+        } finally {
+            $this->projecting = false;
+            $this->projectionEffects = [];
+            $this->projectionTokens = [];
+        }
+    }
+
+    private function campaignEffects(int $campaignId): array
+    {
+        $load = fn () => $this->active()->whereIn('scene_id', Scene::where('campaign_id', $campaignId)->select('id'))->get()->all();
+
+        return $this->projecting ? ($this->projectionEffects[$campaignId] ??= $load()) : $load();
+    }
+
+    private function tokenIds(Token|Character $subject): array
+    {
+        if ($subject instanceof Token) {
+            return [(string) $subject->id];
+        }
+        $load = fn () => $subject->tokens()->pluck('id')->map(fn ($id) => (string) $id)->all();
+
+        return $this->projecting ? ($this->projectionTokens[$subject->id] ??= $load()) : $load();
+    }
+
     public function active()
     {
         return SpellEffect::whereNull('ended_at')->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()));
@@ -32,10 +71,14 @@ class SpellEffects
 
     public function forSubject(Token|Character $subject): array
     {
-        $ids = $subject instanceof Token ? [(string) $subject->id] : $subject->tokens()->pluck('id')->map(fn ($id) => (string) $id)->all();
         $campaignId = $subject instanceof Character ? $subject->campaign_id : $subject->scene->campaign_id;
+        $effects = $this->campaignEffects($campaignId);
+        if (! $effects) {
+            return [];
+        }
+        $ids = $this->tokenIds($subject);
 
-        return $this->active()->whereIn('scene_id', Scene::where('campaign_id', $campaignId)->select('id'))->get()->filter(fn ($e) => (bool) array_intersect($ids, $e->targets))->all();
+        return array_values(array_filter($effects, fn ($e) => (bool) array_intersect($ids, $e->targets)));
     }
 
     public function flat(Token|Character $subject, string $key): array
@@ -44,7 +87,7 @@ class SpellEffects
         $bySpell = [];
         foreach ($this->forSubject($subject) as $e) {
             foreach ($e->payload['effects'] ?? [] as $node) {
-                $ids = $subject instanceof Token ? [(string) $subject->id] : $subject->tokens()->pluck('id')->map(fn ($id) => (string) $id)->all();
+                $ids = $this->tokenIds($subject);
                 if (isset($node['_targets']) && ! array_intersect($ids, $node['_targets'])) {
                     continue;
                 }

@@ -1,4 +1,6 @@
 export interface TokenCondition {
+    description?: string;
+    sourceTokenId?: string | null;
     durationMode?: string;
     remainingRounds?: number | null;
     compendiumEntryId?: number | null;
@@ -45,6 +47,7 @@ export type CombatCommand =
 export type TokenCombatCommand =
     | { action: 'stand-up' }
     | { action: 'hp'; delta: number }
+    | { action: 'hp-set'; value: number }
     | {
           action: 'condition-add';
           key?: string;
