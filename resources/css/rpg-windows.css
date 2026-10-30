@@ -1443,3 +1443,28 @@
         max-height: calc(100% - 108px);
     }
 }
+.rules-core-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.rules-core-stats > span {
+    display: grid;
+    gap: 5px;
+    padding: 9px 6px;
+    text-align: center;
+    background: #171918;
+    border: 1px solid #b6a27c35;
+    color: #b8b0a0;
+    font-size: 11px;
+}
+.rules-core-stats strong {
+    color: #ece3ce;
+    font-size: 15px;
+}
+.rules-edit-row > span small {
+    display: block;
+    color: #aaa;
+    font-size: 10px;
+}

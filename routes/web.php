@@ -64,6 +64,7 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/scenes/{scene}/abilities/execute', [AbilityController::class, 'execute'])->name('scene.ability')->middleware([IdempotentMutation::class, 'throttle:60,1']);
         Route::post('/campaigns/{campaign}/resources/adjust', [AbilityController::class, 'resource'])->name('campaign.resource')->middleware(IdempotentMutation::class);
         Route::get('/campaigns/{campaign}/characters', [CharacterController::class, 'index']);
+        Route::get('/campaigns/{campaign}/character-rules/catalog', [CharacterController::class, 'catalog']);
         Route::post('/campaigns/{campaign}/character-rules/preview', [CharacterController::class, 'preview']);
         Route::post('/campaigns/{campaign}/characters', [CharacterController::class, 'save'])->name('campaign.characters.save')->middleware(IdempotentMutation::class);
         Route::put('/campaigns/{campaign}/active-character', [CharacterController::class, 'select']);
@@ -110,10 +111,11 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/campaigns/{campaign}/handouts', [HandoutController::class, 'store'])->name('campaign.handout.save')->middleware(IdempotentMutation::class);
         Route::post('/campaigns/{campaign}/handouts/show', [HandoutController::class, 'show'])->name('campaign.handout.show')->middleware(IdempotentMutation::class);
         Route::post('/scenes/{scene}/notes', NoteController::class)->name('scene.notes')->middleware(IdempotentMutation::class);
-        foreach (['prepare', 'add', 'remove', 'initiative', 'sort', 'reorder', 'begin', 'next', 'previous', 'current', 'end'] as $command) {
+        Route::get('/scenes/{scene}/combat/history', [CombatController::class, 'history']);
+        foreach (['override', 'prepare', 'add', 'remove', 'initiative', 'sort', 'reorder', 'begin', 'next', 'previous', 'current', 'end'] as $command) {
             Route::post('/scenes/{scene}/combat/'.$command, [CombatController::class, 'combat'])->defaults('command', $command)->name('scene.combat.'.$command)->middleware(IdempotentMutation::class);
         }
-        foreach (['hp', 'condition-add', 'condition-remove', 'condition-visibility'] as $command) {
+        foreach (['stand-up', 'hp', 'condition-add', 'condition-remove', 'condition-visibility'] as $command) {
             Route::post('/tokens/{token}/'.$command, [CombatController::class, 'token'])->defaults('command', $command)->name('token.'.$command)->middleware(IdempotentMutation::class);
         }
         Route::get('/campaigns/{campaign}/invites', [InviteController::class, 'index']);

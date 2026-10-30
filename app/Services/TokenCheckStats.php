@@ -33,7 +33,8 @@ class TokenCheckStats
 
                 return ['source' => $character->rules ? 'character_rules' : 'character_stat', 'characterId' => (string) $character->id,
                     'characterName' => $character->name, 'tokenId' => $token instanceof Token ? (string) $token->id : null,
-                    'tokenName' => $token->name, 'statKey' => $key, 'statLabel' => $stat['label'],
+                    'tokenName' => $token->name, 'statKey' => $stat['key'], 'statLabel' => $stat['label'],
+                    'compendiumEntryId' => $stat['compendiumEntryId'] ?? null,
                     'baseModifier' => $stat['breakdown'][0]['value'] ?? 0, 'otherModifiers' => array_map(fn ($p) => ['label' => $p['label'], 'modifier' => $p['value']], array_slice($stat['breakdown'], 1)),
                     'breakdown' => $stat['breakdown'], 'finalModifier' => $stat['modifier']];
             }

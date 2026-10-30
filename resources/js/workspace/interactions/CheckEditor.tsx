@@ -155,6 +155,14 @@ export function CheckEditor({
                     />
                     Показывать DC игроку
                 </label>
+                <label>
+                    <input
+                        type="checkbox"
+                        checked={!!value.requires_sight}
+                        onChange={(e) => patch({ requires_sight: e.target.checked })}
+                    />
+                    Проверка требует зрения
+                </label>
                 <p className="hint">
                     Сервер берёт модификатор по ключу у действующего персонажа. Сравнивается d20 +
                     модификатор с DC. Натуральные 1 и 20 не меняют правило.

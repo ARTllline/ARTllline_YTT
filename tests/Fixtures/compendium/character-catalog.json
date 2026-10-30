@@ -1,0 +1,552 @@
+[
+  {
+    "endpoint": "conditions",
+    "data": {
+      "index": "blinded",
+      "name": "Blinded",
+      "description": "While you have the Blinded condition, you experience the following effects.\n**Can't See.** You can't see and automatically fail any ability check that requires sight.\n**Attacks Affected.** Attack rolls against you have Advantage, and your attack rolls have Disadvantage.",
+      "url": "/api/2024/conditions/blinded",
+      "updated_at": "2026-04-23T07:06:26.480Z"
+    }
+  },
+  {
+    "endpoint": "conditions",
+    "data": {
+      "index": "charmed",
+      "name": "Charmed",
+      "description": "While you have the Charmed condition, you experience the following effects.\n**Can't Harm the Charmer.** You can't attack the charmer or target the charmer with damaging abilities or magical effects.\n**Social Advantage.** The charmer has Advantage on ability checks to interact socially with you.",
+      "url": "/api/2024/conditions/charmed",
+      "updated_at": "2026-04-23T07:06:26.480Z"
+    }
+  },
+  {
+    "endpoint": "conditions",
+    "data": {
+      "index": "deafened",
+      "name": "Deafened",
+      "description": "While you have the Deafened condition, you experience the following effect.\n**Can't Hear.** You can't hear and automatically fail any ability check that requires hearing.",
+      "url": "/api/2024/conditions/deafened",
+      "updated_at": "2026-04-23T07:06:26.480Z"
+    }
+  },
+  {
+    "endpoint": "conditions",
+    "data": {
+      "index": "exhaustion",
+      "name": "Exhaustion",
+      "description": "While you have the Exhaustion condition, you experience the following effects.\n**Exhaustion Levels.** This condition is cumulative. Each time you receive it, you gain 1 Exhaustion level. You die if your Exhaustion level is 6.\n**D20 Tests Affected.** When you make a D20 Test, the roll is reduced by 2 times your Exhaustion level.\n**Speed Reduced.** Your Speed is reduced by a number of feet equal to 5 times your Exhaustion level.\n**Removing Exhaustion Levels.** Finishing a Long Rest removes 1 of your Exhaustion levels. When your Exhaustion level reaches 0, the condition ends.",
+      "url": "/api/2024/conditions/exhaustion",
+      "updated_at": "2026-04-23T07:06:26.480Z"
+    }
+  },
+  {
+    "endpoint": "conditions",
+    "data": {
+      "index": "frightened",
+      "name": "Frightened",
+      "description": "While you have the Frightened condition, you experience the following effects.\n**Ability Checks and Attacks Affected.** You have Disadvantage on ability checks and attack rolls while the source of fear is within line of sight.\n**Can't Approach.** You can't willingly move closer to the source of your fear.",
+      "url": "/api/2024/conditions/frightened",
+      "updated_at": "2026-04-23T07:06:26.480Z"
+    }
+  },
+  {
+    "endpoint": "conditions",
+    "data": {
+      "index": "grappled",
+      "name": "Grappled",
+      "description": "While you have the Grappled condition, you experience the following effects.\n**Speed 0.** Your Speed is 0 and can't increase.\n**Attacks Affected.** You have Disadvantage on attack rolls against any target other than the grappler.\n**Movable.** The grappler can drag or carry you when it moves, but every foot of movement costs it 1 extra foot unless you are Tiny or two or more sizes smaller.",
+      "url": "/api/2024/conditions/grappled",
+      "updated_at": "2026-04-23T07:06:26.480Z"
+    }
+  },
+  {
+    "endpoint": "conditions",
+    "data": {
+      "index": "incapacitated",
+      "name": "Incapacitated",
+      "description": "While you have the Incapacitated condition, you experience the following effects.\n**Inactive.** You can't take any action, Bonus Action, or Reaction.\n**No Concentration.** Your Concentration is broken.\n**Speechless.** You can't speak.\n**Surprised.** If you're Incapacitated when you roll Initiative, you have Disadvantage on the roll.",
+      "url": "/api/2024/conditions/incapacitated",
+      "updated_at": "2026-04-23T07:06:26.480Z"
+    }
+  },
+  {
+    "endpoint": "conditions",
+    "data": {
+      "index": "invisible",
+      "name": "Invisible",
+      "description": "While you have the Invisible condition, you experience the following effects.\n**Surprise.** If you're Invisible when you roll Initiative, you have Advantage on the roll.\n**Concealed.** You aren't affected by any effect that requires its target to be seen unless the effect's creator can somehow see you. Any equipment you are wearing or carrying is also concealed.\n**Attacks Affected.** Attack rolls against you have Disadvantage, and your attack rolls have Advantage. If a creature can somehow see you, you don't gain this benefit against that creature.",
+      "url": "/api/2024/conditions/invisible",
+      "updated_at": "2026-04-23T07:06:26.480Z"
+    }
+  },
+  {
+    "endpoint": "conditions",
+    "data": {
+      "index": "paralyzed",
+      "name": "Paralyzed",
+      "description": "While you have the Paralyzed condition, you experience the following effects.\n**Incapacitated.** You have the Incapacitated condition.\n**Speed 0.** Your Speed is 0 and can't increase.\n**Saving Throws Affected.** You automatically fail Strength and Dexterity saving throws.\n**Attacks Affected.** Attack rolls against you have Advantage.\n**Automatic Critical Hits.** Any attack roll that hits you is a Critical Hit if the attacker is within 5 feet of you.",
+      "url": "/api/2024/conditions/paralyzed",
+      "updated_at": "2026-04-23T07:06:26.480Z"
+    }
+  },
+  {
+    "endpoint": "conditions",
+    "data": {
+      "index": "petrified",
+      "name": "Petrified",
+      "description": "While you have the Petrified condition, you experience the following effects.\n**Turned to Inanimate Substance.** You are transformed, along with any nonmagical objects you are wearing and carrying, into a solid inanimate substance (usually stone). Your weight increases by a factor of ten, and you cease aging.\n**Incapacitated.** You have the Incapacitated condition.\n**Speed 0.** Your Speed is 0 and can't increase.\n**Attacks Affected.** Attack rolls against you have Advantage.\n**Saving Throws Affected.** You automatically fail Strength and Dexterity saving throws.\n**Resist Damage.** You have Resistance to all damage.\n**Poison Immunity.** You have Immunity to the Poisoned condition.\n**Saving Throws Affected.** You automatically fail Strength and Dexterity saving throws.\n**Resist Damage.** You have Resistance to all damage.\n**Poison Immunity.** You have Immunity to the Poisoned condition.",
+      "url": "/api/2024/conditions/petrified",
+      "updated_at": "2026-04-23T07:06:26.480Z"
+    }
+  },
+  {
+    "endpoint": "conditions",
+    "data": {
+      "index": "poisoned",
+      "name": "Poisoned",
+      "description": "While you have the Poisoned condition, you experience the following effect.\n**Ability Checks and Attacks Affected.** You have Disadvantage on attack rolls and ability checks.",
+      "url": "/api/2024/conditions/poisoned",
+      "updated_at": "2026-04-23T07:06:26.480Z"
+    }
+  },
+  {
+    "endpoint": "conditions",
+    "data": {
+      "index": "prone",
+      "name": "Prone",
+      "description": "While you have the Prone condition, you experience the following effects.\n**Restricted Movement.** Your only movement options are to crawl or to spend an amount of movement equal to half your Speed (round down) to right yourself and thereby end the condition. If your Speed is 0, you can't right yourself.\n**Attacks Affected.** You have Disadvantage on attack rolls. An attack roll against you has Advantage if the attacker is within 5 feet of you. Otherwise, that attack roll has Disadvantage.",
+      "url": "/api/2024/conditions/prone",
+      "updated_at": "2026-04-23T07:06:26.480Z"
+    }
+  },
+  {
+    "endpoint": "conditions",
+    "data": {
+      "index": "restrained",
+      "name": "Restrained",
+      "description": "While you have the Restrained condition, you experience the following effects.\n**Speed 0.** Your Speed is 0 and can't increase.\n**Attacks Affected.** Attack rolls against you have Advantage, and your attack rolls have Disadvantage.\n**Saving Throws Affected.** You have Disadvantage on Dexterity saving throws.",
+      "url": "/api/2024/conditions/restrained",
+      "updated_at": "2026-04-23T07:06:26.480Z"
+    }
+  },
+  {
+    "endpoint": "conditions",
+    "data": {
+      "index": "stunned",
+      "name": "Stunned",
+      "description": "While you have the Stunned condition, you experience the following effects.\n**Incapacitated.** You have the Incapacitated condition.\n**Saving Throws Affected.** You automatically fail Strength and Dexterity saving throws.\n**Attacks Affected.** Attack rolls against you have Advantage.",
+      "url": "/api/2024/conditions/stunned",
+      "updated_at": "2026-04-23T07:06:26.480Z"
+    }
+  },
+  {
+    "endpoint": "conditions",
+    "data": {
+      "index": "unconscious",
+      "name": "Unconscious",
+      "description": "While you have the Unconscious condition, you experience the following effects.\n**Inert.** You have the Incapacitated and Prone conditions, and you drop whatever you're holding.\n**When this condition ends, you remain Prone.\n**Speed 0.** Your Speed is 0 and can't increase.\n**Attacks Affected.** Attack rolls against you have Advantage.\n**Saving Throws Affected.** You automatically fail Strength and Dexterity saving throws.\n**Automatic Critical Hits.** Any attack roll that hits you is a Critical Hit if the attacker is within 5 feet of you.\n**Unaware.** You're unaware of your surroundings.",
+      "url": "/api/2024/conditions/unconscious",
+      "updated_at": "2026-04-23T07:06:26.480Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "acrobatics",
+      "name": "Acrobatics",
+      "description": "Stay on your feet in a tricky situation, or perform an acrobatic stunt.",
+      "ability_score": {
+        "index": "dex",
+        "name": "DEX",
+        "url": "/api/2024/ability-scores/dex"
+      },
+      "url": "/api/2024/skills/acrobatics",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "animal-handling",
+      "name": "Animal Handling",
+      "description": "Calm or train an animal, or get an animal to behave in a certain way.",
+      "ability_score": {
+        "index": "wis",
+        "name": "WIS",
+        "url": "/api/2024/ability-scores/wis"
+      },
+      "url": "/api/2024/skills/animal-handling",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "arcana",
+      "name": "Arcana",
+      "description": "Recall lore about spells, magic items, and the planes of existence.",
+      "ability_score": {
+        "index": "int",
+        "name": "INT",
+        "url": "/api/2024/ability-scores/int"
+      },
+      "url": "/api/2024/skills/arcana",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "athletics",
+      "name": "Athletics",
+      "description": "Jump farther than normal, stay afloat in rough water, or break something.",
+      "ability_score": {
+        "index": "str",
+        "name": "STR",
+        "url": "/api/2024/ability-scores/str"
+      },
+      "url": "/api/2024/skills/athletics",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "deception",
+      "name": "Deception",
+      "description": "Tell a convincing lie, or wear a disguise convincingly.",
+      "ability_score": {
+        "index": "cha",
+        "name": "CHA",
+        "url": "/api/2024/ability-scores/cha"
+      },
+      "url": "/api/2024/skills/deception",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "history",
+      "name": "History",
+      "description": "Recall lore about historical events, people, nations, and cultures.",
+      "ability_score": {
+        "index": "int",
+        "name": "INT",
+        "url": "/api/2024/ability-scores/int"
+      },
+      "url": "/api/2024/skills/history",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "insight",
+      "name": "Insight",
+      "description": "Discern a personвЂ™s mood and intentions.",
+      "ability_score": {
+        "index": "wis",
+        "name": "WIS",
+        "url": "/api/2024/ability-scores/wis"
+      },
+      "url": "/api/2024/skills/insight",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "intimidation",
+      "name": "Intimidation",
+      "description": "Awe or threaten someone into doing what you want.",
+      "ability_score": {
+        "index": "cha",
+        "name": "CHA",
+        "url": "/api/2024/ability-scores/cha"
+      },
+      "url": "/api/2024/skills/intimidation",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "investigation",
+      "name": "Investigation",
+      "description": "Find obscure information in books, or deduce how something works.",
+      "ability_score": {
+        "index": "int",
+        "name": "INT",
+        "url": "/api/2024/ability-scores/int"
+      },
+      "url": "/api/2024/skills/investigation",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "medicine",
+      "name": "Medicine",
+      "description": "Diagnose an illness, or determine what killed the recently slain.",
+      "ability_score": {
+        "index": "wis",
+        "name": "WIS",
+        "url": "/api/2024/ability-scores/wis"
+      },
+      "url": "/api/2024/skills/medicine",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "nature",
+      "name": "Nature",
+      "description": "Recall lore about terrain, plants, animals, and weather.",
+      "ability_score": {
+        "index": "int",
+        "name": "INT",
+        "url": "/api/2024/ability-scores/int"
+      },
+      "url": "/api/2024/skills/nature",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "perception",
+      "name": "Perception",
+      "description": "Using a combination of senses, notice something thatвЂ™s easy to miss.",
+      "ability_score": {
+        "index": "wis",
+        "name": "WIS",
+        "url": "/api/2024/ability-scores/wis"
+      },
+      "url": "/api/2024/skills/perception",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "performance",
+      "name": "Performance",
+      "description": "Act, tell a story, perform music, or dance.",
+      "ability_score": {
+        "index": "cha",
+        "name": "CHA",
+        "url": "/api/2024/ability-scores/cha"
+      },
+      "url": "/api/2024/skills/performance",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "persuasion",
+      "name": "Persuasion",
+      "description": "Honestly and graciously convince someone of something.",
+      "ability_score": {
+        "index": "cha",
+        "name": "CHA",
+        "url": "/api/2024/ability-scores/cha"
+      },
+      "url": "/api/2024/skills/persuasion",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "religion",
+      "name": "Religion",
+      "description": "Recall lore about gods, religious rituals, and holy symbols.",
+      "ability_score": {
+        "index": "int",
+        "name": "INT",
+        "url": "/api/2024/ability-scores/int"
+      },
+      "url": "/api/2024/skills/religion",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "sleight-of-hand",
+      "name": "Sleight of Hand",
+      "description": "Pick a pocket, conceal a handheld object, or perform legerdemain.",
+      "ability_score": {
+        "index": "dex",
+        "name": "DEX",
+        "url": "/api/2024/ability-scores/dex"
+      },
+      "url": "/api/2024/skills/sleight-of-hand",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "stealth",
+      "name": "Stealth",
+      "description": "Escape notice by moving quietly and hiding behind things.",
+      "ability_score": {
+        "index": "dex",
+        "name": "DEX",
+        "url": "/api/2024/ability-scores/dex"
+      },
+      "url": "/api/2024/skills/stealth",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "skills",
+    "data": {
+      "index": "survival",
+      "name": "Survival",
+      "description": "Follow tracks, forage, find a trail, or avoid natural hazards.",
+      "ability_score": {
+        "index": "wis",
+        "name": "WIS",
+        "url": "/api/2024/ability-scores/wis"
+      },
+      "url": "/api/2024/skills/survival",
+      "updated_at": "2026-04-23T07:06:28.346Z"
+    }
+  },
+  {
+    "endpoint": "damage-types",
+    "data": {
+      "index": "acid",
+      "name": "Acid",
+      "description": "Corrosive liquids, digestive enzymes",
+      "url": "/api/2024/damage-types/acid",
+      "updated_at": "2026-04-23T07:06:26.645Z"
+    }
+  },
+  {
+    "endpoint": "damage-types",
+    "data": {
+      "index": "bludgeoning",
+      "name": "Bludgeoning",
+      "description": "Blunt objects, constriction, falling",
+      "url": "/api/2024/damage-types/bludgeoning",
+      "updated_at": "2026-04-23T07:06:26.645Z"
+    }
+  },
+  {
+    "endpoint": "damage-types",
+    "data": {
+      "index": "cold",
+      "name": "Cold",
+      "description": "Freezing water, icy blasts",
+      "url": "/api/2024/damage-types/cold",
+      "updated_at": "2026-04-23T07:06:26.645Z"
+    }
+  },
+  {
+    "endpoint": "damage-types",
+    "data": {
+      "index": "fire",
+      "name": "Fire",
+      "description": "Flames, unbearable heat",
+      "url": "/api/2024/damage-types/fire",
+      "updated_at": "2026-04-23T07:06:26.645Z"
+    }
+  },
+  {
+    "endpoint": "damage-types",
+    "data": {
+      "index": "force",
+      "name": "Force",
+      "description": "Pure magical energy",
+      "url": "/api/2024/damage-types/force",
+      "updated_at": "2026-04-23T07:06:26.645Z"
+    }
+  },
+  {
+    "endpoint": "damage-types",
+    "data": {
+      "index": "lightning",
+      "name": "Lightning",
+      "description": "Electricity",
+      "url": "/api/2024/damage-types/lightning",
+      "updated_at": "2026-04-23T07:06:26.645Z"
+    }
+  },
+  {
+    "endpoint": "damage-types",
+    "data": {
+      "index": "necrotic",
+      "name": "Necrotic",
+      "description": "Life-draining energy",
+      "url": "/api/2024/damage-types/necrotic",
+      "updated_at": "2026-04-23T07:06:26.645Z"
+    }
+  },
+  {
+    "endpoint": "damage-types",
+    "data": {
+      "index": "piercing",
+      "name": "Piercing",
+      "description": "Fangs, puncturing objects",
+      "url": "/api/2024/damage-types/piercing",
+      "updated_at": "2026-04-23T07:06:26.645Z"
+    }
+  },
+  {
+    "endpoint": "damage-types",
+    "data": {
+      "index": "poison",
+      "name": "Poison",
+      "description": "Toxic gas, venom",
+      "url": "/api/2024/damage-types/poison",
+      "updated_at": "2026-04-23T07:06:26.645Z"
+    }
+  },
+  {
+    "endpoint": "damage-types",
+    "data": {
+      "index": "psychic",
+      "name": "Psychic",
+      "description": "Mind-rending energy",
+      "url": "/api/2024/damage-types/psychic",
+      "updated_at": "2026-04-23T07:06:26.645Z"
+    }
+  },
+  {
+    "endpoint": "damage-types",
+    "data": {
+      "index": "radiant",
+      "name": "Radiant",
+      "description": "Holy energy, searing radiation",
+      "url": "/api/2024/damage-types/radiant",
+      "updated_at": "2026-04-23T07:06:26.645Z"
+    }
+  },
+  {
+    "endpoint": "damage-types",
+    "data": {
+      "index": "slashing",
+      "name": "Slashing",
+      "description": "Claws, cutting objects",
+      "url": "/api/2024/damage-types/slashing",
+      "updated_at": "2026-04-23T07:06:26.645Z"
+    }
+  },
+  {
+    "endpoint": "damage-types",
+    "data": {
+      "index": "thunder",
+      "name": "Thunder",
+      "description": "Concussive sound",
+      "url": "/api/2024/damage-types/thunder",
+      "updated_at": "2026-04-23T07:06:26.645Z"
+    }
+  }
+]

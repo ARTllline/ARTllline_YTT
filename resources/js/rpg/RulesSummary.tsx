@@ -19,6 +19,29 @@ export function RulesSummary({ character: c }: { character: Character }) {
     const custom = d.checks.filter((s) => !s.ability);
     return (
         <section className="character-rules-summary" aria-label="Правила персонажа">
+            <div className="rules-core-stats">
+                <span title="Сохранённое состояние персонажа">
+                    HP{' '}
+                    <strong>
+                        {d.hp} / {d.maxHp}
+                    </strong>
+                </span>
+                <span title={breakdownLabel(d.coreBreakdown.ac)}>
+                    AC <strong>{d.ac ?? '—'}</strong>
+                </span>
+                <span title={breakdownLabel(d.coreBreakdown.speed)}>
+                    Скорость{' '}
+                    <strong>
+                        {d.speed ?? '—'} {d.speedUnit ?? 'ft'}
+                    </strong>
+                </span>
+                <span>
+                    Владение <strong>{signed(d.proficiencyBonus ?? 0)}</strong>
+                </span>
+            </div>
+            {d.catalog?.ready === false && (
+                <p className="hint">Навыки SRD пока недоступны в локальном компендии.</p>
+            )}
             <div className="rules-ability-grid">
                 {keys.map((key) => {
                     const stat = d.checks.find((s) => s.key === key);
@@ -26,7 +49,13 @@ export function RulesSummary({ character: c }: { character: Character }) {
                         <div key={key} title={stat ? breakdownLabel(stat.breakdown) : ''}>
                             <small>{abilityLabels[key]}</small>
                             <b>{c.rules!.scores[key]}</b>
-                            <strong>{stat ? signed(stat.modifier) : '—'}</strong>
+                            <strong>
+                                {d.abilityModifiers?.[key] !== undefined
+                                    ? signed(d.abilityModifiers[key]!)
+                                    : stat
+                                      ? signed(stat.modifier)
+                                      : '—'}
+                            </strong>
                         </div>
                     );
                 })}
@@ -79,7 +108,11 @@ export function RulesSummary({ character: c }: { character: Character }) {
                     <span>
                         Атака <strong>{signed(d.spellcasting.attackBonus)}</strong>
                     </span>
-                    <span>
+                    <span
+                        title={breakdownLabel(
+                            d.spellcasting.saveBreakdown ?? d.spellcasting.breakdown,
+                        )}
+                    >
                         Сложность спасброска <strong>{d.spellcasting.saveDc}</strong>
                     </span>
                 </div>

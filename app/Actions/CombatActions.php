@@ -2,9 +2,13 @@
 
 namespace App\Actions;
 
+use App\Combat\AppliedConditions;
+use App\Combat\CombatLog;
+use App\Combat\TurnBudget;
 use App\Models\Combat;
 use App\Models\Scene;
 use App\Models\User;
+use App\Services\SceneSnapshotBuilder;
 use App\Services\TriggerEvents;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -33,7 +37,7 @@ class CombatActions
                 }
             }
 
-            return ['_combatChanged' => true];
+            return ['_combatChanged' => true, 'tokens' => $scene->tokens()->get()->map(fn ($t) => app(SceneSnapshotBuilder::class)->token($t, true, $user))->all()];
         }, 'combat.updated');
     }
 
@@ -76,6 +80,8 @@ class CombatActions
             case 'begin':
                 abort_unless($combat->status === 'preparing' && $entries->isNotEmpty(), 422, 'Add combatants before beginning combat.');
                 $combat->update(['status' => 'active', 'round' => 1, 'current_combatant_id' => $entries->first()->id, 'started_at' => now()]);
+                $combat->combatants()->update(['action_available' => true, 'bonus_available' => true, 'reaction_available' => true, 'movement_spent' => 0]);
+                app(TurnBudget::class)->start($combat, $entries->first()->id);
                 break;
             case 'next':
             case 'previous':
@@ -98,13 +104,27 @@ class CombatActions
                     $index = count($ids) - 1;
                     $round--;
                 }
-                $combat->update(['round' => $round, 'current_combatant_id' => $ids[$index]]);
+                if ((string) $combat->current_combatant_id !== $ids[$index] || $combat->round !== $round || $command === 'next') {
+                    app(TurnBudget::class)->end($combat);
+                    $combat->update(['round' => $round, 'current_combatant_id' => $ids[$index]]);
+                    app(TurnBudget::class)->start($combat, (int) $ids[$index]);
+                }
                 break;
             case 'current':
                 abort_unless($combat->status === 'active' && in_array($data['combatantId'], $ids, true), 422, 'Choose a current combatant from this active combat.');
-                $combat->update(['current_combatant_id' => $data['combatantId']]);
+                if ((string) $combat->current_combatant_id !== $data['combatantId']) {
+                    app(TurnBudget::class)->end($combat);
+                    $combat->update(['current_combatant_id' => $data['combatantId']]);
+                    app(TurnBudget::class)->start($combat, (int) $data['combatantId']);
+                }
+                break;
+            case 'override':
+                $entry = $combat->combatants()->findOrFail($data['combatantId']);
+                $entry->update(array_intersect_key($data, array_flip(['action_available', 'bonus_available', 'reaction_available', 'movement_spent'])));
+                app(CombatLog::class)->write($combat, 'budget.override', ['combatantId' => (string) $entry->id]);
                 break;
             case 'end':
+                app(AppliedConditions::class)->finish($combat);
                 $combat->update(['status' => 'ended', 'ended_at' => now(), 'current_combatant_id' => null]);
                 break;
         }
@@ -130,9 +150,13 @@ class CombatActions
         $entries = $combat->combatants()->get();
         $index = $entries->search(fn ($entry) => (string) $entry->id === $id);
         abort_if($index === false, 422, 'This combatant is no longer in combat.');
+        app(AppliedConditions::class)->removeActor($combat, $entries[$index]->token_id);
         if ((string) $combat->current_combatant_id === $id) {
             $next = $entries->count() > 1 ? $entries[($index + 1) % $entries->count()]->id : null;
             $combat->update(['current_combatant_id' => $next]);
+            if ($next && $combat->status === 'active') {
+                app(TurnBudget::class)->start($combat, $next);
+            }
         }
         $entries[$index]->delete();
     }

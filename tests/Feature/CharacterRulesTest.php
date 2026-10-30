@@ -6,21 +6,26 @@ use App\Events\TabletopEvent;
 use App\Models\AbilityExecution;
 use App\Models\Campaign;
 use App\Models\Character;
+use App\Models\CompendiumEntry;
 use App\Models\ItemDefinition;
 use App\Models\ObjectCheck;
 use App\Models\User;
+use App\Services\CharacterCatalog;
 use App\Services\CharacterRules;
 use App\Services\D20Roller;
 use App\Services\TokenCheckStats;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Tests\Support\SeedsCharacterCatalog;
 use Tests\TestCase;
 
 class CharacterRulesTest extends TestCase
 {
     use DatabaseMigrations;
+    use SeedsCharacterCatalog;
 
     private $gm;
 
@@ -39,6 +44,7 @@ class CharacterRulesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seedCharacterCatalog();
         Event::fake([TabletopEvent::class]);
         [$this->gm, $this->player, $this->other] = User::factory()->count(3)->create()->all();
         $this->campaign = Campaign::create(['name' => 'Rules QA']);
@@ -90,7 +96,8 @@ class CharacterRulesTest extends TestCase
         $this->hero->update(['rules' => $r]);
         $this->assertSame(-1, $s->stat($this->hero, 'str')['modifier']);
         $this->assertSame(4, $s->stat($this->hero, 'save_str')['modifier']);
-        $this->assertSame(3, $s->stat($this->hero, 'perception')['modifier']);
+        $this->assertSame(4, $s->stat($this->hero, 'perception')['modifier']);
+        $this->assertSame('wis', $s->stat($this->hero, 'perception')['ability']);
         $this->assertNull($s->derived($this->hero)['spellcasting']);
     }
 
@@ -200,5 +207,133 @@ class CharacterRulesTest extends TestCase
         $this->postJson($base.'/interact', $command)->assertOk()->assertJsonPath('check.id', $first['check']['id']);
         $this->assertDatabaseCount('object_checks', 1);
         $this->assertSame(5, ObjectCheck::sole()->provenance['finalModifier']);
+    }
+
+    public function test_skills_use_local_compendium_identity_and_expertise_has_distinct_provenance(): void
+    {
+        $s = app(CharacterRules::class);
+        $this->assertCount(18, $s->catalog()->skills());
+        $entry = CompendiumEntry::where('entity_type', 'skills')->where('external_key', 'perception')->sole();
+        $p = $s->stat($this->hero, 'perception');
+        $this->assertSame($entry->id, $p['compendiumEntryId']);
+        $this->assertSame($entry->normalized_data['ability'], $p['ability']);
+        $this->assertSame('Perception', $p['label']);
+        $expertise = $s->stat($this->hero, 'persuasion', true);
+        $this->assertSame(10, $expertise['modifier']);
+        $this->assertSame(['ability', 'proficiency', 'expertise'], array_column($expertise['breakdown'], 'source'));
+        $this->assertSame([4, 3, 3], array_column($expertise['breakdown'], 'value'));
+        $r = $this->rules();
+        $r['skills']['perception']['ability'] = 'str'; // A client cannot replace the canonical ability.
+        $r['skills']['perception']['bonus'] = 2;
+        $this->hero->update(['rules' => $r]);
+        $this->assertSame(6, $s->stat($this->hero, 'perception')['modifier']);
+        $this->assertSame('wis', $s->stat($this->hero, 'perception')['ability']);
+    }
+
+    public function test_spell_attack_dc_and_raw_ability_bonuses_do_not_leak_into_each_other(): void
+    {
+        $this->equip('Focus', 'main_hand', ['checks' => ['spell_attack' => 1, 'spell_save_dc' => 2, 'cha' => 9]]);
+        $s = app(CharacterRules::class);
+        $d = $s->derived($this->hero->fresh());
+        $this->assertSame(8, $d['spellcasting']['attackBonus']);
+        $this->assertSame(17, $d['spellcasting']['saveDc']);
+        $this->assertSame(4, $d['abilityModifiers']['cha']);
+        $this->assertSame(13, $s->stat($this->hero, 'cha')['modifier']);
+        $this->assertSame(10, $s->stat($this->hero, 'persuasion')['modifier']);
+        $this->assertSame(['base', 'ability', 'proficiency', 'equipment'], array_column($d['spellcasting']['saveBreakdown'], 'source'));
+    }
+
+    public function test_core_custom_modifiers_preview_and_equipment_use_one_pipeline_with_explicit_units(): void
+    {
+        $this->equip('Shield', 'off_hand', ['ac' => 2]);
+        $this->equip('Boots', 'boots', ['speed' => 10]);
+        $r = $this->rules();
+        $r['modifiers'] = ['ac' => 1, 'speed' => 5, 'spell_attack' => 2, 'spell_save_dc' => 1];
+        $this->hero->update(['rules' => $r]);
+        $d = app(CharacterRules::class)->derived($this->hero->fresh());
+        $this->assertSame(18, $d['ac']);
+        $this->assertSame(45, $d['speed']);
+        $this->assertSame('ft', $d['speedUnit']);
+        $this->assertSame('character', $d['hpSource']);
+        $this->assertSame(34, $d['hp']);
+        $this->assertSame(['base', 'custom', 'equipment'], array_column($d['coreBreakdown']['ac'], 'source'));
+        $this->assertSame(9, $d['spellcasting']['attackBonus']);
+        $this->assertSame(16, $d['spellcasting']['saveDc']);
+        $this->actingAs($this->gm)->postJson('/api/campaigns/'.$this->campaign->id.'/character-rules/preview', ['id' => $this->hero->id, 'rules' => $r, 'ac' => 20, 'speed' => 35])
+            ->assertOk()->assertJsonPath('derived.ac', 23)->assertJsonPath('derived.speed', 50);
+        $this->assertSame(15, $this->hero->fresh()->getRawOriginal('ac'));
+    }
+
+    public function test_legacy_skill_override_is_converted_explicitly_and_aliases_have_one_canonical_total(): void
+    {
+        $r = $this->rules();
+        unset($r['schema_version']);
+        $r['skills']['perception']['ability'] = 'int';
+        $this->hero->update(['rules' => $r, 'check_stats' => [['key' => 'strength', 'label' => 'Old STR', 'modifier' => 90], ['key' => 'str', 'label' => 'Duplicate STR', 'modifier' => 80], ['key' => 'magic', 'label' => 'Custom magic', 'modifier' => 8]]]);
+        $s = app(CharacterRules::class);
+        $state = $s->state($this->hero);
+        $this->assertSame(-1, $state['skills']['perception']['bonus']);
+        $this->assertArrayNotHasKey('ability', $state['skills']['perception']);
+        $this->assertSame('int', $this->hero->fresh()->rules['skills']['perception']['ability']);
+        $checks = $s->checks($this->hero);
+        $this->assertSame(1, collect($checks)->where('key', 'str')->count());
+        $this->assertSame(3, $s->stat($this->hero, 'perception')['modifier']);
+        $this->assertSame(8, $s->stat($this->hero, 'magic')['modifier']);
+        $this->actingAs($this->gm)->postJson('/api/campaigns/'.$this->campaign->id.'/characters', ['id' => $this->hero->id, 'name' => 'QA', 'rules' => $state, 'clientMutationId' => (string) Str::uuid()])
+            ->assertOk()->assertJsonPath('character.rules.schema_version', 2);
+        $this->assertArrayNotHasKey('ability', $this->hero->fresh()->rules['skills']['perception']);
+        $this->assertSame(3, $s->stat($this->hero->fresh(), 'perception')['modifier']);
+    }
+
+    public function test_missing_catalog_is_explicit_and_never_fetches_a_remote_skill_catalogue(): void
+    {
+        $r = $this->rules();
+        CompendiumEntry::where('entity_type', 'skills')->delete();
+        $this->app->forgetInstance(CharacterCatalog::class);
+        Http::preventStrayRequests();
+        $s = app(CharacterRules::class);
+        $this->assertFalse($s->derived($this->hero)['catalog']['ready']);
+        $this->assertNull($s->suggestion($this->hero));
+        $this->actingAs($this->gm)->postJson('/api/campaigns/'.$this->campaign->id.'/characters', ['id' => $this->hero->id, 'name' => 'QA', 'rules' => $r, 'clientMutationId' => (string) Str::uuid()])->assertUnprocessable();
+        $this->assertSame(16, $this->hero->fresh()->rules['scores']['str']);
+        Http::assertNothingSent();
+    }
+
+    public function test_raw_ability_and_save_checks_use_canonical_aliases_advantage_and_structured_history(): void
+    {
+        $r = $this->rules();
+        $r['saves']['wis'] = ['proficient' => true, 'bonus' => 1];
+        $this->hero->update(['rules' => $r]);
+        $this->mock(D20Roller::class)->shouldReceive('roll')->times(4)->andReturn(4, 14, 4, 14);
+        foreach (['strength' => ['str', 3], 'saving_throw_wis' => ['save_wis', 5]] as $key => [$canonical, $expected]) {
+            $action = ['id' => (string) Str::uuid(), 'label' => 'Check '.$key, 'icon' => 'search', 'enabled' => true, 'result_type' => 'nothing',
+                'check' => ['enabled' => true, 'label' => $key, 'stat_key' => $key, 'modifier' => 99, 'dc' => 15, 'retry' => 'repeatable',
+                    'success' => ['result_type' => 'nothing'], 'failure' => ['result_type' => 'nothing']]];
+            $target = $this->scene->tokens()->create(['name' => 'Check target', 'x' => 100, 'y' => 100]);
+            $base = '/api/scenes/'.$this->scene->id;
+            $this->actingAs($this->gm)->postJson($base.'/object-actions', ['kind' => 'token', 'id' => $target->id, 'actions' => [$action], 'clientMutationId' => (string) Str::uuid()])->assertOk();
+            $this->actingAs($this->player)->postJson($base.'/interact', ['kind' => 'token', 'id' => $target->id, 'actionId' => $action['id'], 'actorTokenId' => $this->actor->id,
+                'epoch' => 0, 'rollMode' => 'advantage', 'clientMutationId' => (string) Str::uuid()])
+                ->assertOk()->assertJsonPath('check.provenance.statKey', $canonical)->assertJsonPath('check.modifier', $expected)
+                ->assertJsonPath('check.total', 14 + $expected)->assertJsonPath('check.rollMode', 'advantage');
+        }
+        $this->assertDatabaseCount('object_checks', 2);
+        $this->assertSame('custom', ObjectCheck::where('label', 'saving_throw_wis')->sole()->provenance['breakdown'][2]['source']);
+    }
+
+    public function test_condition_definitions_link_to_compendium_keep_custom_markers_and_do_not_apply_mechanics(): void
+    {
+        $path = '/api/tokens/'.$this->actor->id.'/condition-add';
+        $entry = CompendiumEntry::where('entity_type', 'conditions')->where('external_key', 'poisoned')->sole();
+        $command = ['key' => 'poisoned', 'visibility' => 'gm_only', 'clientMutationId' => (string) Str::uuid()];
+        $this->actingAs($this->gm)->postJson($path, $command)->assertOk()->assertJsonPath('token.conditions.0.compendiumEntryId', $entry->id);
+        $this->postJson($path, $command)->assertOk()->assertHeader('Idempotent-Replay', 'true');
+        $this->assertSame(6, app(CharacterRules::class)->stat($this->hero, 'athletics')['modifier']);
+        $this->actingAs($this->player)->getJson('/api/scenes/'.$this->scene->id.'/snapshot')->assertOk()->assertJsonCount(0, 'tokens.0.conditions');
+        $this->postJson($path, ['key' => 'exhaustion', 'visibility' => 'public', 'clientMutationId' => (string) Str::uuid()])->assertForbidden();
+        $this->actingAs($this->gm)->postJson($path, ['key' => 'exhaustion', 'visibility' => 'public', 'clientMutationId' => (string) Str::uuid()])->assertOk();
+        $this->postJson($path, ['key' => 'concentrating', 'visibility' => 'public', 'clientMutationId' => (string) Str::uuid()])->assertOk();
+        $this->assertNull($this->actor->conditions()->where('key', 'concentrating')->sole()->compendium_entry_id);
+        $this->postJson($path, ['key' => 'invented_srd_key', 'visibility' => 'public', 'clientMutationId' => (string) Str::uuid()])->assertUnprocessable();
     }
 }

@@ -38,6 +38,7 @@ class CharacterActions
             $character = isset($data['id']) ? $campaign->characters()->findOrFail($data['id']) : null;
             unset($data['id']);
             $this->validate($campaign, $data, $character);
+            app(CharacterRules::class)->prepare($data);
             app(CharacterGameplay::class)->validate($campaign, $data, $character);
             if ($character) {
                 $character->update($data);
@@ -68,14 +69,14 @@ class CharacterActions
             app(SceneTransaction::class)->run($scene, function ($scene) use ($character, $user) {
                 $token = $scene->tokens()->where('character_id', $character->id)->first();
 
-                return ['charactersChanged' => true] + ($token ? ['token' => app(SceneSnapshotBuilder::class)->token($token, true, $user), '_wasVisible' => ! $token->is_hidden] : []);
+                return ['_combatChanged' => true, 'charactersChanged' => true] + ($token ? ['token' => app(SceneSnapshotBuilder::class)->token($token, true, $user), '_wasVisible' => ! $token->is_hidden] : []);
             }, 'character.updated');
         }
     }
 
     public function projection(Character $character, bool $gm = true): array
     {
-        return ['rules' => $character->rules, 'derived' => app(CharacterRules::class)->derived($character),
+        return ['rules' => app(CharacterRules::class)->state($character), 'derived' => app(CharacterRules::class)->derived($character),
             ...($gm ? ['rulesSuggestion' => app(CharacterRules::class)->suggestion($character)] : []),
             'id' => (string) $character->id, 'name' => $character->name,
             'portrait' => app(SceneSnapshotBuilder::class)->asset($character->portraitAsset),

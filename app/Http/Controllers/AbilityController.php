@@ -19,7 +19,7 @@ class AbilityController extends Controller
     public static function commandRules(): array
     {
         return [
-            'clientMutationId' => 'required|uuid', 'characterId' => 'required|integer|min:1',
+            'clientMutationId' => 'required|uuid', 'characterId' => 'required_without:actorTokenId|nullable|integer|min:1', 'actorTokenId' => 'required_without:characterId|nullable|integer|min:1',
             'abilityId' => 'required|uuid', 'epoch' => 'required|integer|min:0',
             'rollMode' => 'required|in:normal,advantage,disadvantage',
             'target' => 'present|nullable|array:kind,id,x,y', 'target.kind' => 'required_with:target|in:token,prop,point',
@@ -29,6 +29,23 @@ class AbilityController extends Controller
 
     public static function present(array $response): array
     {
+        $scene = request()->route('scene');
+        if ($scene instanceof Scene && $scene->campaign->roleFor(request()->user()) === 'gm') {
+            unset($response['execution']['dcVisible']);
+
+            return $response;
+        }
+        foreach ($response['execution']['outcomes'] ?? [] as $i => $outcome) {
+            unset($response['execution']['outcomes'][$i]['damageDetail'],$response['execution']['outcomes'][$i]['conditionsApplied']);
+            if (isset($outcome['save'])) {
+                $response['execution']['outcomes'][$i]['save'] = array_intersect_key($outcome['save'], array_flip(['success', 'rollMode', 'automaticFailure']));
+            }
+        }
+        if (isset($response['execution']['roll']['context'])) {
+            foreach (['advantage', 'disadvantage', 'automaticFailure'] as $kind) {
+                $response['execution']['roll']['context'][$kind] = array_map(fn ($r) => ($r['visibility'] ?? 'public') === 'gm_only' ? ['label' => 'Модификатор ГМ'] : $r, $response['execution']['roll']['context'][$kind] ?? []);
+            }
+        }
         if (! $response['execution']['dcVisible'] && isset($response['execution']['roll'])) {
             unset($response['execution']['roll']['dc']);
         }

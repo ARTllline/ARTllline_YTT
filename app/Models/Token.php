@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Token extends Model
 {
     /** Persistent fields are read from Character; legacy columns remain for standalone tokens. */
-    public const CHARACTER_FIELDS = ['name' => 'name', 'token_image_asset_id' => 'portrait_asset_id',
+    public const CHARACTER_FIELDS = ['combat_profile' => 'combat_profile', 'abilities' => 'abilities', 'resources' => 'resources', 'name' => 'name', 'token_image_asset_id' => 'portrait_asset_id',
         'owner_user_id' => 'owner_user_id', 'kind' => 'kind', 'disposition' => 'disposition',
         'ac' => 'ac', 'speed' => 'speed', 'check_stats' => 'check_stats', 'hp' => 'hp', 'max_hp' => 'max_hp'];
 
@@ -31,7 +31,7 @@ class Token extends Model
 
     protected function casts(): array
     {
-        return ['is_hidden' => 'boolean', 'is_locked' => 'boolean', 'interactions' => 'array', 'check_stats' => 'array'];
+        return ['combat_profile' => 'array', 'abilities' => 'array', 'resources' => 'array', 'is_hidden' => 'boolean', 'is_locked' => 'boolean', 'interactions' => 'array', 'check_stats' => 'array'];
     }
 
     public function scene(): BelongsTo

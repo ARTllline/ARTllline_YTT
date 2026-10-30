@@ -63,7 +63,11 @@ class IdempotentCommand
                             Gate::forUser($user)->authorize('update', $campaign);
                         }
                     } elseif (in_array($operation, ['scene.ability', 'campaign.resource', 'scene.inventory.use'])) {
-                        app(AbilityActions::class)->authorize($user, $campaign, $payload['characterId']);
+                        if ($operation === 'scene.ability') {
+                            app(AbilityActions::class)->authorizeActor($user, Scene::findOrFail($resource), $payload);
+                        } else {
+                            app(AbilityActions::class)->authorize($user, $campaign, $payload['characterId']);
+                        }
                     } elseif ($operation === 'scene.interact') {
                         $scene = Scene::findOrFail($resource);
                         $scene->setRelation('campaign', $campaign);

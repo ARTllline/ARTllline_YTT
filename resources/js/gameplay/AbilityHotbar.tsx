@@ -12,6 +12,7 @@ import { PAGE_SIZE, type HotbarSlots } from './hotbarModel';
 import { GAMEPLAY_ENTRY_MIME } from './gameplayDrag';
 import { useGameplayDrag } from './useGameplayDrag';
 import { DeckSlot } from './DeckSlot';
+import { CombatBudgetView, combatReason, type TurnResources } from './combat';
 import { deckBanks } from './deckPresentation';
 import { AbilityBrowser } from './AbilityBrowser';
 
@@ -46,6 +47,8 @@ export function AbilityHotbar({
     onChooseItem,
     onOpenWindow,
     openWindow,
+    combatBudget,
+    onStand,
 }: {
     abilities: Ability[];
     resources: CharacterResource[];
@@ -69,6 +72,8 @@ export function AbilityHotbar({
     onChooseItem?: (i: InventoryItem) => void;
     onOpenWindow?: (kind: RpgWindowKind) => void;
     openWindow?: RpgWindowKind | null;
+    combatBudget?: TurnResources;
+    onStand?: () => void;
 }) {
     const [view, setView] = useState(() => readView(preferencesKey));
     const [browser, setBrowser] = useState(false),
@@ -140,6 +145,7 @@ export function AbilityHotbar({
             );
             if (
                 a &&
+                !combatReason(a, combatBudget) &&
                 canAfford(a, resources) &&
                 (worldAvailable || !['token', 'prop', 'point'].includes(a.target))
             )
@@ -192,6 +198,7 @@ export function AbilityHotbar({
                 className={`hotbar-shell action-deck ${view.expanded ? 'is-expanded' : ''} ${edit ? 'is-editing' : ''}`}
                 aria-label="Панель действий"
             >
+                {combatBudget && <CombatBudgetView budget={combatBudget} onStand={onStand} />}
                 <div className="deck-upper-strip">
                     <ResourceRail resources={resources} onDetails={onResourceDetails} />
                     <div className="deck-tools">
@@ -275,6 +282,7 @@ export function AbilityHotbar({
                                         const binding = slots[index];
                                         return (
                                             <DeckSlot
+                                                combatBudget={combatBudget}
                                                 key={index}
                                                 index={index}
                                                 shortcutActive={

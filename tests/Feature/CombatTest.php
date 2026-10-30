@@ -6,14 +6,17 @@ use App\Events\TabletopEvent;
 use App\Models\Campaign;
 use App\Models\Scene;
 use App\Models\User;
+use App\Services\CombatView;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
+use Tests\Support\SeedsCharacterCatalog;
 use Tests\TestCase;
 
 class CombatTest extends TestCase
 {
     use DatabaseMigrations;
+    use SeedsCharacterCatalog;
 
     private User $gm;
 
@@ -30,6 +33,7 @@ class CombatTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seedCharacterCatalog();
         $this->gm = User::factory()->create();
         $this->player = User::factory()->create();
         $this->campaign = Campaign::create(['name' => 'Combat QA']);
@@ -181,7 +185,7 @@ class CombatTest extends TestCase
         $this->assertSame($combat['combatants'][0]['id'], $result['combat']['currentTurn']['combatantId']);
         $this->assertCount($events + 1, $this->playerEvents());
         $this->assertArrayNotHasKey('deletedId', $this->playerEvents()->last()->envelope['payload']);
-        $this->assertSame($result['combat'], $this->playerEvents()->last()->envelope['payload']['combat']);
+        $this->assertEquals(app(CombatView::class)->build($this->scene->fresh(), false, $this->player), $this->playerEvents()->last()->envelope['payload']['combat']);
         foreach ($result['combat']['combatants'] as $entry) {
             $result['combat'] = $this->command('remove', ['combatantId' => $entry['id']]);
         }

@@ -27,6 +27,9 @@ export function RulesEditor({
                     Существующие проверки пока используют прежние модификаторы. При включении
                     знакомые ключи будут перенесены; проверьте дополнительные бонусы.
                 </p>
+                {c.derived?.catalog?.ready === false && (
+                    <p className="hint">Сначала импортируйте навыки SRD в компендий.</p>
+                )}
                 <button
                     type="button"
                     className="secondary-button"
@@ -58,7 +61,13 @@ export function RulesEditor({
                                 })
                             }
                         />
-                        <strong>{stat(k) ? signed(stat(k)!.modifier) : '…'}</strong>
+                        <strong>
+                            {derived?.abilityModifiers?.[k] !== undefined
+                                ? signed(derived.abilityModifiers[k]!)
+                                : stat(k)
+                                  ? signed(stat(k)!.modifier)
+                                  : '…'}
+                        </strong>
                     </label>
                 ))}
             </div>
@@ -78,99 +87,127 @@ export function RulesEditor({
                     Навыки <small>— / владение / компетентность</small>
                 </summary>
                 <div className="rules-edit-skills">
-                    {Object.entries(r.skills).map(([key, skill]) => (
-                        <div className="rules-edit-row" key={key}>
-                            <span>
-                                {stat(key)?.label ??
-                                    c.derived?.checks.find((s) => s.key === key)?.label ??
-                                    key}
-                            </span>
-                            <div
-                                className="rules-rank-chips"
-                                role="group"
-                                aria-label={`Владение: ${key}`}
-                            >
-                                {[0, 1, 2].map((rank) => (
-                                    <button
-                                        type="button"
-                                        key={rank}
-                                        aria-label={`${key}: ${['без владения', 'владение', 'компетентность'][rank]}`}
-                                        aria-pressed={
-                                            (skill.expertise ? 2 : skill.proficient ? 1 : 0) ===
-                                            rank
-                                        }
-                                        onClick={() =>
-                                            onChange({
-                                                ...r,
-                                                skills: {
-                                                    ...r.skills,
-                                                    [key]: {
-                                                        ...skill,
-                                                        proficient: rank > 0,
-                                                        expertise: rank === 2,
+                    {(
+                        derived?.catalog?.skills ??
+                        c.derived?.catalog?.skills ??
+                        Object.entries(r.skills).map(([key, skill]) => ({
+                            key,
+                            name: stat(key)?.label ?? key,
+                            ability: skill.ability,
+                        }))
+                    ).map((definition) => {
+                        const key = definition.key;
+                        const skill = r.skills[key];
+                        if (!skill) return null;
+                        return (
+                            <div className="rules-edit-row" key={key}>
+                                <span>
+                                    {definition.name}{' '}
+                                    <small>{definition.ability?.toUpperCase()}</small>
+                                </span>
+                                <div
+                                    className="rules-rank-chips"
+                                    role="group"
+                                    aria-label={`Владение: ${key}`}
+                                >
+                                    {[0, 1, 2].map((rank) => (
+                                        <button
+                                            type="button"
+                                            key={rank}
+                                            aria-label={`${key}: ${['без владения', 'владение', 'компетентность'][rank]}`}
+                                            aria-pressed={
+                                                (skill.expertise ? 2 : skill.proficient ? 1 : 0) ===
+                                                rank
+                                            }
+                                            onClick={() =>
+                                                onChange({
+                                                    ...r,
+                                                    skills: {
+                                                        ...r.skills,
+                                                        [key]: {
+                                                            ...skill,
+                                                            proficient: rank > 0,
+                                                            expertise: rank === 2,
+                                                        },
                                                     },
-                                                },
-                                            })
-                                        }
-                                    >
-                                        {['—', '●', '◆'][rank]}
-                                    </button>
-                                ))}
+                                                })
+                                            }
+                                        >
+                                            {['—', '●', '◆'][rank]}
+                                        </button>
+                                    ))}
+                                </div>
+                                <strong
+                                    title={stat(key) ? breakdownLabel(stat(key)!.breakdown) : ''}
+                                >
+                                    {stat(key) ? signed(stat(key)!.modifier) : '…'}
+                                </strong>
+                                <details>
+                                    <summary aria-label={`Дополнительно: ${key}`}>＋</summary>
+                                    <p className="hint">
+                                        {definition.ability
+                                            ? abilityLabels[definition.ability]
+                                            : ''}{' '}
+                                        · SRD
+                                    </p>
+                                    <label>
+                                        Дополнительный бонус
+                                        <input
+                                            aria-label={`Бонус: ${key}`}
+                                            type="number"
+                                            min={-100}
+                                            max={100}
+                                            value={skill.bonus}
+                                            onChange={(e) =>
+                                                onChange({
+                                                    ...r,
+                                                    skills: {
+                                                        ...r.skills,
+                                                        [key]: {
+                                                            ...skill,
+                                                            bonus: Number(e.target.value),
+                                                        },
+                                                    },
+                                                })
+                                            }
+                                        />
+                                    </label>
+                                </details>
                             </div>
-                            <strong title={stat(key) ? breakdownLabel(stat(key)!.breakdown) : ''}>
-                                {stat(key) ? signed(stat(key)!.modifier) : '…'}
-                            </strong>
-                            <details>
-                                <summary aria-label={`Дополнительно: ${key}`}>＋</summary>
-                                <label>
-                                    Характеристика
-                                    <select
-                                        aria-label={`Характеристика: ${key}`}
-                                        value={skill.ability}
-                                        onChange={(e) =>
-                                            onChange({
-                                                ...r,
-                                                skills: {
-                                                    ...r.skills,
-                                                    [key]: {
-                                                        ...skill,
-                                                        ability: e.target.value as AbilityKey,
-                                                    },
-                                                },
-                                            })
-                                        }
-                                    >
-                                        {keys.map((k) => (
-                                            <option key={k} value={k}>
-                                                {abilityLabels[k]}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
-                                <label>
-                                    Дополнительный бонус
-                                    <input
-                                        aria-label={`Бонус: ${key}`}
-                                        type="number"
-                                        min={-100}
-                                        max={100}
-                                        value={skill.bonus}
-                                        onChange={(e) =>
-                                            onChange({
-                                                ...r,
-                                                skills: {
-                                                    ...r.skills,
-                                                    [key]: {
-                                                        ...skill,
-                                                        bonus: Number(e.target.value),
-                                                    },
-                                                },
-                                            })
-                                        }
-                                    />
-                                </label>
-                            </details>
-                        </div>
+                        );
+                    })}
+                </div>
+            </details>
+            <details>
+                <summary>Дополнительные бонусы</summary>
+                <div className="rules-save-editor">
+                    {(
+                        [
+                            ['ac', 'AC'],
+                            ['speed', 'Скорость · ft'],
+                            ['spell_attack', 'Атака заклинанием'],
+                            ['spell_save_dc', 'Сл заклинаний'],
+                        ] as const
+                    ).map(([key, label]) => (
+                        <label key={key}>
+                            {label}
+                            <input
+                                aria-label={`Дополнительный бонус: ${label}`}
+                                type="number"
+                                min={-100}
+                                max={100}
+                                value={r.modifiers?.[key] ?? 0}
+                                onChange={(e) =>
+                                    onChange({
+                                        ...r,
+                                        modifiers: {
+                                            ...r.modifiers,
+                                            [key]: Number(e.target.value),
+                                        },
+                                    })
+                                }
+                            />
+                        </label>
                     ))}
                 </div>
             </details>

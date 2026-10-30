@@ -4,6 +4,7 @@ import { RulesSummary } from './RulesSummary';
 import { RulesEditor } from './RulesEditor';
 import type { Character } from '../tabletop/types/scene';
 import type { CharacterRules } from './rules';
+import { findCheck } from './rules';
 const rules: CharacterRules = {
     scores: { str: 16, dex: 14, con: 15, int: 10, wis: 12, cha: 18 },
     proficiency_bonus: 3,
@@ -51,6 +52,41 @@ const character: Character = {
     },
 };
 describe('Character rule presentation', () => {
+    it('keeps old action aliases usable without publishing competing totals', () => {
+        const checks = [
+            { key: 'str', label: 'Strength', modifier: 3 },
+            { key: 'save_wis', label: 'Wisdom save', modifier: 5 },
+        ];
+        expect(findCheck(checks, 'strength')?.modifier).toBe(3);
+        expect(findCheck(checks, 'saving_throw_wis')?.modifier).toBe(5);
+        expect(findCheck([{ key: 'strength', modifier: 8 }], 'str')?.modifier).toBe(8);
+        expect(findCheck(checks, 'custom')).toBeUndefined();
+    });
+    it('uses canonical catalog names and abilities in the editor without an ability override control', () => {
+        const derived = {
+            ...character.derived!,
+            abilityModifiers: { str: 3 },
+            catalog: {
+                ready: true,
+                skills: [
+                    {
+                        key: 'perception',
+                        name: 'Compendium Perception',
+                        ability: 'wis' as const,
+                        compendium_entry_id: 7,
+                        source_id: 1,
+                    },
+                ],
+            },
+        };
+        const html = renderToStaticMarkup(
+            <RulesEditor character={character} derived={derived} onChange={() => {}} />,
+        );
+        expect(html).toContain('Compendium Perception');
+        expect(html).toContain('WIS');
+        expect(html).not.toContain('Характеристика: perception');
+        expect(html).toContain('Дополнительный бонус: Сл заклинаний');
+    });
     it('shows server totals verbatim, ownership rank and equipment provenance', () => {
         const html = renderToStaticMarkup(<RulesSummary character={character} />);
         expect(html).toContain('+42');

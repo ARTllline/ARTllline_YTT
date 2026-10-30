@@ -1,5 +1,5 @@
 import { RpgDice } from '../../gameplay/RpgDice';
-import { breakdownLabel } from '../../rpg/rules';
+import { breakdownLabel, findCheck } from '../../rpg/rules';
 import { usePlayerDice } from '../../gameplay/PlayerDiceProvider';
 import { useEffect, useRef, useState } from 'react';
 import { Dices, X } from 'lucide-react';
@@ -44,7 +44,7 @@ export function CheckDialog({
     const acting = retained?.context
         ? actors.find((t) => t.id === retained.context!.actorTokenId)
         : actor;
-    const stat = acting?.checkStats?.find((s) => s.key === invocation.action.check?.stat_key);
+    const stat = findCheck(acting?.checkStats, invocation.action.check?.stat_key);
     const missingActor = actorRequired && !acting;
     const missingStat = !!invocation.action.check?.stat_key && !stat;
     const dialog = useRef<HTMLDialogElement>(null);
@@ -123,6 +123,7 @@ export function CheckDialog({
             };
             visualSettled.current = settle;
             setResult(response.check!);
+            if (response.check?.automaticFailure) settle();
         } catch (e) {
             if (e instanceof ApiError && e.status > 0 && e.status < 500) {
                 pending.current.complete();
@@ -238,17 +239,21 @@ export function CheckDialog({
             {check.dc !== undefined && check.dc_visible !== false && (
                 <span className="check-dc">DC {check.dc}</span>
             )}
-            <RpgDice
-                dice={result?.rawDice}
-                selected={result?.selectedDie}
-                mode={mode}
-                phase={phase}
-                onSettled={() => visualSettled.current?.()}
-            />
+            {!result?.automaticFailure && (
+                <RpgDice
+                    dice={result?.rawDice}
+                    selected={result?.selectedDie}
+                    mode={mode}
+                    phase={phase}
+                    onSettled={() => visualSettled.current?.()}
+                />
+            )}
             <div className="check-equation" aria-live="polite">
                 {showTotal && result ? (
                     <span className="check-sum">
-                        <span className="sum-face">{natural}</span>{' '}
+                        <span className="sum-face">
+                            {result.automaticFailure ? 'Автопровал' : natural}
+                        </span>{' '}
                         <span className="sum-modifier">
                             {result.modifier < 0 ? '−' : '+'} {Math.abs(result.modifier)}
                         </span>{' '}
@@ -266,6 +271,17 @@ export function CheckDialog({
             </div>
             {showTotal && result?.provenance.breakdown && (
                 <p className="hint">{breakdownLabel(result.provenance.breakdown)}</p>
+            )}
+            {showTotal && result?.provenance.rollContext && (
+                <p className="hint">
+                    {[
+                        ...result.provenance.rollContext.advantage,
+                        ...result.provenance.rollContext.disadvantage,
+                        ...result.provenance.rollContext.automaticFailure,
+                    ]
+                        .map((r) => r.label)
+                        .join(' · ')}
+                </p>
             )}
             <div className="check-outcome" role="status">
                 {phase === 'outcome' && result && (

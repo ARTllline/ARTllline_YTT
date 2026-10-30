@@ -15,23 +15,6 @@ import {
     Focus,
     Diamond,
 } from 'lucide-react';
-export const conditionKeys = [
-    'blinded',
-    'charmed',
-    'deafened',
-    'frightened',
-    'grappled',
-    'incapacitated',
-    'invisible',
-    'paralyzed',
-    'petrified',
-    'poisoned',
-    'prone',
-    'restrained',
-    'stunned',
-    'unconscious',
-    'concentrating',
-];
 export function ConditionIcon({ name }: { name: string | null }) {
     const Icon =
         (

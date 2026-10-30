@@ -78,7 +78,7 @@ class ObjectInteractionActions
                 'actions.*.icon' => 'required|in:'.implode(',', self::ICONS),
                 'actions.*.result_type' => 'required|in:handout,cue,nothing',
                 'actions.*.result_target' => 'nullable|integer|min:1', 'actions.*.enabled' => 'required|boolean',
-                'actions.*.check' => 'sometimes|array:enabled,label,ability_key,stat_key,dc,dc_visible,modifier,retry,success,failure',
+                'actions.*.check' => 'sometimes|array:enabled,label,ability_key,stat_key,dc,dc_visible,modifier,retry,success,failure,requires_sight',
                 'actions.*.check.enabled' => 'required_with:actions.*.check|boolean',
             ])->validate();
             $object = $this->object($scene, $data['kind'], $data['id']);
@@ -87,7 +87,7 @@ class ObjectInteractionActions
                     $action['check'] = Validator::make($action['check'], [
                         'enabled' => 'required|boolean', 'label' => 'required|string|max:80',
                         'ability_key' => 'nullable|string|max:48|regex:/^[a-zA-Z0-9_-]+$/',
-                        'dc' => 'required|integer|min:1|max:100', 'dc_visible' => 'sometimes|boolean',
+                        'dc' => 'required|integer|min:1|max:100', 'dc_visible' => 'sometimes|boolean', 'requires_sight' => 'sometimes|boolean',
                         'modifier' => 'required_without:stat_key|integer|min:-100|max:100',
                         'stat_key' => 'nullable|string|max:48|regex:/^[a-z][a-z0-9_]*$/',
                         'retry' => 'required|in:once,once_per_player,repeatable',

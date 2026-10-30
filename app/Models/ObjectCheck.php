@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Combat\ConditionRules;
 use Illuminate\Database\Eloquent\Model;
 
 class ObjectCheck extends Model
@@ -19,14 +20,20 @@ class ObjectCheck extends Model
         return ['provenance' => 'array', 'raw_dice' => 'array', 'request_context' => 'array', 'branch' => 'array', 'success' => 'boolean', 'dc_visible' => 'boolean', 'created_at' => 'datetime'];
     }
 
-    public function projection(): array
+    public function projection(bool $gm = false): array
     {
+        $provenance = $this->provenance;
+        if (! $gm && isset($provenance['rollContext'])) {
+            $provenance['rollContext'] = app(ConditionRules::class)->publicContext($provenance['rollContext']);
+        }
+
         return ['id' => $this->id, 'actionId' => $this->action_id, 'actionLabel' => $this->action_label,
             'label' => $this->label, 'natural' => (int) $this->natural, 'modifier' => (int) $this->modifier,
             'total' => (int) $this->total, 'success' => $this->success, 'tokenId' => $this->token_id ? (string) $this->token_id : null,
             'rollMode' => $this->roll_mode ?? 'normal', 'rawDice' => $this->raw_dice ?? [(int) $this->natural],
-            'selectedDie' => array_search((int) $this->natural, $this->raw_dice ?? [(int) $this->natural], true),
-            'provenance' => $this->provenance ?? ['source' => 'legacy_interaction', 'tokenId' => $this->token_id ? (string) $this->token_id : null,
+            'automaticFailure' => ! empty($this->provenance['rollContext']['automaticFailure']),
+            'selectedDie' => (int) array_search((int) $this->natural, $this->raw_dice ?? [(int) $this->natural], true),
+            'provenance' => $provenance ?? ['source' => 'legacy_interaction', 'tokenId' => $this->token_id ? (string) $this->token_id : null,
                 'tokenName' => null, 'statKey' => $this->ability_key, 'statLabel' => $this->label,
                 'baseModifier' => (int) $this->modifier, 'otherModifiers' => [], 'finalModifier' => (int) $this->modifier],
             'rolledAt' => $this->created_at->toIso8601String()]

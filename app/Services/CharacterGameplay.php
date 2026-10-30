@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Combat\CombatMetadata;
 use App\Models\Campaign;
 use App\Models\Character;
 use App\Models\Cue;
@@ -26,7 +27,8 @@ class CharacterGameplay
             'resources.*.accent' => 'required|in:violet,blue,amber,green,red',
             'resources.*.sort_order' => 'required|integer|between:0,100', 'resources.*.player_adjustable' => 'required|boolean',
             'abilities' => 'sometimes|present|array|list|max:24',
-            'abilities.*' => 'required|array:id,name,icon,description,category,target,check,costs,damage,result,sort_order,enabled,attack_type,range,area,spell,item_only',
+            'abilities.*' => 'required|array:id,name,icon,description,category,target,check,costs,damage,result,sort_order,enabled,attack_type,range,area,spell,item_only,activation,attack,save,damage_components,condition_effects,requires_sight',
+            'abilities.*.requires_sight' => 'sometimes|boolean',
             'abilities.*.item_only' => 'sometimes|boolean',
             'abilities.*.spell' => 'sometimes|nullable|array:level,school,classes,known,prepared,ritual,concentration',
             'abilities.*.spell.level' => 'required_with:abilities.*.spell|integer|between:0,9',
@@ -61,7 +63,7 @@ class CharacterGameplay
             'abilities.*.result.target' => 'present|nullable|integer|min:1',
             'abilities.*.result.amount' => 'required|integer|between:0,9999',
             'abilities.*.sort_order' => 'required|integer|between:0,100', 'abilities.*.enabled' => 'required|boolean',
-        ];
+        ] + CombatMetadata::abilityRules();
     }
 
     public function validate(Campaign $campaign, array &$data, ?Character $character): void
@@ -89,13 +91,22 @@ class CharacterGameplay
                     'dc_visible' => 'required|boolean', 'defense' => ['required', Rule::in(['ac', 'fixed'])],
                 ])->validate();
             }
-            if (in_array($ability['category'], ['check', 'attack']) && ! $check) {
+            if (in_array($ability['category'], ['check', 'attack']) && ! $check && empty($ability['attack'])) {
                 $this->invalid('Для проверки или атаки настройте бросок.');
             }
             if ($ability['category'] === 'attack' && $ability['target'] !== 'token') {
                 $this->invalid('Атака должна выбирать токен.');
             }
             $area = $ability['area'] ?? null;
+            if (! empty($ability['attack']) && ($ability['category'] !== 'attack' || ! empty($ability['save']))) {
+                $this->invalid('Атаку и спасбросок настраивайте отдельными способностями.');
+            }
+            if (! empty($ability['save']) && (! in_array($ability['target'], ['token', 'point']) || $ability['category'] === 'attack')) {
+                $this->invalid('Для спасброска выберите цель или область эффекта.');
+            }
+            if (! empty($ability['damage_components']) && $ability['target'] !== 'token' && ! ($area && $area['shape'] !== 'none')) {
+                $this->invalid('Урон должен выбирать токен или область.');
+            }
             if ($area && $area['shape'] !== 'none' && ($ability['target'] !== 'point' || $ability['category'] === 'attack')) {
                 $this->invalid('Для области выберите точку мира и тип «Эффект» или «Проверка».');
             }
@@ -148,7 +159,7 @@ class CharacterGameplay
             if (($a['item_only'] ?? false) && ! $includeItems) {
                 return null;
             }
-            $safe = array_intersect_key($a, array_flip(['id', 'name', 'icon', 'description', 'category', 'target', 'costs', 'sort_order', 'enabled', 'attack_type', 'range', 'area', 'spell', 'item_only', 'damage']));
+            $safe = array_intersect_key($a, array_flip(['id', 'name', 'icon', 'description', 'category', 'target', 'costs', 'sort_order', 'enabled', 'attack_type', 'range', 'area', 'spell', 'item_only', 'damage', 'activation', 'attack', 'damage_components', 'requires_sight']));
             if (isset($a['spell']) && ! $a['spell']['known']) {
                 return null;
             }

@@ -8,7 +8,7 @@ import { charactersApi } from '../../api/characters';
 import type { Character } from '../../tabletop/types/scene';
 import { CheckStatsEditor } from '../interactions/TokenCheckEditor';
 import { RulesEditor } from '../../rpg/RulesEditor';
-import type { DerivedCharacter } from '../../rpg/rules';
+import { canonicalStatKey, type DerivedCharacter } from '../../rpg/rules';
 import type { Placement } from './model';
 
 export function CharacterBrowser({
@@ -27,6 +27,14 @@ export function CharacterBrowser({
     const [preview, setPreview] = useState<DerivedCharacter>();
     const [previewError, setPreviewError] = useState('');
     const [previewBusy, setPreviewBusy] = useState(false);
+    const reservedChecks = draft?.rules
+        ? [
+              ...(preview?.checks ?? draft.derived?.checks ?? [])
+                  .filter((s) => s.ability)
+                  .map((s) => s.key),
+              'spell_save_dc',
+          ]
+        : [];
     useEffect(() => {
         if (!draft?.rules) return;
         const abort = new AbortController();
@@ -261,8 +269,21 @@ export function CharacterBrowser({
                             и спасбросков. Здесь остаются только особые проверки.
                         </p>
                         <CheckStatsEditor
-                            stats={draft.checkStats}
-                            save={(checkStats) => setDraft({ ...draft, checkStats })}
+                            stats={draft.checkStats.filter(
+                                (s) => !reservedChecks.includes(canonicalStatKey(s.key)),
+                            )}
+                            reservedKeys={reservedChecks}
+                            save={(checkStats) =>
+                                setDraft({
+                                    ...draft,
+                                    checkStats: [
+                                        ...draft.checkStats.filter((s) =>
+                                            reservedChecks.includes(canonicalStatKey(s.key)),
+                                        ),
+                                        ...checkStats,
+                                    ],
+                                })
+                            }
                             disabled={busy}
                         />
                     </details>

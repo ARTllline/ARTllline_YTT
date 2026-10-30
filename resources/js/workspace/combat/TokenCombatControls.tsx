@@ -1,9 +1,11 @@
 import { t, conditionLabel } from '../../i18n';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { request } from '../../api/client';
 import { Eye, EyeOff, Minus, Plus, X } from 'lucide-react';
 import type { Token } from '../../tabletop/types/scene';
 import type { SceneStore } from '../../tabletop/state/SceneStore';
-import { ConditionIcon, conditionKeys } from './ConditionIcon';
+import { ConditionIcon } from './ConditionIcon';
+import { durationOptions } from '../../gameplay/CombatAbilityEditor';
 
 export function ConditionList({
     token,
@@ -20,6 +22,7 @@ export function ConditionList({
                 <span
                     className={`condition-chip ${condition.visibility === 'gm_only' ? 'secret' : ''}`}
                     key={condition.id}
+                    title={`${conditionLabel(condition)}${condition.remainingRounds ? ` · ${condition.remainingRounds} раунд.` : condition.durationMode && condition.durationMode !== 'until_removed' ? ` · ${durationOptions.find(([v]) => v === condition.durationMode)?.[1] ?? condition.durationMode}` : ''}`}
                 >
                     <ConditionIcon name={condition.key} />
                     <span>{conditionLabel(condition)}</span>
@@ -87,6 +90,32 @@ export function TokenCombatControls({
     const [condition, setCondition] = useState('poisoned');
     const [label, setLabel] = useState('');
     const [secret, setSecret] = useState(false);
+    const [duration, setDuration] = useState('until_removed');
+    const [rounds, setRounds] = useState(1);
+    const [source, setSource] = useState('');
+    const [definitions, setDefinitions] = useState<{ key: string; name: string }[]>([]);
+    const [catalogError, setCatalogError] = useState('');
+    const campaign = store.getSnapshot().scene.campaignId;
+    useEffect(() => {
+        if (!campaign) return;
+        const abort = new AbortController();
+        void request<{ conditions: { key: string; name: string }[] }>(
+            `/campaigns/${campaign}/character-rules/catalog`,
+            'GET',
+            undefined,
+            abort.signal,
+        )
+            .then((r) => {
+                if (!abort.signal.aborted) {
+                    setDefinitions(r.conditions);
+                    setCatalogError('');
+                }
+            })
+            .catch((e: Error) => {
+                if (!abort.signal.aborted) setCatalogError(e.message);
+            });
+        return () => abort.abort();
+    }, [campaign]);
     const value = Number(amount);
     const valid = amount.trim() !== '' && Number.isInteger(value) && Math.abs(value) <= 9999;
     const adjust = (delta: number) => {
@@ -136,6 +165,11 @@ export function TokenCombatControls({
             <ConditionList token={token} store={store} disabled={disabled} />
             <details className="condition-disclosure">
                 <summary>Добавить состояние</summary>
+                {catalogError && (
+                    <p role="alert" className="form-error">
+                        {catalogError}
+                    </p>
+                )}
                 <form
                     className="condition-add"
                     onSubmit={(e) => {
@@ -146,6 +180,9 @@ export function TokenCombatControls({
                                 ? { label: label.trim() }
                                 : { key: condition }),
                             visibility: secret ? 'gm_only' : 'public',
+                            duration_mode: duration,
+                            rounds,
+                            ...(source ? { source_token_id: source } : {}),
                         });
                     }}
                 >
@@ -154,15 +191,24 @@ export function TokenCombatControls({
                         value={condition}
                         onChange={(e) => setCondition(e.target.value)}
                     >
-                        {conditionKeys.map((key) => (
+                        {definitions.map(({ key, name }) => (
                             <option key={key} value={key}>
-                                {conditionLabel({ key, label: key })}
+                                {conditionLabel({ key, label: name })}
                             </option>
                         ))}
+                        <option value="concentrating">
+                            {conditionLabel({ key: 'concentrating', label: 'Concentrating' })}
+                        </option>
                         <option value="custom"> {t('Custom condition…')} </option>
                     </select>
                     <button
-                        disabled={disabled || (condition === 'custom' && !label.trim())}
+                        disabled={
+                            disabled ||
+                            (condition === 'custom'
+                                ? !label.trim()
+                                : condition !== 'concentrating' &&
+                                  !definitions.some((d) => d.key === condition))
+                        }
                         type="submit"
                         aria-label={t('addCondition', { name: token.name })}
                     >
@@ -185,6 +231,41 @@ export function TokenCombatControls({
                         />
                         <EyeOff size={12} /> {t('GM only')}{' '}
                     </label>
+                    <select
+                        aria-label="Длительность состояния"
+                        value={duration}
+                        onChange={(e) => setDuration(e.target.value)}
+                    >
+                        {durationOptions.map(([v, n]) => (
+                            <option key={v} value={v}>
+                                {n}
+                            </option>
+                        ))}
+                    </select>
+                    {duration === 'rounds' && (
+                        <input
+                            aria-label="Осталось раундов"
+                            type="number"
+                            min={1}
+                            max={100}
+                            value={rounds}
+                            onChange={(e) => setRounds(Number(e.target.value))}
+                        />
+                    )}
+                    {duration.includes('source') && (
+                        <select
+                            aria-label="Источник состояния"
+                            value={source}
+                            onChange={(e) => setSource(e.target.value)}
+                        >
+                            <option value="">Выберите источник</option>
+                            {store.getSnapshot().scene.tokens.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                    {t.name}
+                                </option>
+                            ))}
+                        </select>
+                    )}
                 </form>
             </details>
         </div>

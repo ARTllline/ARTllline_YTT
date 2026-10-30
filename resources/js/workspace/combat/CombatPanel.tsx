@@ -1,3 +1,5 @@
+import { CombatHistory } from './CombatHistory';
+import { CombatActorControls } from './CombatActorControls';
 import { t } from '../../i18n';
 import { tokenAppearance } from '../../tabletop/objects/tokenAppearance';
 import { resourceCache } from '../../preload/ResourceCache';
@@ -208,6 +210,7 @@ export function CombatPanel({
                                     </button>
                                 </div>
                             )}
+                            {gm && scene.id && <CombatHistory sceneId={scene.id} />}
                             <div className="combat-rows">
                                 {!combat.combatants.length && (
                                     <p className="combat-empty">
@@ -369,6 +372,10 @@ export function CombatPanel({
                                             </div>
                                             {gm && expanded ? (
                                                 <div className="combat-row-detail">
+                                                    <CombatActorControls
+                                                        token={token}
+                                                        store={store}
+                                                    />
                                                     <div className="combat-row-actions">
                                                         {combat.status === 'active' && (
                                                             <button

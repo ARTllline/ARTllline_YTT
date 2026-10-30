@@ -30,6 +30,7 @@ export type InteractionResult = {
 };
 // Only enabled/label and explicitly visible DC occur in the Player projection.
 export interface InteractionCheck {
+    requires_sight?: boolean;
     enabled: boolean;
     label: string;
     ability_key?: string;
@@ -42,6 +43,7 @@ export interface InteractionCheck {
     failure?: InteractionResult;
 }
 export interface CheckResult {
+    automaticFailure?: boolean;
     id: string;
     actionId: string;
     actionLabel: string;
@@ -57,6 +59,11 @@ export interface CheckResult {
     rawDice: number[];
     selectedDie: number;
     provenance: {
+        rollContext?: import('../../gameplay/model').AbilityResult['roll'] extends infer R
+            ? R extends { context?: infer C }
+                ? C
+                : never
+            : never;
         source: 'token_stat' | 'character_stat' | 'character_rules' | 'legacy_interaction';
         characterId?: string;
         characterName?: string;

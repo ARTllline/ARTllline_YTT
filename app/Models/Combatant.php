@@ -9,6 +9,11 @@ class Combatant extends Model
 {
     protected $guarded = ['id'];
 
+    protected function casts(): array
+    {
+        return ['token_id' => 'integer', 'action_available' => 'boolean', 'bonus_available' => 'boolean', 'reaction_available' => 'boolean', 'movement_spent' => 'float'];
+    }
+
     public function token(): BelongsTo
     {
         return $this->belongsTo(Token::class);

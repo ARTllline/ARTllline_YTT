@@ -124,7 +124,7 @@ export class ScenePersistence {
                         return;
                     }
                     if (
-                        this.store.role === 'player' &&
+                        (this.store.role === 'player' || command.type === 'move') &&
                         error instanceof ApiError &&
                         [403, 404, 422].includes(error.status)
                     ) {

@@ -61,8 +61,10 @@ Units are explicit (`ft`, `lb`, original currency unit). Abilities use `str/dex/
 int/wis/cha`. Skill, condition, damage and property keys use underscores, e.g.
 `sleight_of_hand`, `animal_handling`, `poisoned`, `slashing`. Future consumers should
 query local entries by source/type/key rather than add independent rules lists.
-Existing translated Character Rules UI labels and legacy freeform conditions are
-unchanged; migration to compendium-backed selection is a subsequent integration.
+Character Rules consumes the local skill definitions and stores canonical skill
+references. Condition selection also reads this catalogue, with optional links on
+existing token conditions. Legacy freeform checks/conditions remain supported;
+see [CHARACTER_RULES.md](CHARACTER_RULES.md) for the authoritative resolver.
 
 The `rules` type contains namespaced reference entries from ability scores, damage
 types, magic schools, weapon properties, weapon mastery properties and equipment
@@ -171,3 +173,9 @@ Structured import source and API fixture provenance:
 YTT normalization and shortened descriptions are adaptations; they do not change
 the underlying SRD. The repository contains only small focused JSON test fixtures,
 not a copy of the entire SRD PDF.
+
+## Combat Gameplay consumer
+
+[Task 27](COMBAT_GAMEPLAY.md) consumes local canonical condition/damage keys and
+monster snapshots for encounter execution. Campaign combat profiles remain editable
+and authoritative; no runtime refresh or natural-language rule parsing is performed.

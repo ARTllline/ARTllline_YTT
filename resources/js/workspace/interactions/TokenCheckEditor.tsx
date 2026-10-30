@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { canonicalStatKey } from '../../rpg/rules';
 import { Plus, X } from 'lucide-react';
 import type { Token, CheckStat } from '../../tabletop/types/scene';
 import type { SceneStore } from '../../tabletop/state/SceneStore';
@@ -53,10 +54,12 @@ export function CheckStatsEditor({
     stats,
     save,
     disabled,
+    reservedKeys = [],
 }: {
     stats: CheckStat[];
     save: (next: CheckStat[]) => void;
     disabled: boolean;
+    reservedKeys?: readonly string[];
 }) {
     const [key, setKey] = useState('');
     const [label, setLabel] = useState('');
@@ -116,7 +119,11 @@ export function CheckStatsEditor({
                 ))}
                 <div className="check-presets">
                     {presets
-                        .filter((p) => !stats.some((s) => s.key === p.key))
+                        .filter(
+                            (p) =>
+                                !stats.some((s) => s.key === p.key) &&
+                                !reservedKeys.includes(canonicalStatKey(p.key)),
+                        )
                         .map((preset) => (
                             <button
                                 className="quiet-button"
@@ -151,6 +158,7 @@ export function CheckStatsEditor({
                             stats.length >= 30 ||
                             !/^[a-z][a-z0-9_]*$/.test(key) ||
                             !label.trim() ||
+                            reservedKeys.includes(canonicalStatKey(key)) ||
                             stats.some((s) => s.key === key)
                         }
                         onClick={() => {

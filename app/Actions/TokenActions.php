@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Combat\TurnBudget;
 use App\Models\Asset;
 use App\Models\CampaignMember;
 use App\Models\Combat;
@@ -74,6 +75,9 @@ class TokenActions
             Gate::forUser($user)->authorize($move ? 'move' : 'update', $token);
             $wasVisible = ! $token->is_hidden;
             $before = clone $token;
+            if ($move) {
+                app(TurnBudget::class)->move($token, (float) ($data['x'] ?? $token->x), (float) ($data['y'] ?? $token->y));
+            }
             if (! $move) {
                 if ($token->character_id) {
                     $identity = [];
@@ -112,7 +116,7 @@ class TokenActions
                 app(TriggerEvents::class)->movement($scene, [[$before, $token]]);
             }
 
-            return ['token' => $this->snapshots->token($token, $scene->campaign->roleFor($user) === 'gm', $user), 'charactersChanged' => $token->character_id !== null && ! $move, '_wasVisible' => $wasVisible, '_combatChanged' => array_key_exists('is_hidden', $data)];
+            return ['token' => $this->snapshots->token($token, $scene->campaign->roleFor($user) === 'gm', $user), 'charactersChanged' => $token->character_id !== null && ! $move, '_wasVisible' => $wasVisible, '_combatChanged' => $move || array_key_exists('is_hidden', $data) || Combat::where('scene_id', $scene->id)->where('status', 'active')->exists()];
         }, $move ? 'token.moved' : 'token.updated');
     }
 
@@ -128,7 +132,7 @@ class TokenActions
             }
             $token->delete();
 
-            return ['deletedId' => (string) $token->id, '_wasVisible' => ! $token->is_hidden, '_combatChanged' => true];
+            return ['deletedId' => (string) $token->id, 'tokens' => $scene->tokens()->get()->map(fn ($t) => $this->snapshots->token($t, true, $user))->all(), '_wasVisible' => ! $token->is_hidden, '_combatChanged' => true];
         }, 'token.removed');
     }
 }

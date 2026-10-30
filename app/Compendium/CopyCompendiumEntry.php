@@ -3,6 +3,7 @@
 namespace App\Compendium;
 
 use App\Actions\CharacterActions;
+use App\Combat\CombatStats;
 use App\Models\Campaign;
 use App\Models\CompendiumCopy;
 use App\Models\CompendiumEntry;
@@ -71,6 +72,7 @@ class CopyCompendiumEntry
                 }
                 $ac = is_numeric($n['armor_class']) ? $n['armor_class'] : (collect($n['armor_class'])->first(fn ($a) => empty($a['condition']))['value'] ?? null);
                 $character = $campaign->characters()->create(['name' => Str::limit($n['name'], 80, ''), 'kind' => 'npc', 'disposition' => 'hostile',
+                    'combat_profile' => app(CombatStats::class)->fromMonster($n),
                     'hp' => $n['hp'], 'max_hp' => $n['hp'], 'ac' => $ac, 'speed' => $n['speed']['walk']['feet'] ?? null,
                     'check_stats' => $checks, 'resources' => [], 'abilities' => []]);
                 app(CharacterActions::class)->publish($user, $character);

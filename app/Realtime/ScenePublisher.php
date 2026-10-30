@@ -41,9 +41,8 @@ class ScenePublisher
         if ($scene->campaign->active_scene_id !== $scene->id) {
             return;
         }
-        $playerCombat = array_key_exists('combat', $result) ? app(CombatView::class)->build($scene, false) : null;
-        $batchTokens = $type === 'objects.changed' ? $scene->tokens()->with(['character.portraitAsset', 'imageAsset', 'conditions'])->whereIn('id', array_column($result['tokens'] ?? [], 'id'))->where('is_hidden', false)->get() : collect();
-        $batchProps = $type === 'objects.changed' ? SceneProp::with('asset')->where('scene_id', $scene->id)->whereIn('id', array_column($result['props'] ?? [], 'id'))->where('is_hidden', false)->get() : collect();
+        $batchTokens = ($type === 'objects.changed' || array_key_exists('tokens', $result)) ? $scene->tokens()->with(['character.portraitAsset', 'imageAsset', 'conditions'])->whereIn('id', array_column($result['tokens'] ?? [], 'id'))->where('is_hidden', false)->get() : collect();
+        $batchProps = ($type === 'objects.changed' || array_key_exists('tokens', $result)) ? SceneProp::with('asset')->where('scene_id', $scene->id)->whereIn('id', array_column($result['props'] ?? [], 'id'))->where('is_hidden', false)->get() : collect();
         foreach ($members as $member) {
             if ($member->pivot->role !== 'player') {
                 continue;
@@ -76,21 +75,21 @@ class ScenePublisher
                 }
             }
             if (array_key_exists('combat', $result)) {
-                $payload['combat'] = $playerCombat;
+                $payload['combat'] = app(CombatView::class)->build($scene, false, $member);
                 if ($payload['combat'] === null && str_starts_with($type, 'combat.')) {
                     $event['type'] = 'scene.revision';
                 }
             }
-            if ($type === 'objects.changed') {
+            if (($type === 'objects.changed' || array_key_exists('tokens', $result))) {
                 $visibleTokens = $batchTokens->pluck('id')->map(strval(...))->all();
                 $visibleProps = $batchProps->pluck('id')->map(strval(...))->all();
                 $payload += ['tokens' => $batchTokens->map(fn ($t) => $this->snapshots->token($t, false, $member))->all(),
                     'props' => $batchProps->map(fn ($p) => $p->projection(false))->all(),
                     'deletedIds' => array_values(array_diff($previousVisibility['tokens'], $visibleTokens)),
                     'deletedPropIds' => array_values(array_diff($previousVisibility['props'], $visibleProps))];
-                if (! $payload['tokens'] && ! $payload['props'] && ! $payload['deletedIds'] && ! $payload['deletedPropIds']) {
+                if (! $payload['tokens'] && ! $payload['props'] && ! $payload['deletedIds'] && ! $payload['deletedPropIds'] && ! isset($payload['deletedId']) && ! isset($payload['token'])) {
                     $event['type'] = 'scene.revision';
-                    $payload = array_key_exists('combat', $result) ? ['combat' => $playerCombat] : [];
+                    $payload = array_key_exists('combat', $result) ? ['combat' => app(CombatView::class)->build($scene, false, $member)] : [];
                 }
             }
             if (! empty($result['gameplayFeedbacks'])) {

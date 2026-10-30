@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Actions\CharacterActions;
 use App\Actions\ObjectInteractionActions;
+use App\Combat\CombatStats;
 use App\Models\Asset;
 use App\Models\Campaign;
 use App\Models\Scene;
@@ -38,7 +39,7 @@ class SceneSnapshotBuilder
                 'tokens' => $tokens->map(fn ($token) => $this->token($token, $gm, $user))->all(),
                 ...app(CharacterActions::class)->roster($campaign, $user),
                 'props' => SceneProp::with('asset')->where('scene_id', $scene->id)->when(! $gm, fn ($q) => $q->where('is_hidden', false))->orderBy('z_index')->orderBy('id')->get()->map(fn ($p) => $p->projection($gm))->all(),
-                'combat' => app(CombatView::class)->build($scene, $gm),
+                'combat' => app(CombatView::class)->build($scene, $gm, $user),
                 ...($gm ? ['regions' => SceneRegion::where('scene_id', $scene->id)->orderBy('id')->get()->map(fn ($r) => $r->projection())->all()] : []),
                 ...($gm ? ['notes' => SceneNote::where('scene_id', $scene->id)->orderBy('id')->get()->map(fn ($n) => $n->projection())->all()] : []),
             ];
@@ -77,6 +78,8 @@ class SceneSnapshotBuilder
             'canMove' => $gm || ($token->owner_user_id === $user->id && ! $token->is_locked)];
         $data['conditions'] = $token->conditions->filter(fn ($condition) => $gm || $condition->visibility === 'public')->values()->map(fn ($condition) => [
             'id' => (string) $condition->id, 'key' => $condition->key, 'label' => $condition->label,
+            'compendiumEntryId' => $condition->compendium_entry_id,
+            'durationMode' => $condition->duration_mode, 'remainingRounds' => $condition->remaining_rounds,
         ] + ($gm ? ['visibility' => $condition->visibility] : []))->all();
         if ($gm || $token->owner_user_id === $user->id) {
             $data += ['hp' => $token->hp, 'maxHp' => $token->max_hp, 'checkStats' => $token->check_stats ?? []];
@@ -85,6 +88,8 @@ class SceneSnapshotBuilder
             $data['isOwner'] = $token->owner_user_id === $user->id;
         }
         if ($gm) {
+            $data['abilities'] = $token->character_id ? [] : ($token->abilities ?? []);
+            $data['combatProfile'] = app(CombatStats::class)->profile($token);
             if ($token->character_id) {
                 $data += ['baseAc' => $token->character->getRawOriginal('ac'), 'baseSpeed' => $token->character->getRawOriginal('speed')];
             }

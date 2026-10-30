@@ -1,121 +1,168 @@
-# Character rules foundation
+# Character Rules — SRD 5.2.1 foundation
 
-Character rules are opt-in, GM-authored data in the nullable `characters.rules`
-JSON column. No totals are stored. `CharacterRules` owns arithmetic and provenance;
-`TokenCheckStats` resolves action/object check keys through that service. Linked
-tokens read Character values; standalone NPC tokens keep their original fields.
+`CharacterRules` is the authoritative calculation layer for Character checks,
+attacks, AC, speed and spellcasting. `CharacterCatalog` supplies request-local
+definitions from the installed `srd-2024` Compendium. Neither service calls HTTP.
+Character RPG windows display server totals; their previews use the same resolver.
 
-## Model and precedence
+## Canonical data and persisted state
 
-- `scores`: `str`, `dex`, `con`, `int`, `wis`, `cha`, integer scores 1–30.
-- Ability modifier: `floor((score - 10) / 2)`, including negative odd scores.
-- `proficiency_bonus`: explicit 0–20, without level/class progression.
-- Eighteen stable skill keys with Russian UI labels. Each has a configurable
-  ability, proficiency, expertise and signed additional bonus. Expertise means
-  twice proficiency; it replaces, rather than stacks with, ordinary proficiency.
-- Six `save_*` keys: ability modifier + configured proficiency + additional bonus.
-- `spellcasting_ability`: nullable. When configured, `spell_attack` derives from
-  that ability + proficiency; the spell save DC is 8 + the derived spell attack.
-- HP/max HP are the existing authoritative Character fields. There is no automatic
-  Constitution HP rule. AC and speed remain explicit base fields, with equipment
-  added by the same service. No automatic Dexterity armor rule is assumed.
+The eighteen skill definitions, names, stable keys and base abilities come from
+local `CompendiumEntry` records of type `skills`. There is no second canonical
+skill catalogue in PHP or TypeScript. Character skill state references its canonical
+key and `compendium_entry_id`, and stores proficiency, expertise and additional
+bonus. Source IDs are validated and rewritten from the authoritative catalogue.
+Canonical skill abilities cannot be replaced by client skill metadata.
 
-Calculation order: ability → proficiency/expertise → configured additional bonus
-→ equipped static modifiers → action-specific additional bonus. A bare ability
-action can opt into proficiency with `check.proficient`; skills/saves own their
-rank and cannot receive proficiency twice. `check.bonus` is a GM-authored additive
-bonus. The old `check.modifier` is ignored whenever `stat_key` resolves a Character
-or token stat; it remains the fixed fallback when no key is configured.
+The existing nullable `characters.rules` JSON uses `schema_version: 2`:
+
+- `scores`: STR/DEX/CON/INT/WIS/CHA, integers 1–30; final modifiers are not stored.
+- `proficiency_bonus`: configurable integer 0–20. Level/class progression is absent.
+- `skills`: canonical key → entry reference, `proficient`, `expertise`, `bonus`.
+- `saves`: six ability keys → `proficient`, `bonus`.
+- `spellcasting_ability`: an ability key or null.
+- `modifiers`: bounded custom bonuses to `ac`, `speed`, `spell_attack`, `spell_save_dc`.
+
+Before enabling rules, install the local skills with the existing sync command:
+
+```powershell
+docker compose --env-file .env.docker exec --user www-data app php artisan compendium:sync srd-2024 --type=skills --type=conditions
+```
+
+Missing/incomplete skill data produces an explicit readiness state and blocks
+enabling/saving rules. It never silently substitutes a hardcoded list or contacts
+the external API. Existing legacy Characters remain usable without enabling rules.
+The catalogue endpoint is `/api/campaigns/{campaign}/character-rules/catalog` and
+requires campaign membership. It contains only canonical definitions.
+
+## Calculation and modifier provenance
+
+The canonical local SRD 5.2.1 PDF was checked at printed pages 6 (ability modifiers),
+7–9 (checks, saves, proficiency and skills), and 23 (spell attack/save formulas).
+The checked eighteen imported skill abilities match the SRD skill table on page 9.
+
+- Ability modifier: `floor((score - 10) / 2)`; STR 16 → +3, WIS 8 → −1.
+- Skill/save: relevant ability modifier + applicable proficiency + explicit bonuses.
+- Expertise adds one further proficiency bonus; ordinary proficiency is never added
+  a second time. History records `proficiency` and `expertise` as separate parts.
+- Spell attack: casting ability modifier + proficiency + spell-attack bonuses.
+- Spell save DC: base 8 + casting ability modifier + proficiency + spell-DC bonuses.
+  A bonus targeting `spell_attack` does not automatically change `spell_save_dc`.
+- AC/speed: explicit Character base + custom bonus + equipped modifiers, resolved
+  through `coreStat`. Existing bounds remain AC 0–99 and speed 0–999. A null base
+  remains unspecified. Full armor formulas/training are deferred.
+- Speed is expressed in `ft`. HP/max HP are persisted Character gameplay state;
+  Constitution does not automatically change them. Linked token HP writes still
+  go through existing Character actions, and standalone token HP remains local.
+
+Each result includes structured `breakdown` entries with source, label, value and,
+for equipment, item ID. Skills also carry their compendium identity. Core breakdowns
+include the base. `derived.abilityModifiers` contains the pure score-derived values,
+so a raw check bonus does not change the score modifier shown on the six-stat cards.
 
 Equipment contributes only when equipped with positive quantity. Existing `ac`,
-`speed`, and `checks` maps are retained. Ability-key equipment bonuses also flow
-into dependent skills, saves and spellcasting. Bonuses targeting a skill/save add
-only to that check. A `spell_attack` equipment bonus affects both spell attack and
-the spell DC under this foundation's shared spellcasting formula. AC clamps to
-0–99, speed to 0–999. A null base stays null. No equipment total is written back.
-Removing equipment reverses its contribution on the next authoritative read.
+`speed` and `checks` maps remain supported. Check keys are normalized through the
+same alias resolver. A `checks.str` bonus affects the current STR-based action/check;
+it is not an ability-score increase and does not flow into Athletics, STR saves or
+spellcasting. Skill/save/spell bonuses target their own keys. Unequipping recalculates
+the next authoritative result; no total is written back into a base field.
 
-## Compatibility and migration
+`TokenCheckStats` delegates Character resolution here. Ability attacks can select
+`check.stat_key = str`, opt into proficiency, and add a GM-authored `check.bonus`.
+The configured fixed modifier is ignored when a stat key is selected. With no stat
+key, old fixed actions keep their behavior. Runtime requests supply action identity,
+actor/target and roll mode; they cannot supply authoritative scores or modifiers.
 
-The migration only adds a nullable column. Existing Characters remain on legacy
-named modifiers until a GM explicitly enables rules in the Character editor.
-The server supplies a conversion suggestion, retaining familiar skill/save totals
-as additional bonuses. Ability aliases (`strength`, `dexterity`, etc.) map to the
-stable short keys; `str_save` / `saving_throw_str` map to `save_str`.
-`sleightofhand` and `animalhandling` map to the underscored skill keys.
+## Migration and compatibility
 
-An old ability modifier cannot recover its original score: the suggestion chooses
-an even score, bounded to 1–30. Extreme custom modifiers and conflicting aliases
-need GM review before enabling rules. Proficiency is never guessed from an old
-total. The original named-modifier JSON is preserved for custom systems and
-rollback. With rules enabled, canonical ability/skill/save keys take precedence
-over those old numeric entries; unknown custom keys still work. Fixed Task 16B
-object checks remain fixed until explicitly converted to a `stat_key`.
+No existing Character is deleted or reset. Characters without rules retain their
+named modifiers until the GM explicitly enables rules. A server conversion suggestion
+preserves familiar skill/save totals as visible additional bonuses and never guesses
+proficiency. Missing scores use safe 10s. An old modifier cannot recover a unique
+score, so suggestions use bounded even scores and require GM review.
 
-The GM roster provides raw AC/speed and legacy custom values for editing, plus a
-separate `derived` DTO. Player and inventory DTOs provide effective values.
-The token Inspector edits explicit base AC/speed and shows linked checks read-only,
-directing the GM to the Character editor. This prevents writing derived totals
-back into base values. The GM-only preview endpoint validates a draft and computes
-it with existing equipment without persisting anything.
+Existing rule JSON is projected into version 2 on read, but is persisted only when
+a GM saves. Historical noncanonical skill-ability overrides become explicit bonus
+adjustments, preserving their current totals while restoring the canonical ability.
+No ability metadata is stored in new skill state. Extreme legacy bonuses may require
+GM review against existing validation bounds.
 
-## Authority, history and realtime
+Aliases such as `strength`, `str_save`, `saving_throw_str`, `animalhandling` and
+hyphenated skill names resolve to one canonical key. Snapshots publish one total
+per canonical key. Original legacy JSON remains available for rollback/custom systems,
+but cannot compete with active canonical rules. The GM custom editor hides reserved
+canonical keys and preserves their old data while editing genuine custom checks.
 
-Players send an ability/check identity, actor, target and roll mode, never final
-totals. Only a GM can save or preview rules. Existing ownership, campaign locking,
-retry policy, transport receipts and durable roll identities remain in force.
-ObjectCheck and AbilityExecution persist the exact modifier breakdown at roll
-time; replay never recalculates a historical roll after stats/equipment change.
-Breakdowns include ability, rank, additional/action bonus and equipped item source.
-Only the actor's authorized data appears; hidden target DC/result configuration
-keeps its existing server redaction. Other players never receive Character rules
-or private equipment from the owner's character snapshot. Character saves and
-equipment changes use existing `charactersChanged` notifications and refresh paths.
+Standalone NPC tokens retain their existing explicit modifiers and do not need a
+Character record. Existing inventory, spellbook, resources, active Character and
+hotbar flows remain. Compendium copies remain independent campaign content.
 
-## Acceptance fixture
+## Conditions and permissions
 
-STR 16 / DEX 14 / CON 15 / INT 10 / WIS 12 / CHA 18; proficiency +3;
-Athletics and Perception proficient, Persuasion expertise, CHA spellcasting:
+An additive migration adds nullable `token_conditions.compendium_entry_id` and links
+existing canonical keys when the local data is present. New canonical conditions
+reference the fifteen imported definitions, including Exhaustion. There is no
+duplicate canonical condition selector list. Custom conditions and the existing YTT
+`concentrating` marker remain available without claiming to be SRD conditions.
+Condition mechanics are not executed. Conditions still belong to scene tokens.
 
-| Value                  | Result                     |
-| ---------------------- | -------------------------- |
-| Ability modifiers      | +3 / +2 / +2 / 0 / +1 / +4 |
-| Athletics              | +6                         |
-| Perception             | +4                         |
-| Persuasion             | +10                        |
-| Spell attack / save DC | +7 / 15                    |
-| AC 15 + shield 2       | 17                         |
-| Speed 30 + boots 10    | 40                         |
-| Perception + amulet 1  | +5                         |
+Only a GM can save/preview rules, modify definitions or configure checks. Existing
+campaign/ownership checks and campaign-first locks remain. Player snapshots include
+only authorized Character data; GM-only conditions and hidden target configuration
+retain server-side redaction. ObjectCheck and AbilityExecution preserve the modifier
+breakdown and compendium reference at roll time. Retrying a UUID or a restricted
+retry-policy check replays that historical result after later stat/equipment changes.
 
-`CharacterRulesTest` creates this Character in isolated SQLite and covers the
-pipeline, removal, legacy aliases, GM validation, player forgery, object checks,
-attacks, persisted provenance and retries. `rules.test.tsx` checks that the UI
-renders server totals without recomputing them and preserves legacy presentation.
+## UI and validation — 2026-10-30
 
-Before Combat Gameplay, define defense/save targeting and damage scaling against
-this resolver. Damage expressions remain explicit GM data. Spell slots,
-concentration, action economy, progression, resistances, critical rules and
-automatic conditions are intentionally outside this foundation.
+The accepted RPG-window presentation is retained: six score cards, HP/AC/speed/
+proficiency summary, eighteen canonical skill rows with proficiency/expertise marks,
+six saves and separate spell attack/DC values. Tooltips expose breakdowns. The GM
+editor uses score controls, rank chips, grouped saves, canonical ability labels,
+casting-ability chips and bounded additional bonuses. No new visual language or
+nested rules modal is introduced.
 
-## Validation — 2026-10-30
+QA Character: STR 16 / DEX 14 / CON 15 / INT 10 / WIS 12 / CHA 18; proficiency +3;
+Athletics/Perception proficient, Persuasion expertise, CHA spellcasting:
 
-- Docker PHP 8.4: 61 relevant tests / 687 assertions passed (Character rules,
-  Characters, gameplay, object checks, inventory and hotbars), isolated SQLite
-  in memory and temporary storage. Persistent MySQL was never used for tests.
-- Frontend: 38 files / 168 tests passed; TypeScript, ESLint, Vite production
-  build, changed-file Pint and `git diff --check` passed.
-- Live Chromium GM/Player: score editing and server preview, save and Reverb
-  refresh, proficiency/expertise chips (+7/+10 Persuasion), equipment removal
-  and re-equip, reload persistence; no browser errors. Visual review at
-  1440×1000, 768×1024 and 390×844. Physical touch and other browsers unverified.
-- Local QA fixture retained: campaign 2 `QA · Character Rules`, scene 2,
-  Character 2 `QA · Герой правил`, with the acceptance scores and three items.
-  Evidence: ignored `artifacts/character-rules-backend.log`,
-  `character-rules-browser-report.json`, `character-rules-qa.json` and
-  `character-rules-*.png`.
-- All 11 Docker doctor checks passed; the normal additive migration is applied.
-  The accessible Docker Engine initially had no YTT containers or named volumes;
-  Compose created new volumes. The historical imported dataset described in
-  AGENTS.md was not available in this Engine. No volumes, host data or backups
-  were removed or restored. These browser checks used newly created QA data.
+| Value                               | Result                     |
+| ----------------------------------- | -------------------------- |
+| Ability modifiers                   | +3 / +2 / +2 / 0 / +1 / +4 |
+| Athletics / Perception / Persuasion | +6 / +4 / +10              |
+| Spell attack / save DC              | +7 / 15                    |
+| AC 15 + shield 2                    | 17                         |
+| Speed 30 ft + boots 10 ft           | 40 ft                      |
+| Perception + amulet 1               | +5                         |
+
+Validation: 180 backend tests / 2186 assertions passed in isolated Docker SQLite;
+36 focused rules/conditions/compendium/reusable-content tests / 510 assertions;
+38 frontend files / 170 tests; TypeScript, ESLint, production build, changed-file
+Pint, Docker doctor and diff checks. Tests cover canonical identity, modifiers,
+separate spell bonuses, legacy projection, missing catalogue, raw/save/skill checks,
+attacks, advantage, private conditions, structured provenance, replay and forgery.
+
+Live Chromium GM/Player QA verified server preview and save, eighteen skill rows,
+real Reverb refresh of equipped AC/speed/Perception without reload, player unequip,
+reload persistence and forbidden player Character edits. Desktop 1440×1000,
+tablet 768×1024 and mobile 390×844 were checked; physical devices and other browser
+engines remain unverified. Evidence is under ignored
+`artifacts/character-rules-compendium/`. The temporary QA campaign/account pair was
+removed; the older prepared campaign 2 fixture and all other existing content remain.
+
+## Before Task 27 Combat Gameplay
+
+No blocker prevents consuming this resolver. Combat must introduce explicit attack,
+save and damage contexts for more specific equipment/effect scopes; the current
+foundation intentionally retains existing generic check-key semantics. Define target
+save execution and damage handling separately from spell save DC derivation. Full
+armor/weapon formulas, training, action economy, movement consumption, condition
+effects, resistances, concentration and spell slots remain subsequent work. No full
+rules engine or progression is implemented here.
+
+SRD attribution and API provenance remain in [COMPENDIUM.md](COMPENDIUM.md).
+
+## Task 27 implemented
+
+The combat contexts, turn budgets, movement, typed damage and focused condition
+mechanics described as future work above are now implemented in
+[COMBAT_GAMEPLAY.md](COMBAT_GAMEPLAY.md). Persistent CharacterRules ownership is unchanged.

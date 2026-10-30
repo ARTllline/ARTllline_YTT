@@ -116,6 +116,22 @@ Old untagged images can remain after rebuilds; they are distinct from campaign
 data volumes. The current Compose configuration repeats the shared image build
 across services and can produce extra untagged images; that optimization is pending.
 
+### Permanent local QA fixture — reuse it
+
+At the user's explicit request on 2026-10-30, routine local QA must reuse the
+single prepared campaign, scene, game session and three existing test accounts.
+See [docs/TEST_PLAYGROUND.md](docs/TEST_PLAYGROUND.md) for current IDs, URLs and
+the location of the ignored local credentials file. Read it before live-data QA.
+
+Do not register more accounts or create new test campaigns, scenes or game
+sessions for each task, browser run or viewport. Sign into the existing accounts
+using isolated browser contexts. Reuse and restore the prepared scene's state
+after checks. Add only content genuinely needed by the requested feature.
+If a test requires separate records, prefer the disposable isolated test database.
+Persistent fixture expansion or replacement requires an explicit user request.
+Never run the old cleanup/preparation scripts as an ordinary verification step.
+Never copy credentials into tracked documentation, source code, logs or memory.
+
 ---
 
 # 2. Product vision

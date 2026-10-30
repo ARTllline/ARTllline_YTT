@@ -1,5 +1,5 @@
 import { RpgDice } from './RpgDice';
-import { breakdownLabel } from '../rpg/rules';
+import { breakdownLabel, findCheck } from '../rpg/rules';
 import { RpgIcon } from './RpgIcon';
 import { usePlayerDice } from './PlayerDiceProvider';
 import { useEffect, useRef, useState } from 'react';
@@ -47,7 +47,9 @@ export function AbilityDialog({
     onAccepted: (result: AbilityResult) => void;
 }) {
     const { ability } = invocation;
-    const cinematic = !!usePlayerDice() && !!(ability.check || ability.damage);
+    const cinematic =
+        !!usePlayerDice() &&
+        !!(ability.check || ability.attack || ability.damage || ability.damage_components?.length);
     const slot = abilitySlot(userId, campaignId, character.id);
     const dialog = useRef<HTMLDialogElement>(null);
     const [retained, setRetained] = useState<PendingAbility | null>(
@@ -134,7 +136,7 @@ export function AbilityDialog({
             };
             visualSettled.current = settle;
             setResult(response.execution);
-            if (!response.execution.roll)
+            if (!response.execution.roll || response.execution.roll.automaticFailure)
                 timer.current = setTimeout(
                     settle,
                     Math.max(0, (reduced ? 0 : 450) - (performance.now() - start)),
@@ -213,7 +215,7 @@ export function AbilityDialog({
             </span>
             <h2 id="ability-roll-title">
                 {cinematic && ability.category === 'check'
-                    ? (character.checkStats.find((s) => s.key === ability.check?.stat_key)?.label ??
+                    ? (findCheck(character.checkStats, ability.check?.stat_key)?.label ??
                       ability.name)
                     : ability.name}
             </h2>
@@ -221,7 +223,7 @@ export function AbilityDialog({
                 {invocation.targetName ??
                     (ability.target === 'self' ? 'На себя' : ability.description)}
             </p>
-            {ability.check && !invocation.auto && phase === 'ready' && (
+            {(ability.check || ability.attack) && !invocation.auto && phase === 'ready' && (
                 <div className="roll-mode-chips" aria-label="Режим броска способности">
                     {Object.entries(rollModes).map(([k, v]) => (
                         <button
@@ -241,12 +243,12 @@ export function AbilityDialog({
                     <strong>
                         {roll.modifier >= 0 ? '+' : '−'}
                         {Math.abs(roll.modifier)}{' '}
-                        {character.checkStats.find((s) => s.key === ability.check?.stat_key)
-                            ?.label ?? 'Модификатор'}
+                        {findCheck(character.checkStats, ability.check?.stat_key)?.label ??
+                            'Модификатор'}
                     </strong>
                 </div>
             )}
-            {ability.check || showingDamage ? (
+            {((ability.check || ability.attack) && !roll?.automaticFailure) || showingDamage ? (
                 <RpgDice
                     dice={showingDamage ? result!.damage!.rawDice : roll?.rawDice}
                     sides={
@@ -269,7 +271,9 @@ export function AbilityDialog({
             <div className="check-equation" aria-live="polite">
                 {roll && ['total', 'outcome', 'damage'].includes(phase) ? (
                     <span className="check-sum">
-                        <span className="sum-face">{roll.natural}</span>{' '}
+                        <span className="sum-face">
+                            {roll.automaticFailure ? 'Автопровал' : roll.natural}
+                        </span>{' '}
                         <span className="sum-modifier">
                             {roll.modifier < 0 ? '−' : '+'} {Math.abs(roll.modifier)}
                         </span>{' '}
@@ -290,6 +294,35 @@ export function AbilityDialog({
             )}
             {result?.provenance?.breakdown && ['total', 'outcome', 'damage'].includes(phase) && (
                 <p className="hint">{breakdownLabel(result.provenance.breakdown)}</p>
+            )}
+            {roll?.context && ['total', 'outcome', 'damage'].includes(phase) && (
+                <p className="hint">
+                    {[
+                        ['Преимущество', roll.context.advantage],
+                        ['Помеха', roll.context.disadvantage],
+                        ['Автопровал', roll.context.automaticFailure],
+                    ]
+                        .map(([label, reasons]) =>
+                            Array.isArray(reasons) && reasons.length
+                                ? `${label}: ${reasons.map((r) => r.label).join(', ')}`
+                                : '',
+                        )
+                        .filter(Boolean)
+                        .join(' · ')}
+                </p>
+            )}
+            {result?.outcomes && ['outcome', 'damage'].includes(phase) && (
+                <div className="ability-target-results">
+                    {result.outcomes.map((o, i) => (
+                        <p key={o.tokenId}>
+                            Цель {i + 1}
+                            {o.save
+                                ? ` · Спасбросок: ${o.save.success ? 'успех' : 'провал'}${o.save.automaticFailure ? ' (автоматически)' : ''}`
+                                : ''}{' '}
+                            · Урон {o.damage}
+                        </p>
+                    ))}
+                </div>
             )}
             <div className="check-outcome" role="status">
                 {['outcome', 'damage'].includes(phase) && (

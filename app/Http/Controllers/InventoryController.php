@@ -39,6 +39,8 @@ class InventoryController extends Controller
     {
         $rules = AbilityController::commandRules();
         unset($rules['abilityId']);
+        $rules['characterId'] = 'required|integer|min:1';
+        $rules['actorTokenId'] = 'prohibited';
         $data = $r->validate($rules + ['inventoryItemId' => 'required|uuid']);
 
         return AbilityController::present($actions->useItem($r->user(), $scene, $data));

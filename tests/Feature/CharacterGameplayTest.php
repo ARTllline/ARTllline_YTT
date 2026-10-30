@@ -103,12 +103,13 @@ class CharacterGameplayTest extends TestCase
         $this->runAbility($command)->assertConflict();
     }
 
-    public function test_natural_one_and_twenty_have_no_implicit_critical_rules(): void
+    public function test_natural_twenty_hits_and_doubles_attack_dice_against_high_ac(): void
     {
         $this->roll(20);
         $this->enemy->update(['ac' => 100]);
-        $this->runAbility($this->command())->assertOk()->assertJsonPath('execution.success', false)->assertJsonPath('execution.damage', null);
-        $this->assertSame(30, (int) $this->enemy->fresh()->hp);
+        $r = $this->runAbility($this->command())->assertOk()->assertJsonPath('execution.success', true)->assertJsonPath('execution.critical', true)->json('execution.damage');
+        $this->assertCount(4, $r['rawDice']);
+        $this->assertSame(30 - $r['total'], (int) $this->enemy->fresh()->hp);
     }
 
     public function test_missing_defense_or_resource_rolls_back_everything(): void

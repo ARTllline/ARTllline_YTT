@@ -2,6 +2,8 @@
 
 namespace App\Actions;
 
+use App\Combat\CombatExecution;
+use App\Combat\ConditionRules;
 use App\Events\TabletopEvent;
 use App\Models\ObjectCheck;
 use App\Models\Scene;
@@ -9,7 +11,7 @@ use App\Models\User;
 use App\Realtime\ChannelAccess;
 use App\Realtime\CommandContext;
 use App\Realtime\SafeBroadcast;
-use App\Services\CheckRoller;
+use App\Services\CharacterRules;
 use App\Services\TokenCheckStats;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -55,7 +57,10 @@ class ObjectCheckActions
             $token = $owned->count() === 1 ? $owned->first() : null;
         }
         $provenance = app(TokenCheckStats::class)->resolve($token, $config);
-        $roll = app(CheckRoller::class)->roll($provenance['finalModifier'], $config['dc'], $context['rollMode']);
+        $stat = app(CharacterRules::class)->canonical($config['stat_key'] ?? '');
+        $ctx = app(ConditionRules::class)->context($token, str_starts_with($stat, 'save_') ? 'save' : 'check', $context['rollMode'], null, 0, str_starts_with($stat, 'save_') ? substr($stat, 5) : null, $config['requires_sight'] ?? false);
+        $roll = app(CombatExecution::class)->roll($provenance, $config['dc'], $ctx);
+        $provenance['rollContext'] = $ctx;
         $dice = $roll['rawDice'];
         $mode = $roll['rollMode'];
         $natural = $roll['natural'];
@@ -71,7 +76,7 @@ class ObjectCheckActions
             'dc_visible' => $config['dc_visible'] ?? false, 'success' => $success, 'branch' => $branch, 'created_at' => now()]);
         $result = app(ObjectInteraction::class)->result($user, $scene, $action['author_id'], $branch);
         $event = new TabletopEvent(ChannelAccess::gm($scene->campaign_id, $scene->id), [
-            'type' => 'check.resolved', 'sceneId' => (string) $scene->id, 'check' => $check->projection(),
+            'type' => 'check.resolved', 'sceneId' => (string) $scene->id, 'check' => $check->projection(true),
             'actor' => ['id' => (string) $user->id, 'name' => $user->name],
             'kind' => $data['kind'], 'objectId' => (string) $data['id'],
         ]);
@@ -86,7 +91,7 @@ class ObjectCheckActions
         app(ObjectInteractionActions::class)->object($scene, $kind, $id);
 
         return ['checks' => ObjectCheck::where('scene_id', $scene->id)->where('object_kind', $kind)->where('object_id', $id)
-            ->orderByDesc('created_at')->limit(20)->get()->map(fn ($c) => $c->projection() + [
+            ->orderByDesc('created_at')->limit(20)->get()->map(fn ($c) => $c->projection(true) + [
                 'actor' => ['id' => (string) $c->user_id, 'name' => User::find($c->user_id)?->name ?? 'Игрок'],
                 'dc' => (int) $c->dc,
             ])->all()];

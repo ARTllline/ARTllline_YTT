@@ -11,7 +11,7 @@ class Combat extends Model
 
     protected function casts(): array
     {
-        return ['round' => 'integer', 'started_at' => 'datetime', 'ended_at' => 'datetime'];
+        return ['round' => 'integer', 'turn_sequence' => 'integer', 'current_combatant_id' => 'integer', 'started_at' => 'datetime', 'ended_at' => 'datetime'];
     }
 
     public function combatants(): HasMany

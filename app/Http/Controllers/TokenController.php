@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Actions\TokenActions;
+use App\Combat\CombatMetadata;
 use App\Models\Scene;
 use App\Models\Token;
+use App\Services\CharacterGameplay;
 use App\Services\TokenCheckStats;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -31,7 +33,7 @@ class TokenController extends Controller
     {
         Gate::authorize('update', $token);
 
-        return $actions->update($request->user(), $token, $request->validate([
+        $data = $request->validate([
             'character_id' => 'prohibited',
             'kind' => 'sometimes|in:player_character,npc', 'disposition' => 'sometimes|in:friendly,neutral,hostile',
             'name' => 'sometimes|required|string|max:80', 'x' => 'sometimes|numeric|between:-1000000,1000000', 'y' => 'sometimes|numeric|between:-1000000,1000000',
@@ -40,7 +42,10 @@ class TokenController extends Controller
             'ac' => 'sometimes|nullable|integer|between:0,99', 'speed' => 'sometimes|nullable|integer|between:0,999',
             'is_hidden' => 'sometimes|boolean', 'is_locked' => 'sometimes|boolean',
             'owner_user_id' => 'sometimes|nullable|integer|min:1', 'token_image_asset_id' => 'sometimes|nullable|integer|min:1',
-        ] + TokenCheckStats::rules()));
+        ] + TokenCheckStats::rules() + CharacterGameplay::rules() + CombatMetadata::profileRules());
+        app(CharacterGameplay::class)->validate($token->scene->campaign, $data, $token->character_id ? $token->character : null);
+
+        return $actions->update($request->user(), $token, $data);
     }
 
     public function destroy(Request $request, Token $token, TokenActions $actions): array

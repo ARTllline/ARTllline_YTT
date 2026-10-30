@@ -5,6 +5,7 @@ import type { SlotBinding } from './hotbarModel';
 import type { InventoryItem } from '../rpg/model';
 import type { GameplayDrag } from './useGameplayDrag';
 import { AbilityCost } from './AbilityCost';
+import { combatReason, type TurnResources } from './combat';
 import { RpgIcon } from './RpgIcon';
 
 export function DeckSlot({
@@ -24,6 +25,7 @@ export function DeckSlot({
     onClear,
     onPick,
     onChoose,
+    combatBudget,
 }: {
     ability?: Ability;
     binding: SlotBinding | null;
@@ -41,6 +43,7 @@ export function DeckSlot({
     onClear: () => void;
     onPick: () => void;
     onChoose: (a: Ability) => void;
+    combatBudget?: TurnResources;
 }) {
     const a = item
         ? itemAbility
@@ -53,12 +56,14 @@ export function DeckSlot({
     const unavailable =
         a &&
         (disabled ||
+            !!combatReason(a, combatBudget) ||
             (item && item.quantity < 1) ||
             a.spell?.prepared === false ||
             !canAfford(a, resources) ||
             (!worldAvailable && ['token', 'prop', 'point'].includes(a.target)));
     const reason =
-        item && item.quantity < 1
+        (a && combatReason(a, combatBudget)) ||
+        (item && item.quantity < 1
             ? 'Предмет закончился'
             : a?.spell?.prepared === false
               ? 'Заклинание не подготовлено'
@@ -68,7 +73,7 @@ export function DeckSlot({
                   ? 'Нужен токен персонажа на сцене'
                   : disabled
                     ? 'Действие сейчас недоступно'
-                    : '';
+                    : '');
     const key = shortcutActive ? `${index % 16 >= 8 ? '⇧' : ''}${(index % 8) + 1}` : `${index + 1}`;
     return (
         <div

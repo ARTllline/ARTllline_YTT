@@ -22,6 +22,7 @@ import { AbilityTargeting } from './AbilityTargeting';
 import { abilitySlot, readPendingAbility } from './pendingAbility';
 import { HeroPortrait } from './HeroPortrait';
 import { CombatSupport } from './CombatSupport';
+import { combatReason } from './combat';
 import { usePlayerDice } from './PlayerDiceProvider';
 
 export function PlayerGameplayHUD({
@@ -140,6 +141,14 @@ function CharacterHUD({
     const inventory = useInventory(scene.campaignId!, character, refresh);
     const choose = (ability: Ability, inventoryItemId?: string) => {
         if (disabled) return;
+        const reason = combatReason(
+            ability,
+            scene.combat?.combatants.find((e) => e.tokenId === actor?.id)?.budget,
+        );
+        if (reason) {
+            setError(reason);
+            return;
+        }
         if (ability.spell?.prepared === false) {
             setError('Заклинание не подготовлено.');
             return;
@@ -361,6 +370,12 @@ function CharacterHUD({
                 )}
             </div>
             <AbilityHotbar
+                onStand={
+                    actor?.conditions?.some((c) => c.key === 'prone')
+                        ? () => store.tokenCombat(actor.id, { action: 'stand-up' })
+                        : undefined
+                }
+                combatBudget={scene.combat?.combatants.find((e) => e.tokenId === actor?.id)?.budget}
                 abilities={abilities}
                 items={inventory.data?.items ?? []}
                 itemAbilities={inventory.data?.useAbilities ?? []}

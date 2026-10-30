@@ -12,11 +12,13 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Tests\Support\SeedsCharacterCatalog;
 use Tests\TestCase;
 
 class ReusableContentTest extends TestCase
 {
     use DatabaseMigrations;
+    use SeedsCharacterCatalog;
 
     private User $gm;
 
@@ -33,6 +35,7 @@ class ReusableContentTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seedCharacterCatalog();
         Storage::fake('campaigns');
         Event::fake([TabletopEvent::class]);
         $this->gm = User::factory()->create();

@@ -14,6 +14,27 @@ export interface CharacterResource {
     player_adjustable: boolean;
 }
 export interface Ability {
+    requires_sight?: boolean;
+    activation?: 'action' | 'bonus_action' | 'reaction' | 'free';
+    attack?: {
+        ability: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha' | 'spellcasting';
+        proficient: boolean;
+        bonus: number;
+    } | null;
+    save?: {
+        ability: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+        dc_source: 'fixed' | 'spellcasting';
+        dc: number;
+        on_success: 'negates' | 'half' | 'full';
+        on_failure: 'full' | 'none';
+    } | null;
+    damage_components?: { dice: string; type: string }[];
+    condition_effects?: {
+        key: string;
+        when: 'hit' | 'failed_save' | 'successful_save' | 'always';
+        duration_mode: string;
+        rounds?: number;
+    }[];
     item_only?: boolean;
     spell?: {
         level: number;
@@ -58,9 +79,10 @@ export interface Ability {
 }
 export type AbilityTarget = { kind: 'token' | 'prop'; id: string } | ({ kind: 'point' } & Point);
 export interface AbilityCommand {
+    actorTokenId?: string;
     inventoryItemId?: string;
     clientMutationId: string;
-    characterId: string;
+    characterId?: string;
     abilityId: string;
     epoch: number;
     target: AbilityTarget | null;
@@ -76,6 +98,13 @@ export interface AbilityResult {
     actorName: string;
     target: AbilityTarget | null;
     roll: null | {
+        automaticFailure?: boolean;
+        context?: {
+            mode: RollMode;
+            advantage: { label: string }[];
+            disadvantage: { label: string }[];
+            automaticFailure: { label: string }[];
+        };
         rawDice: number[];
         natural: number;
         total: number;
@@ -86,7 +115,11 @@ export interface AbilityResult {
         selectedDie: number;
     };
     success: boolean;
-    outcomes?: { tokenId: string; damage: number }[];
+    outcomes?: {
+        tokenId: string;
+        damage: number;
+        save?: { success: boolean; automaticFailure?: boolean; rollMode: RollMode } | null;
+    }[];
     damage: null | { expression: string; rawDice: number[]; modifier: number; total: number };
     healing: number | null;
     mutationId: string;

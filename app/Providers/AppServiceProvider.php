@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Realtime\CommandContext;
+use App\Services\CharacterCatalog;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -15,6 +16,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(CommandContext::class);
+        $this->app->scoped(CharacterCatalog::class);
     }
 
     /**

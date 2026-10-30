@@ -2,12 +2,14 @@
 
 namespace App\Services;
 
+use App\Combat\TurnBudget;
 use App\Models\Combat;
 use App\Models\Scene;
+use App\Models\User;
 
 class CombatView
 {
-    public function build(Scene $scene, bool $gm): ?array
+    public function build(Scene $scene, bool $gm, ?User $viewer = null): ?array
     {
         $combat = Combat::where('scene_id', $scene->id)->whereIn('status', ['preparing', 'active'])->with('combatants.token')->first();
         if (! $combat || (! $gm && ($combat->status !== 'active' || $scene->campaign->active_scene_id !== $scene->id))) {
@@ -23,6 +25,7 @@ class CombatView
             'combatants' => $visible->values()->map(fn ($entry) => [
                 'id' => (string) $entry->id, 'tokenId' => (string) $entry->token_id,
                 'initiative' => $entry->initiative === null ? null : (float) $entry->initiative,
+                ...(($gm || ($viewer && $entry->token->owner_user_id === $viewer->id)) && $combat->status === 'active' ? ['budget' => app(TurnBudget::class)->status($combat, $entry)] : []),
             ])->all()];
     }
 }

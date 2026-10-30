@@ -391,3 +391,109 @@
         width: 200px;
     }
 }
+
+.combat-budget {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 7px 10px;
+    border: 1px solid #b39a5940;
+    border-radius: 6px;
+    background: #151815;
+    color: #b9b39f;
+    font-size: 11px;
+}
+.combat-budget .ready b {
+    color: #a6d5bb;
+}
+.combat-budget .spent {
+    opacity: 0.5;
+}
+.combat-budget .movement-budget {
+    margin-left: auto;
+    color: #e3d7bc;
+}
+.combat-actor-controls,
+.combat-ability-editor {
+    display: grid;
+    gap: 8px;
+}
+.combat-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+.combat-fields input,
+.combat-fields select {
+    min-width: 0;
+    flex: 1 1 70px;
+}
+.combat-ability-editor label {
+    display: grid;
+    gap: 4px;
+}
+
+.combat-history {
+    padding: 8px 12px;
+    font-size: 11px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+.combat-history summary {
+    cursor: pointer;
+    padding: 5px 0;
+}
+.combat-history pre {
+    max-height: 240px;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 10px;
+}
+.combat-actor-controls input {
+    max-width: 100%;
+}
+.combat-budget {
+    flex-wrap: wrap;
+}
+.combat-ability-editor {
+    min-width: 0;
+}
+.combat-fields > * {
+    min-width: 0;
+}
+.ability-target-results {
+    max-height: 120px;
+    overflow: auto;
+    font-size: 12px;
+}
+
+.player-view .action-deck > .combat-budget {
+    justify-content: center;
+    margin: 0 0 5px;
+    padding: 4px 8px;
+    gap: 5px 10px;
+    border-color: #b79a5c55;
+    background: linear-gradient(#302c21, #171b16);
+    color: #e6d7b6;
+}
+.player-view .action-deck > .combat-budget .movement-budget {
+    margin-left: 0;
+}
+
+.player-view .hud-conditions .condition-chip > span {
+    display: none;
+}
+.player-view .hud-conditions .condition-chip {
+    padding: 5px;
+    min-width: 24px;
+    min-height: 24px;
+}
+.player-view .hud-conditions .condition-list {
+    gap: 4px;
+}
+
+.combat-history[open] {
+    max-height: 250px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
