@@ -9,6 +9,8 @@ import { combatReason, CombatBudgetView } from '../../gameplay/combat';
 export function CombatActorControls({ token, store }: { token: Token; store: SceneStore }) {
     const scene = store.getSnapshot().scene;
     const combat = scene.combat;
+    const character = scene.characters?.find((c) => c.id === token.characterId);
+    const actorAbilities = character?.abilities ?? token.abilities ?? [];
     const entry = combat?.combatants.find((e) => e.tokenId === token.id);
     const [selected, setSelected] = useState(''),
         [target, setTarget] = useState(''),
@@ -50,7 +52,7 @@ export function CombatActorControls({ token, store }: { token: Token; store: Sce
         }
     };
     const run = async () => {
-        const a = (token.abilities ?? []).find((a) => a.id === selected);
+        const a = actorAbilities.find((a) => a.id === selected);
         if (!a) return;
         setBusy(true);
         setError('');
@@ -71,7 +73,9 @@ export function CombatActorControls({ token, store }: { token: Token; store: Sce
                     outcomes?: { damage: number }[];
                 };
             }>(`/scenes/${scene.id}/abilities/execute`, 'POST', {
-                actorTokenId: token.id,
+                ...(token.characterId
+                    ? { characterId: token.characterId }
+                    : { actorTokenId: token.id }),
                 abilityId: a.id,
                 epoch: scene.liveRevision ?? 0,
                 target: choice,
@@ -88,7 +92,7 @@ export function CombatActorControls({ token, store }: { token: Token; store: Sce
             setBusy(false);
         }
     };
-    const chosen = token.abilities?.find((a) => a.id === selected);
+    const chosen = actorAbilities.find((a) => a.id === selected);
     const reason = chosen ? combatReason(chosen, entry?.budget) : '';
     const pseudo: Character = {
         id: token.id,
@@ -185,7 +189,7 @@ export function CombatActorControls({ token, store }: { token: Token; store: Sce
                     </label>
                 </div>
             )}
-            {!token.characterId && (
+            {actorAbilities.length > 0 && (!character || character.kind === 'npc') && (
                 <>
                     <select
                         aria-label={`Действие NPC ${token.name}`}
@@ -193,7 +197,7 @@ export function CombatActorControls({ token, store }: { token: Token; store: Sce
                         onChange={(e) => setSelected(e.target.value)}
                     >
                         <option value="">Выберите действие NPC</option>
-                        {token.abilities?.map((a) => (
+                        {actorAbilities.map((a) => (
                             <option key={a.id} value={a.id}>
                                 {a.name}
                             </option>

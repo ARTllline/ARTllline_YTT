@@ -1,8 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { abilityBinding, defaultSlots, normalizeSlots, placeBinding } from './hotbarModel';
+import {
+    abilityBinding,
+    canBindInventoryItem,
+    defaultSlots,
+    normalizeSlots,
+    placeBinding,
+} from './hotbarModel';
+import type { InventoryItem } from '../rpg/model';
 import { GAMEPLAY_ENTRY_MIME, readGameplayEntry, writeGameplayEntry } from './gameplayDrag';
 
 describe('typed action deck', () => {
+    it('accepts modern item actions without a legacy ability ID, including unequipped weapons', () => {
+        const item = {
+            quantity: 1,
+            definition: { use_ability_id: null },
+            action: { ability: { id: 'weapon' }, available: false },
+        } as InventoryItem;
+        expect(canBindInventoryItem(item)).toBe(true);
+        expect(canBindInventoryItem({ ...item, quantity: 0 })).toBe(false);
+        expect(canBindInventoryItem({ ...item, action: undefined })).toBe(false);
+        expect(
+            canBindInventoryItem({
+                ...item,
+                action: undefined,
+                definition: { ...item.definition, use_ability_id: 'legacy' },
+            }),
+        ).toBe(true);
+    });
     it('preserves legacy holes and positions while extending to 32 slots', () => {
         const old = Array.from({ length: 12 }, (_, i) => (i === 11 ? 'bow' : null));
         const next = normalizeSlots(old, ['bow']);

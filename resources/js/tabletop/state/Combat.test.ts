@@ -21,6 +21,43 @@ const combat: Combat = {
 const scene = () => ({ ...createDemoScene(), id: '1', revision: 5, combat });
 afterEach(() => vi.restoreAllMocks());
 
+it('lets Players stand with their own movable token while retaining GM-only HP and conditions', async () => {
+    const initial = scene();
+    initial.tokens = initial.tokens.map((token, i) =>
+        i === 0 ? { ...token, canMove: true, isOwner: true } : token,
+    );
+    const store = new SceneStore(initial, 'player');
+    const persistence = new ScenePersistence(store, '1');
+    const send = vi.spyOn(api, 'tokenCombat').mockResolvedValue({ revision: 6 });
+    store.tokenCombat('mira', { action: 'stand-up' });
+    store.tokenCombat('kern', { action: 'hp', delta: 10 });
+    store.tokenCombat('kern', { action: 'condition-remove', conditionId: 'c' });
+    store.tokenCombat('kern', { action: 'stand-up' });
+    await persistence.queue.flush();
+    expect(send).toHaveBeenCalledExactlyOnceWith(
+        'kern',
+        { action: 'stand-up' },
+        expect.any(String),
+    );
+});
+
+it('does not lock a Player after a rejected stand at speed zero', async () => {
+    const initial = scene();
+    initial.tokens = initial.tokens.map((token, i) =>
+        i === 0 ? { ...token, canMove: true } : token,
+    );
+    const store = new SceneStore(initial, 'player');
+    const persistence = new ScenePersistence(store, '1');
+    vi.spyOn(api, 'tokenCombat').mockRejectedValue(
+        new ApiError('При скорости 0 нельзя встать.', 422),
+    );
+    vi.spyOn(api, 'snapshot').mockResolvedValue(initial);
+    store.tokenCombat('kern', { action: 'stand-up' });
+    await persistence.queue.flush();
+    expect(persistence.queue.getSnapshot().status).toBe('saved');
+    expect(store.getSnapshot().combatNotice).toContain('скорости 0');
+});
+
 it('hydrates and replaces combat together with canonical tokens, clearing turn on end or scene switch', () => {
     const store = new SceneStore(scene());
     expect(currentTokenId(store.getSnapshot().scene.combat)).toBe('kern');

@@ -8,7 +8,7 @@ import type { Ability, CharacterResource } from './model';
 import { canAfford } from './model';
 import { RpgIcon } from './RpgIcon';
 import { ResourceRail } from './ResourceRail';
-import { PAGE_SIZE, type HotbarSlots } from './hotbarModel';
+import { PAGE_SIZE, canBindInventoryItem, type HotbarSlots } from './hotbarModel';
 import { GAMEPLAY_ENTRY_MIME } from './gameplayDrag';
 import { useGameplayDrag } from './useGameplayDrag';
 import { DeckSlot } from './DeckSlot';
@@ -102,7 +102,7 @@ export function AbilityHotbar({
     const drag = useGameplayDrag(slots, onLayout, editable, (binding) =>
         binding.sourceType === 'ability'
             ? abilities.some((a) => a.id === binding.sourceId && !a.item_only)
-            : items.some((i) => i.id === binding.sourceId && !!i.definition.use_ability_id),
+            : items.some((i) => i.id === binding.sourceId && canBindInventoryItem(i)),
     );
     useEffect(() => {
         try {

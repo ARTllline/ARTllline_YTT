@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\CueRunner;
+use App\QA\TownhouseScenario;
 use App\Services\TabletopDoctor;
 use App\Spells\SpellAudit;
 use App\Spells\SpellEffects;
@@ -8,6 +9,11 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
+
+Artisan::command('qa:townhouse {--install : Explicitly replace the existing prepared scene on first use}', function () {
+    $result = app(TownhouseScenario::class)->run(5, 5, 1, 5, 6, (bool) $this->option('install'));
+    $this->info('Townhouse ready: campaign '.$result['campaign'].', scene '.$result['scene'].', combat '.$result['combat'].'.');
+})->purpose('Reset the existing local two-player full-gameplay QA scenario; never creates accounts or campaigns');
 
 Artisan::command('tabletop:doctor {--production : Require Redis, HTTPS/WSS and secure configuration} {--json : Machine-readable diagnostics}', function () {
     $rows = app(TabletopDoctor::class)->inspect((bool) $this->option('production'));

@@ -128,10 +128,20 @@ export class ScenePersistence {
                         error instanceof ApiError &&
                         [403, 404, 422].includes(error.status)
                     ) {
-                        // Restore the canonical projection immediately after a rejected optimistic
-                        // move; keep the actionable error until retry or an explicit reload.
+                        // Restore the canonical projection after a rejected optimistic command.
                         try {
                             this.store.reconcile(await api.snapshot(this.sceneId));
+                            if (
+                                error.status === 422 &&
+                                (command.type === 'move' ||
+                                    (command.type === 'tokenCombat' &&
+                                        command.command.action === 'stand-up'))
+                            ) {
+                                // A rules rejection (spent movement, restrained, wrong turn) is
+                                // terminal. Retrying it must not block every subsequent action.
+                                this.store.combatNotice(error.message);
+                                return;
+                            }
                         } catch {
                             /* Activation may already have revoked this scene. */
                         }

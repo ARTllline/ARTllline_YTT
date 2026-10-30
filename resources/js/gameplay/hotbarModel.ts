@@ -1,6 +1,8 @@
+import type { InventoryItem } from '../rpg/model';
+
 export const PAGE_SIZE = 16;
 export const HOTBAR_SIZE = 32;
-/** Only ability is supported today. New sources must add their resolver and authorization. */
+/** Resolved and authorized source identities; positions remain canonical. */
 export interface SlotBinding {
     sourceType: 'ability' | 'inventory_item';
     sourceId: string;
@@ -14,6 +16,10 @@ export const abilityBinding = (id: string): SlotBinding => ({
     sourceType: 'ability',
     sourceId: id,
 });
+export function canBindInventoryItem(item: InventoryItem): boolean {
+    // Unavailable weapons may be prepared on the deck before equipping them.
+    return item.quantity > 0 && !!(item.action?.ability || item.definition.use_ability_id);
+}
 export function isBinding(value: unknown): value is SlotBinding {
     return (
         !!value &&

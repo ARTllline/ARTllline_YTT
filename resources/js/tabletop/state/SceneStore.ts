@@ -342,7 +342,8 @@ export class SceneStore {
         this.command?.({ type: 'combat', command });
     }
     tokenCombat(id: string, command: TokenCombatCommand) {
-        if (this.role !== 'gm') return;
+        if (this.role !== 'gm' && !(command.action === 'stand-up' && this.canMove(id))) return;
+        this.combatNotice('');
         this.command?.({ type: 'tokenCombat', id, command });
     }
     combatNotice(message: string) {
@@ -382,6 +383,7 @@ export class SceneStore {
         }
     }
     moveToken(id: string, position: Point) {
+        this.combatNotice('');
         const before = this.snapshot.scene;
         this.updateToken(id, position, false);
         this.command?.({ type: 'move', id, position, dragSessionId: this.dragSessionId }, before);

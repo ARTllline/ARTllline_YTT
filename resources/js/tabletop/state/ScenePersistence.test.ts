@@ -12,6 +12,26 @@ afterEach(() => {
 });
 
 describe('persistent scene commands', () => {
+    it('rolls back a rules-rejected move, explains it and leaves later gameplay usable', async () => {
+        const scene = { ...createDemoScene(), id: '1', revision: 5 };
+        const store = new SceneStore(scene, 'player');
+        const persistence = new ScenePersistence(store, '1');
+        const move = vi
+            .spyOn(api, 'move')
+            .mockRejectedValueOnce(new ApiError('Недостаточно перемещения: осталось 25 ft.', 422))
+            .mockResolvedValueOnce({ revision: 6 });
+        vi.spyOn(api, 'snapshot').mockResolvedValue(scene);
+        store.moveToken('kern', { x: 999, y: 999 });
+        await persistence.queue.flush();
+        expect(store.getSnapshot().scene).toEqual(scene);
+        expect(store.getSnapshot().combatNotice).toContain('25 ft');
+        expect(persistence.queue.getSnapshot().status).toBe('saved');
+        expect(store.objectEditingEnabled).toBe(true);
+        store.moveToken('kern', { x: 640, y: 750 });
+        await persistence.queue.flush();
+        expect(move).toHaveBeenCalledTimes(2);
+        expect(move.mock.calls[1][2]).not.toBe(move.mock.calls[0][2]);
+    });
     it('does not replace a queued movement with a debounced note draft sharing its key', async () => {
         const queue = new SaveQueue();
         let release!: () => void;
