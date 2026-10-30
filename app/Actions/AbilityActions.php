@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Combat\CombatExecution;
+use App\Combat\ConditionRules;
 use App\Combat\TurnBudget;
 use App\Items\ItemActions;
 use App\Models\AbilityExecution;
@@ -16,6 +17,9 @@ use App\Realtime\CommandContext;
 use App\Services\AbilityGeometry;
 use App\Services\DamageRoller;
 use App\Services\SceneSnapshotBuilder;
+use App\Spells\SpellCasting;
+use App\Spells\SpellEffects;
+use App\Spells\SpellScrolls;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -95,8 +99,9 @@ class AbilityActions
             $campaign = Campaign::whereKey($scene->campaign_id)->lockForUpdate()->firstOrFail();
             $scene = Scene::whereKey($scene->id)->lockForUpdate()->firstOrFail();
             $scene->setRelation('campaign', $campaign);
+            app(SpellEffects::class)->expire($scene);
             $character = $this->authorizeActor($user, $scene, $data);
-            $context = ['sceneId' => (string) $scene->id, 'epoch' => (int) $data['epoch'], 'target' => $data['target'] ?? null, 'rollMode' => $data['rollMode']];
+            $context = ['sceneId' => (string) $scene->id, 'epoch' => (int) $data['epoch'], 'target' => $data['target'] ?? null, 'rollMode' => $data['rollMode'], ...array_intersect_key($data, array_flip(['castLevel', 'effectChoice', 'manualComplete']))];
             if ($existing = $this->replay($user, $character, $data['abilityId'], $context)) {
                 return ['execution' => $existing];
             }
@@ -111,10 +116,20 @@ class AbilityActions
 
             abort_unless($ability && $ability['enabled'], 403, 'Способность больше недоступна.');
             abort_if(($ability['item_only'] ?? false) && ! $fromItem, 403, 'Это действие доступно только через предмет.');
-            abort_if(! $fromItem && isset($ability['spell']) && (! $ability['spell']['known'] || ! $ability['spell']['prepared']), 403, 'Заклинание не подготовлено.');
+            if (isset($ability['spell'])) {
+                abort_unless($character instanceof Character, 422, 'Заклинания требуют постоянного Character.');
+                if ($data['manualComplete'] ?? false) {
+                    abort_unless($campaign->roleFor($user) === 'gm' && ! app(TurnBudget::class)->active($scene->id), 403);
+                }
+                $data['_gmCompleted'] = $data['manualComplete'] ?? false;
+                $ability = app(SpellCasting::class)->prepare($character, $ability, $data, $scene, $fromItem);
+                $ability['_effectChoice'] = $data['effectChoice'] ?? null;
+            }
             // A result runs with a current GM's authority, never a player-forged author ID.
             $author = $campaign->members()->wherePivot('role', 'gm')->orderBy('users.id')->firstOrFail();
             $actor = $character instanceof Token ? $character : $scene->tokens()->where('character_id', $character->id)->where('is_hidden', false)->first();
+            abort_if(isset($ability['spell']) && ! empty($ability['spell']['effects']) && ! $actor, 422, 'Для эффектов заклинания разместите доступный токен персонажа.');
+            abort_if(isset($ability['spell']) && ($ability['requires_sight'] ?? false) && $actor && app(ConditionRules::class)->has($actor, ['blinded']), 422, 'Для этого заклинания нужно видеть цель; персонаж ослеплён.');
             $target = $this->target($scene, $ability['target'], $data['target'] ?? null, $character, $actor);
             $areaTargets = app(AbilityGeometry::class)->validate($scene, $ability, $actor, $target, $data['target'] ?? null);
             $isArea = ! empty($ability['area']) && $ability['area']['shape'] !== 'none';
@@ -126,8 +141,18 @@ class AbilityActions
             }
             app(TurnBudget::class)->spend($actor, $ability['activation'] ?? 'action', $scene->id);
             $victims = $isArea ? $areaTargets : ($target instanceof Token ? [$target] : []);
+            if (isset($ability['spell'])) {
+                app(SpellCasting::class)->spend($character, $ability, $scene, $fromItem);
+                if ($ability['spell']['concentration']) {
+                    app(SpellEffects::class)->stop($character, 'replacement');
+                }
+            }
             abort_if(count($victims) > 200, 422, 'Слишком много целей.');
-            $resolved = app(CombatExecution::class)->resolve($author, $character, $actor, $ability, $victims, $data['rollMode'], $scene);
+            $scrollCheck = isset($ability['_scroll']) ? app(SpellScrolls::class)->check($character, $ability, $actor) : null;
+            $resolved = $scrollCheck && ! $scrollCheck['success'] ? ['roll' => $scrollCheck, 'provenance' => $scrollCheck['provenance'], 'success' => false, 'critical' => false, 'damage' => null, 'damageRolls' => [], 'outcomes' => [], 'feedbacks' => []] : app(CombatExecution::class)->resolve($author, $character, $actor, $ability, $victims, $data['rollMode'], $scene);
+            if (isset($ability['spell']) && (! $scrollCheck || $scrollCheck['success'])) {
+                app(SpellEffects::class)->start($author, $character, $actor, $scene, $ability, $victims, $resolved);
+            }
             $roll = $resolved['roll'];
             $provenance = $resolved['provenance'];
             $success = $resolved['success'];
@@ -135,11 +160,12 @@ class AbilityActions
             $outcomes = $resolved['outcomes'];
             $feedbacks = $resolved['feedbacks'];
             $feedback = $feedbacks[0] ?? null;
-            $healing = null;
+            $healing = $healingRoll = null;
             if ($success) {
                 $result = $ability['result'];
                 if ($result['type'] === 'heal') {
-                    $healing = isset($result['dice']) ? app(DamageRoller::class)->roll($result['dice'])['total'] : $result['amount'];
+                    $healingRoll = isset($result['dice']) ? app(DamageRoller::class)->roll($result['dice']) : null;
+                    $healing = min(max(0, $target->max_hp - $target->hp), $healingRoll['total'] ?? $result['amount']);
                     app(TokenCombatActions::class)->adjustHp($author, $target, $healing);
                     if ($target instanceof Token) {
                         $feedback = ['tokenId' => (string) $target->id, 'text' => '+'.$healing, 'tone' => 'heal'];
@@ -165,11 +191,12 @@ class AbilityActions
             }, $isArea ? 'objects.changed' : 'ability.resolved');
             // Persist the full authoritative roll; redact DC only in the player response below.
             $execution = $this->record($user, $character, $ability['id'], $context, [
+                ...(isset($ability['spell']) ? ['castLevel' => $ability['_castLevel'], 'coverage' => $ability['spell']['coverage'] ?? 'PARTIAL', 'manualResolution' => ($ability['spell']['coverage'] ?? 'PARTIAL') !== 'FULL' ? 'pending' : null] : []),
                 'abilityId' => $ability['id'], 'abilityName' => $ability['name'], 'category' => $ability['category'],
                 'actorId' => (string) $character->id, 'actorName' => $character->name,
                 'target' => $data['target'] ?? null, 'roll' => $roll, 'success' => $success,
                 'provenance' => $provenance,
-                'damage' => $damage, 'damageRolls' => $resolved['damageRolls'], 'critical' => $resolved['critical'], 'outcomes' => $outcomes, 'healing' => $healing,
+                'scrollCheck' => $scrollCheck, 'damage' => $damage, 'damageRolls' => $resolved['damageRolls'], 'critical' => $resolved['critical'], 'outcomes' => $outcomes, 'healing' => $healing, 'healingRoll' => $healingRoll,
                 'dcVisible' => $ability['check']['dc_visible'] ?? false,
                 'mutationId' => app(CommandContext::class)->id(), 'resolvedAt' => now()->toIso8601String(),
             ]);

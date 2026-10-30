@@ -7,6 +7,7 @@ use App\Models\Token;
 use App\Models\TokenCondition;
 use App\Models\User;
 use App\Services\CharacterCatalog;
+use App\Spells\SpellEffects;
 
 class AppliedConditions
 {
@@ -33,6 +34,9 @@ class AppliedConditions
             'source_token_id' => $source?->id, 'source_ability_id' => $ability, 'combat_id' => $combat?->id,
             'duration_mode' => $mode, 'remaining_rounds' => $mode === 'rounds' ? ($effect['rounds'] ?? 1) : null,
             'applied_turn_sequence' => $combat?->turn_sequence, 'metadata' => ['source' => 'ability_or_gm']])->save();
+        if (in_array($key, ['incapacitated', 'stunned', 'unconscious', 'paralyzed', 'petrified']) && $target->character_id) {
+            app(SpellEffects::class)->stop($target->character, 'incapacitated');
+        }
         // SRD Unconscious also leaves the target Prone when it ends.
         if ($key === 'unconscious' && ! $target->conditions()->where('key', 'prone')->exists()) {
             $this->apply($author, $target, ['key' => 'prone'], $source, null, $visibility);
@@ -68,7 +72,8 @@ class AppliedConditions
 
     public function finish(Combat $combat): void
     {
-        foreach (TokenCondition::where('combat_id', $combat->id)->get() as $c) {
+        $linked = app(SpellEffects::class)->active()->get()->flatMap(fn ($e) => $e->payload['conditions'] ?? [])->all();
+        foreach (TokenCondition::where('combat_id', $combat->id)->whereNotIn('id', $linked)->get() as $c) {
             $this->remove($c, 'combat_ended');
         }
     }

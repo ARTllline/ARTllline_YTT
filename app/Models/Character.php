@@ -29,7 +29,7 @@ class Character extends Model
 
     protected function casts(): array
     {
-        return ['combat_profile' => 'array', 'rules' => 'array', 'check_stats' => 'array', 'resources' => 'array', 'abilities' => 'array', 'ac' => 'integer', 'speed' => 'integer', 'hp' => 'integer', 'max_hp' => 'integer', 'owner_user_id' => 'integer'];
+        return ['spellcasting' => 'array', 'temporary_hp' => 'integer', 'combat_profile' => 'array', 'rules' => 'array', 'check_stats' => 'array', 'resources' => 'array', 'abilities' => 'array', 'ac' => 'integer', 'speed' => 'integer', 'hp' => 'integer', 'max_hp' => 'integer', 'owner_user_id' => 'integer'];
     }
 
     public function campaign(): BelongsTo

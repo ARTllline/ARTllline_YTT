@@ -14,6 +14,16 @@ export interface CharacterResource {
     player_adjustable: boolean;
 }
 export interface Ability {
+    casting?: {
+        available: boolean;
+        reason: string;
+        levels: {
+            level: number;
+            current: number | null;
+            damage?: string | null;
+            healing?: string | null;
+        }[];
+    };
     requires_sight?: boolean;
     activation?: 'action' | 'bonus_action' | 'reaction' | 'free';
     attack?: {
@@ -37,6 +47,40 @@ export interface Ability {
     }[];
     item_only?: boolean;
     spell?: {
+        coverage?: 'FULL' | 'PARTIAL' | 'MANUAL';
+        reasons?: string[];
+        source_key?: string;
+        source_entry_id?: number | null;
+        available?: boolean;
+        manual_allowed?: boolean;
+        reference?: string;
+        casting_time?: string | null;
+        duration_text?: string | null;
+        duration?: {
+            mode: 'instantaneous' | 'rounds' | 'seconds' | 'manual' | 'source_start';
+            amount: number;
+        };
+        components?: string[];
+        material?: string | null;
+        scaling?: Partial<
+            Record<
+                'damage' | 'healing' | 'temporary_hp',
+                { per_level?: string | null; spellcasting?: boolean }
+            >
+        >;
+        cantrip_dice?: string | null;
+        cantrip_tier?: number;
+        effects?: {
+            type: 'modifier' | 'temporary_hp' | 'remove_condition';
+            key?: string;
+            value?: number;
+            dice?: string | null;
+            when: 'always' | 'hit' | 'failed_save' | 'successful_save';
+            choices?: string[];
+        }[];
+        material_definition_id?: number | null;
+        material_quantity?: number;
+        consume_material?: boolean;
         level: number;
         school: string;
         classes: string[];
@@ -80,6 +124,9 @@ export interface Ability {
 }
 export type AbilityTarget = { kind: 'token' | 'prop'; id: string } | ({ kind: 'point' } & Point);
 export interface AbilityCommand {
+    castLevel?: number;
+    effectChoice?: string;
+    manualComplete?: boolean;
     actorTokenId?: string;
     inventoryItemId?: string;
     itemAction?: 'use' | 'throw';
@@ -91,6 +138,9 @@ export interface AbilityCommand {
     rollMode: RollMode;
 }
 export interface AbilityResult {
+    castLevel?: number;
+    coverage?: string;
+    manualResolution?: string | null;
     provenance?: import('../workspace/interactions/model').CheckResult['provenance'] | null;
     id: string;
     abilityId: string;

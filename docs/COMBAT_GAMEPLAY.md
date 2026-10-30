@@ -89,8 +89,8 @@ Implemented focused mechanics (verified against local SRD 5.2.1 glossary):
 | Incapacitated | Blocks action/bonus/reaction execution                                                                                     |
 
 Any advantage and disadvantage cancel, regardless of reason counts. Provenance
-retains the contributing reasons. Speech, awareness, dropping held objects,
-concentration, initiative penalties and full visibility are not automated. The
+retains the contributing reasons. Automatic speech zones, awareness, dropping held objects, initiative penalties and
+full visibility are not automated. Task 29 concentration is documented below. The
 other canonical conditions are displayable/removable instances, not complete rules.
 HP reaching zero does not automatically apply Unconscious or dying/death saves.
 
@@ -164,3 +164,11 @@ SRD attribution and structured import provenance: [COMPENDIUM.md](COMPENDIUM.md)
 [Items & Loot](ITEMS_LOOT.md) now supplies current equipped-weapon descriptors,
 weapon-specific CharacterRules scopes, ammunition and physical thrown-item loot.
 Its property support table distinguishes implemented and deferred behavior.
+
+## Task 29 spellcasting and active effects
+
+[Spellcasting](SPELLCASTING.md) extends the same Ability/Combat executor with slots,
+cast-level scaling, healing provenance, temporary HP, managed effects and concentration.
+The 2024 one-slot-per-current-turn restriction is separate from Action/Bonus/Reaction
+budgets. Ending combat preserves slots and converts managed spell durations rather than
+ending ongoing concentration arbitrarily. GM confirms reaction triggers and manual effects.

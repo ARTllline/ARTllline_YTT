@@ -2,6 +2,8 @@
 
 use App\Actions\CueRunner;
 use App\Services\TabletopDoctor;
+use App\Spells\SpellAudit;
+use App\Spells\SpellEffects;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -61,3 +63,18 @@ Artisan::command('tabletop:recover-cues', function () {
 
 Schedule::command('tabletop:recover-cues')->everyMinute()->withoutOverlapping();
 Schedule::call(fn () => DB::table('audio_grants')->where('expires_at', '<', now())->delete())->daily()->name('prune-audio-grants')->withoutOverlapping();
+
+Artisan::command('spells:audit {--output=} {--json}', function () {
+    $audit = app(SpellAudit::class)->run();
+    if ($path = $this->option('output')) {
+        file_put_contents($path, $this->option('json') ? json_encode($audit, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : app(SpellAudit::class)->markdown($audit));
+    }
+    $this->info(json_encode(['total' => $audit['total'], 'counts' => $audit['counts'], 'invalid' => count($audit['errors'])]));
+
+    return $audit['total'] === 339 && ! $audit['errors'] ? 0 : 1;
+})->purpose('Audit every local SRD spell without modifying library or campaigns');
+
+Artisan::command('spells:expire', function () {
+    $this->info(app(SpellEffects::class)->expire().' spell effects expired.');
+})->purpose('Expire timestamped spell effects with campaign writer locks');
+Schedule::command('spells:expire')->everyMinute()->withoutOverlapping();

@@ -265,10 +265,15 @@ export function AbilityEditor({
                                 )}
                             </div>
                             <SpellMetadataEditor
+                                campaignId={campaignId}
                                 ability={a}
                                 onChange={(value) => patch(i, value)}
                             />
-                            <CombatAbilityEditor ability={a} campaignId={campaignId} onChange={(p)=>patch(i,p)} />
+                            <CombatAbilityEditor
+                                ability={a}
+                                campaignId={campaignId}
+                                onChange={(p) => patch(i, p)}
+                            />
                             <AbilityGeometryEditor
                                 ability={a}
                                 onChange={(data) => patch(i, data)}

@@ -26,7 +26,11 @@ export interface ItemGameplay {
         stealth_disadvantage?: boolean;
         ac_semantics?: 'base' | 'bonus';
     } | null;
-    use?: { consume: boolean; ability: import('../gameplay/model').Ability } | null;
+    use?: {
+        scroll?: boolean;
+        consume: boolean;
+        ability: import('../gameplay/model').Ability;
+    } | null;
 }
 export const itemCategories: Record<string, string> = {
     weapon: 'Оружие',
@@ -89,6 +93,14 @@ export function ItemFacts({
         a = g?.armor;
     return (
         <div className="item-gameplay-facts">
+            {g?.use?.scroll && (
+                <span>
+                    Свиток SRD · без ячейки Character · Сл{' '}
+                    {[13, 13, 13, 15, 15, 17, 17, 18, 18, 19][g.use.ability.spell?.level ?? 0]} ·
+                    атака +{[5, 5, 5, 7, 7, 9, 9, 10, 10, 11][g.use.ability.spell?.level ?? 0]} ·
+                    доступ списка подтверждает GM
+                </span>
+            )}
             {w && (
                 <>
                     <strong>

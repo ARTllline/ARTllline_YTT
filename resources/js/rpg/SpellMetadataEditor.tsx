@@ -1,9 +1,12 @@
+import { SpellEffectEditor } from './SpellEffectEditor';
 import type { Ability } from '../gameplay/model';
 export function SpellMetadataEditor({
     ability,
     onChange,
+    campaignId,
 }: {
     ability: Ability;
+    campaignId?: string;
     onChange: (a: Partial<Ability>) => void;
 }) {
     const spell = ability.spell;
@@ -94,6 +97,7 @@ export function SpellMetadataEditor({
                     </div>
                 </>
             )}
+            <SpellEffectEditor campaignId={campaignId} ability={ability} onChange={onChange} />
             <label>
                 <input
                     type="checkbox"

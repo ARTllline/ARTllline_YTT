@@ -6,7 +6,7 @@ use Illuminate\Validation\ValidationException;
 
 class DamageRoller
 {
-    public const PATTERN = '/^(?:([1-9]|1[0-9]|20)d(4|6|8|10|12|20)([+-](?:[0-9]|[1-9][0-9]))?|[0-9]|[1-9][0-9])$/';
+    public const PATTERN = '/^(?:([1-9]|1[0-9]|20)d(4|6|8|10|12|20)([+-](?:[0-9]|[1-9][0-9]))?|[0-9]|[1-9][0-9]{0,3})$/';
 
     public function roll(string $expression, bool $critical = false): array
     {

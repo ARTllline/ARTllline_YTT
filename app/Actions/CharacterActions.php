@@ -11,6 +11,8 @@ use App\Models\User;
 use App\Services\CharacterGameplay;
 use App\Services\CharacterRules;
 use App\Services\SceneSnapshotBuilder;
+use App\Spells\SpellCasting;
+use App\Spells\SpellEffects;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -76,7 +78,7 @@ class CharacterActions
 
     public function projection(Character $character, bool $gm = true): array
     {
-        return ['rules' => app(CharacterRules::class)->state($character), 'derived' => app(CharacterRules::class)->derived($character),
+        return ['temporaryHp' => $character->temporary_hp ?? 0, 'spellcasting' => app(SpellCasting::class)->state($character), 'spellEffects' => app(SpellEffects::class)->projection($character), 'rules' => app(CharacterRules::class)->state($character), 'derived' => app(CharacterRules::class)->derived($character),
             ...($gm ? ['rulesSuggestion' => app(CharacterRules::class)->suggestion($character)] : []),
             'id' => (string) $character->id, 'name' => $character->name,
             'portrait' => app(SceneSnapshotBuilder::class)->asset($character->portraitAsset),

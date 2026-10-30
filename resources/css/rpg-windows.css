@@ -1720,3 +1720,186 @@
         font-size: 16px;
     }
 }
+
+/* Spellcasting extends the accepted folio and compact player HUD. */
+.spell-slots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 8px 0 16px;
+}
+.spell-slots > span {
+    display: flex;
+    gap: 7px;
+    align-items: center;
+    padding: 7px 10px;
+    border: 1px solid #9e87554d;
+    background: #10191d;
+    border-radius: 5px;
+}
+.spell-slots b {
+    color: #e3c786;
+}
+.spell-slots i {
+    font-style: normal;
+    color: #91c3d2;
+    letter-spacing: 2px;
+}
+.spell-slots small {
+    color: #b7b6a4;
+}
+.spell-canonical-details {
+    display: grid;
+    gap: 7px;
+    margin: 10px 0;
+    color: #c1b69f;
+}
+.spell-canonical-details small {
+    display: block;
+    font-size: 11px;
+    line-height: 1.5;
+}
+.spell-coverage {
+    border: 1px solid #ba945751;
+    padding: 5px 8px;
+    font-size: 11px;
+    color: #e5cb8d;
+    background: #302919;
+}
+.spell-coverage.status-FULL {
+    color: #afd8c5;
+    background: #193027;
+    border-color: #64b29355;
+}
+.spell-reference {
+    white-space: pre-wrap;
+    font-size: 12px;
+    line-height: 1.65;
+}
+.spell-cast-chooser {
+    width: min(590px, calc(100vw - 24px));
+    max-height: calc(100dvh - 40px);
+    padding: 22px;
+    border: 1px solid #b29560;
+    border-radius: 12px;
+    color: #ece1c6;
+    background: radial-gradient(at top, #28393d, #10161a 70%);
+    box-shadow: 0 20px 80px #000b;
+}
+.spell-cast-chooser::backdrop {
+    background: #05090bb0;
+}
+.spell-cast-chooser header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+}
+.spell-cast-chooser h3 {
+    margin: 0;
+}
+.cast-level-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0;
+}
+.cast-level-chips button {
+    display: grid;
+    gap: 4px;
+    min-width: 83px;
+    padding: 10px;
+    border: 1px solid #736b4c;
+    background: #18252a;
+    color: #dfd8be;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.cast-level-chips button[aria-pressed='true'] {
+    border-color: #dfc98a;
+    background: #425356;
+    box-shadow: inset 0 0 0 1px #dfc98a66;
+}
+.cast-level-chips b {
+    font:
+        21px Georgia,
+        serif;
+    color: #efdaa4;
+}
+.cast-level-chips small {
+    font-size: 10px;
+}
+.concentration-hud {
+    position: fixed;
+    top: 86px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 46;
+}
+.concentration-hud > span {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 7px 12px;
+    font-size: 12px;
+    color: #ded7f3;
+    border: 1px solid #a496cd77;
+    border-radius: 7px;
+    background: #252038e8;
+    box-shadow: 0 4px 20px #0008;
+}
+.concentration-hud button {
+    color: #d5c7f5;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+.spellcasting-editor {
+    margin: 12px 0;
+    border-top: 1px solid #8d80524d;
+    padding: 12px 0;
+}
+.spell-slot-editor {
+    display: grid;
+    gap: 7px;
+    margin: 12px 0;
+}
+.spell-slot-editor > div {
+    display: grid;
+    grid-template-columns: 28px 1fr 1fr auto;
+    gap: 8px;
+    align-items: end;
+}
+.spell-slot-editor input {
+    width: 66px;
+}
+.spell-effect-editor {
+    display: grid;
+    gap: 9px;
+    margin: 12px 0;
+}
+.spell-effect-editor label {
+    display: grid;
+    gap: 4px;
+}
+@media (max-width: 600px) {
+    .concentration-hud {
+        top: 100px;
+        left: auto;
+        right: 9px;
+        transform: none;
+        max-width: calc(100vw - 18px);
+    }
+    .spell-slots {
+        gap: 5px;
+    }
+    .spell-slots > span {
+        padding: 5px;
+    }
+    .spell-slot-editor > div {
+        grid-template-columns: 25px 1fr 1fr;
+    }
+    .spell-slot-editor button {
+        grid-column: 2 / 4;
+    }
+}

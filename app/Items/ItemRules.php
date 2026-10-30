@@ -57,7 +57,7 @@ class ItemRules
             'gameplay.armor.category' => 'required_with:gameplay.armor|in:light_armor,medium_armor,heavy_armor,shield', 'gameplay.armor.ac_semantics' => 'required_with:gameplay.armor|in:base,bonus',
             'gameplay.armor.base_ac' => 'sometimes|nullable|integer|between:0,40', 'gameplay.armor.ac_bonus' => 'sometimes|nullable|integer|between:0,20', 'gameplay.armor.add_dex' => 'required_with:gameplay.armor|boolean', 'gameplay.armor.max_dex_bonus' => 'sometimes|nullable|integer|between:0,10', 'gameplay.armor.strength_minimum' => 'sometimes|nullable|integer|between:0,30', 'gameplay.armor.stealth_disadvantage' => 'sometimes|boolean',
             'gameplay.ammunition' => 'sometimes|nullable|string|max:80|regex:/^[a-z][a-z0-9_]*$/',
-            'gameplay.use' => 'sometimes|nullable|array:ability,consume', 'gameplay.use.consume' => 'required_with:gameplay.use|boolean',
+            'gameplay.use' => 'sometimes|nullable|array:ability,consume,scroll', 'gameplay.use.scroll' => 'sometimes|boolean', 'gameplay.use.consume' => 'required_with:gameplay.use|boolean',
             'gameplay.use.ability' => 'required_with:gameplay.use|array'];
     }
 
@@ -67,6 +67,7 @@ class ItemRules
         $w = $g['weapon'] ?? null;
         $a = $g['armor'] ?? null;
         if (isset($g['use'])) {
+            abort_if(($g['use']['scroll'] ?? false) && (empty($g['use']['ability']['spell']['source_key']) || ! $g['use']['consume']), 422, 'Свиток требует связанное SRD-заклинание и расход экземпляра.');
             $data = Validator::make(['abilities' => [$g['use']['ability']]], CharacterGameplay::rules())->validate();
             app(CharacterGameplay::class)->validate($d->campaign_id ? Campaign::findOrFail($d->campaign_id) : abort(422), $data, null);
             $g['use']['ability'] = $data['abilities'][0];

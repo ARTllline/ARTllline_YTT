@@ -12,11 +12,14 @@ use App\Services\AbilityGeometry;
 use App\Services\CharacterRules;
 use App\Services\CheckRoller;
 use App\Services\TokenCheckStats;
+use App\Spells\SpellEffects;
 
 class CombatExecution
 {
-    public function roll(array $provenance, int $dc, array $context, bool $attack = false): array
+    public function roll(array $provenance, int $dc, array $context, bool $attack = false, ?Token $subject = null, string $kind = 'check'): array
     {
+        $bonusRolls = app(SpellEffects::class)->rollBonus($subject, $kind);
+        $provenance['finalModifier'] += array_sum(array_map(fn ($b) => $b['roll']['total'], $bonusRolls));
         if ($context['automaticFailure']) {
             $r = ['rawDice' => [], 'natural' => 0, 'modifier' => $provenance['finalModifier'], 'total' => $provenance['finalModifier'], 'dc' => $dc, 'success' => false, 'rollMode' => $context['mode'], 'selectedDie' => null, 'automaticFailure' => true];
         } else {
@@ -26,7 +29,7 @@ class CombatExecution
             $r['success'] = $r['natural'] === 20 || ($r['natural'] !== 1 && $r['success']);
         }
 
-        return $r + ['context' => $context];
+        return $r + ['context' => $context, 'bonusRolls' => $bonusRolls];
     }
 
     public function resolve(User $author, Token|Character $subject, ?Token $actor, array $ability, array $targets, string $requested, Scene $scene): array
@@ -45,6 +48,9 @@ class CombatExecution
                 $config = ['stat_key' => $a['ability'] === 'spellcasting' ? 'spell_attack' : $a['ability'], 'modifier' => 0, 'proficient' => $a['proficient'], 'bonus' => $a['bonus'], 'defense' => 'ac', 'dc' => 0];
             }
             $provenance = ! empty($ability['attack']) && $actor && ! $actor->character_id ? app(CombatStats::class)->attack($actor, $ability['attack']) : app(TokenCheckStats::class)->resolve($actor ?? $subject, $config + ['label' => $ability['name']]);
+            if (isset($ability['_scrollAttack'])) {
+                $provenance = $ability['_scrollAttack'];
+            }
             if (isset($ability['_weapon'])) {
                 $provenance = $ability['_weapon']['provenance'];
             }
@@ -61,7 +67,7 @@ class CombatExecution
                 $context['disadvantage'] = [...$context['disadvantage'], ...app(ItemActions::class)->reasons($subject, $ability, $scene, $actor, $first)];
                 $context['mode'] = ($context['advantage'] && $context['disadvantage']) ? 'normal' : ($context['advantage'] ? 'advantage' : ($context['disadvantage'] ? 'disadvantage' : 'normal'));
             }
-            $roll = $this->roll($provenance, $dc, $context, $attack);
+            $roll = $this->roll($provenance, $dc, $context, $attack, $actor, $attack ? 'attack' : ($saveAbility ? 'save' : 'check'));
             $success = $roll['success'];
             $critical = $attack && $success && ($roll['natural'] === 20 || ($first && $distance <= 5 && app(ConditionRules::class)->has($first, ['unconscious'])));
         }
@@ -93,7 +99,7 @@ class CombatExecution
                 }
                 $p = app(CombatStats::class)->save($target, $save['ability']);
                 $ctx = app(ConditionRules::class)->context($target, 'save', 'normal', null, 0, $save['ability']);
-                $targetSave = $this->roll($p, $dc, $ctx) + ['provenance' => $p, 'dcProvenance' => $dcProvenance];
+                $targetSave = $this->roll($p, $dc, $ctx, false, $target, 'save') + ['provenance' => $p, 'dcProvenance' => $dcProvenance];
                 $effect = $targetSave['success'] ? $save['on_success'] : $save['on_failure'];
                 app(CombatLog::class)->write($combat, 'save.roll', ['abilityId' => $ability['id'], 'sourceId' => $actor?->id, 'targetId' => (string) $target->id, 'save' => $targetSave]);
             }

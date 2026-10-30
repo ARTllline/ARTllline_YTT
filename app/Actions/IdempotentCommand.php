@@ -59,6 +59,14 @@ class IdempotentCommand
                         $result['token'] = array_intersect_key($result['token'], $safe);
                         $result['token']['canMove'] = $safe['canMove'];
                         $result['token']['conditions'] = array_values(array_filter($result['token']['conditions'] ?? [], fn ($condition) => in_array($condition['id'], array_column($safe['conditions'], 'id'), true)));
+                    } elseif ($operation === 'campaign.spellcasting') {
+                        app(AbilityActions::class)->authorize($user, $campaign, $payload['characterId']);
+                        if (($payload['action'] ?? '') !== 'end-effect') {
+                            Gate::forUser($user)->authorize('update', $campaign);
+                        }
+                        if ($campaign->roleFor($user) !== 'gm' && array_key_exists('rulesSuggestion', $result['character'] ?? [])) {
+                            abort(403, 'Роль изменилась. Обновите данные персонажа.');
+                        }
                     } elseif ($operation === 'campaign.loot') {
                         app(LootActions::class)->authorize($user, $campaign, $payload);
                         app(LootActions::class)->assertReceiptReadable($user, $campaign, $result);

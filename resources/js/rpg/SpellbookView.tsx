@@ -1,3 +1,4 @@
+import { SpellSlots, SpellDetails, type SpellcastingState } from '../gameplay/spellcasting';
 import { useState } from 'react';
 import { RpgIcon } from '../gameplay/RpgIcon';
 import { AbilityCost } from '../gameplay/AbilityCost';
@@ -7,10 +8,12 @@ import { useRpgDrag } from './RpgDrag';
 export function SpellbookView({
     abilities,
     resources,
+    spellcasting,
     onChoose,
     onBind,
 }: {
     abilities: Ability[];
+    spellcasting?: SpellcastingState;
     resources: CharacterResource[];
     onChoose: (a: Ability) => void;
     onBind: (a: Ability) => void;
@@ -59,6 +62,7 @@ export function SpellbookView({
                         подготовлено <span> / {available.length} известно</span>
                     </span>
                 </header>
+                <SpellSlots state={spellcasting} />
                 <div className="rpg-filterbar">
                     <div className="rpg-chips">
                         {[
@@ -242,6 +246,7 @@ export function SpellbookView({
                         </span>
                         <h2>{selected.name}</h2>
                         <p>{selected.description}</p>
+                        <SpellDetails ability={selected} />
                         <div className="spell-traits">
                             {selected.spell?.classes.map((v) => (
                                 <span key={v}>{v}</span>
@@ -299,7 +304,8 @@ export function SpellbookView({
                                 className="rpg-gold-button"
                                 disabled={
                                     !canAfford(selected, resources) ||
-                                    selected.spell?.prepared === false
+                                    selected.spell?.prepared === false ||
+                                    selected.casting?.available === false
                                 }
                                 onClick={() => onChoose(selected)}
                             >

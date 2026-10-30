@@ -19,6 +19,8 @@ import {
 } from './pendingAbility';
 
 export interface AbilityInvocation {
+    castLevel?: number;
+    effectChoice?: string;
     inventoryItemId?: string;
     itemAction?: 'use' | 'throw';
     ability: Ability;
@@ -97,6 +99,8 @@ export function AbilityDialog({
                           itemAction: invocation.itemAction ?? 'use',
                       }
                     : {}),
+                castLevel: invocation.castLevel,
+                effectChoice: invocation.effectChoice,
                 abilityId: ability.id,
                 epoch,
                 target: invocation.target,
@@ -371,6 +375,12 @@ export function AbilityDialog({
                                 `${character.resources?.find((r) => r.key === c.key)?.label ?? c.key} −${c.amount}`,
                         )
                         .join(' · ')}
+                </p>
+            )}
+            {result?.manualResolution === 'pending' && (
+                <p className="spell-coverage">
+                    Эффекты требуют ручного разрешения GM. Автоматическая часть и стоимость уже
+                    применены.
                 </p>
             )}
             {error && (

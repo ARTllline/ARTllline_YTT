@@ -9,6 +9,7 @@ use App\Models\Token;
 use App\Models\User;
 use App\Services\CharacterCatalog;
 use App\Services\SceneSnapshotBuilder;
+use App\Spells\SpellEffects;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -65,6 +66,13 @@ class TokenCombatActions
     /** Caller holds campaign/scene locks and authorizes the command (GM or configured ability). */
     public function adjustHp(User $user, Token|Character $subject, int $delta): void
     {
+        $damage = max(0, -$delta);
+        $owner = $subject instanceof Token && $subject->character_id ? $subject->character : $subject;
+        if ($damage && ($owner->temporary_hp ?? 0)) {
+            $absorbed = min($owner->temporary_hp, $damage);
+            $owner->update(['temporary_hp' => $owner->temporary_hp - $absorbed]);
+            $delta += $absorbed;
+        }
         $hp = ['hp' => max(0, min($subject->max_hp, $subject->hp + $delta))];
         if ($subject instanceof Character) {
             $subject->update($hp);
@@ -73,6 +81,9 @@ class TokenCombatActions
             app(CharacterActions::class)->updateLinked($user, $subject, $hp);
         } else {
             $subject->update($hp);
+        }
+        if ($damage && $subject instanceof Token) {
+            app(SpellEffects::class)->damage($user, $subject->fresh(), $damage);
         }
     }
 }

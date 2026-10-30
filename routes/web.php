@@ -24,6 +24,7 @@ use App\Http\Controllers\PreloadController;
 use App\Http\Controllers\SceneController;
 use App\Http\Controllers\SceneEditController;
 use App\Http\Controllers\SpatialController;
+use App\Http\Controllers\SpellcastingController;
 use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\TokenController;
 use App\Http\Controllers\WorkspaceController;
@@ -63,6 +64,8 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::get('/campaigns/{campaign}/characters/{character}/hotbar', [CharacterHotbarController::class, 'show']);
         Route::put('/campaigns/{campaign}/characters/{character}/hotbar', [CharacterHotbarController::class, 'update']);
         Route::post('/scenes/{scene}/abilities/execute', [AbilityController::class, 'execute'])->name('scene.ability')->middleware([IdempotentMutation::class, 'throttle:60,1']);
+        Route::get('/campaigns/{campaign}/spellcasting', [SpellcastingController::class, 'index']);
+        Route::post('/campaigns/{campaign}/spellcasting', [SpellcastingController::class, 'command'])->name('campaign.spellcasting')->middleware(IdempotentMutation::class);
         Route::post('/campaigns/{campaign}/resources/adjust', [AbilityController::class, 'resource'])->name('campaign.resource')->middleware(IdempotentMutation::class);
         Route::get('/campaigns/{campaign}/loot/catalog', [LootController::class, 'catalog']);
         Route::get('/campaigns/{campaign}/loot', [LootController::class, 'show']);

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Items\ItemRules;
 use App\Models\Character;
+use App\Spells\SpellEffects;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -190,7 +191,7 @@ class CharacterRules
             $label = $legacy['label'];
             $parts[] = ['source' => 'custom', 'label' => $label, 'value' => $legacy['modifier']];
         }
-        $parts = [...$parts, ...$this->equipment($character, $key)];
+        $parts = [...$parts, ...$this->equipment($character, $key), ...app(SpellEffects::class)->flat($character, $key)];
         if ($bonus) {
             $parts[] = ['source' => 'custom', 'label' => 'Бонус действия', 'value' => $bonus];
         }
@@ -249,7 +250,7 @@ class CharacterRules
         if ($bonus) {
             $parts[] = ['source' => 'custom', 'label' => 'Дополнительный бонус', 'value' => $bonus];
         }
-        $parts = [...$parts, ...$this->equipment($character, $key)];
+        $parts = [...$parts, ...$this->equipment($character, $key), ...app(SpellEffects::class)->flat($character, $key)];
         $total = $base === null ? null : max(0, min($key === 'ac' ? 99 : 999, (int) array_sum(array_column($parts, 'value'))));
 
         return ['value' => $total, 'breakdown' => $parts, 'unit' => $key === 'speed' ? 'ft' : null];

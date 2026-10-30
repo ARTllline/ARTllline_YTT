@@ -32,7 +32,7 @@ class ConditionRules
 
     public function inactive(Token $t): bool
     {
-        return $this->has($t, ['incapacitated', 'stunned', 'unconscious']);
+        return $this->has($t, ['incapacitated', 'stunned', 'unconscious', 'paralyzed', 'petrified']);
     }
 
     public function prone(Token $t): bool

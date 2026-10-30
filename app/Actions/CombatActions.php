@@ -10,6 +10,7 @@ use App\Models\Scene;
 use App\Models\User;
 use App\Services\SceneSnapshotBuilder;
 use App\Services\TriggerEvents;
+use App\Spells\SpellEffects;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
@@ -37,7 +38,7 @@ class CombatActions
                 }
             }
 
-            return ['_combatChanged' => true, 'tokens' => $scene->tokens()->get()->map(fn ($t) => app(SceneSnapshotBuilder::class)->token($t, true, $user))->all()];
+            return ['charactersChanged' => true, '_combatChanged' => true, 'tokens' => $scene->tokens()->get()->map(fn ($t) => app(SceneSnapshotBuilder::class)->token($t, true, $user))->all()];
         }, 'combat.updated');
     }
 
@@ -125,6 +126,7 @@ class CombatActions
                 break;
             case 'end':
                 app(AppliedConditions::class)->finish($combat);
+                app(SpellEffects::class)->finish($combat);
                 $combat->update(['status' => 'ended', 'ended_at' => now(), 'current_combatant_id' => null]);
                 break;
         }

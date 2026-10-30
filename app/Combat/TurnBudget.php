@@ -5,6 +5,7 @@ namespace App\Combat;
 use App\Models\Combat;
 use App\Models\Combatant;
 use App\Models\Token;
+use App\Spells\SpellEffects;
 
 class TurnBudget
 {
@@ -29,6 +30,7 @@ class TurnBudget
         $entry = $combat->combatants()->findOrFail($id);
         $combat->increment('turn_sequence');
         app(AppliedConditions::class)->boundary($combat, $entry->token_id, 'start');
+        app(SpellEffects::class)->boundary($combat, $entry->token_id);
         $entry->update(['action_available' => true, 'bonus_available' => true, 'reaction_available' => true, 'movement_spent' => 0]);
         app(CombatLog::class)->write($combat, 'turn.started', ['combatantId' => (string) $entry->id, 'tokenId' => (string) $entry->token_id, 'round' => $combat->round]);
     }

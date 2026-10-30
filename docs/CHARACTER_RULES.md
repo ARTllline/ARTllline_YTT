@@ -171,3 +171,10 @@ mechanics described as future work above are now implemented in
 
 [Items & Loot](ITEMS_LOOT.md) adds typed armor/shield formulas and weapon attack/
 damage scopes to this resolver while retaining legacy manual bases and modifiers.
+
+## Task 29 spellcasting
+
+[Spellcasting](SPELLCASTING.md) adds persistent Character spell slots/access, explicit
+cantrip tiers, scroll list eligibility and managed concentration/effects. Spell attacks
+and DC still come from this resolver; active AC/speed modifiers use its breakdowns.
+See [all 339 spell classifications](SPELL_COVERAGE.md) for exact automation limits.

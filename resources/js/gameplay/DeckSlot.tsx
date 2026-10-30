@@ -60,10 +60,11 @@ export function DeckSlot({
             (disabled ||
                 !!combatReason(a, combatBudget) ||
                 (item && (item.quantity < 1 || (item.action && !item.action.available))) ||
-                a.spell?.prepared === false ||
+                (!item && (a.spell?.prepared === false || a.casting?.available === false)) ||
                 !canAfford(a, resources) ||
                 (!worldAvailable && ['token', 'prop', 'point'].includes(a.target))));
     const reason =
+        (!item && a?.casting?.available === false ? a.casting.reason : '') ||
         (missingItem ? 'Предмет больше не принадлежит персонажу' : '') ||
         (item?.action && !item.action.available ? item.action.reason : '') ||
         (a && combatReason(a, combatBudget)) ||

@@ -87,8 +87,8 @@ checked against the PDF. Attribute scores and proficiency are resolved by Charac
 An item can embed an authored Ability plus `consume` policy, so scrolls and special
 consumables can grant actions without requiring a matching permanent Character ability.
 The existing `use_ability_id` linkage is still supported. Item-granted actions require an
-enabled definition but do not require the Character to know/prepare that spell; complete
-SRD scroll eligibility, spell levels/slots and scroll exceptions belong to Task 29.
+enabled definition but do not require the Character to know/prepare that spell; the explicit
+SRD scroll/slot rules are now described in [SPELLCASTING.md](SPELLCASTING.md).
 
 Quantity is consumed after an accepted effect/attack, within the same transaction. Retry
 uses the original UUID and result. Reusable items can set consume=false. Dynamic healing
@@ -186,11 +186,12 @@ verified by this local acceptance pass.
 
 ## Task 29 Spells & Spellcasting
 
-Connect local spell definitions to explicit save/attack/damage/effect mappings rather than
-inferring text. Add spell-slot ownership, casting eligibility, upcasting, concentration
-lifecycle and component rules before claiming full spellcasting. Define scroll-specific
-eligibility, DC/attack values and consumption failure rules; generic granted actions already
-provide a transaction-safe integration point. Reactions still have no prompting engine.
+[Spellcasting](SPELLCASTING.md) now supplies reviewed spell mappings, persistent slots,
+cast-level scaling, concentration, managed effects and explicit scroll rules. Scrolls use
+fixed SRD DC/attack values, a GM-confirmed spell-list allowance, no Character slots and
+transaction-safe consumption/check failure. Components and unsupported spell mechanics
+are explicitly classified; [the coverage audit](SPELL_COVERAGE.md) lists all 339 spells.
+Reactions still have no automatic prompting engine.
 Weapon mastery, full extra attacks/dual wielding, armor training/classes, economy, crafting,
 encumbrance, attunement and loot tables remain outside this slice.
 

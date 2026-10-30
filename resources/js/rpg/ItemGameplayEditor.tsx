@@ -426,6 +426,50 @@ export function ItemGameplayEditor({
                                     />
                                 </label>
                             )}
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={g.use.scroll ?? false}
+                                    onChange={(e) =>
+                                        save({
+                                            use: {
+                                                ...g.use!,
+                                                scroll: e.target.checked,
+                                                consume: true,
+                                            },
+                                        })
+                                    }
+                                />
+                                Свиток SRD · фиксированные DC/атака, без ячейки Character
+                            </label>
+                            <label>
+                                Взять заклинание персонажа
+                                <select
+                                    value=""
+                                    onChange={(e) => {
+                                        const a = character.abilities?.find(
+                                            (a) => a.id === e.target.value,
+                                        );
+                                        if (a)
+                                            save({
+                                                use: {
+                                                    consume: true,
+                                                    scroll: true,
+                                                    ability: structuredClone(a),
+                                                },
+                                            });
+                                    }}
+                                >
+                                    <option value="">Выберите заклинание</option>
+                                    {character.abilities
+                                        ?.filter((a) => a.spell)
+                                        .map((a) => (
+                                            <option key={a.id} value={a.id}>
+                                                {a.name}
+                                            </option>
+                                        ))}
+                                </select>
+                            </label>
                             <AbilityEditor
                                 campaignId={campaignId}
                                 character={{ ...character, abilities: [g.use.ability] }}

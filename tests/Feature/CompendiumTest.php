@@ -136,10 +136,11 @@ class CompendiumTest extends TestCase
         $spell = $this->postJson($base.'/copy', $command)->assertOk()->assertJsonPath('copy.source_reference.version', '5.2.1')->json('ability');
         $this->postJson($base.'/copy', $command)->assertOk()->assertHeader('Idempotent-Replay', 'true');
         $this->assertCount(1, $hero->fresh()->abilities);
-        $this->assertFalse($spell['enabled']);
+        $this->assertTrue($spell['enabled']);
+        $this->assertSame('PARTIAL', $spell['spell']['coverage']);
         $this->assertSame('effect', $spell['category']);
         $this->assertSame('circle', $spell['area']['shape']);
-        $this->assertSame('8d6', $spell['damage']);
+        $this->assertSame('8d6', $spell['damage_components'][0]['dice']);
         $item = $this->postJson($base.'/copy', ['entry_id' => $this->entry('longsword')->id, 'clientMutationId' => (string) Str::uuid()])->assertOk()->json('definition');
         $npc = $this->postJson($base.'/copy', ['entry_id' => $this->entry('goblin-warrior')->id, 'clientMutationId' => (string) Str::uuid()])->assertOk()->json('character');
         $this->assertSame('npc', $npc['kind']);
@@ -237,6 +238,8 @@ class CompendiumTest extends TestCase
     public function test_all_fixture_spells_map_into_existing_ability_contract_without_executing_rules(): void
     {
         $this->import();
+        $damageRecords = array_values(array_filter(json_decode(file_get_contents(base_path('tests/Fixtures/compendium/character-catalog.json')), true), fn ($r) => $r['endpoint'] === 'damage-types'));
+        app(CompendiumSync::class)->import(CompendiumSource::firstOrFail(), $damageRecords, ['rules']);
         [, $campaign] = $this->campaign();
         $hero = $campaign->characters()->create(['name' => 'Hero']);
         foreach (CompendiumEntry::where('entity_type', 'spells')->get() as $entry) {
@@ -244,7 +247,8 @@ class CompendiumTest extends TestCase
             $data = ['abilities' => [$ability]];
             $this->assertFalse(Validator::make($data, CharacterGameplay::rules())->fails(), $entry->name);
             app(CharacterGameplay::class)->validate($campaign, $data, $hero);
-            $this->assertFalse($ability['enabled']);
+            $this->assertTrue($ability['enabled']);
+            $this->assertFalse($ability['spell']['prepared']);
             $this->assertSame([], $ability['costs']);
         }
     }
@@ -258,7 +262,8 @@ class CompendiumTest extends TestCase
         $this->assertSame('touch', $normalized['range']['kind']);
         $this->assertNull($ability['area']);
         $this->assertNull($ability['damage']);
-        $this->assertFalse($ability['enabled']);
+        $this->assertTrue($ability['enabled']);
+        $this->assertFalse($ability['spell']['prepared']);
         $this->assertFalse(Validator::make(['abilities' => [$ability]], CharacterGameplay::rules())->fails());
     }
 

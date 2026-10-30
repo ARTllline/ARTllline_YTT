@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\AbilityGeometry;
 use App\Services\CharacterGameplay;
 use App\Services\CharacterRules;
+use App\Spells\SpellScrolls;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -41,6 +42,12 @@ class ItemActions
             abort_unless($mode === 'use', 422, 'Это не метательное оружие.');
             $a = $g['use']['ability'] ?? collect($c->abilities ?? [])->firstWhere('id', $d->use_ability_id);
             abort_unless($a && $a['enabled'], 422, 'Предмет нельзя использовать.');
+            if (($g['use']['scroll'] ?? false) && isset($a['spell'])) {
+                $a = app(SpellScrolls::class)->configure($c, $a);
+            }
+            if (isset($a['spell'])) {
+                $a['spell'] = array_replace($a['spell'], ['known' => true, 'prepared' => true, 'available' => true]);
+            }
             $a['id'] = $this->key($item->id);
             $a['name'] = $d->name;
 
@@ -147,7 +154,7 @@ class ItemActions
             } elseif (! empty($w['ammunition'])) {
                 $this->spendStack($this->ammunition($c, $w['ammunition'])->firstOrFail());
             }
-        } elseif ($g['use']['consume'] ?? true) {
+        } elseif (($g['use']['scroll'] ?? false) || ($g['use']['consume'] ?? true)) {
             $this->spendStack($i);
         }
     }

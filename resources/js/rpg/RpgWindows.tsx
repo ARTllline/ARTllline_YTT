@@ -60,6 +60,7 @@ export function RpgWindows({
             )}
             {kind === 'spellbook' ? (
                 <SpellbookView
+                    spellcasting={character.spellcasting}
                     abilities={character.abilities ?? []}
                     resources={character.resources ?? []}
                     onChoose={onChoose}

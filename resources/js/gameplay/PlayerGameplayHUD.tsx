@@ -1,3 +1,4 @@
+import { CastLevelChooser, ConcentrationHUD } from './spellcasting';
 import type { RollMode } from '../workspace/interactions/actingToken';
 import { AbilityHotbar } from './AbilityHotbar';
 import { useHotbar } from './useHotbar';
@@ -140,7 +141,13 @@ function CharacterHUD({
             .catch((e) => setError(e.message));
     };
     const inventory = useInventory(scene.campaignId!, character, refresh);
-    const choose = (ability: Ability, inventoryItemId?: string) => {
+    const [castingChoice, setCastingChoice] = useState<{
+        ability: Ability;
+        itemId?: string;
+    } | null>(null);
+    const castLevel = useRef<number | undefined>(undefined),
+        effectChoice = useRef<string | undefined>(undefined);
+    const beginChoose = (ability: Ability, inventoryItemId?: string) => {
         if (disabled) return;
         const reason = combatReason(
             ability,
@@ -150,8 +157,11 @@ function CharacterHUD({
             setError(reason);
             return;
         }
-        if (ability.spell?.prepared === false) {
-            setError('Заклинание не подготовлено.');
+        if (
+            !inventoryItemId &&
+            (ability.spell?.prepared === false || ability.casting?.available === false)
+        ) {
+            setError(ability.casting?.reason || 'Заклинание не подготовлено.');
             return;
         }
         itemSource.current = inventoryItemId;
@@ -177,8 +187,25 @@ function CharacterHUD({
                 auto: true,
                 mode: rollMode,
                 inventoryItemId,
+                castLevel: castLevel.current,
+                effectChoice: effectChoice.current,
                 itemAction: itemMode.current,
             });
+    };
+    const choose = (ability: Ability, inventoryItemId?: string) => {
+        castLevel.current = undefined;
+        effectChoice.current = undefined;
+        if (ability.spell && !inventoryItemId && ability.casting?.available === false) {
+            setError(ability.casting.reason);
+            return;
+        }
+        if (
+            ability.spell &&
+            !inventoryItemId &&
+            (ability.spell.level > 0 || ability.spell.effects?.some((e) => e.choices?.length))
+        )
+            setCastingChoice({ ability, itemId: inventoryItemId });
+        else beginChoose(ability, inventoryItemId);
     };
     const chooseItem = (item: InventoryItem, mode: 'use' | 'throw' = 'use') => {
         itemMode.current = mode;
@@ -474,6 +501,24 @@ function CharacterHUD({
                     {error}
                 </p>
             )}
+            <ConcentrationHUD
+                character={character}
+                campaign={scene.campaignId!}
+                onChanged={refresh}
+            />
+            {castingChoice && (
+                <CastLevelChooser
+                    ability={castingChoice.ability}
+                    onClose={() => setCastingChoice(null)}
+                    onChoose={(level, choice) => {
+                        castLevel.current = level;
+                        effectChoice.current = choice;
+                        const pick = castingChoice;
+                        setCastingChoice(null);
+                        beginChoose(pick.ability, pick.itemId);
+                    }}
+                />
+            )}
             {targeting && (
                 <AbilityTargeting
                     ability={targeting}
@@ -488,6 +533,8 @@ function CharacterHUD({
                             auto: true,
                             mode: rollMode,
                             inventoryItemId: itemSource.current,
+                            castLevel: castLevel.current,
+                            effectChoice: effectChoice.current,
                             itemAction: itemMode.current,
                         });
                         setTargeting(null);

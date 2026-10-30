@@ -17,7 +17,11 @@ class ItemDefinition extends Model
         $data = $this->toArray();
         if (! $gm && isset($data['gameplay']['use']['ability'])) {
             $draft = new Character;
-            $draft->abilities = [$data['gameplay']['use']['ability']];
+            $ability = $data['gameplay']['use']['ability'];
+            if (isset($ability['spell'])) {
+                $ability['spell'] = array_replace($ability['spell'], ['known' => true, 'prepared' => true, 'available' => true]);
+            }
+            $draft->abilities = [$ability];
             $safe = app(CharacterGameplay::class)->abilities($draft, false, true)[0] ?? null;
             if ($safe) {
                 $data['gameplay']['use']['ability'] = $safe;

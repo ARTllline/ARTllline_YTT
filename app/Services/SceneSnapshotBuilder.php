@@ -84,7 +84,7 @@ class SceneSnapshotBuilder
             'durationMode' => $condition->duration_mode, 'remainingRounds' => $condition->remaining_rounds,
         ] + ($gm ? ['visibility' => $condition->visibility] : []))->all();
         if ($gm || $token->owner_user_id === $user->id) {
-            $data += ['hp' => $token->hp, 'maxHp' => $token->max_hp, 'checkStats' => $token->check_stats ?? []];
+            $data += ['temporaryHp' => $token->temporary_hp ?? 0, 'hp' => $token->hp, 'maxHp' => $token->max_hp, 'checkStats' => $token->check_stats ?? []];
         }
         if (! $gm) {
             $data['isOwner'] = $token->owner_user_id === $user->id;
@@ -95,7 +95,7 @@ class SceneSnapshotBuilder
             if ($token->character_id) {
                 $data += ['baseAc' => $token->character->getRawOriginal('ac'), 'baseSpeed' => $token->character->getRawOriginal('speed')];
             }
-            $data += ['hp' => $token->hp, 'maxHp' => $token->max_hp, 'ac' => $token->ac, 'speed' => $token->speed,
+            $data += ['temporaryHp' => $token->temporary_hp ?? 0, 'hp' => $token->hp, 'maxHp' => $token->max_hp, 'ac' => $token->ac, 'speed' => $token->speed,
                 'isHidden' => $token->is_hidden, 'isLocked' => $token->is_locked,
                 'ownerUserId' => $token->owner_user_id ? (string) $token->owner_user_id : null];
         }

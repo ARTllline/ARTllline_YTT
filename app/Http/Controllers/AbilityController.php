@@ -21,7 +21,7 @@ class AbilityController extends Controller
         return [
             'clientMutationId' => 'required|uuid', 'characterId' => 'required_without:actorTokenId|nullable|integer|min:1', 'actorTokenId' => 'required_without:characterId|nullable|integer|min:1',
             'abilityId' => 'required|uuid', 'epoch' => 'required|integer|min:0',
-            'rollMode' => 'required|in:normal,advantage,disadvantage',
+            'rollMode' => 'required|in:normal,advantage,disadvantage', 'castLevel' => 'sometimes|integer|between:0,9', 'effectChoice' => 'sometimes|string|max:48', 'manualComplete' => 'sometimes|boolean',
             'target' => 'present|nullable|array:kind,id,x,y', 'target.kind' => 'required_with:target|in:token,prop,point',
             'target.id' => 'sometimes|integer|min:1', 'target.x' => 'sometimes|numeric', 'target.y' => 'sometimes|numeric',
         ];

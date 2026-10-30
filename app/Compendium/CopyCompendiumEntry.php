@@ -12,7 +12,7 @@ use App\Models\ItemDefinition;
 use App\Models\User;
 use App\Services\CharacterGameplay;
 use App\Services\CharacterRules;
-use App\Services\DamageRoller;
+use App\Spells\SpellProjection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
@@ -33,6 +33,8 @@ class CopyCompendiumEntry
                 $character = $campaign->characters()->findOrFail($characterId);
                 $abilities = $character->abilities ?? [];
                 abort_if(count($abilities) >= 24, 422, 'У персонажа уже 24 способности.');
+                $n['source_key'] = $entry->external_key;
+                $n['source_entry_id'] = $entry->id;
                 $ability = $this->spell($n, count($abilities));
                 $data = ['abilities' => [...$abilities, $ability]];
                 Validator::make($data, CharacterGameplay::rules())->validate();
@@ -99,35 +101,6 @@ class CopyCompendiumEntry
 
     public function spell(array $n, int $order): array
     {
-        $area = $n['area'];
-        // Only YTT-compatible geometry; cylinder height and other dimensions stay in the snapshot.
-        $shape = match ($area['shape'] ?? null) {
-            'sphere' => 'circle', 'cone' => 'cone', 'cube' => 'rectangle', default => null
-        };
-        $geometry = $shape ? ['shape' => $shape, 'size' => $area['size'], 'width' => $area['size']] : null;
-        $attack = $n['attack_type'] && ! $n['saving_throw'] && ! $area;
-        $range = $n['range']['distance'];
-        if ($geometry && $shape === 'cone' && $range === null && $n['range']['kind'] === 'self') {
-            $range = $area['size'];
-        }
-        // E.g. Dragon's Breath grants a later cone to a touched creature. Do not
-        // mistake that secondary effect for the casting geometry or expand range.
-        if ($geometry && (($n['range']['kind'] === 'touch') || ($shape === 'cone' && ($range === null || $range < $area['size'])))) {
-            $geometry = null;
-        }
-        $dice = $n['damage']['expression'];
-        $safeDice = is_string($dice) && preg_match(DamageRoller::PATTERN, $dice) ? $dice : null;
-
-        return ['id' => (string) Str::uuid(), 'name' => Str::limit($n['name'], 60, ''), 'icon' => 'spark',
-            'description' => Str::limit($n['description'], 800, ''),
-            'category' => $attack ? 'attack' : ($geometry ? 'effect' : 'utility'), 'attack_type' => 'spell',
-            'target' => $geometry ? 'point' : ($attack ? 'token' : ($n['range']['kind'] === 'self' ? 'self' : 'none')),
-            'check' => $attack ? ['stat_key' => 'spell_attack', 'modifier' => 0, 'dc' => 0, 'dc_visible' => false, 'defense' => 'ac'] : null,
-            'range' => $range !== null ? ['normal' => $range, 'long' => null] : null, 'area' => $geometry,
-            'damage' => $attack || $geometry ? $safeDice : null, 'costs' => [],
-            'result' => ['type' => 'nothing', 'target' => null, 'amount' => 0], 'sort_order' => $order,
-            'enabled' => false, // GM reviews unsupported saves/conditional damage before enabling.
-            'spell' => ['level' => $n['spell_level'], 'school' => $n['school'], 'classes' => $n['classes'],
-                'known' => true, 'prepared' => false, 'ritual' => $n['ritual'], 'concentration' => $n['concentration']]];
+        return app(SpellProjection::class)->ability($n, $order);
     }
 }

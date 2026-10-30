@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ResourceEditor } from '../../gameplay/ResourceEditor';
 import { AbilityEditor } from '../../gameplay/AbilityEditor';
+import { SpellcastingEditor } from '../../rpg/SpellcastingEditor';
 import { ItemAuthoring } from '../../rpg/ItemAuthoring';
 import { CircleUserRound, Plus, Settings2 } from 'lucide-react';
 import { api } from '../../api/workspace';
@@ -287,6 +288,7 @@ export function CharacterBrowser({
                             disabled={busy}
                         />
                     </details>
+                    <SpellcastingEditor key={draft.id} character={draft} campaignId={campaignId} />
                     <ItemAuthoring
                         campaignId={campaignId}
                         character={{

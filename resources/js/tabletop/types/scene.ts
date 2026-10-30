@@ -80,6 +80,16 @@ export interface Scene {
     tokens: readonly Token[];
 }
 export interface Character {
+    temporaryHp?: number;
+    spellcasting?: import('../../gameplay/spellcasting').SpellcastingState;
+    spellEffects?: {
+        id: string;
+        name: string;
+        concentration: boolean;
+        remainingRounds: number | null;
+        expiresAt: string | null;
+        startedAt: string;
+    }[];
     rules?: import('../../rpg/rules').CharacterRules | null;
     rulesSuggestion?: import('../../rpg/rules').CharacterRules | null;
     derived?: import('../../rpg/rules').DerivedCharacter;

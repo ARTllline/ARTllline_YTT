@@ -7,6 +7,9 @@ use App\Models\Campaign;
 use App\Models\Character;
 use App\Models\Cue;
 use App\Models\Handout;
+use App\Models\ItemDefinition;
+use App\Spells\SpellCasting;
+use App\Spells\SpellMetadata;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -30,7 +33,7 @@ class CharacterGameplay
             'abilities.*' => 'required|array:id,name,icon,description,category,target,check,costs,damage,result,sort_order,enabled,attack_type,range,area,spell,item_only,activation,attack,save,damage_components,condition_effects,requires_sight',
             'abilities.*.requires_sight' => 'sometimes|boolean',
             'abilities.*.item_only' => 'sometimes|boolean',
-            'abilities.*.spell' => 'sometimes|nullable|array:level,school,classes,known,prepared,ritual,concentration',
+            'abilities.*.spell' => 'sometimes|nullable|array:'.SpellMetadata::FIELDS,
             'abilities.*.spell.level' => 'required_with:abilities.*.spell|integer|between:0,9',
             'abilities.*.spell.school' => 'required_with:abilities.*.spell|string|max:48',
             'abilities.*.spell.classes' => 'present_with:abilities.*.spell|array|list|max:8',
@@ -64,7 +67,7 @@ class CharacterGameplay
             'abilities.*.result.dice' => ['sometimes', 'nullable', 'string', 'max:12', 'regex:'.DamageRoller::PATTERN],
             'abilities.*.result.amount' => 'required|integer|between:0,9999',
             'abilities.*.sort_order' => 'required|integer|between:0,100', 'abilities.*.enabled' => 'required|boolean',
-        ] + CombatMetadata::abilityRules();
+        ] + CombatMetadata::abilityRules() + SpellMetadata::rules();
     }
 
     public function validate(Campaign $campaign, array &$data, ?Character $character): void
@@ -78,10 +81,14 @@ class CharacterGameplay
         }
         foreach ($abilities as &$ability) {
             if (isset($ability['spell'])) {
+                SpellMetadata::validate($ability['spell']);
                 $classes = $ability['spell']['classes'];
                 if (count($classes) !== count(array_unique($classes))) {
                     $this->invalid('Классы одного заклинания не должны повторяться.');
                 }
+            }
+            if (! empty($ability['spell']['material_definition_id'])) {
+                abort_unless(ItemDefinition::where('campaign_id', $campaign->id)->whereKey($ability['spell']['material_definition_id'])->exists(), 422, 'Компонент должен принадлежать кампании.');
             }
             $check = $ability['check'];
             if ($check !== null) {
@@ -156,13 +163,16 @@ class CharacterGameplay
             return $abilities->values()->all();
         }
 
-        return $abilities->where('enabled', true)->map(function ($a) use ($includeItems) {
+        return $abilities->where('enabled', true)->map(function ($a) use ($includeItems, $character) {
             if (($a['item_only'] ?? false) && ! $includeItems) {
                 return null;
             }
             $safe = array_intersect_key($a, array_flip(['id', 'name', 'icon', 'description', 'category', 'target', 'costs', 'sort_order', 'enabled', 'attack_type', 'range', 'area', 'spell', 'item_only', 'damage', 'activation', 'attack', 'damage_components', 'requires_sight']));
             if (isset($a['spell']) && ! $a['spell']['known']) {
                 return null;
+            }
+            if (isset($a['spell'])) {
+                $safe['casting'] = app(SpellCasting::class)->availability($character, $a);
             }
             $safe['check'] = $a['check'] ? ['stat_key' => $a['check']['stat_key']] : null;
 
