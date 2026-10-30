@@ -2,12 +2,25 @@
 
 namespace App\Models;
 
+use App\Services\EquipmentStats;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Character extends Model
 {
+    public function inventory(): HasMany
+    {
+        return $this->hasMany(InventoryItem::class);
+    }
+
+    public function getAttribute($key)
+    {
+        $value = parent::getAttribute($key);
+
+        return in_array($key, ['ac', 'speed', 'check_stats'], true) ? app(EquipmentStats::class)->apply($this, $key, $value) : $value;
+    }
+
     protected $guarded = ['id', 'campaign_id'];
 
     protected function casts(): array

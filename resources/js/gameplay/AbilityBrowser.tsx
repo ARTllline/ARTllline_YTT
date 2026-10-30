@@ -31,17 +31,19 @@ export function AbilityBrowser({
     initialFilter?: 'spell';
 }) {
     const [filter, setFilter] = useState<keyof typeof filters>(initialFilter ?? 'all');
-    const shown = abilities.filter(
-        (a) =>
-            filter === 'all' ||
-            (filter === 'spell'
-                ? a.attack_type === 'spell'
-                : filter === 'attack'
-                  ? a.category === 'attack' && a.attack_type !== 'spell'
-                  : filter === 'utility'
-                    ? ['utility', 'effect'].includes(a.category)
-                    : a.category === 'check'),
-    );
+    const shown = abilities
+        .filter((a) => !a.item_only)
+        .filter(
+            (a) =>
+                filter === 'all' ||
+                (filter === 'spell'
+                    ? !!a.spell || a.attack_type === 'spell'
+                    : filter === 'attack'
+                      ? a.category === 'attack' && a.attack_type !== 'spell'
+                      : filter === 'utility'
+                        ? ['utility', 'effect'].includes(a.category)
+                        : a.category === 'check'),
+        );
     return (
         <section className="ability-browser" aria-label="Браузер способностей">
             <header>

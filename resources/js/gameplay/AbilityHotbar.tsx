@@ -1,7 +1,9 @@
 import type { RollMode } from '../workspace/interactions/actingToken';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { ChevronsDown, ChevronsUp, Settings2 } from 'lucide-react';
+
+import { ChevronsDown, ChevronsUp, Settings2, Backpack, UserRound } from 'lucide-react';
+import type { InventoryItem } from '../rpg/model';
+import type { RpgWindowKind } from '../rpg/RpgWindow';
 import type { Ability, CharacterResource } from './model';
 import { canAfford } from './model';
 import { RpgIcon } from './RpgIcon';
@@ -38,6 +40,10 @@ export function AbilityHotbar({
     worldAvailable,
     onResourceDetails,
     preferencesKey,
+    items = [],
+    itemAbilities = [],
+    onChooseItem,
+    onOpenWindow,
 }: {
     abilities: Ability[];
     resources: CharacterResource[];
@@ -56,6 +62,10 @@ export function AbilityHotbar({
     worldAvailable: boolean;
     onResourceDetails: () => void;
     preferencesKey: string;
+    items?: InventoryItem[];
+    itemAbilities?: Ability[];
+    onChooseItem?: (i: InventoryItem) => void;
+    onOpenWindow?: (kind: RpgWindowKind) => void;
 }) {
     const [view, setView] = useState(() => readView(preferencesKey));
     const [browser, setBrowser] = useState(false),
@@ -81,12 +91,10 @@ export function AbilityHotbar({
         previousHeight.current = height;
         return () => animation?.cancel();
     }, [view.expanded]);
-    const drag = useGameplayDrag(
-        slots,
-        onLayout,
-        editable,
-        (binding) =>
-            binding.sourceType === 'ability' && abilities.some((a) => a.id === binding.sourceId),
+    const drag = useGameplayDrag(slots, onLayout, editable, (binding) =>
+        binding.sourceType === 'ability'
+            ? abilities.some((a) => a.id === binding.sourceId && !a.item_only)
+            : items.some((i) => i.id === binding.sourceId && !!i.definition.use_ability_id),
     );
     useEffect(() => {
         try {
@@ -117,8 +125,13 @@ export function AbilityHotbar({
     const shortcut = useRef<(index: number) => void>(() => {});
     useEffect(() => {
         shortcut.current = (index) => {
-            if (edit || browser || disabled) return;
+            if (edit || browser || disabled || document.querySelector('.rpg-window')) return;
             const binding = slots[view.page * PAGE_SIZE + index];
+            if (binding?.sourceType === 'inventory_item') {
+                const i = items.find((i) => i.id === binding.sourceId);
+                if (i && i.quantity > 0) onChooseItem?.(i);
+                return;
+            }
             const a = abilities.find(
                 (a) => binding?.sourceType === 'ability' && a.id === binding.sourceId,
             );
@@ -210,6 +223,23 @@ export function AbilityHotbar({
                                         binding?.sourceType === 'ability' &&
                                         a.id === binding.sourceId,
                                 )}
+                                binding={binding}
+                                item={
+                                    binding?.sourceType === 'inventory_item'
+                                        ? items.find((i) => i.id === binding.sourceId)
+                                        : undefined
+                                }
+                                itemAbility={
+                                    binding?.sourceType === 'inventory_item'
+                                        ? itemAbilities.find(
+                                              (a) =>
+                                                  a.id ===
+                                                  items.find((i) => i.id === binding.sourceId)
+                                                      ?.definition.use_ability_id,
+                                          )
+                                        : undefined
+                                }
+                                onChooseItem={onChooseItem}
                                 resources={resources}
                                 drag={drag}
                                 edit={edit}
@@ -257,6 +287,10 @@ export function AbilityHotbar({
                         aria-label="Способности"
                         aria-expanded={browser}
                         onClick={() => {
+                            if (onOpenWindow) {
+                                onOpenWindow('spellbook');
+                                return;
+                            }
                             setInitialFilter(undefined);
                             setDestination(null);
                             setBrowser(!browser);
@@ -265,6 +299,26 @@ export function AbilityHotbar({
                         <RpgIcon icon="book" size={17} />
                         <span>Способности</span>
                     </button>
+                    {onOpenWindow && (
+                        <>
+                            <button
+                                className="deck-edit icon-button"
+                                aria-label="Инвентарь"
+                                title="Инвентарь · I"
+                                onClick={() => onOpenWindow('inventory')}
+                            >
+                                <Backpack size={18} />
+                            </button>
+                            <button
+                                className="deck-edit icon-button"
+                                aria-label="Открыть персонажа"
+                                title="Персонаж · C"
+                                onClick={() => onOpenWindow('character')}
+                            >
+                                <UserRound size={18} />
+                            </button>
+                        </>
+                    )}
                     <div className="hotbar-roll-stance" role="group" aria-label="Режим броска">
                         {(['normal', 'advantage', 'disadvantage'] as const).map((mode, i) => (
                             <button
@@ -305,22 +359,6 @@ export function AbilityHotbar({
                     </div>
                 )}
             </section>
-            {drag.ghost &&
-                createPortal(
-                    <div
-                        className="hotbar-drag-ghost"
-                        style={{ left: drag.ghost.x + 12, top: drag.ghost.y - 65 }}
-                    >
-                        <RpgIcon
-                            icon={
-                                abilities.find((a) => a.id === drag.ghost?.binding.sourceId)
-                                    ?.icon ?? 'spark'
-                            }
-                            size={62}
-                        />
-                    </div>,
-                    document.body,
-                )}
         </>
     );
 }

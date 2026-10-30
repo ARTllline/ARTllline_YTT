@@ -2,7 +2,7 @@ export const PAGE_SIZE = 16;
 export const HOTBAR_SIZE = 32;
 /** Only ability is supported today. New sources must add their resolver and authorization. */
 export interface SlotBinding {
-    sourceType: 'ability';
+    sourceType: 'ability' | 'inventory_item';
     sourceId: string;
 }
 export interface DeckLayout {
@@ -19,7 +19,7 @@ export function isBinding(value: unknown): value is SlotBinding {
         !!value &&
         typeof value === 'object' &&
         'sourceType' in value &&
-        value.sourceType === 'ability' &&
+        ['ability', 'inventory_item'].includes(String(value.sourceType)) &&
         'sourceId' in value &&
         typeof value.sourceId === 'string' &&
         value.sourceId.length > 0 &&
@@ -47,11 +47,11 @@ export function normalizeSlots(value: unknown, available: string[]): HotbarSlots
         const binding = typeof raw[i] === 'string' ? abilityBinding(raw[i]) : raw[i];
         if (
             !isBinding(binding) ||
-            !available.includes(binding.sourceId) ||
-            seen.has(binding.sourceId)
+            (binding.sourceType === 'ability' && !available.includes(binding.sourceId)) ||
+            seen.has(`${binding.sourceType}:${binding.sourceId}`)
         )
             return null;
-        seen.add(binding.sourceId);
+        seen.add(`${binding.sourceType}:${binding.sourceId}`);
         return binding;
     });
 }

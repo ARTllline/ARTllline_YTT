@@ -12,6 +12,7 @@ use App\Http\Controllers\CueController;
 use App\Http\Controllers\FogController;
 use App\Http\Controllers\GameSessionController;
 use App\Http\Controllers\HandoutController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InviteController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\MovePreviewController;
@@ -49,6 +50,11 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
     });
     Route::middleware('auth')->group(function () {
+        Route::get('/campaigns/{campaign}/items', [InventoryController::class, 'definitions']);
+        Route::post('/campaigns/{campaign}/items', [InventoryController::class, 'saveDefinition'])->name('campaign.items.save')->middleware(IdempotentMutation::class);
+        Route::get('/campaigns/{campaign}/characters/{character}/inventory', [InventoryController::class, 'show']);
+        Route::post('/campaigns/{campaign}/characters/{character}/inventory', [InventoryController::class, 'command'])->name('campaign.inventory.command')->middleware(IdempotentMutation::class);
+        Route::post('/scenes/{scene}/inventory/use', [InventoryController::class, 'useItem'])->name('scene.inventory.use')->middleware([IdempotentMutation::class, 'throttle:60,1']);
         Route::get('/campaigns/{campaign}/characters/{character}/hotbar', [CharacterHotbarController::class, 'show']);
         Route::put('/campaigns/{campaign}/characters/{character}/hotbar', [CharacterHotbarController::class, 'update']);
         Route::post('/scenes/{scene}/abilities/execute', [AbilityController::class, 'execute'])->name('scene.ability')->middleware([IdempotentMutation::class, 'throttle:60,1']);

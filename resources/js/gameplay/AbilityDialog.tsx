@@ -18,6 +18,7 @@ import {
 } from './pendingAbility';
 
 export interface AbilityInvocation {
+    inventoryItemId?: string;
     ability: Ability;
     target: AbilityTarget | null;
     targetName?: string;
@@ -86,6 +87,9 @@ export function AbilityDialog({
             command: {
                 clientMutationId: commandId(),
                 characterId: character.id,
+                ...(invocation.inventoryItemId
+                    ? { inventoryItemId: invocation.inventoryItemId }
+                    : {}),
                 abilityId: ability.id,
                 epoch,
                 target: invocation.target,

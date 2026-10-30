@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ResourceEditor } from '../../gameplay/ResourceEditor';
 import { AbilityEditor } from '../../gameplay/AbilityEditor';
+import { ItemAuthoring } from '../../rpg/ItemAuthoring';
 import { CircleUserRound, Plus, Settings2 } from 'lucide-react';
 import { api } from '../../api/workspace';
 import { charactersApi } from '../../api/characters';
@@ -208,6 +209,7 @@ export function CharacterBrowser({
                         save={(checkStats) => setDraft({ ...draft, checkStats })}
                         disabled={busy}
                     />
+                    <ItemAuthoring campaignId={campaignId} character={draft} />
                     <p className="hint">
                         Портрет и состояние меняются в Inspector размещённого токена; HP — через
                         существующие действия Combat.

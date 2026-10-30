@@ -78,10 +78,10 @@ class CharacterActions
             'portrait' => app(SceneSnapshotBuilder::class)->asset($character->portraitAsset),
             'ownerUserId' => $character->owner_user_id ? (string) $character->owner_user_id : null,
             'kind' => $character->kind, 'disposition' => $character->disposition,
-            'ac' => $character->ac, 'speed' => $character->speed,
+            'ac' => $gm ? $character->getRawOriginal('ac') : $character->ac, 'speed' => $gm ? $character->getRawOriginal('speed') : $character->speed,
             'resources' => collect($character->resources ?? [])->sortBy('sort_order')->values()->all(),
             'abilities' => app(CharacterGameplay::class)->abilities($character, $gm),
-            'checkStats' => $character->check_stats ?? [], 'hp' => $character->hp, 'maxHp' => $character->max_hp];
+            'checkStats' => $gm ? (json_decode($character->getRawOriginal('check_stats') ?? '[]', true) ?? []) : ($character->check_stats ?? []), 'hp' => $character->hp, 'maxHp' => $character->max_hp];
     }
 
     public function roster(Campaign $campaign, User $user): array

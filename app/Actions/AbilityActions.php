@@ -74,9 +74,9 @@ class AbilityActions
         }, 3);
     }
 
-    public function execute(User $user, Scene $scene, array $data): array
+    public function execute(User $user, Scene $scene, array $data, bool $fromItem = false): array
     {
-        return DB::transaction(function () use ($user, $scene, $data) {
+        return DB::transaction(function () use ($user, $scene, $data, $fromItem) {
             $campaign = Campaign::whereKey($scene->campaign_id)->lockForUpdate()->firstOrFail();
             $scene = Scene::whereKey($scene->id)->lockForUpdate()->firstOrFail();
             $scene->setRelation('campaign', $campaign);
@@ -92,6 +92,8 @@ class AbilityActions
             }
             $ability = collect($character->abilities ?? [])->firstWhere('id', $data['abilityId']);
             abort_unless($ability && $ability['enabled'], 403, 'Способность больше недоступна.');
+            abort_if(($ability['item_only'] ?? false) && ! $fromItem, 403, 'Это действие доступно только через предмет.');
+            abort_if(isset($ability['spell']) && (! $ability['spell']['known'] || ! $ability['spell']['prepared']), 403, 'Заклинание не подготовлено.');
             // A result runs with a current GM's authority, never a player-forged author ID.
             $author = $campaign->members()->wherePivot('role', 'gm')->orderBy('users.id')->firstOrFail();
             $actor = $scene->tokens()->where('character_id', $character->id)->where('is_hidden', false)->first();

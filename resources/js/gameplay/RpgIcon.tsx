@@ -13,6 +13,17 @@ export const rpgIconKeys = new Set([
     'footprints',
     'focus',
     'mana',
+    'item_sword',
+    'item_shield',
+    'item_potion',
+    'item_scroll',
+    'item_armor',
+    'item_boots',
+    'item_helmet',
+    'item_ring',
+    'item_amulet',
+    'item_cloak',
+    'item_gloves',
 ]);
 
 /** Painted gameplay art; utility controls continue to use the UI icon system. */

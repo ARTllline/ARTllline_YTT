@@ -14,6 +14,16 @@ export interface CharacterResource {
     player_adjustable: boolean;
 }
 export interface Ability {
+    item_only?: boolean;
+    spell?: {
+        level: number;
+        school: string;
+        classes: string[];
+        known: boolean;
+        prepared: boolean;
+        ritual?: boolean;
+        concentration?: boolean;
+    } | null;
     attack_type?: 'melee' | 'ranged' | 'spell' | 'check' | 'utility';
     range?: { normal: number; long: number | null } | null;
     area?: {
@@ -46,6 +56,7 @@ export interface Ability {
 }
 export type AbilityTarget = { kind: 'token' | 'prop'; id: string } | ({ kind: 'point' } & Point);
 export interface AbilityCommand {
+    inventoryItemId?: string;
     clientMutationId: string;
     characterId: string;
     abilityId: string;
@@ -85,7 +96,9 @@ export interface GameplayFeedback {
 export const gameplayApi = {
     execute: (scene: string, command: AbilityCommand) =>
         request<{ execution: AbilityResult }>(
-            `/scenes/${scene}/abilities/execute`,
+            command.inventoryItemId
+                ? `/scenes/${scene}/inventory/use`
+                : `/scenes/${scene}/abilities/execute`,
             'POST',
             command,
         ),

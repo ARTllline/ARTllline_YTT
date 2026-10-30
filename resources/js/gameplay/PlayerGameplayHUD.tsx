@@ -1,19 +1,22 @@
 import type { RollMode } from '../workspace/interactions/actingToken';
 import { AbilityHotbar } from './AbilityHotbar';
 import { useHotbar } from './useHotbar';
-import { normalizeSlots } from './hotbarModel';
+import { normalizeSlots, placeBinding, abilityBinding, type SlotBinding } from './hotbarModel';
 import { abilityPreview } from './geometry';
 import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
-import { ChevronUp, Heart, Shield, Footprints, X } from 'lucide-react';
-import { ApiError } from '../api/client';
+import { ChevronUp, Heart } from 'lucide-react';
 import { currentTokenId } from '../tabletop/types/combat';
-import { api, commandId } from '../api/workspace';
+import { api } from '../api/workspace';
 import type { SceneStore } from '../tabletop/state/SceneStore';
 import type { TabletopRenderer } from '../tabletop/renderer/TabletopRenderer';
 import type { Character, Token } from '../tabletop/types/scene';
 import { ConditionList } from '../workspace/combat/TokenCombatControls';
-import { gameplayIcon } from './icons';
-import { canAfford, gameplayApi, type Ability, type AbilityResult } from './model';
+import { canAfford, type Ability, type AbilityResult } from './model';
+import { RpgDragProvider } from '../rpg/RpgDrag';
+import { RpgWindows } from '../rpg/RpgWindows';
+import type { RpgWindowKind } from '../rpg/RpgWindow';
+import { useInventory } from '../rpg/useInventory';
+import { itemBinding, type InventoryItem } from '../rpg/model';
 import { AbilityDialog, type AbilityInvocation } from './AbilityDialog';
 import { AbilityTargeting } from './AbilityTargeting';
 import { abilitySlot, readPendingAbility } from './pendingAbility';
@@ -97,9 +100,9 @@ function CharacterHUD({
     disabled: boolean;
     actors: Token[];
 }) {
-    const [panel, setPanel] = useState(false);
+    const [panel, setPanel] = useState<RpgWindowKind | null>(null);
     useEffect(() => {
-        const open = () => setPanel(true);
+        const open = () => setPanel('character');
         window.addEventListener('ytt:character-panel', open);
         return () => window.removeEventListener('ytt:character-panel', open);
     }, []);
@@ -108,9 +111,7 @@ function CharacterHUD({
     const [targeting, setTargeting] = useState<Ability | null>(null);
     const [invocation, setInvocation] = useState<AbilityInvocation | null>(null);
     const [error, setError] = useState('');
-    const [resourceBusy, setResourceBusy] = useState(false);
-    const [resourcePending, setResourcePending] = useState(false);
-    const resourceRequest = useRef<{ key: string; delta: number; id: string } | null>(null);
+    const itemSource = useRef<string | undefined>(undefined);
     const { scene } = store.getSnapshot();
     const slot = abilitySlot(userId, scene.campaignId!, character.id);
     const pending = readPendingAbility(slot);
@@ -135,9 +136,15 @@ function CharacterHUD({
             })
             .catch((e) => setError(e.message));
     };
-    const choose = (ability: Ability) => {
+    const inventory = useInventory(scene.campaignId!, character, refresh);
+    const choose = (ability: Ability, inventoryItemId?: string) => {
         if (disabled) return;
-        setPanel(false);
+        if (ability.spell?.prepared === false) {
+            setError('Заклинание не подготовлено.');
+            return;
+        }
+        itemSource.current = inventoryItemId;
+        setPanel(null);
         setError('');
         if (!canAfford(ability, resources)) {
             setError('Недостаточно ресурса.');
@@ -152,8 +159,63 @@ function CharacterHUD({
             return;
         }
         if (['token', 'prop', 'point'].includes(ability.target)) setTargeting(ability);
-        else setInvocation({ ability, target: null, auto: true, mode: rollMode });
+        else setInvocation({ ability, target: null, auto: true, mode: rollMode, inventoryItemId });
     };
+    const chooseItem = (item: InventoryItem) => {
+        const ability = inventory.data?.useAbilities.find(
+            (a) => a.id === item.definition.use_ability_id,
+        );
+        if (!ability || item.quantity < 1) {
+            setError('Предмет недоступен или закончился.');
+            return;
+        }
+        choose(ability, item.id);
+    };
+    const bind = (binding: SlotBinding) => {
+        const empty = hotbar.slots.findIndex((s) => s === null);
+        if (empty < 0) {
+            setError('В панели нет свободных ячеек. Перетащите на нужный слот.');
+            return;
+        }
+        hotbar.change(placeBinding(hotbar.slots, binding, empty));
+    };
+    const windowHandlers = useRef(chooseItem);
+    useEffect(() => {
+        windowHandlers.current = chooseItem;
+    });
+    useEffect(() => {
+        const key = (e: KeyboardEvent) => {
+            if (
+                e.ctrlKey ||
+                e.metaKey ||
+                e.altKey ||
+                e.shiftKey ||
+                e.repeat ||
+                document.querySelector('dialog[open]') ||
+                (e.target instanceof HTMLElement &&
+                    e.target.closest('input,textarea,select,[contenteditable="true"]'))
+            )
+                return;
+            const kind = ({ KeyI: 'inventory', KeyK: 'spellbook', KeyC: 'character' } as const)[
+                e.code as 'KeyI' | 'KeyK' | 'KeyC'
+            ];
+            if (kind) {
+                e.preventDefault();
+                setPanel((p) => (p === kind ? null : kind));
+            }
+        };
+        const item = (e: Event) => {
+            const id = (e as CustomEvent<string>).detail;
+            const candidate = inventory.data?.items.find((i) => i.id === id);
+            if (candidate) windowHandlers.current(candidate);
+        };
+        window.addEventListener('keydown', key);
+        window.addEventListener('ytt:inventory-use', item);
+        return () => {
+            window.removeEventListener('keydown', key);
+            window.removeEventListener('ytt:inventory-use', item);
+        };
+    }, [inventory.data]);
     const radialRequest = useRef<(event: CustomEvent) => void>(() => {});
     useEffect(() => {
         radialRequest.current = (event) => {
@@ -185,6 +247,7 @@ function CharacterHUD({
         return () => window.removeEventListener('ytt:ability-invoke', listener);
     }, []);
     const accepted = (r: AbilityResult) => {
+        void inventory.refresh();
         refresh();
         if (r.outcomes?.length) {
             for (const outcome of r.outcomes) {
@@ -209,142 +272,33 @@ function CharacterHUD({
                 : null;
         if (feedback) renderer.current?.gameplay.feedback({ tokenId: target, ...feedback });
     };
-    const adjust = async (key: string, delta: number) => {
-        if (resourceBusy || disabled) return;
-        resourceRequest.current ??= { key, delta, id: commandId() };
-        setResourceBusy(true);
-        setResourcePending(true);
-        setError('');
-        try {
-            const command = resourceRequest.current;
-            await gameplayApi.resource(
-                scene.campaignId!,
-                character.id,
-                command.key,
-                command.delta,
-                command.id,
-            );
-            resourceRequest.current = null;
-            setResourcePending(false);
-            refresh();
-        } catch (e) {
-            if (e instanceof ApiError && e.status > 0 && e.status < 500) {
-                resourceRequest.current = null;
-                setResourcePending(false);
-            }
-            setError((e as Error).message);
-        } finally {
-            setResourceBusy(false);
-        }
-    };
     return (
-        <>
+        <RpgDragProvider
+            icon={(b) =>
+                b.sourceType === 'ability'
+                    ? (abilities.find((a) => a.id === b.sourceId)?.icon ?? 'spark')
+                    : (inventory.data?.items.find((i) => i.id === b.sourceId)?.definition.icon ??
+                      'item_potion')
+            }
+        >
             {panel && (
-                <section className="character-compact-panel" aria-label="Персонаж подробнее">
-                    <header>
-                        <div>
-                            <span className="eyebrow">ПЕРСОНАЖ</span>
-                            <h3>{character.name}</h3>
-                        </div>
-                        <button
-                            className="icon-button"
-                            aria-label="Закрыть персонажа"
-                            onClick={() => setPanel(false)}
-                        >
-                            <X size={17} />
-                        </button>
-                    </header>
-                    <div className="character-vitals">
-                        <span>
-                            <Heart size={14} />
-                            {character.hp} / {character.maxHp}
-                        </span>
-                        {character.ac != null && (
-                            <span>
-                                <Shield size={14} />
-                                {character.ac}
-                            </span>
-                        )}
-                        {character.speed != null && (
-                            <span>
-                                <Footprints size={14} />
-                                {character.speed}
-                            </span>
-                        )}
-                    </div>
-                    {actor && <ConditionList token={actor} />}
-                    <div className="character-resource-list">
-                        {resources.map((r) => {
-                            const Icon = gameplayIcon(r.icon);
-                            return (
-                                <div className={`resource-detail accent-${r.accent}`} key={r.key}>
-                                    <Icon size={16} />
-                                    <span>{r.label}</span>
-                                    <strong>
-                                        {r.current} / {r.max}
-                                    </strong>
-                                    {r.player_adjustable && (
-                                        <>
-                                            <button
-                                                aria-label={`Уменьшить ${r.label}`}
-                                                disabled={
-                                                    disabled || resourceBusy || resourcePending
-                                                }
-                                                onClick={() => void adjust(r.key, -1)}
-                                            >
-                                                −
-                                            </button>
-                                            <button
-                                                aria-label={`Увеличить ${r.label}`}
-                                                disabled={
-                                                    disabled || resourceBusy || resourcePending
-                                                }
-                                                onClick={() => void adjust(r.key, 1)}
-                                            >
-                                                +
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                    {!!character.checkStats.length && (
-                        <>
-                            <span className="eyebrow">ПРОВЕРКИ</span>
-                            <div className="character-stat-list">
-                                {character.checkStats.map((s) => (
-                                    <div key={s.key}>
-                                        <span>{s.label}</span>
-                                        <strong>
-                                            {s.modifier >= 0 ? '+' : ''}
-                                            {s.modifier}
-                                        </strong>
-                                    </div>
-                                ))}
-                            </div>
-                        </>
-                    )}
-                    <span className="eyebrow">СПОСОБНОСТИ</span>
-                    <div className="character-ability-list">
-                        {abilities.map((a) => {
-                            const Icon = gameplayIcon(a.icon);
-                            return (
-                                <button
-                                    key={a.id}
-                                    disabled={disabled || !canAfford(a, resources)}
-                                    onClick={() => choose(a)}
-                                >
-                                    <Icon size={17} />
-                                    <span>
-                                        <strong>{a.name}</strong>
-                                        <small>{a.description}</small>
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </section>
+                <RpgWindows
+                    campaign={scene.campaignId!}
+                    kind={panel}
+                    onChange={setPanel}
+                    onClose={() => setPanel(null)}
+                    character={character}
+                    actor={actor}
+                    inventory={inventory}
+                    onResourceChange={() => {
+                        void inventory.refresh();
+                        refresh();
+                    }}
+                    onChoose={choose}
+                    onUse={chooseItem}
+                    onBindAbility={(a) => bind(abilityBinding(a.id))}
+                    onBindItem={(i) => bind(itemBinding(i.id))}
+                />
             )}
             <div className="character-hud" key={character.id}>
                 <HeroPortrait
@@ -353,14 +307,14 @@ function CharacterHUD({
                     actor={actor}
                     character={character}
                     disabled={disabled}
-                    onDetails={() => setPanel(!panel)}
+                    onDetails={() => setPanel(panel === 'character' ? null : 'character')}
                 />
                 <div className="hud-identity">
                     <button
                         className="hud-character-details"
                         aria-label={`Подробнее: ${character.name}`}
-                        aria-expanded={panel}
-                        onClick={() => setPanel(!panel)}
+                        aria-expanded={panel === 'character'}
+                        onClick={() => setPanel(panel === 'character' ? null : 'character')}
                     >
                         {character.name} <ChevronUp size={12} />
                     </button>
@@ -403,6 +357,10 @@ function CharacterHUD({
             </div>
             <AbilityHotbar
                 abilities={abilities}
+                items={inventory.data?.items ?? []}
+                itemAbilities={inventory.data?.useAbilities ?? []}
+                onChooseItem={chooseItem}
+                onOpenWindow={setPanel}
                 resources={resources}
                 slots={hotbar.slots}
                 onLayout={(next) =>
@@ -424,7 +382,7 @@ function CharacterHUD({
                 rollMode={rollMode}
                 onRollMode={setRollMode}
                 worldAvailable={!!actor}
-                onResourceDetails={() => setPanel(true)}
+                onResourceDetails={() => setPanel('character')}
                 preferencesKey={`ytt:deck:${userId}:${scene.campaignId}:${character.id}`}
             />
             {pending && !invocation && (
@@ -432,39 +390,30 @@ function CharacterHUD({
                     className="ability-recover"
                     disabled={disabled}
                     onClick={() => {
-                        const ability = abilities.find(
-                            (a) => a.id === pending.command.abilityId,
-                        ) ?? {
-                            id: pending.command.abilityId,
-                            name: pending.name,
-                            icon: 'spark',
-                            description: null,
-                            category: 'utility',
-                            target: 'none',
-                            check: null,
-                            costs: [],
-                            sort_order: 0,
-                            enabled: true,
-                        };
+                        const ability = abilities.find((a) => a.id === pending.command.abilityId) ??
+                            inventory.data?.useAbilities.find(
+                                (a) => a.id === pending.command.abilityId,
+                            ) ?? {
+                                id: pending.command.abilityId,
+                                name: pending.name,
+                                icon: 'spark',
+                                description: null,
+                                category: 'utility',
+                                target: 'none',
+                                check: null,
+                                costs: [],
+                                sort_order: 0,
+                                enabled: true,
+                            };
                         setInvocation({
                             ability,
+                            inventoryItemId: pending.command.inventoryItemId,
                             target: pending.command.target,
                             retained: pending,
                         });
                     }}
                 >
                     Восстановить ответ · {pending.name}
-                </button>
-            )}
-            {resourcePending && !resourceBusy && (
-                <button
-                    className="ability-recover"
-                    disabled={disabled}
-                    onClick={() =>
-                        void adjust(resourceRequest.current!.key, resourceRequest.current!.delta)
-                    }
-                >
-                    Повторить изменение ресурса
                 </button>
             )}
             {error && (
@@ -485,6 +434,7 @@ function CharacterHUD({
                             targetName,
                             auto: true,
                             mode: rollMode,
+                            inventoryItemId: itemSource.current,
                         });
                         setTargeting(null);
                     }}
@@ -505,6 +455,6 @@ function CharacterHUD({
                     }}
                 />
             )}
-        </>
+        </RpgDragProvider>
     );
 }

@@ -22,7 +22,12 @@ class IdempotentMutation
         $parameters = $request->route()->parameters();
         $resource = reset($parameters);
 
+        $payload = $request->except(['clientMutationId', '_token']);
+        if (isset($parameters['character'])) {
+            $payload['_routeCharacterId'] = (int) $parameters['character'];
+        }
+
         return app(IdempotentCommand::class)->execute($request->user(), $id, $request->route()->getName(),
-            (int) $resource, $request->except(['clientMutationId', '_token']), fn () => $next($request));
+            (int) $resource, $payload, fn () => $next($request));
     }
 }

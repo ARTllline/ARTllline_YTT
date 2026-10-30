@@ -5,6 +5,7 @@ import type { Character } from '../tabletop/types/scene';
 import { interactions, type InteractionResources } from '../workspace/interactions/model';
 import { gameplayIcons, gameplayIcon, iconLabels } from './icons';
 import { AbilityGeometryEditor } from './AbilityGeometryEditor';
+import { SpellMetadataEditor } from '../rpg/SpellMetadataEditor';
 import { newAbility, targetLabels, type Ability } from './model';
 
 export function AbilityEditor({
@@ -262,6 +263,10 @@ export function AbilityEditor({
                                     ),
                                 )}
                             </div>
+                            <SpellMetadataEditor
+                                ability={a}
+                                onChange={(value) => patch(i, value)}
+                            />
                             <AbilityGeometryEditor
                                 ability={a}
                                 onChange={(data) => patch(i, data)}

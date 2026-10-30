@@ -26,3 +26,4 @@ simple_icons / util / search.svg. Utility art is tinted in CSS; gameplay slots u
 the painted RPG pack.
 BG3 screenshots are reference-only. No BG3 asset is included in this directory.
 Pack ownership/licensing remains that of the supplied local resources.
+RPG item icons: selected 1.png from the named local packs, PNG/without background, copied at 256px preserving aspect ratio; item_cloak currently shares armor art.

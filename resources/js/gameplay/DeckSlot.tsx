@@ -1,13 +1,18 @@
 import { Plus, X } from 'lucide-react';
 import type { Ability, CharacterResource } from './model';
 import { canAfford } from './model';
-import { abilityBinding } from './hotbarModel';
+import type { SlotBinding } from './hotbarModel';
+import type { InventoryItem } from '../rpg/model';
 import type { GameplayDrag } from './useGameplayDrag';
 import { AbilityCost } from './AbilityCost';
 import { RpgIcon } from './RpgIcon';
 
 export function DeckSlot({
-    ability: a,
+    ability,
+    binding,
+    item,
+    itemAbility,
+    onChooseItem,
     index,
     resources,
     drag,
@@ -21,6 +26,10 @@ export function DeckSlot({
     onChoose,
 }: {
     ability?: Ability;
+    binding: SlotBinding | null;
+    item?: InventoryItem;
+    itemAbility?: Ability;
+    onChooseItem?: (i: InventoryItem) => void;
     index: number;
     resources: CharacterResource[];
     drag: GameplayDrag;
@@ -33,25 +42,37 @@ export function DeckSlot({
     onPick: () => void;
     onChoose: (a: Ability) => void;
 }) {
+    const a = item
+        ? itemAbility
+            ? { ...itemAbility, name: item.definition.name, icon: item.definition.icon }
+            : undefined
+        : ability;
     const missing =
         a?.costs.filter((c) => (resources.find((r) => r.key === c.key)?.current ?? 0) < c.amount) ??
         [];
     const unavailable =
         a &&
         (disabled ||
+            (item && item.quantity < 1) ||
+            a.spell?.prepared === false ||
             !canAfford(a, resources) ||
             (!worldAvailable && ['token', 'prop', 'point'].includes(a.target)));
-    const reason = missing.length
-        ? `Недостаточно: ${missing.map((c) => resources.find((r) => r.key === c.key)?.label ?? c.key).join(', ')}`
-        : !worldAvailable && a && ['token', 'prop', 'point'].includes(a.target)
-          ? 'Нужен токен персонажа на сцене'
-          : disabled
-            ? 'Действие сейчас недоступно'
-            : '';
+    const reason =
+        item && item.quantity < 1
+            ? 'Предмет закончился'
+            : a?.spell?.prepared === false
+              ? 'Заклинание не подготовлено'
+              : missing.length
+                ? `Недостаточно: ${missing.map((c) => resources.find((r) => r.key === c.key)?.label ?? c.key).join(', ')}`
+                : !worldAvailable && a && ['token', 'prop', 'point'].includes(a.target)
+                  ? 'Нужен токен персонажа на сцене'
+                  : disabled
+                    ? 'Действие сейчас недоступно'
+                    : '';
     const key = shortcutActive ? `${index % 16 >= 8 ? '⇧' : ''}${(index % 8) + 1}` : `${index + 1}`;
     return (
         <div
-            className={`rpg-slot ${drag.over === index ? 'is-drop-target' : ''} ${a && drag.lifted === a.id ? 'is-lifted' : ''} ${drag.dropped === index ? 'is-settling' : ''}`}
+            className={`rpg-slot ${drag.over === index ? 'is-drop-target' : ''} ${binding && drag.lifted === binding.sourceId ? 'is-lifted' : ''} ${drag.dropped === index ? 'is-settling' : ''}`}
             data-hotbar-slot={index}
             {...drag.destination(index)}
         >
@@ -61,9 +82,9 @@ export function DeckSlot({
                 aria-disabled={!edit && !!unavailable}
                 className={!edit && unavailable ? 'is-unavailable' : ''}
                 aria-describedby={`deck-tip-${index}`}
-                {...(a ? drag.source(abilityBinding(a.id)) : {})}
+                {...(a && binding ? drag.source(binding) : {})}
                 onKeyDown={(e) => {
-                    if (a && ['Delete', 'Backspace'].includes(e.key)) {
+                    if (binding && ['Delete', 'Backspace'].includes(e.key)) {
                         e.preventDefault();
                         e.stopPropagation();
                         onClear();
@@ -72,7 +93,10 @@ export function DeckSlot({
                 onClick={() => {
                     if (drag.consumeClick()) return;
                     if (!a || edit) onPick();
-                    else if (!unavailable) onChoose(a);
+                    else if (!unavailable) {
+                        if (item) onChooseItem?.(item);
+                        else onChoose(a);
+                    }
                 }}
             >
                 <span
@@ -85,6 +109,7 @@ export function DeckSlot({
                     <>
                         <RpgIcon icon={a.icon} size={64} />
                         <AbilityCost ability={a} resources={resources} />
+                        {item && <b className="slot-quantity">{item.quantity}</b>}
                     </>
                 ) : (
                     <Plus size={18} />

@@ -26,7 +26,17 @@ class CharacterGameplay
             'resources.*.accent' => 'required|in:violet,blue,amber,green,red',
             'resources.*.sort_order' => 'required|integer|between:0,100', 'resources.*.player_adjustable' => 'required|boolean',
             'abilities' => 'sometimes|present|array|list|max:24',
-            'abilities.*' => 'required|array:id,name,icon,description,category,target,check,costs,damage,result,sort_order,enabled,attack_type,range,area',
+            'abilities.*' => 'required|array:id,name,icon,description,category,target,check,costs,damage,result,sort_order,enabled,attack_type,range,area,spell,item_only',
+            'abilities.*.item_only' => 'sometimes|boolean',
+            'abilities.*.spell' => 'sometimes|nullable|array:level,school,classes,known,prepared,ritual,concentration',
+            'abilities.*.spell.level' => 'required_with:abilities.*.spell|integer|between:0,9',
+            'abilities.*.spell.school' => 'required_with:abilities.*.spell|string|max:48',
+            'abilities.*.spell.classes' => 'present_with:abilities.*.spell|array|list|max:8',
+            'abilities.*.spell.classes.*' => 'string|max:32',
+            'abilities.*.spell.known' => 'required_with:abilities.*.spell|boolean',
+            'abilities.*.spell.prepared' => 'required_with:abilities.*.spell|boolean',
+            'abilities.*.spell.ritual' => 'sometimes|boolean',
+            'abilities.*.spell.concentration' => 'sometimes|boolean',
             'abilities.*.id' => 'required|uuid|distinct', 'abilities.*.name' => 'required|string|max:60',
             'abilities.*.icon' => 'required|in:spark,focus,flame,heart,shield,bolt,sword,eye,potion,footprints,bow',
             'abilities.*.description' => 'present|nullable|string|max:800',
@@ -64,6 +74,12 @@ class CharacterGameplay
             }
         }
         foreach ($abilities as &$ability) {
+            if (isset($ability['spell'])) {
+                $classes = $ability['spell']['classes'];
+                if (count($classes) !== count(array_unique($classes))) {
+                    $this->invalid('Классы одного заклинания не должны повторяться.');
+                }
+            }
             $check = $ability['check'];
             if ($check !== null) {
                 $ability['check'] = Validator::make($check, [
@@ -120,18 +136,24 @@ class CharacterGameplay
         throw ValidationException::withMessages(['gameplay' => $message]);
     }
 
-    public function abilities(Character $character, bool $gm): array
+    public function abilities(Character $character, bool $gm, bool $includeItems = false): array
     {
         $abilities = collect($character->abilities ?? [])->sortBy('sort_order');
         if ($gm) {
             return $abilities->values()->all();
         }
 
-        return $abilities->where('enabled', true)->map(function ($a) {
-            $safe = array_intersect_key($a, array_flip(['id', 'name', 'icon', 'description', 'category', 'target', 'costs', 'sort_order', 'enabled', 'attack_type', 'range', 'area']));
+        return $abilities->where('enabled', true)->map(function ($a) use ($includeItems) {
+            if (($a['item_only'] ?? false) && ! $includeItems) {
+                return null;
+            }
+            $safe = array_intersect_key($a, array_flip(['id', 'name', 'icon', 'description', 'category', 'target', 'costs', 'sort_order', 'enabled', 'attack_type', 'range', 'area', 'spell', 'item_only', 'damage']));
+            if (isset($a['spell']) && ! $a['spell']['known']) {
+                return null;
+            }
             $safe['check'] = $a['check'] ? ['stat_key' => $a['check']['stat_key']] : null;
 
             return $safe;
-        })->values()->all();
+        })->filter()->values()->all();
     }
 }
