@@ -16,7 +16,14 @@ class CombatMetadata
 
     public static function profileRules(): array
     {
-        $r = ['combat_profile' => 'sometimes|nullable|array:resistances,vulnerabilities,immunities,condition_immunities,ability_scores,saving_throws,proficiency_bonus,spellcasting_ability', 'combat_profile.proficiency_bonus' => 'sometimes|integer|between:0,20', 'combat_profile.spellcasting_ability' => 'sometimes|nullable|in:str,dex,con,int,wis,cha'];
+        $r = ['combat_profile' => 'sometimes|nullable|array:resistances,vulnerabilities,immunities,condition_immunities,ability_scores,saving_throws,proficiency_bonus,spellcasting_ability,zero_hp_policy,lifecycle_consequences', 'combat_profile.proficiency_bonus' => 'sometimes|integer|between:0,20', 'combat_profile.spellcasting_ability' => 'sometimes|nullable|in:str,dex,con,int,wis,cha'];
+        $r += ['combat_profile.zero_hp_policy' => 'sometimes|in:immediate_death,death_saves,manual',
+            'combat_profile.lifecycle_consequences' => 'sometimes|array|list|max:6',
+            'combat_profile.lifecycle_consequences.*' => 'array:name,trigger,description,reference',
+            'combat_profile.lifecycle_consequences.*.name' => 'required|string|max:80',
+            'combat_profile.lifecycle_consequences.*.trigger' => 'required|in:on_zero_hp,on_defeat,on_death',
+            'combat_profile.lifecycle_consequences.*.description' => 'required|string|max:12000',
+            'combat_profile.lifecycle_consequences.*.reference' => 'sometimes|string|max:500'];
         foreach (['resistances', 'vulnerabilities', 'immunities', 'condition_immunities'] as $key) {
             $r['combat_profile.'.$key] = 'sometimes|array|list|max:30';
             $r['combat_profile.'.$key.'.*'] = ['string', 'distinct', Rule::in($key === 'condition_immunities' ? array_keys(app(CharacterCatalog::class)->entries('conditions')) : self::types())];

@@ -114,15 +114,18 @@ export function GMResolutionQueue({ store, disabled }: { store: SceneStore; disa
                     </strong>
                     <p className="hint">
                         Уже выполнено:{' '}
-                        {(
-                            {
-                                action: 'действие',
-                                bonus_action: 'бонусное действие',
-                                reaction: 'реакция',
-                                free: 'свободное действие',
-                                outside_combat: 'сотворение вне боя',
-                            } as Record<string, string>
-                        )[task.result.gmContext?.activation ?? ''] ?? 'стоимость действия'}
+                        {task.result.gmContext?.appliedSummary ??
+                            (
+                                {
+                                    action: 'действие',
+                                    bonus_action: 'бонусное действие',
+                                    reaction: 'реакция',
+                                    free: 'свободное действие',
+                                    outside_combat: 'сотворение вне боя',
+                                    lifecycle: 'переход жизненного цикла',
+                                } as Record<string, string>
+                            )[task.result.gmContext?.activation ?? ''] ??
+                            'стоимость действия'}
                         {task.result.gmContext?.slotSpent
                             ? ` · ячейка ${task.result.gmContext.slotSpent}`
                             : ''}
@@ -135,11 +138,14 @@ export function GMResolutionQueue({ store, disabled }: { store: SceneStore; disa
                             'Разрешить ручные последствия по описанию заклинания.'}
                     </p>
                     <details>
-                        <summary>Описание заклинания</summary>
+                        <summary>Подготовленное описание / источник</summary>
                         <p className="spell-source-text">
                             {task.result.gmContext?.description ??
                                 'Описание доступно в кампанийной копии заклинания.'}
                         </p>
+                        {task.result.gmContext?.reference && (
+                            <small>{task.result.gmContext.reference}</small>
+                        )}
                     </details>
                     <div className="manual-targets">
                         {Array.from(

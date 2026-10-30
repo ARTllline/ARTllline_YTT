@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Combat\LifeCycle;
 use App\Combat\TurnBudget;
 use App\Models\Asset;
 use App\Models\CampaignMember;
@@ -109,7 +110,17 @@ class TokenActions
                     $data['hp'] = $maxHp;
                 }
             }
+            if (! $move && ! $token->character_id && array_key_exists('hp', $data)) {
+                $life = app(LifeCycle::class);
+                if (! $token->lifecycle) {
+                    $token->update(['lifecycle' => $life->state($before)]);
+                }
+                abort_if($data['hp'] > 0 && $life->state($token)['status'] === 'dead', 422, 'Используйте GM revival.');
+            }
             $token->update($data);
+            if (! $move && ! $token->character_id && array_key_exists('hp', $data)) {
+                app(LifeCycle::class)->hpChanged($user, $token, (int) $before->hp);
+            }
             $token->refresh();
             $token->setRelation('scene', $scene);
 

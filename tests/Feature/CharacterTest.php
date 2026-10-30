@@ -89,7 +89,8 @@ class CharacterTest extends TestCase
         $this->postJson('/api/campaigns/'.$this->campaign->id.'/activate', ['sceneId' => $this->second->id])->assertOk();
         $this->actingAs($this->player)->getJson('/api/scenes/'.$this->second->id.'/snapshot')->assertJsonPath('tokens.0.hp', 25);
         $this->actingAs($this->gm)->postJson('/api/tokens/'.$second['id'].'/hp', ['delta' => -999])->assertOk()->assertJsonPath('token.hp', 0);
-        $this->postJson('/api/tokens/'.$hero['id'].'/hp', ['delta' => 999])->assertOk()->assertJsonPath('token.hp', 41);
+        $this->postJson('/api/tokens/'.$hero['id'].'/hp', ['delta' => 999])->assertOk()->assertJsonPath('token.hp', 0);
+        $this->postJson('/api/scenes/'.$this->second->id.'/adventuring', ['action' => 'revive', 'tokenId' => $second['id'], 'hp' => 41])->assertOk();
         $this->patchJson('/api/tokens/'.$second['id'], ['max_hp' => 20])->assertOk()->assertJsonPath('token.hp', 20);
         $this->assertSame(20, Token::find($hero['id'])->hp);
     }

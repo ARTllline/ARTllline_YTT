@@ -5,6 +5,7 @@ import { commandId } from '../api/workspace';
 import { request } from '../api/client';
 
 export interface SpellcastingState {
+    recovery?: 'manual' | 'long_rest';
     slots: Record<string, { max: number; current: number }>;
     cantrip_tier: number;
     scroll_list: string[];

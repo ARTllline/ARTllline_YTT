@@ -1,3 +1,4 @@
+import { GMRestControls } from './AdventuringControls';
 import { CombatHistory } from './CombatHistory';
 import { CombatActorControls } from './CombatActorControls';
 import { t } from '../../i18n';
@@ -213,6 +214,7 @@ export function CombatPanel({
             </button>
             {!collapsed && (
                 <>
+                    {gm && <GMRestControls store={store} disabled={disabled} />}
                     {!combat ? (
                         <div className="combat-empty">
                             <strong> {t('No active combat')} </strong>

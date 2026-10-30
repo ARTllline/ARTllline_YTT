@@ -4,6 +4,7 @@ namespace App\Spells;
 
 use App\Combat\CombatExecution;
 use App\Combat\ConditionRules;
+use App\Combat\ExhaustionRules;
 use App\Models\Character;
 use App\Models\Token;
 use App\Services\CharacterRules;
@@ -22,7 +23,7 @@ class SpellScrolls
             $a['save'] = array_replace($a['save'], ['dc_source' => 'fixed', 'dc' => $dc]);
         }
         if (! empty($a['attack']) || $a['category'] === 'attack') {
-            $a['_scrollAttack'] = ['source' => 'spell_scroll', 'statKey' => 'spell_attack', 'finalModifier' => $bonus, 'breakdown' => [['source' => 'spell_scroll', 'label' => 'SRD Spell Scroll', 'value' => $bonus]]];
+            $a['_scrollAttack'] = ['source' => 'spell_scroll', 'statKey' => 'spell_attack', 'finalModifier' => $bonus + array_sum(array_column(app(ExhaustionRules::class)->parts($c), 'value')), 'breakdown' => [['source' => 'spell_scroll', 'label' => 'SRD Spell Scroll', 'value' => $bonus], ...app(ExhaustionRules::class)->parts($c)]];
         }
         $a['_scroll'] = true;
 

@@ -5,6 +5,7 @@ namespace App\Items;
 use App\Actions\AbilityActions;
 use App\Actions\CharacterActions;
 use App\Actions\SceneTransaction;
+use App\Combat\LifeCycle;
 use App\Models\Campaign;
 use App\Models\Character;
 use App\Models\InventoryItem;
@@ -38,10 +39,11 @@ class LootActions
         abort_unless($object, 404);
         if (! $gm) {
             abort_unless($campaign->active_scene_id === $scene->id && ! $object->is_hidden, 403);
-            abort_if($loot->kind === 'corpse' && $object instanceof Token && $object->hp > 0, 403);
+            abort_if($loot->kind === 'corpse' && $object instanceof Token && ! app(LifeCycle::class)->blocked($object), 403);
         }
         if (in_array($data['action'] ?? '', ['take', 'take-all'])) {
-            app(AbilityActions::class)->authorize($u, $campaign, $data['characterId']);
+            $actor = app(AbilityActions::class)->authorize($u, $campaign, $data['characterId']);
+            abort_if(app(LifeCycle::class)->blocked($actor), 422, 'Персонаж не может забирать добычу в этом состоянии.');
         }
 
         return $loot;

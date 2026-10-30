@@ -10,6 +10,8 @@ use App\Models\SceneProp;
 use App\Models\Token;
 use App\Services\CombatView;
 use App\Services\SceneSnapshotBuilder;
+use App\Spells\SpellEffects;
+use App\Support\RequestPerformance;
 use Illuminate\Support\Facades\DB;
 
 class ScenePublisher
@@ -18,6 +20,11 @@ class ScenePublisher
 
     /** Materialize recipient-safe payloads while campaign + scene locks are held. */
     public function changed(Scene $scene, string $type, array $result, bool $wasVisible, array $previousVisibility = ['tokens' => [], 'props' => []]): void
+    {
+        app(RequestPerformance::class)->measure('broadcast_prepare', fn () => app(SpellEffects::class)->project(fn () => $this->changedMeasured($scene, $type, $result, $wasVisible, $previousVisibility)));
+    }
+
+    private function changedMeasured(Scene $scene, string $type, array $result, bool $wasVisible, array $previousVisibility): void
     {
         $members = $scene->campaign->members()->get();
         $token = isset($result['token']) ? $scene->tokens()->with(['character.portraitAsset', 'imageAsset', 'conditions'])->find($result['token']['id']) : null;

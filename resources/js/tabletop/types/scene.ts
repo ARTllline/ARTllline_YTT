@@ -21,6 +21,8 @@ export interface CheckStat {
     modifier: number;
 }
 export interface Token extends Point {
+    lifecycle?: import('../../gameplay/adventuring').LifeState;
+    exhaustion?: number;
     loot?: import('../../rpg/loot').LootSummary;
     abilities?: import('../../gameplay/model').Ability[];
     combatProfile?: Record<string, unknown>;
@@ -80,6 +82,11 @@ export interface Scene {
     tokens: readonly Token[];
 }
 export interface Character {
+    inventoryRevision?: string;
+    lifecycle?: import('../../gameplay/adventuring').LifeState;
+    exhaustion?: number;
+    hitPointDice?: import('../../gameplay/adventuring').HitPointPool[];
+    rest?: import('../../gameplay/adventuring').RestState | null;
     temporaryHp?: number;
     spellcasting?: import('../../gameplay/spellcasting').SpellcastingState;
     spellEffects?: {

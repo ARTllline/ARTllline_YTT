@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Combat\ExhaustionRules;
 use App\Spells\SpellEffects;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Token extends Model
 {
     /** Persistent fields are read from Character; legacy columns remain for standalone tokens. */
-    public const CHARACTER_FIELDS = ['temporary_hp' => 'temporary_hp', 'combat_profile' => 'combat_profile', 'abilities' => 'abilities', 'resources' => 'resources', 'name' => 'name', 'token_image_asset_id' => 'portrait_asset_id',
+    public const CHARACTER_FIELDS = ['lifecycle' => 'lifecycle', 'exhaustion' => 'exhaustion', 'temporary_hp' => 'temporary_hp', 'combat_profile' => 'combat_profile', 'abilities' => 'abilities', 'resources' => 'resources', 'name' => 'name', 'token_image_asset_id' => 'portrait_asset_id',
         'owner_user_id' => 'owner_user_id', 'kind' => 'kind', 'disposition' => 'disposition',
         'ac' => 'ac', 'speed' => 'speed', 'check_stats' => 'check_stats', 'hp' => 'hp', 'max_hp' => 'max_hp'];
 
@@ -29,7 +30,7 @@ class Token extends Model
 
         $value = parent::getAttribute($key);
         if ($this->exists && in_array($key, ['ac', 'speed']) && $value !== null) {
-            return max(0, $value + array_sum(array_column(app(SpellEffects::class)->flat($this, $key), 'value')));
+            return max(0, $value + array_sum(array_column(app(SpellEffects::class)->flat($this, $key), 'value')) + ($key === 'speed' ? array_sum(array_column(app(ExhaustionRules::class)->parts($this, 'speed'), 'value')) : 0));
         }
 
         return $value;
@@ -37,7 +38,7 @@ class Token extends Model
 
     protected function casts(): array
     {
-        return ['temporary_hp' => 'integer', 'combat_profile' => 'array', 'abilities' => 'array', 'resources' => 'array', 'is_hidden' => 'boolean', 'is_locked' => 'boolean', 'interactions' => 'array', 'check_stats' => 'array'];
+        return ['lifecycle' => 'array', 'exhaustion' => 'integer', 'temporary_hp' => 'integer', 'combat_profile' => 'array', 'abilities' => 'array', 'resources' => 'array', 'is_hidden' => 'boolean', 'is_locked' => 'boolean', 'interactions' => 'array', 'check_stats' => 'array'];
     }
 
     public function scene(): BelongsTo

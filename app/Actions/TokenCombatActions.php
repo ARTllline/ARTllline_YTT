@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Combat\AppliedConditions;
 use App\Combat\GMCorrections;
+use App\Combat\LifeCycle;
 use App\Combat\TurnBudget;
 use App\Models\Character;
 use App\Models\Token;
@@ -31,15 +32,7 @@ class TokenCombatActions
             if ($command === 'hp') {
                 $this->adjustHp($user, $token, $data['delta']);
             } elseif ($command === 'hp-set') {
-                $hp = ['hp' => min($token->max_hp, $data['value'])];
-                if ($token->character_id) {
-                    app(CharacterActions::class)->updateLinked($user, $token, $hp);
-                    if ($hp['hp'] === 0) {
-                        app(SpellEffects::class)->stop($token->character, 'zero_hp');
-                    }
-                } else {
-                    $token->update($hp);
-                }
+                $this->setHp($user, $token, min($token->max_hp, $data['value']));
             } elseif ($command === 'stand-up') {
                 app(TurnBudget::class)->stand($token);
             } elseif ($command === 'condition-add') {
@@ -48,10 +41,13 @@ class TokenCombatActions
                 if ($definition) {
                     $source = isset($data['source_token_id']) ? $scene->tokens()->findOrFail($data['source_token_id']) : null;
                     app(AppliedConditions::class)->apply($user, $token, $data, $source, null, $data['visibility']);
+                    if ($key === 'exhaustion' && $token->character_id) {
+                        app(CharacterActions::class)->publish($user, $token->fresh()->character, $scene->id);
+                    }
 
                     $journal->record($user, $token, $command, $before, $effects);
 
-                    return ['token' => $this->snapshots->token($token->fresh(), true, $user), '_wasVisible' => ! $token->is_hidden, '_combatChanged' => true];
+                    return ['token' => $this->snapshots->token($token->fresh(), true, $user), '_wasVisible' => ! $token->is_hidden, '_combatChanged' => true, 'charactersChanged' => $key === 'exhaustion'];
                 }
                 $label = $definition['name'] ?? ($key ? ucfirst($key) : Str::squish($data['label']));
                 if ($label === '') {
@@ -70,6 +66,9 @@ class TokenCombatActions
                 $condition = $token->conditions()->findOrFail($data['conditionId']);
                 if ($command === 'condition-remove') {
                     app(AppliedConditions::class)->remove($condition);
+                    if ($condition->key === 'exhaustion' && $token->character_id) {
+                        app(CharacterActions::class)->publish($user, $token->fresh()->character, $scene->id);
+                    }
                 } else {
                     $condition->update(['visibility' => $data['visibility']]);
                 }
@@ -79,13 +78,22 @@ class TokenCombatActions
                 $journal->record($user, $token, $command, $before, $effects);
             }
 
-            return ['token' => $this->snapshots->token($token->refresh(), $scene->campaign->roleFor($user) === 'gm', $user), '_combatChanged' => true, 'charactersChanged' => $token->character_id !== null && in_array($command, ['hp', 'hp-set']), '_wasVisible' => ! $token->is_hidden];
+            return ['token' => $this->snapshots->token($token->refresh(), $scene->campaign->roleFor($user) === 'gm', $user), '_combatChanged' => true, 'charactersChanged' => $token->character_id !== null && (in_array($command, ['hp', 'hp-set']) || ($condition->key ?? '') === 'exhaustion'), '_wasVisible' => ! $token->is_hidden];
         }, in_array($command, ['hp', 'hp-set']) ? 'token.hp_changed' : 'token.conditions_changed');
     }
 
     /** Caller holds campaign/scene locks and authorizes the command (GM or configured ability). */
-    public function adjustHp(User $user, Token|Character $subject, int $delta): void
+    public function adjustHp(User $user, Token|Character $subject, int $delta, bool $critical = false): void
     {
+        $life = app(LifeCycle::class);
+        $owner = $life->owner($subject);
+        if ($delta > 0 && $life->state($owner)['status'] === 'dead') {
+            return;
+        }
+        if (! $owner->lifecycle) {
+            $owner->update(['lifecycle' => $life->state($owner)]);
+        }
+        $beforeHp = $subject->hp;
         $damage = max(0, -$delta);
         $owner = $subject instanceof Token && $subject->character_id ? $subject->character : $subject;
         if ($damage && ($owner->temporary_hp ?? 0)) {
@@ -93,17 +101,40 @@ class TokenCombatActions
             $owner->update(['temporary_hp' => $owner->temporary_hp - $absorbed]);
             $delta += $absorbed;
         }
+        $hpDamage = max(0, -$delta);
         $hp = ['hp' => max(0, min($subject->max_hp, $subject->hp + $delta))];
+        $owner->update($hp);
+        $life->hpChanged($user, $subject, $beforeHp, $damage, $hpDamage, $critical);
+        if ($damage && $owner instanceof Character && ($owner->rest_state['status'] ?? '') === 'spending') {
+            $owner->update(['rest_state' => array_replace($owner->rest_state, ['status' => 'interrupted', 'interruption' => 'damage'])]);
+        }
         if ($subject instanceof Character) {
-            $subject->update($hp);
+            $subject->refresh();
             app(CharacterActions::class)->publish($user, $subject);
         } elseif ($subject->character_id) {
-            app(CharacterActions::class)->updateLinked($user, $subject, $hp);
+            $subject->unsetRelation('character');
+            app(CharacterActions::class)->publish($user, $subject->character, $subject->scene_id);
         } else {
             $subject->update($hp);
         }
         if ($damage && $subject instanceof Token) {
             app(SpellEffects::class)->damage($user, $subject->fresh(), $damage);
+        }
+    }
+
+    public function setHp(User $user, Token $token, int $value): void
+    {
+        $life = app(LifeCycle::class);
+        $owner = $life->owner($token);
+        abort_if($value > 0 && $life->state($owner)['status'] === 'dead', 422, 'Используйте явную GM-коррекцию «Вернуть к жизни».');
+        $before = $owner->hp;
+        if (! $owner->lifecycle) {
+            $owner->update(['lifecycle' => $life->state($owner)]);
+        }
+        $owner->update(['hp' => $value]);
+        $life->hpChanged($user, $token, $before);
+        if ($owner instanceof Character) {
+            app(CharacterActions::class)->publish($user, $owner, $token->scene_id);
         }
     }
 }

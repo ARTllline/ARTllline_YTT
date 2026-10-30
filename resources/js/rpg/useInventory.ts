@@ -11,6 +11,10 @@ export function useInventory(campaign: string, character: Character | null, onCh
         pending = useRef<{ data: Record<string, unknown>; id: string } | null>(null),
         lock = useRef(false),
         changed = useRef(onChanged);
+    // Realtime replaces Character objects even when their contents are identical.
+    // Retain all semantic fields (including casting availability); inventoryRevision
+    // also detects quantity/definition edits which do not affect CharacterRules.
+    const characterKey = JSON.stringify(character);
     useEffect(() => {
         changed.current = onChanged;
     });
@@ -30,10 +34,11 @@ export function useInventory(campaign: string, character: Character | null, onCh
             : Promise.resolve();
     useEffect(() => {
         alive.current = true;
-        if (!character) return;
+        const current = JSON.parse(characterKey) as Character | null;
+        if (!current) return;
         const abort = new AbortController();
         void inventoryApi
-            .read(campaign, character.id, abort.signal)
+            .read(campaign, current.id, abort.signal)
             .then((v) => {
                 if (!abort.signal.aborted) {
                     setData(v);
@@ -47,7 +52,7 @@ export function useInventory(campaign: string, character: Character | null, onCh
             alive.current = false;
             abort.abort();
         };
-    }, [campaign, character]);
+    }, [campaign, characterKey]);
     const send = async (command: Record<string, unknown>) => {
         if (!character) return;
         if (lock.current) return;
@@ -72,7 +77,7 @@ export function useInventory(campaign: string, character: Character | null, onCh
         }
     };
     return {
-        data,
+        data: data?.character.id === character?.id ? data : null,
         error,
         busy,
         send,

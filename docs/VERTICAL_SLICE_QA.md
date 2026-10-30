@@ -296,3 +296,16 @@ rollback-файл остаётся приватным; его не следуе�
 Продолжение того же сценария: [архитектура, приёмка и границы GM-пульта](GM_COMBAT_CONSOLE.md).
 `qa:townhouse` теперь также закрывает старые pending manual resolutions данного
 сценария как `dismissed_by_qa_reset`, сохраняя execution receipts и историю.
+
+## Task 32 — полный adventuring lifecycle
+
+Тот же Townhouse: [правила, архитектура и результаты](ADVENTURING_LIFECYCLE.md).
+Проверены dying → Death Save → Stable → лечение, Player Help/Medicine с карты,
+Short Rest с двумя Hit Point Dice и reconnect, Long Rest/ячейки/Exhaustion,
+подготовленное последствие смерти магмина в существующей GM-очереди.
+Последний native suite: 279 PHP tests / 3934 assertions; 210 frontend tests.
+Chromium 1440×1000 и Player 390×844, без JS errors. Полигон восстановлен тем же
+`qa:townhouse`: HP48/40, полные кости/ресурсы, Exhaustion0, preparing combat,
+нет применённых состояний и pending задач. Состав аккаунтов/кампании/сцены/сессии
+и композиция карты сохранены. Подробные performance limits и ручные границы времени
+описаны в связанном документе; Docker не использовался.

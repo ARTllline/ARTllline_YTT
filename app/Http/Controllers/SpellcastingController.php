@@ -32,7 +32,7 @@ class SpellcastingController extends Controller
             'slots' => 'sometimes|array:1,2,3,4,5,6,7,8,9', 'slots.*' => 'array:max,current', 'slots.*.max' => 'required|integer|between:0,99', 'slots.*.current' => 'required|integer|between:0,99',
             'level' => 'sometimes|integer|between:1,9', 'current' => 'sometimes|integer|between:0,99', 'cantrip_tier' => 'sometimes|integer|between:1,4',
             'scroll_list' => 'sometimes|array|list|max:339', 'scroll_list.*' => 'string|max:100|distinct', 'scroll_max_level' => 'sometimes|integer|between:0,9', 'verbal_blocked' => 'sometimes|boolean',
-            'effectId' => 'sometimes|uuid', 'executionId' => 'sometimes|uuid']);
+            'recovery' => 'sometimes|in:manual,long_rest', 'effectId' => 'sometimes|uuid', 'executionId' => 'sometimes|uuid']);
 
         return DB::transaction(function () use ($r, $campaign, $d) {
             $campaign = Campaign::whereKey($campaign->id)->lockForUpdate()->firstOrFail();
@@ -54,6 +54,9 @@ class SpellcastingController extends Controller
             } else {
                 $state = app(SpellCasting::class)->state($c);
                 if ($d['action'] === 'configure') {
+                    if (isset($d['recovery'])) {
+                        $state['recovery'] = $d['recovery'];
+                    }
                     foreach ($d['slots'] ?? [] as $level => $slot) {
                         abort_if($slot['current'] > $slot['max'], 422, 'Ячейки превышают максимум.');
                         $state['slots'][$level] = $slot;

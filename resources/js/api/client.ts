@@ -1,4 +1,5 @@
 import { t, errorMessage } from '../i18n';
+import { observingPerformance, performanceMark } from '../realtime/performance';
 export class ApiError extends Error {
     constructor(
         message: string,
@@ -45,6 +46,8 @@ export async function request<T>(
         }
     };
     let response: Response;
+    const profiling = observingPerformance();
+    if (profiling) performanceMark('http.start', { id: mutationId, path, method });
     try {
         response = await fetch(`/api${path}`, {
             method,
@@ -54,6 +57,7 @@ export async function request<T>(
                 Accept: 'application/json',
                 'X-CSRF-TOKEN': csrf,
                 ...(socketId() ? { 'X-Socket-ID': socketId()! } : {}),
+                ...(profiling ? { 'X-YTT-Perf': '1' } : {}),
                 ...(body && !form ? { 'Content-Type': 'application/json' } : {}),
             },
             body: body === undefined ? undefined : form ? (body as FormData) : JSON.stringify(body),
@@ -68,7 +72,16 @@ export async function request<T>(
             0,
         );
     }
+    if (profiling)
+        performanceMark('http.headers', {
+            id: mutationId,
+            path,
+            status: response.status,
+            timing: response.headers.get('Server-Timing'),
+        });
     const data = await response.json().catch(() => ({}));
+    if (profiling)
+        performanceMark('http.complete', { id: mutationId, path, status: response.status });
     if (response.status >= 500) retain();
     else if (commandKey) ambiguous.delete(commandKey);
     if (!response.ok) {

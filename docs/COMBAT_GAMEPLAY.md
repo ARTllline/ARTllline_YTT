@@ -181,3 +181,9 @@ ending ongoing concentration arbitrarily. GM confirms reaction triggers and manu
 controls, HP/conditions, bounded correction undo, secret batch checks, a readable
 structured log and durable manual-spell resolution in the existing editor dock.
 Gameplay engines and coverage classifications remain authoritative and unchanged.
+
+## Adventuring lifecycle
+
+[Adventuring lifecycle](ADVENTURING_LIFECYCLE.md) now owns zero-HP/death-save
+transitions through the shared HP path, canonical Unconscious, NPC zero-HP policy
+and prepared death/defeat consequences. Until-removed conditions survive combat end.

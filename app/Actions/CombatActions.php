@@ -81,6 +81,12 @@ class CombatActions
             case 'begin':
                 abort_unless($combat->status === 'preparing' && $entries->isNotEmpty(), 422, 'Add combatants before beginning combat.');
                 $combat->update(['status' => 'active', 'round' => 1, 'current_combatant_id' => $entries->first()->id, 'started_at' => now()]);
+                foreach ($entries as $entry) {
+                    $c = $entry->token->character;
+                    if ($c && ($c->rest_state['status'] ?? '') === 'spending') {
+                        $c->update(['rest_state' => array_replace($c->rest_state, ['status' => 'interrupted', 'interruption' => 'initiative'])]);
+                    }
+                }
                 $combat->combatants()->update(['action_available' => true, 'bonus_available' => true, 'reaction_available' => true, 'movement_spent' => 0]);
                 app(TurnBudget::class)->start($combat, $entries->first()->id);
                 break;

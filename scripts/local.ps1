@@ -84,8 +84,20 @@ $reverbHost = $settings.REVERB_SERVER_HOST
 if ($reverbHost -notin @('localhost', '127.0.0.1')) { throw 'REVERB_SERVER_HOST must be loopback for local development.' }
 $reverbPort = $settings.REVERB_SERVER_PORT
 if (-not $reverbPort) { $reverbPort = '8080' }
+# Keep HTTP logs out of artisan serve's polled child-process pipes. Windows PHP
+# serves one request at a time, so compilation overhead also queues other clients.
+$opcache = & $php -r "echo extension_loaded('Zend OPcache') ? 'loaded' : ((is_file(ini_get('extension_dir').DIRECTORY_SEPARATOR.(PHP_OS_FAMILY === 'Windows' ? 'php_opcache.dll' : 'opcache.so')) || is_file(dirname(PHP_BINARY).DIRECTORY_SEPARATOR.ini_get('extension_dir').DIRECTORY_SEPARATOR.(PHP_OS_FAMILY === 'Windows' ? 'php_opcache.dll' : 'opcache.so'))) ? 'available' : 'missing');"
+if ($LASTEXITCODE -ne 0) { throw 'Could not inspect PHP OPcache support.' }
+$httpArgs = @()
+if ($opcache -eq 'available') { $httpArgs += @('-d', 'zend_extension=opcache') }
+if ($opcache -ne 'missing') {
+    $httpArgs += @('-d', 'opcache.enable_cli=1', '-d', 'opcache.validate_timestamps=1', '-d', 'opcache.revalidate_freq=0')
+} else {
+    Write-Warning 'OPcache is unavailable. Native multiplayer requests will be slower; install the matching PHP OPcache extension.'
+}
+$httpArgs += @('-S', "127.0.0.1:$($url.Port)", ('"' + (Join-Path $projectRoot 'vendor\laravel\framework\src\Illuminate\Foundation\resources\server.php') + '"'))
 $definitions = @(
-    @{ name = 'app'; args = @('artisan', 'serve', '--host=127.0.0.1', "--port=$($url.Port)") },
+    @{ name = 'app'; args = $httpArgs; directory = (Join-Path $projectRoot 'public') },
     @{ name = 'reverb'; args = @('artisan', 'reverb:start', "--host=$reverbHost", "--port=$reverbPort") },
     @{ name = 'queue'; args = @('artisan', 'queue:work', 'tabletop', '--queue=cues', '--sleep=0.1', '--tries=3', '--timeout=60') },
     @{ name = 'scheduler'; args = @('artisan', 'schedule:work', '--no-interaction') }
@@ -110,7 +122,8 @@ if (-not $SkipBuild) { Invoke-Checked 'npm.cmd' @('run', 'build') }
 $entries = @()
 try {
     foreach ($definition in $definitions) {
-        $process = Start-Process -FilePath $php -ArgumentList $definition.args -WorkingDirectory $projectRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $runtime ($definition.name + '.log')) -RedirectStandardError (Join-Path $runtime ($definition.name + '.error.log'))
+        $directory = if ($definition.directory) { $definition.directory } else { $projectRoot }
+        $process = Start-Process -FilePath $php -ArgumentList $definition.args -WorkingDirectory $directory -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $runtime ($definition.name + '.log')) -RedirectStandardError (Join-Path $runtime ($definition.name + '.error.log'))
         $entries += [PSCustomObject]@{ name = $definition.name; pid = $process.Id; started = $process.StartTime.ToUniversalTime().Ticks.ToString() }
         $entries | ConvertTo-Json | Set-Content -LiteralPath $statePath -Encoding UTF8
     }

@@ -32,6 +32,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local.ps1 test
 Launcher читает HTTP/Reverb endpoints из `.env`; текущий WebSocket — порт 8085.
 Он применяет `scripts/php/local.ini` только к своим процессам (лимиты загрузки
 64/68 MiB и память 512 MiB), без изменения системного PHP или production.
+HTTP запускается напрямую через PHP built-in server, без промежуточного
+`artisan serve`. Если OPcache установлен, launcher включает его только для HTTP
+процесса с `validate_timestamps=1`, `revalidate_freq=0`: изменения PHP видны сразу.
+При отсутствии расширения запуск продолжится с предупреждением. `.env` больше
+не отслеживается процессом `artisan serve`: после его изменения нужен stop → start.
+Windows built-in server обрабатывает запросы последовательно; подробные замеры
+и ограничения — [MULTIPLAYER_PERFORMANCE.md](MULTIPLAYER_PERFORMANCE.md).
 
 ## Новая установка и прямые команды
 
@@ -66,7 +73,11 @@ npm run build
 ```powershell
 # Необязательно: локальные PHP-лимиты, унаследуются дочерним HTTP-процессом.
 $env:PHP_INI_SCAN_DIR = ";$PWD/scripts/php"
-php artisan serve --host=127.0.0.1 --port=8090
+# Рекомендуемый полный запуск: scripts/local.ps1 start.
+# Ручной диагностический запуск; без OPcache multiplayer будет медленнее:
+Push-Location public
+php -S 127.0.0.1:8090 ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php
+Pop-Location
 php artisan reverb:start
 php artisan queue:work tabletop --queue=cues --sleep=0.1 --tries=3 --timeout=60
 php artisan schedule:work

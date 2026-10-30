@@ -78,6 +78,18 @@ export function SpellcastingEditor({
             <summary>Сотворение · ячейки и свитки</summary>
             <p>Ячейки принадлежат персонажу и сохраняются после боя. Восстанавливает только GM.</p>
             <fieldset disabled={busy}>
+                <div role="group" aria-label="Восстановление ячеек">
+                    {(['long_rest', 'manual'] as const).map((recovery) => (
+                        <button
+                            type="button"
+                            key={recovery}
+                            aria-pressed={(state.recovery ?? 'long_rest') === recovery}
+                            onClick={() => setState({ ...state, recovery })}
+                        >
+                            {recovery === 'long_rest' ? 'Long Rest' : 'Только вручную'}
+                        </button>
+                    ))}
+                </div>
                 <div className="spell-slot-editor">
                     {Array.from({ length: 9 }, (_, i) => i + 1).map((level) => (
                         <div key={level}>

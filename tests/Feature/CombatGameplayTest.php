@@ -187,7 +187,7 @@ class CombatGameplayTest extends TestCase
         $this->assertSame(0, $this->actor->conditions()->count());
         app(AppliedConditions::class)->apply($this->gm, $this->actor, ['key' => 'blinded']);
         $this->command('end')->assertOk();
-        $this->assertSame(0, $this->actor->conditions()->count());
+        $this->assertSame('blinded', $this->actor->conditions()->firstOrFail()->key);
     }
 
     public function test_poison_prone_restraint_stun_and_blind_contexts_follow_srd_2024(): void

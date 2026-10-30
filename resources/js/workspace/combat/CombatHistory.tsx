@@ -43,6 +43,18 @@ export function eventSummary(e: CombatEvent, scene: Scene) {
         const damage = r?.outcomes?.reduce((n, o) => n + o.damage, 0) ?? 0;
         return `${d.actorName}${target ? ' → ' + target : ''} · ${d.abilityName}${roll ? ` — ${roll.total}${roll.dc !== undefined ? ` vs ${r?.category === 'attack' ? 'AC' : 'Сл'} ${roll.dc}` : ''} · ${r?.success ? (r.category === 'attack' ? 'попадание' : 'успех') : r?.category === 'attack' ? 'промах' : 'провал'}` : ''}${damage ? ` · урон ${damage}` : ''}${r?.healing ? ` · лечение +${r.healing}` : ''}`;
     }
+    if (e.type === 'lifecycle.changed') {
+        const labels: Record<string, string> = {
+            alive: 'В сознании',
+            dying: 'Без сознания · Death Saves',
+            stable: 'Стабилен',
+            dead: 'Мёртв',
+            defeated: 'Побеждён',
+            unconscious: 'Без сознания',
+        };
+        return `${name} · ${labels[d.after?.status ?? ''] ?? ''}${d.cause === 'death_save' ? ` · Death Save ${d.roll?.total} · ${d.roll?.success ? 'успех' : 'провал'} · ${d.after?.successes} / ${d.after?.failures}` : d.cause === 'damage_at_zero' ? ' · урон при 0 HP · провалы ' + d.after?.failures : d.cause === 'massive_damage' ? ' · мгновенная смерть: массивный урон' : d.cause === 'exhaustion' ? ' · Exhaustion 6' : ''}`;
+    }
+    if (e.type === 'lifecycle.consequence') return `${name} · ${d.abilityName} → ручной шаг ГМ`;
     if (e.type === 'turn.started') return `Раунд ${d.round} · ход ${name}`;
     if (e.type === 'gm.correction')
         return d.before?.hp !== d.after?.hp

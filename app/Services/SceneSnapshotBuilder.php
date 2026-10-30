@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Actions\CharacterActions;
 use App\Actions\ObjectInteractionActions;
 use App\Combat\CombatStats;
+use App\Combat\LifeCycle;
 use App\Models\Asset;
 use App\Models\Campaign;
 use App\Models\LootContainer;
@@ -15,12 +16,18 @@ use App\Models\SceneRegion;
 use App\Models\Token;
 use App\Models\User;
 use App\Spells\SpellEffects;
+use App\Support\RequestPerformance;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class SceneSnapshotBuilder
 {
     public function build(Scene $scene, User $user): array
+    {
+        return app(RequestPerformance::class)->measure('snapshot', fn () => app(SpellEffects::class)->project(fn () => $this->buildMeasured($scene, $user)));
+    }
+
+    private function buildMeasured(Scene $scene, User $user): array
     {
         // Shared lock keeps the revision and its entities from different commits from being mixed.
         return DB::transaction(function () use ($scene, $user) {
@@ -76,21 +83,21 @@ class SceneSnapshotBuilder
 
     private function tokenProjection(Token $token, bool $gm, User $user): array
     {
-        $loot = LootContainer::where('token_id', $token->id)->first();
-        $data = [...($loot && ($gm || $token->hp <= 0) ? ['loot' => $loot->summary($gm)] : []), 'id' => (string) $token->id, 'name' => $token->name,
+        $loot = app(SpellEffects::class)->read('token-loot:'.$token->id, fn () => LootContainer::where('token_id', $token->id)->first());
+        $data = [...($loot && ($gm || app(LifeCycle::class)->blocked($token)) ? ['loot' => $loot->summary($gm)] : []), 'id' => (string) $token->id, 'name' => $token->name,
             'characterId' => $token->character_id ? (string) $token->character_id : null,
             'interactions' => app(ObjectInteractionActions::class)->projection($token, $gm),
             'x' => (float) $token->x, 'y' => (float) $token->y, 'rotation' => (float) $token->rotation,
             'scale' => (float) $token->scale, 'size' => (float) $token->size,
             'kind' => $token->kind, 'disposition' => $token->disposition, 'color' => 9751480, 'image' => $this->asset($token->character_id ? $token->character->portraitAsset : $token->imageAsset),
-            'canMove' => $gm || ($token->owner_user_id === $user->id && ! $token->is_locked)];
+            'canMove' => $gm || ($token->owner_user_id === $user->id && ! $token->is_locked && ! app(LifeCycle::class)->blocked($token))];
         $data['conditions'] = $token->conditions->filter(fn ($condition) => $gm || $condition->visibility === 'public')->values()->map(fn ($condition) => [
             'id' => (string) $condition->id, 'key' => $condition->key, 'label' => $condition->label,
             'compendiumEntryId' => $condition->compendium_entry_id, 'description' => app(CharacterCatalog::class)->entries('conditions')[$condition->key]['description'] ?? '',
             'durationMode' => $condition->duration_mode, 'remainingRounds' => $condition->remaining_rounds,
         ] + ($gm ? ['visibility' => $condition->visibility, 'sourceTokenId' => $condition->source_token_id ? (string) $condition->source_token_id : null] : []))->all();
         if ($gm || $token->owner_user_id === $user->id) {
-            $data += ['temporaryHp' => $token->temporary_hp ?? 0, 'hp' => $token->hp, 'maxHp' => $token->max_hp, 'checkStats' => $token->check_stats ?? []];
+            $data += ['lifecycle' => app(LifeCycle::class)->state($token), 'exhaustion' => $token->exhaustion, 'temporaryHp' => $token->temporary_hp ?? 0, 'hp' => $token->hp, 'maxHp' => $token->max_hp, 'checkStats' => $token->check_stats ?? []];
         }
         if (! $gm) {
             $data['isOwner'] = $token->owner_user_id === $user->id;
@@ -101,7 +108,7 @@ class SceneSnapshotBuilder
             if ($token->character_id) {
                 $data += ['baseAc' => $token->character->getRawOriginal('ac'), 'baseSpeed' => $token->character->getRawOriginal('speed')];
             }
-            $data += ['temporaryHp' => $token->temporary_hp ?? 0, 'hp' => $token->hp, 'maxHp' => $token->max_hp, 'ac' => $token->ac, 'speed' => $token->speed,
+            $data += ['lifecycle' => app(LifeCycle::class)->state($token), 'exhaustion' => $token->exhaustion, 'temporaryHp' => $token->temporary_hp ?? 0, 'hp' => $token->hp, 'maxHp' => $token->max_hp, 'ac' => $token->ac, 'speed' => $token->speed,
                 'isHidden' => $token->is_hidden, 'isLocked' => $token->is_locked,
                 'ownerUserId' => $token->owner_user_id ? (string) $token->owner_user_id : null];
         }

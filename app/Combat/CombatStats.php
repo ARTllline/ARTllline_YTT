@@ -49,8 +49,8 @@ class CombatStats
         }
         abort_if($value === null, 422, 'У цели не настроен спасбросок '.$ability.'.');
 
-        return ['source' => 'token_stat', 'tokenId' => (string) $token->id, 'statKey' => 'save_'.$ability, 'finalModifier' => (int) $value,
-            'breakdown' => [['source' => 'base', 'label' => 'Save '.strtoupper($ability), 'value' => (int) $value]]];
+        return ['source' => 'token_stat', 'tokenId' => (string) $token->id, 'statKey' => 'save_'.$ability, 'finalModifier' => (int) $value + array_sum(array_column(app(ExhaustionRules::class)->parts($token), 'value')),
+            'breakdown' => [['source' => 'base', 'label' => 'Save '.strtoupper($ability), 'value' => (int) $value], ...app(ExhaustionRules::class)->parts($token)]];
     }
 
     public function speed(Token $token): float
@@ -63,6 +63,11 @@ class CombatStats
         $key = $config['ability'] === 'spellcasting' ? ($this->profile($token)['spellcasting_ability'] ?? 'spell_attack') : $config['ability'];
         $score = $this->profile($token)['ability_scores'][$key] ?? null;
         $p = $score !== null ? ['source' => 'token_stat', 'tokenId' => (string) $token->id, 'statKey' => $key, 'finalModifier' => app(CharacterRules::class)->abilityModifier($score)] : app(TokenCheckStats::class)->resolve($token, ['stat_key' => $key]);
+        if ($score !== null) {
+            $parts = app(ExhaustionRules::class)->parts($token);
+            $p['breakdown'] = [['source' => 'ability', 'label' => strtoupper($key), 'value' => $p['finalModifier']], ...$parts];
+            $p['finalModifier'] += array_sum(array_column($parts, 'value'));
+        }
         $pb = $config['proficient'] ? ($this->profile($token)['proficiency_bonus'] ?? 0) : 0;
         $p['breakdown'] = [...($p['breakdown'] ?? [['source' => 'base', 'label' => strtoupper($key), 'value' => $p['finalModifier']]]), ['source' => 'proficiency', 'label' => 'Владение', 'value' => $pb], ['source' => 'custom', 'label' => 'Бонус атаки', 'value' => $config['bonus']]];
         $p['finalModifier'] += $pb + $config['bonus'];

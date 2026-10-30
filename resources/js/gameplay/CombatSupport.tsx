@@ -17,6 +17,8 @@ export function CombatSupport({
     onDetails: () => void;
 }) {
     const active = combat?.status === 'active';
+    const speed =
+        character.lifecycle && character.lifecycle.status !== 'alive' ? 0 : character.speed;
     const ownTurn = active && !!actor && currentTokenId(combat) === actor.id;
     const status = disabled
         ? 'Синхронизация…'
@@ -48,12 +50,9 @@ export function CombatSupport({
                     <strong>{character.ac ?? '—'}</strong>
                 </span>
             </button>
-            <span
-                className="combat-movement"
-                aria-label={`Скорость: ${character.speed ?? 'не задана'}`}
-            >
+            <span className="combat-movement" aria-label={`Скорость: ${speed ?? 'не задана'}`}>
                 <Footprints size={14} />
-                <strong>{character.speed ?? '—'}</strong>
+                <strong>{speed ?? '—'}</strong>
                 <small>скорость</small>
             </span>
             <div className="combat-context-state" role="status">

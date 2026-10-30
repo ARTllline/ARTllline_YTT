@@ -107,3 +107,10 @@ Verified locally on 2026-10-30 against the rebuilt Docker application:
 Browser evidence is Chromium on this Windows machine with a mobile viewport, not a
 physical phone, Safari/Firefox or public/WAN deployment. Rest, progression, full reaction
 prompting, 3D/LOS/cover and the audit's remaining rule families are not claimed as automated.
+
+## Rest recovery
+
+[Adventuring lifecycle](ADVENTURING_LIFECYCLE.md) adds an explicit long-rest slot
+recovery policy, shared healing/death handling and reconciliation of finite managed
+effects during GM-confirmed rest. Indefinite effects remain; Long Rest sleep ends
+the resting caster's concentration.

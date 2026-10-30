@@ -202,3 +202,11 @@ Chromium desktop 1440×1000, GM tablet 900×1000 и Player 390×844; JS errors �
 последствия уже подготовленных NPC-действий (например, дополнительные эффекты атаки
 и Death Burst). Сохранить честную границу автоматизации; без monster AI, нового
 движка правил и парсинга произвольного SRD prose.
+
+## Task 32 — lifecycle and rest
+
+[Adventuring lifecycle](ADVENTURING_LIFECYCLE.md) closes the prepared NPC lifecycle
+consequence P1 above: zero HP/defeat/death can create a durable task in this same queue,
+with copied text and reference. This is explicit preparation, not arbitrary prose
+automation. The console also exposes party/selected-hero rest and compact lifecycle
+corrections; independent NPCs still require no Character.

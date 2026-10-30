@@ -4,6 +4,7 @@ import { request } from '../api/client';
 import { commandId } from '../api/workspace';
 
 export interface CharacterResource {
+    recovery?: 'manual' | 'short_rest' | 'long_rest';
     key: string;
     label: string;
     current: number;

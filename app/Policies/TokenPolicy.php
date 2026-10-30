@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Combat\LifeCycle;
 use App\Models\Token;
 use App\Models\User;
 
@@ -19,6 +20,6 @@ class TokenPolicy
 
         return $role === 'gm' || ($role === 'player'
             && $campaign->active_scene_id === $token->scene_id
-            && $token->owner_user_id === $user->id && ! $token->is_hidden && ! $token->is_locked);
+            && $token->owner_user_id === $user->id && ! $token->is_hidden && ! $token->is_locked && ! app(LifeCycle::class)->blocked($token));
     }
 }

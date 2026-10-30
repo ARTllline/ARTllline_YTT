@@ -2,6 +2,7 @@
 
 namespace App\Spells;
 
+use App\Combat\LifeCycle;
 use App\Combat\TurnBudget;
 use App\Models\Character;
 use App\Models\Scene;
@@ -19,11 +20,12 @@ class SpellCasting
             $slots[$i] = $state['slots'][$i] ?? ['max' => 0, 'current' => 0];
         }
 
-        return ['slots' => $slots, 'cantrip_tier' => $state['cantrip_tier'] ?? 1, 'scroll_list' => $state['scroll_list'] ?? [], 'scroll_max_level' => $state['scroll_max_level'] ?? 0, 'verbal_blocked' => $state['verbal_blocked'] ?? false];
+        return ['recovery' => $state['recovery'] ?? 'long_rest', 'slots' => $slots, 'cantrip_tier' => $state['cantrip_tier'] ?? 1, 'scroll_list' => $state['scroll_list'] ?? [], 'scroll_max_level' => $state['scroll_max_level'] ?? 0, 'verbal_blocked' => $state['verbal_blocked'] ?? false];
     }
 
     public function validate(Character $c, array $a, ?int $level, bool $item = false, bool $completed = false): int
     {
+        abort_if(app(LifeCycle::class)->blocked($c), 422, 'Персонаж без сознания, побеждён или мёртв и не может колдовать.');
         $s = $a['spell'];
         if (! $item) {
             abort_unless($s['known'] && $s['prepared'] && ($s['available'] ?? true), 403, 'Заклинание неизвестно, не подготовлено или доступ закрыт GM.');
@@ -152,8 +154,9 @@ class SpellCasting
 
     public function availability(Character $c, array $a): array
     {
-        if ($c->exists && $a['spell']['level'] > 0 && ($scene = Scene::find($c->campaign->active_scene_id)) && ($combat = app(TurnBudget::class)->active($scene->id))) {
-            if (DB::table('spell_turn_slots')->where('combat_id', $combat->id)->where('character_id', $c->id)->where('turn_sequence', $combat->turn_sequence)->exists()) {
+        $reads = app(SpellEffects::class);
+        if ($c->exists && $a['spell']['level'] > 0 && ($scene = $reads->read('casting-scene:'.$c->campaign_id, fn () => Scene::find($c->campaign->active_scene_id))) && ($combat = $reads->read('casting-combat:'.$scene->id, fn () => app(TurnBudget::class)->active($scene->id)))) {
+            if ($reads->read('casting-slot:'.$combat->id.':'.$combat->turn_sequence.':'.$c->id, fn () => DB::table('spell_turn_slots')->where('combat_id', $combat->id)->where('character_id', $c->id)->where('turn_sequence', $combat->turn_sequence)->exists())) {
                 return ['available' => false, 'reason' => 'На этом ходу уже потрачена ячейка заклинания (SRD 2024).', 'levels' => []];
             }
         }

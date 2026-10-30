@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Actions\TokenCombatActions;
 use App\Combat\ConditionRules;
+use App\Combat\LifeCycle;
 use App\Compendium\SrdEquipmentMapper;
 use App\Compendium\SrdKeys;
 use App\Events\TabletopEvent;
@@ -223,6 +225,22 @@ class ItemsLootGameplayTest extends TestCase
         $this->useItem($i, ['target' => ['kind' => 'token', 'id' => $this->actor->id], 'clientMutationId' => $uuid])->assertOk()->assertExactJson($r);
         $this->assertSame($hp, $this->hero->fresh()->hp);
         $this->assertSame(2, $i->fresh()->quantity);
+    }
+
+    public function test_potion_administered_to_dying_ally_heals_and_resets_lifecycle(): void
+    {
+        $d = $this->definition(['category' => 'consumable', 'gameplay' => ['use' => ['consume' => true, 'ability' => ItemActions::potionAbility()]]]);
+        $item = $this->give($d, 2);
+        $target = $this->scene->tokens()->where('character_id', $this->friend->id)->firstOrFail();
+        app(TokenCombatActions::class)->adjustHp($this->gm, $target, -50);
+        $id = (string) Str::uuid();
+        $command = ['target' => ['kind' => 'token', 'id' => $target->id], 'clientMutationId' => $id];
+        $this->useItem($item, $command)->assertOk();
+        $this->useItem($item, $command)->assertOk();
+        $this->assertSame('alive', app(LifeCycle::class)->state($this->friend->fresh())['status']);
+        $this->assertGreaterThan(0, $this->friend->fresh()->hp);
+        $this->assertSame(1, $item->fresh()->quantity);
+        $this->assertFalse($target->conditions()->where('key', 'unconscious')->exists());
     }
 
     public function test_loot_pickup_shared_state_stale_final_item_and_idempotency(): void

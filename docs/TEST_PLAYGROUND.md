@@ -81,3 +81,11 @@ Chromium: вход под всеми тремя аккаунтами, единс
 `tabletop:doctor`: все проверки OK, включая heartbeat планировщика.
 Отчёт и снимки: `artifacts/permanent-playground-20261030/browser-report.json`,
 `gm.png`, `player1.png`, `player2.png`.
+
+## Adventuring lifecycle fixture
+
+The same Townhouse recipe now configures Kern with six d10 Hit Point Dice and Lyra
+with six d6, explicitly (no Character levels inferred), plus a short-rest resource.
+The existing Magmin has a prepared on-death consequence in the GM manual queue.
+Reset restores lifecycle, exhaustion, rest/dice/resources and pending tasks. See
+[adventuring lifecycle rules and acceptance](ADVENTURING_LIFECYCLE.md).

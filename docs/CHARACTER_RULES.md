@@ -180,3 +180,9 @@ damage scopes to this resolver while retaining legacy manual bases and modifiers
 cantrip tiers, scroll list eligibility and managed concentration/effects. Spell attacks
 and DC still come from this resolver; active AC/speed modifiers use its breakdowns.
 See [all 339 spell classifications](SPELL_COVERAGE.md) for exact automation limits.
+
+## Adventuring lifecycle
+
+[Adventuring lifecycle](ADVENTURING_LIFECYCLE.md) adds persistent Exhaustion to
+D20/speed provenance and explicitly configured Hit Point Dice. Constitution healing
+uses the pure ability modifier; exhaustion never reduces damage or spell save DC.

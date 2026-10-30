@@ -1,3 +1,4 @@
+import { ExhaustionBadge, LifeSummary } from '../gameplay/adventuring';
 import { equipmentDropReason } from './itemGameplay';
 import { Shield, Footprints, Heart, UserRound } from 'lucide-react';
 import { RpgIcon } from '../gameplay/RpgIcon';
@@ -54,6 +55,10 @@ export function CharacterView({
     const c = state.character;
     return (
         <div className="character-equipment-layout">
+            <div>
+                <LifeSummary state={c.lifecycle} />
+                <ExhaustionBadge level={c.exhaustion} />
+            </div>
             <HeroEquipment state={state} send={send} busy={busy} onInspect={onInspect} />
             <section className="character-satchel">
                 <header>

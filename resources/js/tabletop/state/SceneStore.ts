@@ -1,3 +1,4 @@
+import { performanceMark } from '../../realtime/performance';
 import { applyObjectPatch } from './objectPatch';
 import { applyRegionPatch, type Region, type RegionCommand } from '../../automation/model';
 import type { ObjectCommand, ObjectSelection } from '../types/scene';
@@ -163,6 +164,10 @@ export class SceneStore {
     private emit(next: WorkspaceSnapshot) {
         this.snapshot = next;
         this.listeners.forEach((listener) => listener());
+        performanceMark('state', {
+            sceneId: this.snapshot.scene.id,
+            revision: this.snapshot.scene.revision,
+        });
     }
     select(id: string | null) {
         if (id && !this.snapshot.scene.tokens.some((token) => token.id === id)) return;

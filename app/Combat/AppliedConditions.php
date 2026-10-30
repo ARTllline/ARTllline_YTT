@@ -25,6 +25,11 @@ class AppliedConditions
             return null;
         }
         $mode = $effect['duration_mode'] ?? 'until_removed';
+        if ($key === 'exhaustion') {
+            app(LifeCycle::class)->exhaustion($author, $target, min(6, $target->exhaustion + 1));
+
+            return $target->conditions()->where('key', 'exhaustion')->first();
+        }
         abort_if($mode !== 'until_removed' && ! $combat, 422, 'Для длительности по ходам начните бой.');
         abort_if(str_contains($mode, 'source_turn') && (! $source || ! $combat->combatants()->where('token_id', $source->id)->exists()), 422, 'Источник длительности должен участвовать в бою.');
         abort_if($mode !== 'until_removed' && ! $combat->combatants()->where('token_id', $target->id)->exists(), 422, 'Цель длительности должна участвовать в бою.');
@@ -48,6 +53,15 @@ class AppliedConditions
 
     public function remove(TokenCondition $condition, string $reason = 'gm'): void
     {
+        abort_if($reason === 'gm' && ($condition->metadata['source'] ?? '') === 'zero_hp', 422, 'Это Unconscious связано с жизненным циклом. Используйте лечение, стабилизацию или GM revival.');
+        if ($condition->key === 'exhaustion') {
+            $token = Token::findOrFail($condition->token_id);
+            $owner = app(LifeCycle::class)->owner($token);
+            $owner->update(['exhaustion' => 0]);
+            if ($token->character_id) {
+                TokenCondition::whereIn('token_id', $owner->tokens()->select('id'))->where('key', 'exhaustion')->delete();
+            }
+        }
         $combat = $condition->combat_id ? Combat::find($condition->combat_id) : null;
         app(CombatLog::class)->write($combat, 'condition.removed', ['targetId' => (string) $condition->token_id, 'conditionId' => (string) $condition->id, 'key' => $condition->key, 'reason' => $reason]);
         $condition->delete();
@@ -73,7 +87,7 @@ class AppliedConditions
     public function finish(Combat $combat): void
     {
         $linked = app(SpellEffects::class)->active()->get()->flatMap(fn ($e) => $e->payload['conditions'] ?? [])->all();
-        foreach (TokenCondition::where('combat_id', $combat->id)->whereNotIn('id', $linked)->get() as $c) {
+        foreach (TokenCondition::where('combat_id', $combat->id)->whereNotIn('id', $linked)->where('duration_mode', '!=', 'until_removed')->get() as $c) {
             $this->remove($c, 'combat_ended');
         }
     }

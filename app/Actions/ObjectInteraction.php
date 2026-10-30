@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Combat\LifeCycle;
 use App\Models\Campaign;
 use App\Models\Cue;
 use App\Models\Scene;
@@ -22,6 +23,7 @@ class ObjectInteraction
         abort_if($object->is_hidden, 403);
         if (isset($data['actorTokenId'])) {
             $actor = $scene->tokens()->findOrFail($data['actorTokenId']);
+            abort_if(app(LifeCycle::class)->blocked($actor), 422, 'Персонаж без сознания или мёртв и не может взаимодействовать.');
             abort_unless(! $actor->is_hidden && ($actor->owner_user_id === $user->id || $scene->campaign->roleFor($user) === 'gm'), 403, 'Этот персонаж вам недоступен.');
         }
         if (isset($data['actionId'])) {

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Combat\ExhaustionRules;
 use App\Models\Character;
 use App\Models\Token;
 use Illuminate\Validation\ValidationException;
@@ -48,8 +49,9 @@ class TokenCheckStats
             return ['source' => $characterId ? 'character_stat' : 'token_stat',
                 ...($characterId ? ['characterId' => (string) $characterId, 'characterName' => $token->name] : []),
                 'tokenId' => $token instanceof Token ? (string) $token->id : null, 'tokenName' => $token->name,
+                'breakdown' => [['source' => 'base', 'label' => $stat['label'], 'value' => (int) $stat['modifier']], ...app(ExhaustionRules::class)->parts($token)],
                 'statKey' => $key, 'statLabel' => $stat['label'], 'baseModifier' => (int) $stat['modifier'],
-                'otherModifiers' => [], 'finalModifier' => (int) $stat['modifier']];
+                'otherModifiers' => array_map(fn ($p) => ['label' => $p['label'], 'modifier' => $p['value']], app(ExhaustionRules::class)->parts($token)), 'finalModifier' => (int) $stat['modifier'] + array_sum(array_column(app(ExhaustionRules::class)->parts($token), 'value'))];
         }
 
         // Task 16B configurations remain fixed until a GM explicitly converts them.
@@ -57,7 +59,8 @@ class TokenCheckStats
 
         return ['source' => 'legacy_interaction', 'tokenId' => $token instanceof Token ? (string) $token->id : null,
             'tokenName' => $token?->name, 'statKey' => $config['ability_key'] ?? null,
+            'breakdown' => [['source' => 'base', 'label' => $config['label'], 'value' => $modifier], ...app(ExhaustionRules::class)->parts($token)],
             'statLabel' => $config['label'], 'baseModifier' => $modifier,
-            'otherModifiers' => [], 'finalModifier' => $modifier];
+            'otherModifiers' => array_map(fn ($p) => ['label' => $p['label'], 'modifier' => $p['value']], app(ExhaustionRules::class)->parts($token)), 'finalModifier' => $modifier + array_sum(array_column(app(ExhaustionRules::class)->parts($token), 'value'))];
     }
 }

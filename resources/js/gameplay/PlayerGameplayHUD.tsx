@@ -1,3 +1,4 @@
+import { AdventuringHUD } from './adventuring';
 import { CastLevelChooser, ConcentrationHUD } from './spellcasting';
 import type { RollMode } from '../workspace/interactions/actingToken';
 import { AbilityHotbar } from './AbilityHotbar';
@@ -149,6 +150,10 @@ function CharacterHUD({
         effectChoice = useRef<string | undefined>(undefined);
     const beginChoose = (ability: Ability, inventoryItemId?: string) => {
         if (disabled) return;
+        if (character.lifecycle && character.lifecycle.status !== 'alive') {
+            setError('Персонаж не может действовать в этом состоянии.');
+            return;
+        }
         const reason = combatReason(
             ability,
             scene.combat?.combatants.find((e) => e.tokenId === actor?.id)?.budget,
@@ -278,7 +283,14 @@ function CharacterHUD({
                 return;
             }
             const ability = abilities.find((a) => a.id === event.detail?.abilityId);
-            if (!ability || disabled || pending || !canAfford(ability, resources)) return;
+            if (
+                !ability ||
+                disabled ||
+                pending ||
+                (character.lifecycle && character.lifecycle.status !== 'alive') ||
+                !canAfford(ability, resources)
+            )
+                return;
             const target = event.detail.target;
             if (
                 target &&
@@ -301,7 +313,6 @@ function CharacterHUD({
         return () => window.removeEventListener('ytt:ability-invoke', listener);
     }, []);
     const accepted = (r: AbilityResult) => {
-        void inventory.refresh();
         refresh();
         if (r.outcomes?.length) {
             for (const outcome of r.outcomes) {
@@ -345,7 +356,6 @@ function CharacterHUD({
                     actor={actor}
                     inventory={inventory}
                     onResourceChange={() => {
-                        void inventory.refresh();
                         refresh();
                     }}
                     onChoose={choose}
@@ -413,43 +423,69 @@ function CharacterHUD({
                     </div>
                 )}
             </div>
-            <AbilityHotbar
-                onStand={
-                    actor?.conditions?.some((c) => c.key === 'prone')
-                        ? () => store.tokenCombat(actor.id, { action: 'stand-up' })
-                        : undefined
-                }
-                combatBudget={scene.combat?.combatants.find((e) => e.tokenId === actor?.id)?.budget}
-                abilities={abilities}
-                items={inventory.data?.items ?? []}
-                itemAbilities={inventory.data?.useAbilities ?? []}
-                onChooseItem={chooseItem}
-                onOpenWindow={setPanel}
-                openWindow={panel}
-                resources={resources}
-                slots={hotbar.slots}
-                onLayout={(next) =>
-                    hotbar.change(
-                        normalizeSlots(
-                            next,
-                            abilities.map((a) => a.id),
-                        ),
-                    )
-                }
-                onChoose={choose}
-                selected={targeting?.id}
-                disabled={disabled || !!pending || (!actor && !!targeting)}
-                editable={hotbar.loaded}
-                saving={hotbar.saving}
-                error={hotbar.error}
-                onRetry={hotbar.retry}
-                openRequest={browserRequest}
-                rollMode={rollMode}
-                onRollMode={setRollMode}
-                worldAvailable={!!actor}
-                onResourceDetails={() => setPanel('character')}
-                preferencesKey={`ytt:deck:${userId}:${scene.campaignId}:${character.id}`}
-            />
+            {(!character.lifecycle || character.lifecycle.status === 'alive') && (
+                <AdventuringHUD
+                    key={character.rest?.id ?? character.id}
+                    character={character}
+                    actor={actor}
+                    store={store}
+                    disabled={disabled}
+                />
+            )}
+            {!character.lifecycle || character.lifecycle.status === 'alive' ? (
+                <AbilityHotbar
+                    onStand={
+                        actor?.conditions?.some((c) => c.key === 'prone')
+                            ? () => store.tokenCombat(actor.id, { action: 'stand-up' })
+                            : undefined
+                    }
+                    combatBudget={
+                        scene.combat?.combatants.find((e) => e.tokenId === actor?.id)?.budget
+                    }
+                    abilities={abilities}
+                    items={inventory.data?.items ?? []}
+                    itemAbilities={inventory.data?.useAbilities ?? []}
+                    onChooseItem={chooseItem}
+                    onOpenWindow={setPanel}
+                    openWindow={panel}
+                    resources={resources}
+                    slots={hotbar.slots}
+                    onLayout={(next) =>
+                        hotbar.change(
+                            normalizeSlots(
+                                next,
+                                abilities.map((a) => a.id),
+                            ),
+                        )
+                    }
+                    onChoose={choose}
+                    selected={targeting?.id}
+                    disabled={disabled || !!pending || (!actor && !!targeting)}
+                    editable={hotbar.loaded}
+                    saving={hotbar.saving}
+                    error={hotbar.error}
+                    onRetry={hotbar.retry}
+                    openRequest={browserRequest}
+                    rollMode={rollMode}
+                    onRollMode={setRollMode}
+                    worldAvailable={!!actor}
+                    onResourceDetails={() => setPanel('character')}
+                    preferencesKey={`ytt:deck:${userId}:${scene.campaignId}:${character.id}`}
+                />
+            ) : (
+                <div className="downed-deck">
+                    <AdventuringHUD
+                        key={character.rest?.id ?? character.id}
+                        character={character}
+                        actor={actor}
+                        store={store}
+                        disabled={disabled}
+                    />
+                    <button className="quiet-button" onClick={() => setPanel('character')}>
+                        Осмотреть персонажа
+                    </button>
+                </div>
+            )}
             <CombatSupport
                 character={character}
                 actor={actor}
@@ -552,7 +588,6 @@ function CharacterHUD({
                     onAccepted={accepted}
                     onClose={() => {
                         setInvocation(null);
-                        refresh();
                     }}
                 />
             )}

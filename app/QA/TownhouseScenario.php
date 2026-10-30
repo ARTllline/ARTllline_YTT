@@ -229,6 +229,7 @@ class TownhouseScenario
 
     private function prepareHero(Character $hero, bool $caster): void
     {
+        $hero->update(['lifecycle' => null, 'exhaustion' => 0, 'rest_state' => null, 'recovery_baseline' => null, 'hit_point_dice' => [['die' => $caster ? 'd6' : 'd10', 'max' => 6, 'current' => 6]]]);
         $rules = app(CharacterRules::class)->defaults();
         $rules['proficiency_bonus'] = 3;
         $rules['scores'] = $caster ? ['str' => 10, 'dex' => 14, 'con' => 14, 'int' => 16, 'wis' => 12, 'cha' => 18] : ['str' => 16, 'dex' => 14, 'con' => 16, 'int' => 10, 'wis' => 14, 'cha' => 10];
@@ -238,7 +239,7 @@ class TownhouseScenario
             }
         }
         $rules['spellcasting_ability'] = $caster ? 'cha' : null;
-        app(CharacterActions::class)->save($this->gm, $this->campaign, ['id' => $hero->id, 'rules' => $rules, 'hp' => $caster ? 40 : 48, 'max_hp' => $caster ? 40 : 48, 'ac' => $caster ? 12 : 10, 'speed' => 30, 'abilities' => [], 'resources' => []]);
+        app(CharacterActions::class)->save($this->gm, $this->campaign, ['id' => $hero->id, 'rules' => $rules, 'hp' => $caster ? 40 : 48, 'max_hp' => $caster ? 40 : 48, 'ac' => $caster ? 12 : 10, 'speed' => 30, 'abilities' => [], 'resources' => [['key' => 'adventuring_focus', 'label' => 'Сосредоточенность', 'current' => 2, 'max' => 2, 'icon' => 'focus', 'accent' => 'violet', 'sort_order' => 0, 'player_adjustable' => false, 'recovery' => 'short_rest']]]);
         $hero->refresh()->update(['temporary_hp' => 0]);
     }
 
@@ -311,7 +312,14 @@ class TownhouseScenario
                 $abilities[] = ['id' => (string) Str::uuid(), 'name' => $action['name'], 'icon' => $action['name'] === 'Shortbow' ? 'bow' : 'sword', 'description' => mb_substr($action['desc'].' Дополнительные условные эффекты разрешает GM.', 0, 800), 'category' => 'attack', 'target' => 'token', 'activation' => 'action', 'attack_type' => $range['long'] ? 'ranged' : 'melee', 'check' => ['stat_key' => null, 'modifier' => $action['attack_bonus'], 'dc' => 0, 'dc_visible' => true, 'defense' => 'ac'], 'costs' => [], 'damage' => null, 'damage_components' => [['dice' => $action['damage'][0]['damage_dice'], 'type' => $action['damage'][0]['damage_type']['index']]], 'range' => $range, 'result' => ['type' => 'nothing', 'target' => null, 'amount' => 0], 'sort_order' => count($abilities), 'enabled' => true];
             }
         }
-        app(CharacterActions::class)->save($this->gm, $this->campaign, ['id' => $character->id, 'name' => $name, 'hp' => $n['hp'], 'max_hp' => $n['hp'], 'abilities' => $abilities, 'combat_profile' => app(CombatStats::class)->fromMonster($n)]);
+        $character->update(['hp' => $n['hp'], 'lifecycle' => null, 'exhaustion' => 0, 'rest_state' => null, 'recovery_baseline' => null]);
+        $profile = app(CombatStats::class)->fromMonster($n);
+        $profile['zero_hp_policy'] = 'immediate_death';
+        if ($key === 'magmin') {
+            $trait = collect($n['traits'] ?? [])->first(fn ($a) => stripos($a['name'], 'Death Burst') !== false);
+            $profile['lifecycle_consequences'] = [['name' => 'Death Burst', 'trigger' => 'on_death', 'description' => $trait['desc'] ?? 'GM: resolve Death Burst from the canonical Magmin stat block. No prose automation.', 'reference' => 'SRD 5.2.1 p.305 · Magmin']];
+        }
+        app(CharacterActions::class)->save($this->gm, $this->campaign, ['id' => $character->id, 'name' => $name, 'hp' => $n['hp'], 'max_hp' => $n['hp'], 'abilities' => $abilities, 'combat_profile' => $profile]);
         $character->refresh()->update(['temporary_hp' => 0]);
         $token = $reuse ? $this->scene->tokens()->find($reuse) : $this->scene->tokens()->where('character_id', $character->id)->first();
         if (! $token) {

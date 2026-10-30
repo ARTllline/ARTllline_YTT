@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Combat\AdventuringActions;
 use App\Http\Controllers\AbilityController;
 use App\Items\LootActions;
 use App\Models\Campaign;
@@ -9,6 +10,7 @@ use App\Models\Scene;
 use App\Models\Token;
 use App\Models\User;
 use App\Services\SceneSnapshotBuilder;
+use App\Support\RequestPerformance;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +20,11 @@ use Symfony\Component\HttpFoundation\Response;
 class IdempotentCommand
 {
     public function execute(User $user, string $id, string $operation, int $resource, array $payload, Closure $next): Response
+    {
+        return app(RequestPerformance::class)->measure('command', fn () => $this->executeMeasured($user, $id, $operation, $resource, $payload, $next));
+    }
+
+    private function executeMeasured(User $user, string $id, string $operation, int $resource, array $payload, Closure $next): Response
     {
         $sort = function (array $value) use (&$sort): array {
             ksort($value);
@@ -59,6 +66,11 @@ class IdempotentCommand
                         $result['token'] = array_intersect_key($result['token'], $safe);
                         $result['token']['canMove'] = $safe['canMove'];
                         $result['token']['conditions'] = array_values(array_filter($result['token']['conditions'] ?? [], fn ($condition) => in_array($condition['id'], array_column($safe['conditions'], 'id'), true)));
+                    } elseif ($operation === 'scene.adventuring') {
+                        $scene = Scene::findOrFail($resource);
+                        $scene->setRelation('campaign', $campaign);
+                        app(AdventuringActions::class)->authorize($user, $scene, $payload);
+                        abort_if($campaign->roleFor($user) !== 'gm' && collect($result['tokens'] ?? [])->contains(fn ($t) => array_key_exists('isHidden', $t)), 403);
                     } elseif ($operation === 'campaign.spellcasting') {
                         app(AbilityActions::class)->authorize($user, $campaign, $payload['characterId']);
                         if (($payload['action'] ?? '') !== 'end-effect') {

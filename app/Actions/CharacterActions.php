@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Combat\LifeCycle;
 use App\Models\Asset;
 use App\Models\Campaign;
 use App\Models\CampaignMember;
@@ -13,6 +14,7 @@ use App\Services\CharacterRules;
 use App\Services\SceneSnapshotBuilder;
 use App\Spells\SpellCasting;
 use App\Spells\SpellEffects;
+use App\Support\RequestPerformance;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -43,9 +45,20 @@ class CharacterActions
             app(CharacterRules::class)->prepare($data);
             app(CharacterGameplay::class)->validate($campaign, $data, $character);
             if ($character) {
+                $beforeHp = $character->hp;
+                if (! $character->lifecycle) {
+                    $character->update(['lifecycle' => app(LifeCycle::class)->state($character)]);
+                }
+                abort_if(isset($data['hp']) && $data['hp'] > 0 && app(LifeCycle::class)->state($character)['status'] === 'dead', 422, 'Используйте GM-коррекцию возвращения к жизни.');
                 $character->update($data);
+                if (array_key_exists('hp', $data)) {
+                    app(LifeCycle::class)->hpChanged($user, $character, $beforeHp);
+                }
             } else {
                 $character = $campaign->characters()->create($data)->refresh();
+                if ($character->hp === 0) {
+                    app(LifeCycle::class)->save($user, $character, app(LifeCycle::class)->state($character), 'created_at_zero');
+                }
             }
             $this->publish($user, $character);
 
@@ -58,7 +71,18 @@ class CharacterActions
     {
         $character = $token->character()->firstOrFail();
         $this->validate($token->scene->campaign, $data, $character);
+        $beforeHp = $character->hp;
+        if (array_key_exists('hp', $data)) {
+            if (! $character->lifecycle) {
+                $character->update(['lifecycle' => app(LifeCycle::class)->state($character)]);
+            }
+            abort_if($data['hp'] > 0 && app(LifeCycle::class)->state($character)['status'] === 'dead', 422, 'Используйте GM revival.');
+        }
         $character->update($data);
+        $token->setRelation('character', $character);
+        if (array_key_exists('hp', $data)) {
+            app(LifeCycle::class)->hpChanged($user, $token, $beforeHp);
+        }
         $this->publish($user, $character, $token->scene_id);
         $token->unsetRelation('character');
         $token->unsetRelation('imageAsset');
@@ -78,8 +102,9 @@ class CharacterActions
 
     public function projection(Character $character, bool $gm = true): array
     {
-        return app(SpellEffects::class)->project(fn () => ['temporaryHp' => $character->temporary_hp ?? 0, 'spellcasting' => app(SpellCasting::class)->state($character), 'spellEffects' => app(SpellEffects::class)->projection($character), 'rules' => app(CharacterRules::class)->state($character), 'derived' => app(CharacterRules::class)->derived($character),
+        return app(SpellEffects::class)->project(fn () => ['lifecycle' => app(LifeCycle::class)->state($character), 'exhaustion' => $character->exhaustion, 'hitPointDice' => $character->hit_point_dice ?? [], 'rest' => $character->rest_state, 'temporaryHp' => $character->temporary_hp ?? 0, 'spellcasting' => app(SpellCasting::class)->state($character), 'spellEffects' => app(SpellEffects::class)->projection($character), 'rules' => app(CharacterRules::class)->state($character), 'derived' => app(CharacterRules::class)->derived($character),
             ...($gm ? ['rulesSuggestion' => app(CharacterRules::class)->suggestion($character)] : []),
+            'inventoryRevision' => $this->inventoryRevision($character),
             'id' => (string) $character->id, 'name' => $character->name,
             'portrait' => app(SceneSnapshotBuilder::class)->asset($character->portraitAsset),
             'ownerUserId' => $character->owner_user_id ? (string) $character->owner_user_id : null,
@@ -92,8 +117,23 @@ class CharacterActions
 
     public function roster(Campaign $campaign, User $user): array
     {
+        return app(RequestPerformance::class)->measure('character_dto', fn () => app(SpellEffects::class)->project(fn () => $this->rosterMeasured($campaign, $user)));
+    }
+
+    /** Content identity, not a cache: quantity, equipment and definition edits invalidate it. */
+    private function inventoryRevision(Character $character): string
+    {
+        $character->loadMissing('inventory.definition');
+
+        return hash('sha256', json_encode([app(CharacterGameplay::class)->abilities($character, false, true, false), $character->inventory->sortBy('id')->map(fn ($item) => [
+            $item->getAttributes(), $item->definition->projection(false),
+        ])->values()->all()], JSON_THROW_ON_ERROR));
+    }
+
+    private function rosterMeasured(Campaign $campaign, User $user): array
+    {
         $gm = $campaign->roleFor($user) === 'gm';
-        $characters = $campaign->characters()->with('portraitAsset')->when(! $gm, fn ($q) => $q->where('owner_user_id', $user->id))->orderBy('name')->orderBy('id')->get();
+        $characters = $campaign->characters()->with(['portraitAsset', 'inventory.definition'])->when(! $gm, fn ($q) => $q->where('owner_user_id', $user->id))->orderBy('name')->orderBy('id')->get();
         $active = CampaignMember::where('campaign_id', $campaign->id)->where('user_id', $user->id)->value('active_character_id');
         $active = $active && $characters->contains('id', $active) ? (string) $active : null;
 

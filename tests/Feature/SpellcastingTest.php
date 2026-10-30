@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Actions\TokenCombatActions;
 use App\Combat\AppliedConditions;
+use App\Combat\LifeCycle;
 use App\Combat\TurnBudget;
 use App\Compendium\SrdSpellMapper;
 use App\Events\TabletopEvent;
@@ -153,6 +154,18 @@ class SpellcastingTest extends TestCase
         $this->cast($a, $cmd)->assertOk();
         $this->assertSame($hp, $this->hero->fresh()->hp);
         $this->assertSame(2, $this->hero->fresh()->spellcasting['slots'][2]['current']);
+    }
+
+    public function test_cure_wounds_revives_dying_ally_through_the_shared_hp_path(): void
+    {
+        $spell = $this->spell('cure-wounds');
+        $target = $this->scene->tokens()->where('character_id', $this->friend->id)->firstOrFail();
+        app(TokenCombatActions::class)->adjustHp($this->gm, $target, -50);
+        $this->assertSame('dying', app(LifeCycle::class)->state($this->friend->fresh())['status']);
+        $this->cast($spell, ['castLevel' => 1, 'target' => ['kind' => 'token', 'id' => $target->id]])->assertOk();
+        $this->assertGreaterThan(0, $this->friend->fresh()->hp);
+        $this->assertSame('alive', app(LifeCycle::class)->state($this->friend->fresh())['status']);
+        $this->assertFalse($target->conditions()->where('key', 'unconscious')->exists());
     }
 
     public function test_concentration_replacement_damage_save_incapacitation_and_modifiers(): void

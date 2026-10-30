@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AbilityController;
+use App\Http\Controllers\AdventuringController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AutomationController;
@@ -119,6 +120,8 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/campaigns/{campaign}/handouts', [HandoutController::class, 'store'])->name('campaign.handout.save')->middleware(IdempotentMutation::class);
         Route::post('/campaigns/{campaign}/handouts/show', [HandoutController::class, 'show'])->name('campaign.handout.show')->middleware(IdempotentMutation::class);
         Route::post('/scenes/{scene}/notes', NoteController::class)->name('scene.notes')->middleware(IdempotentMutation::class);
+        Route::post('/scenes/{scene}/adventuring', [AdventuringController::class, 'command'])->name('scene.adventuring')->middleware(IdempotentMutation::class);
+        Route::get('/scenes/{scene}/adventuring/history', [AdventuringController::class, 'history']);
         Route::get('/scenes/{scene}/combat/session', [GMCombatController::class, 'index']);
         Route::post('/scenes/{scene}/combat/session', [GMCombatController::class, 'command'])->name('scene.combat.session')->middleware(IdempotentMutation::class);
         Route::get('/scenes/{scene}/combat/history', [CombatController::class, 'history']);

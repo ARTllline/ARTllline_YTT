@@ -1,0 +1,234 @@
+.adventuring-hud {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+    max-height: 40vh;
+    overflow: auto;
+    color: var(--text-primary, #e7e3ed);
+}
+.adventuring-hud:empty {
+    display: none;
+}
+.exhaustion-badge {
+    font-size: 11px;
+    color: #e6bd8b;
+    background: #b77a2720;
+    border: 1px solid #bb8b4340;
+    border-radius: 5px;
+    padding: 4px 7px;
+}
+.life-summary {
+    border-left: 2px solid #b06c83;
+    padding: 8px 12px;
+    background: #30202dc9;
+    font-size: 12px;
+    display: grid;
+    gap: 8px;
+}
+.life-summary.is-stable {
+    border-color: #7fa99e;
+    background: #19312cc9;
+}
+.life-summary.is-dead {
+    border-color: #8b8793;
+    background: #24222bc9;
+    color: #c4becb;
+}
+.death-marks {
+    display: flex;
+    gap: 20px;
+    font-size: 11px;
+}
+.death-marks b {
+    letter-spacing: 4px;
+    display: block;
+    color: #d6b4ca;
+    font-size: 17px;
+}
+.death-save-button {
+    background: #533247;
+    border: 1px solid #b06c83;
+    border-radius: 6px;
+    padding: 10px;
+    color: #fff;
+    font-weight: 600;
+}
+.adventuring-hud button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+.rest-card {
+    padding: 12px;
+    background: linear-gradient(145deg, #302a20fa, #191712fa);
+    border: 1px solid #a38b5866;
+    border-radius: 9px;
+    box-shadow: 0 6px 25px #0004;
+}
+.rest-card header {
+    display: grid;
+    gap: 4px;
+    margin-bottom: 12px;
+    font-size: 12px;
+}
+.rest-card small {
+    opacity: 0.7;
+    font-size: 10px;
+}
+.hit-point-dice {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.hit-point-die {
+    display: grid;
+    justify-items: center;
+    gap: 3px;
+    padding: 9px 15px;
+    background: #393023;
+    border: 1px solid #b49b6170;
+    color: #e8dcc4;
+    border-radius: 8px;
+}
+.hit-point-die b {
+    font-size: 21px;
+    font-variant-numeric: tabular-nums;
+}
+.hit-point-die span {
+    font-size: 11px;
+}
+.rest-roll {
+    font-size: 11px;
+    color: #b8ccbc;
+}
+.rest-recovery {
+    background: #223126;
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 11px;
+}
+.gm-rest-controls,
+.gm-lifecycle-controls {
+    padding: 8px 10px;
+    display: grid;
+    gap: 7px;
+    border-top: 1px solid #ffffff12;
+    font-size: 11px;
+}
+.rest-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+}
+.rest-actions strong {
+    flex: 1 0 100%;
+    font-size: 11px;
+}
+.rest-confirm {
+    display: grid;
+    gap: 8px;
+    padding: 9px;
+    background: #ffffff06;
+    border-radius: 6px;
+}
+.rest-confirm p {
+    margin: 0;
+    line-height: 1.5;
+    color: #bdb8c7;
+}
+.rest-confirm label {
+    display: flex;
+    gap: 7px;
+    align-items: flex-start;
+}
+.gm-lifecycle-controls details {
+    display: grid;
+    gap: 6px;
+}
+.gm-lifecycle-controls input[type='number'] {
+    width: 58px;
+}
+.hit-point-pool {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    margin: 6px 0;
+}
+.player-view .player-gameplay > .adventuring-hud {
+    position: absolute;
+    left: 184px;
+    right: 136px;
+    bottom: calc(100% + 12px);
+    max-height: 40vh;
+}
+.player-view .downed-deck {
+    grid-column: 2;
+    grid-row: 1;
+    width: 370px;
+    max-width: 100%;
+    padding: 12px;
+    margin-bottom: 32px;
+    background: linear-gradient(#302820f5, #171512fa);
+    border: 1px solid #927648;
+    border-radius: 8px;
+    display: grid;
+    gap: 8px;
+}
+.player-view .downed-deck .adventuring-hud {
+    position: static;
+    max-height: 30vh;
+}
+.rest-actions button {
+    padding: 6px 9px;
+    border: 1px solid #ffffff1a;
+    border-radius: 5px;
+    background: #ffffff07;
+}
+.rest-actions button:hover {
+    background: #ffffff12;
+}
+@media (min-width: 761px) {
+    .player-view .character-hud {
+        grid-column: 1;
+        grid-row: 1;
+    }
+    .player-view .action-deck {
+        grid-column: 2;
+        grid-row: 1;
+    }
+    .player-view .deck-combat-support {
+        grid-column: 3;
+        grid-row: 1;
+    }
+}
+@media (max-width: 1100px) and (min-width: 761px) {
+    .player-view .player-gameplay > .adventuring-hud {
+        left: 133px;
+        right: 107px;
+    }
+}
+@media (max-width: 760px) {
+    .player-view .player-gameplay > .adventuring-hud {
+        left: 0;
+        right: 0;
+        bottom: calc(100% + 8px);
+        max-height: 35vh;
+    }
+    .player-view .downed-deck {
+        grid-column: 2;
+        grid-row: 1/3;
+        width: auto;
+        margin-bottom: 32px;
+        padding: 8px;
+    }
+}
+@media (max-width: 600px) {
+    .adventuring-hud {
+        max-height: 35vh;
+    }
+    .death-marks {
+        gap: 12px;
+    }
+}

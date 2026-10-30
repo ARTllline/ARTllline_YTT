@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Combat\CombatExecution;
 use App\Combat\CombatLog;
 use App\Combat\ConditionRules;
+use App\Combat\LifeCycle;
 use App\Combat\TurnBudget;
 use App\Items\ItemActions;
 use App\Models\AbilityExecution;
@@ -111,6 +112,7 @@ class AbilityActions
             if ($character instanceof Character && $campaign->roleFor($user) !== 'gm') {
                 abort_unless((int) CampaignMember::where('campaign_id', $campaign->id)->where('user_id', $user->id)->value('active_character_id') === $character->id, 409, 'Выберите этого персонажа как действующего.');
             }
+            abort_if(app(LifeCycle::class)->blocked($character), 422, 'Персонаж без сознания, побеждён или мёртв и не может действовать.');
             $ability = $fromItem && isset($data['inventoryItemId']) && $character instanceof Character ?
                 app(ItemActions::class)->resolve($character, $character->inventory()->with('definition')->findOrFail($data['inventoryItemId']), $data['itemAction'] ?? 'use') :
                 collect($character->abilities ?? [])->firstWhere('id', $data['abilityId']);
@@ -144,6 +146,9 @@ class AbilityActions
             $victims = $isArea ? $areaTargets : ($target instanceof Token ? [$target] : []);
             if (isset($ability['spell'])) {
                 app(SpellCasting::class)->spend($character, $ability, $scene, $fromItem);
+                if ($ability['spell']['level'] > 0 && ($character->rest_state['status'] ?? '') === 'spending') {
+                    $character->update(['rest_state' => array_replace($character->rest_state, ['status' => 'interrupted', 'interruption' => 'spellcasting'])]);
+                }
                 if ($ability['spell']['concentration']) {
                     app(SpellEffects::class)->stop($character, 'replacement');
                 }
@@ -167,6 +172,9 @@ class AbilityActions
                 if ($result['type'] === 'heal') {
                     $healingRoll = isset($result['dice']) ? app(DamageRoller::class)->roll($result['dice']) : null;
                     $healing = min(max(0, $target->max_hp - $target->hp), $healingRoll['total'] ?? $result['amount']);
+                    if (app(LifeCycle::class)->state($target)['status'] === 'dead') {
+                        $healing = 0;
+                    }
                     app(TokenCombatActions::class)->adjustHp($author, $target, $healing);
                     if ($target instanceof Token) {
                         foreach ($outcomes as &$outcome) {

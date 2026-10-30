@@ -6,12 +6,19 @@ use App\Combat\TurnBudget;
 use App\Models\Combat;
 use App\Models\Scene;
 use App\Models\User;
+use App\Spells\SpellEffects;
+use App\Support\RequestPerformance;
 
 class CombatView
 {
     public function build(Scene $scene, bool $gm, ?User $viewer = null): ?array
     {
-        $combat = Combat::where('scene_id', $scene->id)->whereIn('status', ['preparing', 'active'])->with('combatants.token')->first();
+        return app(RequestPerformance::class)->measure('combat_dto', fn () => app(SpellEffects::class)->project(fn () => $this->buildMeasured($scene, $gm, $viewer)));
+    }
+
+    private function buildMeasured(Scene $scene, bool $gm, ?User $viewer = null): ?array
+    {
+        $combat = app(SpellEffects::class)->read('combat-view:'.$scene->id, fn () => Combat::where('scene_id', $scene->id)->whereIn('status', ['preparing', 'active'])->with('combatants.token.character.inventory.definition')->first());
         if (! $combat || (! $gm && ($combat->status !== 'active' || $scene->campaign->active_scene_id !== $scene->id))) {
             return null;
         }

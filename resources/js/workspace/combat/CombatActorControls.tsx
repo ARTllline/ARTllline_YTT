@@ -1,3 +1,4 @@
+import { GMLifecycleControls } from './AdventuringControls';
 import { useState, type RefObject } from 'react';
 import type { SceneStore } from '../../tabletop/state/SceneStore';
 import type { Token } from '../../tabletop/types/scene';
@@ -87,6 +88,7 @@ export function CombatActorControls({
     if (store.role !== 'gm') return null;
     return (
         <div className="combat-actor-controls">
+            <GMLifecycleControls key={token.id} token={token} store={store} disabled={disabled} />
             {entry?.budget && (
                 <CombatBudgetView
                     budget={entry.budget}

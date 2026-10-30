@@ -22,7 +22,8 @@ class CharacterGameplay
         return [
             'ac' => 'sometimes|nullable|integer|between:0,99', 'speed' => 'sometimes|nullable|integer|between:0,999',
             'resources' => 'sometimes|present|array|list|max:12',
-            'resources.*' => 'required|array:key,label,current,max,icon,accent,sort_order,player_adjustable',
+            'resources.*' => 'required|array:key,label,current,max,icon,accent,sort_order,player_adjustable,recovery',
+            'resources.*.recovery' => 'sometimes|in:manual,short_rest,long_rest',
             'resources.*.key' => 'required|string|max:48|regex:/^[a-z][a-z0-9_]*$/|distinct',
             'resources.*.label' => 'required|string|max:40',
             'resources.*.current' => 'required|integer|between:0,9999', 'resources.*.max' => 'required|integer|between:1,9999',
@@ -156,14 +157,14 @@ class CharacterGameplay
         throw ValidationException::withMessages(['gameplay' => $message]);
     }
 
-    public function abilities(Character $character, bool $gm, bool $includeItems = false): array
+    public function abilities(Character $character, bool $gm, bool $includeItems = false, bool $availability = true): array
     {
         $abilities = collect($character->abilities ?? [])->sortBy('sort_order');
         if ($gm) {
             return $abilities->values()->all();
         }
 
-        return $abilities->where('enabled', true)->map(function ($a) use ($includeItems, $character) {
+        return $abilities->where('enabled', true)->map(function ($a) use ($includeItems, $character, $availability) {
             if (($a['item_only'] ?? false) && ! $includeItems) {
                 return null;
             }
@@ -171,7 +172,7 @@ class CharacterGameplay
             if (isset($a['spell']) && ! $a['spell']['known']) {
                 return null;
             }
-            if (isset($a['spell'])) {
+            if (isset($a['spell']) && $availability) {
                 $safe['casting'] = app(SpellCasting::class)->availability($character, $a);
             }
             $safe['check'] = $a['check'] ? ['stat_key' => $a['check']['stat_key']] : null;

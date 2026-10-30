@@ -1,3 +1,4 @@
+import { performanceMark, observingPerformance } from '../../realtime/performance';
 import { t } from '../../i18n';
 import { GameplayLayer } from '../layers/GameplayLayer';
 import { AtmosphereLayer } from '../layers/AtmosphereLayer';
@@ -117,6 +118,18 @@ export class TabletopRenderer {
             this.world.addChildAt(this.regions, this.world.children.length - 1);
             this.notes = new GMLayer();
             this.world.addChildAt(this.notes, this.world.children.length - 1);
+        }
+        if (observingPerformance()) {
+            let lastRevision: number | undefined;
+            this.app.renderer.runners.postrender.add({
+                postrender: () => {
+                    const scene = this.store.getSnapshot().scene;
+                    if (scene.revision !== lastRevision) {
+                        lastRevision = scene.revision;
+                        performanceMark('pixi', { sceneId: scene.id, revision: scene.revision });
+                    }
+                },
+            });
         }
         this.app.stage.addChild(this.world);
         this.app.stage.addChild(this.weather);

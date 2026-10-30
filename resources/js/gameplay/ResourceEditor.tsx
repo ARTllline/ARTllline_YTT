@@ -135,6 +135,22 @@ export function ResourceEditor({
                             </select>
                         </label>
                     </div>
+                    <div role="group" aria-label="Восстановление ресурса">
+                        {(['manual', 'short_rest', 'long_rest'] as const).map((recovery) => (
+                            <button
+                                type="button"
+                                key={recovery}
+                                aria-pressed={(r.recovery ?? 'manual') === recovery}
+                                onClick={() => patch(i, { recovery })}
+                            >
+                                {recovery === 'manual'
+                                    ? 'Вручную'
+                                    : recovery === 'short_rest'
+                                      ? 'Short Rest'
+                                      : 'Long Rest'}
+                            </button>
+                        ))}
+                    </div>
                     <label className="gameplay-checkbox">
                         <input
                             type="checkbox"

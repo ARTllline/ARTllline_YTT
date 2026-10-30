@@ -106,7 +106,7 @@ class CombatExecution
             $hpBefore = $target->hp;
             $damage = $success ? app(TypedDamage::class)->apply($rolled, $target, $effect) : ['total' => 0, 'components' => []];
             if ($damage['total']) {
-                app(TokenCombatActions::class)->adjustHp($author, $target, -$damage['total']);
+                app(TokenCombatActions::class)->adjustHp($author, $target, -$damage['total'], $critical);
             }
             $applied = [];
             foreach ($ability['condition_effects'] ?? [] as $condition) {

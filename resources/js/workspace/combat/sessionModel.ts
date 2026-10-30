@@ -43,6 +43,8 @@ export interface SessionResult extends Omit<AbilityResult, 'outcomes' | 'roll'> 
     }[];
     gmContext?: {
         sourceTokenId?: string;
+        reference?: string;
+        appliedSummary?: string;
         description: string;
         remaining: string;
         activation: string;
@@ -80,8 +82,14 @@ export interface CombatEvent {
         operation?: string;
         note?: string;
         status?: string;
-        before?: { hp: number; conditions: { label: string }[] };
-        after?: { hp: number; conditions: { label: string }[] };
+        before?: { status?: string; hp: number; conditions: { label: string }[] };
+        after?: {
+            status?: string;
+            successes?: number;
+            failures?: number;
+            hp: number;
+            conditions: { label: string }[];
+        };
         roll?: SessionRoll;
         save?: SessionRoll;
         provenance?: { finalModifier?: number; breakdown?: { label: string; value: number }[] };

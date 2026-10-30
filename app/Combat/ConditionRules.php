@@ -4,6 +4,7 @@ namespace App\Combat;
 
 use App\Items\ItemRules;
 use App\Models\Token;
+use App\Spells\SpellEffects;
 
 class ConditionRules
 {
@@ -22,7 +23,9 @@ class ConditionRules
             return [];
         }
 
-        return $token->conditions()->whereIn('key', $keys)->get()->map(fn ($c) => ['conditionId' => (string) $c->id, 'key' => $c->key, 'label' => $c->label, 'visibility' => $c->visibility])->all();
+        $conditions = app(SpellEffects::class)->read('conditions:'.$token->id, fn () => $token->conditions()->get());
+
+        return $conditions->whereIn('key', $keys)->map(fn ($c) => ['conditionId' => (string) $c->id, 'key' => $c->key, 'label' => $c->label, 'visibility' => $c->visibility])->values()->all();
     }
 
     public function has(Token $token, array $keys): bool
@@ -32,7 +35,7 @@ class ConditionRules
 
     public function inactive(Token $t): bool
     {
-        return $this->has($t, ['incapacitated', 'stunned', 'unconscious', 'paralyzed', 'petrified']);
+        return app(LifeCycle::class)->blocked($t) || $this->has($t, ['incapacitated', 'stunned', 'unconscious', 'paralyzed', 'petrified']);
     }
 
     public function prone(Token $t): bool
@@ -42,7 +45,7 @@ class ConditionRules
 
     public function speed(Token $t): float
     {
-        return $this->has($t, ['restrained', 'unconscious']) ? 0 : app(CombatStats::class)->speed($t);
+        return app(LifeCycle::class)->blocked($t) || $this->has($t, ['restrained', 'unconscious']) ? 0 : app(CombatStats::class)->speed($t);
     }
 
     public function context(?Token $actor, string $kind, string $requested = 'normal', ?Token $target = null, float $distance = 0, ?string $saveAbility = null, bool $sight = false, ?string $statKey = null): array

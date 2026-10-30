@@ -3,6 +3,7 @@
 namespace App\Combat;
 
 use App\Actions\CharacterActions;
+use App\Models\Character;
 use App\Models\Scene;
 use App\Models\SpellEffect;
 use App\Models\Token;
@@ -18,7 +19,7 @@ class GMCorrections
         $token = $token->fresh();
         $owner = $token->character_id ? $token->character : $token;
 
-        return ['hp' => $token->hp, 'temporaryHp' => (int) $owner->temporary_hp,
+        return ['lifecycle' => $owner->lifecycle, 'exhaustion' => $owner->exhaustion, 'rest' => $owner instanceof Character ? $owner->rest_state : null, 'hp' => $token->hp, 'temporaryHp' => (int) $owner->temporary_hp,
             'conditions' => $token->conditions()->orderBy('id')->get()->map(fn ($c) => $c->getRawOriginal())->all()];
     }
 
@@ -37,7 +38,7 @@ class GMCorrections
         app(CombatLog::class)->write($combat, 'gm.correction', ['tokenId' => (string) $token->id, 'name' => $token->name,
             'operation' => $command, 'userId' => $user->id, 'before' => $before, 'after' => $after,
             'revision' => Scene::findOrFail($token->scene_id)->revision + 1,
-            'reversible' => $effects === $this->effects($token->scene)]);
+            'reversible' => $before['exhaustion'] === $after['exhaustion'] && $effects === $this->effects($token->scene) && ! (($before['lifecycle']['status'] ?? 'alive') !== ($after['lifecycle']['status'] ?? 'alive') && $token->kind !== 'player_character')]);
     }
 
     public function available(Scene $scene): ?object
@@ -61,7 +62,7 @@ class GMCorrections
         $d = json_decode($event->data, true);
         $token = $scene->tokens()->findOrFail($d['tokenId']);
         $owner = $token->character_id ? $token->character : $token;
-        $owner->update(['hp' => $d['before']['hp'], 'temporary_hp' => $d['before']['temporaryHp']]);
+        $owner->update(['hp' => $d['before']['hp'], 'temporary_hp' => $d['before']['temporaryHp'], 'lifecycle' => $d['before']['lifecycle'], 'exhaustion' => $d['before']['exhaustion']] + ($token->character_id ? ['rest_state' => $d['before']['rest']] : []));
         $token->conditions()->delete();
         if ($d['before']['conditions']) {
             DB::table('token_conditions')->insert($d['before']['conditions']);

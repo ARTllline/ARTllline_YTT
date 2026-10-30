@@ -28,10 +28,15 @@ class TurnBudget
     public function start(Combat $combat, int $id): void
     {
         $entry = $combat->combatants()->findOrFail($id);
+        $c = $entry->token->character;
+        if ($c && ($c->rest_state['status'] ?? '') === 'spending') {
+            $c->update(['rest_state' => array_replace($c->rest_state, ['status' => 'interrupted', 'interruption' => 'initiative'])]);
+        }
         $combat->increment('turn_sequence');
         app(AppliedConditions::class)->boundary($combat, $entry->token_id, 'start');
         app(SpellEffects::class)->boundary($combat, $entry->token_id);
         $entry->update(['action_available' => true, 'bonus_available' => true, 'reaction_available' => true, 'movement_spent' => 0]);
+        app(LifeCycle::class)->requireSave($combat, $entry->token);
         app(CombatLog::class)->write($combat, 'turn.started', ['combatantId' => (string) $entry->id, 'tokenId' => (string) $entry->token_id, 'round' => $combat->round]);
     }
 
@@ -68,6 +73,7 @@ class TurnBudget
 
     public function move(Token $actor, float $x, float $y): void
     {
+        abort_if(app(ConditionRules::class)->inactive($actor), 422, 'Персонаж недееспособен и не может перемещаться.');
         $combat = $this->active($actor->scene_id);
         if (! $combat) {
             return;

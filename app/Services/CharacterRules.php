@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Combat\ExhaustionRules;
 use App\Items\ItemRules;
 use App\Models\Character;
 use App\Spells\SpellEffects;
@@ -196,6 +197,10 @@ class CharacterRules
             $parts[] = ['source' => 'custom', 'label' => 'Бонус действия', 'value' => $bonus];
         }
 
+        if ($key !== 'spell_save_dc') {
+            $parts = [...$parts, ...app(ExhaustionRules::class)->parts($character)];
+        }
+
         return $this->total($key, $label, $parts, $meta);
     }
 
@@ -222,7 +227,8 @@ class CharacterRules
         } else {
             $legacy = $this->stat($c, $ability);
             abort_unless($legacy, 422, 'Настройте характеристику оружия у персонажа.');
-            $parts = $legacy['breakdown'];
+            // A weapon damage modifier is not a D20 Test; reattach Exhaustion only for its attack.
+            $parts = array_values(array_filter($legacy['breakdown'], fn ($p) => $p['source'] !== 'exhaustion'));
         }
         if (! $damage && $proficient) {
             abort_unless($r, 422, 'Настройте бонус владения в характеристиках персонажа.');
@@ -231,6 +237,10 @@ class CharacterRules
         $parts = [...$parts, ...$this->equipment($c, $damage ? 'weapon_damage' : 'weapon_attack')];
         if ($bonus) {
             $parts[] = ['source' => 'custom', 'label' => 'Бонус оружия', 'value' => $bonus];
+        }
+
+        if (! $damage) {
+            $parts = [...$parts, ...app(ExhaustionRules::class)->parts($c)];
         }
 
         return $this->total($ability, self::ABILITIES[$ability], $parts, ['proficient' => $proficient]);
@@ -251,6 +261,9 @@ class CharacterRules
             $parts[] = ['source' => 'custom', 'label' => 'Дополнительный бонус', 'value' => $bonus];
         }
         $parts = [...$parts, ...$this->equipment($character, $key), ...app(SpellEffects::class)->flat($character, $key)];
+        if ($key === 'speed') {
+            $parts = [...$parts, ...app(ExhaustionRules::class)->parts($character, 'speed')];
+        }
         $total = $base === null ? null : max(0, min($key === 'ac' ? 99 : 999, (int) array_sum(array_column($parts, 'value'))));
 
         return ['value' => $total, 'breakdown' => $parts, 'unit' => $key === 'speed' ? 'ft' : null];

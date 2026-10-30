@@ -31,6 +31,21 @@ class SpellEffects
 
     private array $projectionTokens = [];
 
+    private array $projectionReads = [];
+
+    /** Only DTO builders open project(); command/rule execution always reads fresh. */
+    public function read(string $key, callable $load): mixed
+    {
+        if (! $this->projecting) {
+            return $load();
+        }
+        if (! array_key_exists($key, $this->projectionReads)) {
+            $this->projectionReads[$key] = $load();
+        }
+
+        return $this->projectionReads[$key];
+    }
+
     /** Reuse reads only while assembling one immutable DTO, never across mutations. */
     public function project(callable $read): mixed
     {
@@ -44,6 +59,7 @@ class SpellEffects
             $this->projecting = false;
             $this->projectionEffects = [];
             $this->projectionTokens = [];
+            $this->projectionReads = [];
         }
     }
 
@@ -279,6 +295,6 @@ class SpellEffects
 
     public function projection(Character $c): array
     {
-        return $this->active()->where('character_id', $c->id)->get()->map(fn ($e) => ['id' => $e->id, 'name' => $e->name, 'concentration' => $e->concentration, 'remainingRounds' => $e->remaining_rounds, 'expiresAt' => $e->expires_at?->toIso8601String(), 'startedAt' => $e->created_at->toIso8601String()])->all();
+        return collect($this->campaignEffects($c->campaign_id))->filter(fn ($e) => $e->character_id === $c->id)->values()->map(fn ($e) => ['id' => $e->id, 'name' => $e->name, 'concentration' => $e->concentration, 'remainingRounds' => $e->remaining_rounds, 'expiresAt' => $e->expires_at?->toIso8601String(), 'startedAt' => $e->created_at->toIso8601String()])->all();
     }
 }
