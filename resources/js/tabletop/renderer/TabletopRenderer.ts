@@ -87,6 +87,9 @@ export class TabletopRenderer {
             autoDensity: true,
             resolution: Math.min(window.devicePixelRatio || 1, 2),
             preference: 'webgl',
+            // PointerController owns input. Pixi's unused federated event pool
+            // otherwise retains native pointer events and closed HUD DOM paths.
+            eventFeatures: { move: false, globalMove: false, click: false, wheel: false },
         });
         this.ready = true;
         if (this.destroyed) {

@@ -366,7 +366,8 @@ function CharacterHUD({
             )}
             <div
                 className={`character-hud ${actor && currentTokenId(scene.combat) === actor.id ? 'is-current-turn' : ''}`}
-                key={character.id}
+                // Sibling identities must differ from the adventuring/rest boundary below.
+                key="identity"
             >
                 <HeroPortrait
                     store={store}
@@ -425,7 +426,7 @@ function CharacterHUD({
             </div>
             {(!character.lifecycle || character.lifecycle.status === 'alive') && (
                 <AdventuringHUD
-                    key={character.rest?.id ?? character.id}
+                    key={`adventuring:${character.rest?.id ?? character.id}`}
                     character={character}
                     actor={actor}
                     store={store}
@@ -475,7 +476,7 @@ function CharacterHUD({
             ) : (
                 <div className="downed-deck">
                     <AdventuringHUD
-                        key={character.rest?.id ?? character.id}
+                        key={`adventuring:${character.rest?.id ?? character.id}`}
                         character={character}
                         actor={actor}
                         store={store}
