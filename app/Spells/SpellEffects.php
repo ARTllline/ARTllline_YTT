@@ -63,8 +63,11 @@ class SpellEffects
         }
     }
 
-    private function campaignEffects(int $campaignId): array
+    private function campaignEffects(?int $campaignId): array
     {
+        if (! $campaignId) {
+            return [];
+        }
         $load = fn () => $this->active()->whereIn('scene_id', Scene::where('campaign_id', $campaignId)->select('id'))->get()->all();
 
         return $this->projecting ? ($this->projectionEffects[$campaignId] ??= $load()) : $load();

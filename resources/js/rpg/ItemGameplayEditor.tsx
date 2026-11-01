@@ -13,14 +13,16 @@ export function ItemGameplayEditor({
 }: {
     draft: Partial<ItemDefinition>;
     patch: (d: Partial<ItemDefinition>) => void;
-    character: Character;
+    character?: Character;
     campaignId: string;
 }) {
     const [types, setTypes] = useState<string[]>([]);
     useEffect(() => {
         const c = new AbortController();
         void request<{ damageTypes: string[] }>(
-            `/campaigns/${campaignId}/character-rules/catalog`,
+            campaignId
+                ? `/campaigns/${campaignId}/character-rules/catalog`
+                : '/library/character-rules/catalog',
             'GET',
             undefined,
             c.signal,
@@ -234,33 +236,41 @@ export function ItemGameplayEditor({
                                     />
                                 </label>
                             )}
-                            <div className="gameplay-form-row">
-                                {(['attack_bonus', 'damage_bonus'] as const).map((k) => (
-                                    <label key={k}>
-                                        {k === 'attack_bonus' ? 'Бонус атаки' : 'Бонус урона'}
-                                        <input
-                                            type="number"
-                                            min={-20}
-                                            max={20}
-                                            value={w[k] ?? 0}
-                                            onChange={(e) =>
-                                                save({
-                                                    weapon: { ...w, [k]: Number(e.target.value) },
-                                                })
-                                            }
-                                        />
-                                    </label>
-                                ))}
-                            </div>
-                            <label>
-                                Мастерство · справочно
-                                <input
-                                    value={w.mastery ?? ''}
-                                    onChange={(e) =>
-                                        save({ weapon: { ...w, mastery: e.target.value || null } })
-                                    }
-                                />
-                            </label>
+                            <details>
+                                <summary>Advanced · бонусы и мастерство</summary>
+                                <div className="gameplay-form-row">
+                                    {(['attack_bonus', 'damage_bonus'] as const).map((k) => (
+                                        <label key={k}>
+                                            {k === 'attack_bonus' ? 'Бонус атаки' : 'Бонус урона'}
+                                            <input
+                                                type="number"
+                                                min={-20}
+                                                max={20}
+                                                value={w[k] ?? 0}
+                                                onChange={(e) =>
+                                                    save({
+                                                        weapon: {
+                                                            ...w,
+                                                            [k]: Number(e.target.value),
+                                                        },
+                                                    })
+                                                }
+                                            />
+                                        </label>
+                                    ))}
+                                </div>
+                                <label>
+                                    Мастерство · справочно
+                                    <input
+                                        value={w.mastery ?? ''}
+                                        onChange={(e) =>
+                                            save({
+                                                weapon: { ...w, mastery: e.target.value || null },
+                                            })
+                                        }
+                                    />
+                                </label>
+                            </details>
                             <p className="hint">
                                 Владение назначается конкретному персонажу ниже. Light и мастерство
                                 сохраняются без автоматических дополнительных атак.
@@ -382,11 +392,41 @@ export function ItemGameplayEditor({
             ) && (
                 <details>
                     <summary>Действие предмета</summary>
+                    {!g.use && (
+                        <button
+                            type="button"
+                            onClick={() =>
+                                save({
+                                    use: {
+                                        consume: true,
+                                        ability: {
+                                            ...newAbility('utility', 0),
+                                            name: 'Восстановление HP',
+                                            icon: 'potion',
+                                            target: 'token',
+                                            activation: 'bonus_action',
+                                            range: { normal: 5, long: null },
+                                            result: {
+                                                type: 'heal',
+                                                target: null,
+                                                amount: 0,
+                                                dice: '2d4+2',
+                                            },
+                                        },
+                                    },
+                                })
+                            }
+                        >
+                            ＋ Лечебный расходник · 2d4+2 HP
+                        </button>
+                    )}
                     {!g.use ? (
                         <button
                             type="button"
                             onClick={() =>
-                                save({ use: { consume: true, ability: newAbility('utility', 0) } })
+                                save({
+                                    use: { consume: true, ability: newAbility('utility', 0) },
+                                })
                             }
                         >
                             Добавить действие
@@ -447,7 +487,7 @@ export function ItemGameplayEditor({
                                 <select
                                     value=""
                                     onChange={(e) => {
-                                        const a = character.abilities?.find(
+                                        const a = character?.abilities?.find(
                                             (a) => a.id === e.target.value,
                                         );
                                         if (a)
@@ -461,7 +501,7 @@ export function ItemGameplayEditor({
                                     }}
                                 >
                                     <option value="">Выберите заклинание</option>
-                                    {character.abilities
+                                    {character?.abilities
                                         ?.filter((a) => a.spell)
                                         .map((a) => (
                                             <option key={a.id} value={a.id}>
@@ -472,7 +512,12 @@ export function ItemGameplayEditor({
                             </label>
                             <AbilityEditor
                                 campaignId={campaignId}
-                                character={{ ...character, abilities: [g.use.ability] }}
+                                character={{
+                                    checkStats: [],
+                                    resources: [],
+                                    ...character,
+                                    abilities: [g.use.ability],
+                                }}
                                 onChange={(abilities) =>
                                     save({
                                         use: abilities[0]

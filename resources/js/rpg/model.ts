@@ -19,6 +19,7 @@ export interface ItemDefinition {
     use_ability_id: string | null;
 }
 export interface InventoryItem {
+    charges?: number | null;
     grip?: 'one' | 'two';
     attack_ability?: 'auto' | 'str' | 'dex';
     weapon_proficient?: boolean;
@@ -50,7 +51,9 @@ export interface InventoryState {
 export const inventoryApi = {
     read: (campaign: string, character: string, signal?: AbortSignal) =>
         request<InventoryState>(
-            `/campaigns/${campaign}/characters/${character}/inventory`,
+            campaign === 'library'
+                ? `/library/characters/${character}/inventory`
+                : `/campaigns/${campaign}/characters/${character}/inventory`,
             'GET',
             undefined,
             signal,
@@ -62,7 +65,9 @@ export const inventoryApi = {
         id: string = commandId(),
     ) =>
         request<InventoryState>(
-            `/campaigns/${campaign}/characters/${character}/inventory`,
+            campaign === 'library'
+                ? `/library/characters/${character}/inventory`
+                : `/campaigns/${campaign}/characters/${character}/inventory`,
             'POST',
             { ...data, clientMutationId: id },
         ),

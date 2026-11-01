@@ -1,9 +1,11 @@
+import { RpgIcon } from './RpgIcon';
+import { AssetIconPicker } from '../control/AssetLibrary';
 import { useEffect, useState } from 'react';
 import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react';
 import { api } from '../api/workspace';
 import type { Character } from '../tabletop/types/scene';
 import { interactions, type InteractionResources } from '../workspace/interactions/model';
-import { gameplayIcons, gameplayIcon, iconLabels } from './icons';
+import { gameplayIcons, iconLabels } from './icons';
 import { AbilityGeometryEditor } from './AbilityGeometryEditor';
 import { CombatAbilityEditor } from './CombatAbilityEditor';
 import { SpellMetadataEditor } from '../rpg/SpellMetadataEditor';
@@ -14,7 +16,7 @@ export function AbilityEditor({
     campaignId,
     onChange,
 }: {
-    character: Character;
+    character: Pick<Character, 'abilities' | 'checkStats' | 'rules' | 'resources'>;
     campaignId: string;
     onChange: (abilities: Ability[]) => void;
 }) {
@@ -22,6 +24,7 @@ export function AbilityEditor({
     const [options, setOptions] = useState<InteractionResources>({ handouts: [], cues: [] });
     const [error, setError] = useState('');
     useEffect(() => {
+        if (!campaignId) return;
         const abort = new AbortController();
         void api
             .campaign(campaignId, abort.signal)
@@ -123,8 +126,7 @@ export function AbilityEditor({
                 </p>
             )}
             {abilities.map((a, i) => {
-                const Icon = gameplayIcon(a.icon),
-                    result = a.result!;
+                const result = a.result!;
                 return (
                     <details
                         key={a.id}
@@ -152,7 +154,7 @@ export function AbilityEditor({
                                 e.dataTransfer.setData('application/ytt-ability-order', String(i))
                             }
                         >
-                            <Icon size={20} />
+                            <RpgIcon icon={a.icon} size={24} />
                             <strong>{a.name}</strong>
                             <small>
                                 {a.range
@@ -170,6 +172,10 @@ export function AbilityEditor({
                                     onChange={(e) => patch(i, { name: e.target.value })}
                                 />
                             </label>
+                            <AssetIconPicker
+                                icon={a.icon}
+                                onChange={(icon) => patch(i, { icon })}
+                            />
                             <div className="ability-icon-choices">
                                 {Object.entries(gameplayIcons).map(([key, Choice]) => (
                                     <button

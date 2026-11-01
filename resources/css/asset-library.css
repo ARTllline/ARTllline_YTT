@@ -1,0 +1,200 @@
+.global-assets {
+    position: relative;
+    min-width: 0;
+}
+.asset-upload-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 20px;
+    border: 1px dashed #5b5876;
+    border-radius: 12px;
+    background: #24233088;
+    margin-bottom: 18px;
+}
+.asset-upload-bar small {
+    display: block;
+    color: #a5a2b8;
+    margin-top: 5px;
+}
+.asset-upload-bar > div {
+    flex: 1;
+    min-width: 150px;
+}
+.global-assets .asset-upload-bar > select,
+.global-assets .asset-library-tools > select {
+    width: auto;
+    max-width: 100%;
+    flex: 0 1 auto;
+}
+.global-assets .asset-library-tools > input {
+    width: auto;
+}
+.asset-upload-bar input[type='file'],
+.asset-management-actions input[type='file'] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+.asset-upload-bar label:focus-within,
+.asset-management-actions label:focus-within {
+    outline: 2px solid #b8a5f3;
+}
+.asset-library-tools {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.asset-library-tools input {
+    flex: 1;
+    min-width: 130px;
+}
+.asset-library-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 22px;
+}
+.asset-library-body:has(.global-asset-inspector) {
+    grid-template-columns: minmax(0, 1fr) minmax(230px, 290px);
+}
+.global-asset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+}
+.global-asset-card {
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    gap: 7px;
+    text-align: left;
+    min-width: 0;
+    border-radius: 10px;
+    background: #23222d;
+    border: 1px solid #3a374a;
+    transition:
+        border-color 0.15s,
+        transform 0.15s;
+}
+.global-asset-card:hover {
+    transform: translateY(-2px);
+    border-color: #9b87cc;
+}
+.global-asset-card[aria-pressed='true'] {
+    border-color: #b8a5f3;
+    box-shadow: 0 0 0 1px #b8a5f344;
+}
+.global-asset-card img,
+.asset-audio-cover {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: contain;
+    background: #17161e;
+    border-radius: 6px;
+}
+.asset-audio-cover {
+    display: grid;
+    place-items: center;
+    color: #b8a5f3;
+}
+.global-asset-card strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+}
+.global-asset-card small {
+    color: #aba7bb;
+    font-size: 11px;
+}
+.global-asset-inspector {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid #403b51;
+    border-radius: 12px;
+    background: #201e29;
+    align-self: start;
+    min-width: 0;
+}
+.global-asset-preview {
+    width: 100%;
+    max-height: 280px;
+    object-fit: contain;
+    border-radius: 7px;
+    background: #17161e;
+}
+.global-asset-inspector audio {
+    width: 100%;
+}
+.global-asset-inspector fieldset {
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+.global-asset-inspector input {
+    width: 100%;
+}
+.asset-management-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+.asset-reference-list {
+    padding-left: 18px;
+    max-height: 180px;
+    overflow: auto;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+.asset-pagination {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
+}
+.asset-picker-current {
+    width: 28px;
+    height: 28px;
+    object-fit: cover;
+    border-radius: 5px;
+}
+.editor-dialog:has(.global-assets) {
+    width: min(1100px, 94vw);
+    max-width: 94vw;
+}
+.asset-drop-hint {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    border: 2px dashed #b8a5f3;
+    background: #242136ee;
+    border-radius: 12px;
+    font-size: 20px;
+}
+.asset-empty {
+    padding: 50px 16px;
+    text-align: center;
+    color: #aba7bb;
+}
+@media (max-width: 700px) {
+    .asset-library-body:has(.global-asset-inspector) {
+        grid-template-columns: 1fr;
+    }
+    .global-asset-grid {
+        grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+    }
+    .global-asset-inspector {
+        grid-row: 1;
+    }
+}

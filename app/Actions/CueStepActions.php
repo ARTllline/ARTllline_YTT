@@ -21,7 +21,7 @@ class CueStepActions
     public function execute(Campaign $campaign, Scene $scene, CueRun $run, CueRunStep $step): int
     {
         $user = User::findOrFail($run->created_by);
-        $data = app(CueDefinition::class)->config($scene, $step->type, $step->config);
+        $data = app(CueDefinition::class)->config($scene, $step->type, $step->config, $user);
         $context = app(CommandContext::class);
         $context->socketId = $context->dragSessionId = null;
         $context->mutationId = $step->id;

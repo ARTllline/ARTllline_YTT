@@ -1,3 +1,4 @@
+import { AssetIconPicker } from '../control/AssetLibrary';
 import { request } from '../api/client';
 import { ItemGameplayEditor } from './ItemGameplayEditor';
 import { itemCategories } from './itemGameplay';
@@ -237,6 +238,10 @@ export function ItemAuthoring({
                             onChange={(e) => patch({ description: e.target.value })}
                         />
                     </label>
+                    <AssetIconPicker
+                        icon={draft.icon ?? 'spark'}
+                        onChange={(icon) => patch({ icon })}
+                    />
                     <div className="ability-icon-choices">
                         {icons.map((icon) => (
                             <button

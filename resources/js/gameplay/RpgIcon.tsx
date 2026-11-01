@@ -41,7 +41,13 @@ export function RpgIcon({
     return (
         <img
             className={`rpg-icon ${utility ? 'utility-pack-icon' : ''}`}
-            src={utility ? `/assets/player/utility/${key}.svg` : `/assets/player/icons/${key}.png`}
+            src={
+                /^asset:[1-9][0-9]*$/.test(icon)
+                    ? `/api/assets/${icon.slice(6)}`
+                    : utility
+                      ? `/assets/player/utility/${key}.svg`
+                      : `/assets/player/icons/${key}.png`
+            }
             width={size}
             height={size}
             alt=""

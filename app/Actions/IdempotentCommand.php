@@ -36,6 +36,7 @@ class IdempotentCommand
         // would pin MySQL REPEATABLE READ to a snapshot older than the writer lock.
         $existing = DB::table('scene_mutation_receipts')->where('user_id', $user->id)->where('client_mutation_id', $id)->first();
         $campaignId = $existing?->campaign_id ?? match (true) {
+            str_starts_with($operation, 'library.') => null,
             str_starts_with($operation, 'token.') => Token::findOrFail($resource)->scene->campaign_id,
             in_array($operation, ['scene.create', 'scene.activate']) || str_starts_with($operation, 'campaign.') => Campaign::findOrFail($resource)->id,
             default => Scene::findOrFail($resource)->campaign_id,
@@ -45,7 +46,7 @@ class IdempotentCommand
                 // Acquire the campaign writer lock before the receipt FK acquires a
                 // shared lock on it. Concurrent receipt inserts otherwise deadlock
                 // when SceneTransaction later upgrades that same campaign lock.
-                $campaign = Campaign::whereKey($campaignId)->lockForUpdate()->firstOrFail();
+                $campaign = $campaignId ? Campaign::whereKey($campaignId)->lockForUpdate()->firstOrFail() : null;
                 // Unique insertion serializes retries even across processes and scenes.
                 // Reservation and result commit together; no incomplete receipt is visible.
                 DB::table('scene_mutation_receipts')->insertOrIgnore([
@@ -57,7 +58,17 @@ class IdempotentCommand
                 abort_unless(hash_equals($receipt->fingerprint, $hash), 409, 'This mutation ID was already used for a different command.');
                 if ($receipt->result !== null) {
                     $result = json_decode($receipt->result, true, flags: JSON_THROW_ON_ERROR);
-                    if ($operation === 'token.move' && $campaign->roleFor($user) !== 'gm') {
+                    if (str_starts_with($operation, 'library.')) {
+                        if (isset($result['character']['id'])) {
+                            $libraryCharacter = app(CharacterLibrary::class)->find($user, (int) $result['character']['id']);
+                            if ($operation === 'library.spells.command') {
+                                abort_if(($result['character']['campaignId'] ?? null) !== ($libraryCharacter->campaign_id ? (string) $libraryCharacter->campaign_id : null), 409, 'Назначение изменилось. Обновите персонажа.');
+                            }
+                            if (in_array($operation, ['library.inventory.command', 'library.spells.command']) && $libraryCharacter->campaign) {
+                                Gate::forUser($user)->authorize('update', $libraryCharacter->campaign);
+                            }
+                        }
+                    } elseif ($operation === 'token.move' && $campaign->roleFor($user) !== 'gm') {
                         abort_if(array_key_exists('isHidden', $result['token']), 403, 'Your role changed. Reload the scene before moving again.');
                         $token = Token::findOrFail($resource);
                         Gate::forUser($user)->authorize('move', $token);

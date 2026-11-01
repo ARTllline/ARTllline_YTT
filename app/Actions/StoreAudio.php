@@ -13,17 +13,19 @@ use Illuminate\Support\Str;
 
 class StoreAudio
 {
-    public function execute(User $user, Campaign $campaign, UploadedFile $file, string $kind): Asset
+    public function execute(User $user, ?Campaign $campaign, UploadedFile $file, string $kind): Asset
     {
-        Gate::forUser($user)->authorize('update', $campaign);
+        if ($campaign) {
+            Gate::forUser($user)->authorize('update', $campaign);
+        }
         abort_unless(in_array($kind, ['music', 'ambient', 'sfx']), 422);
         $info = app(AudioProbe::class)->inspect($file);
-        $path = 'campaigns/'.$campaign->id.'/'.$kind.'/'.Str::uuid().'.'.$info['extension'];
+        $path = ($campaign ? 'campaigns/'.$campaign->id : 'library/'.$user->id).'/'.$kind.'/'.Str::uuid().'.'.$info['extension'];
         Storage::disk('campaigns')->putFileAs(dirname($path), $file, basename($path));
         try {
             $original = basename(str_replace('\\', '/', $file->getClientOriginalName()));
 
-            return Asset::create(['campaign_id' => $campaign->id, 'uploaded_by' => $user->id, 'kind' => $kind,
+            return Asset::create(['campaign_id' => $campaign?->id, 'library_user_id' => $user->id, 'uploaded_by' => $user->id, 'kind' => $kind,
                 'name' => mb_substr(pathinfo($original, PATHINFO_FILENAME), 0, 255), 'original_name' => mb_substr($original, 0, 255),
                 'storage_path' => $path, 'mime_type' => $info['mime'], 'file_size' => $file->getSize(),
                 'width' => 0, 'height' => 0, 'duration_ms' => $info['duration']]);

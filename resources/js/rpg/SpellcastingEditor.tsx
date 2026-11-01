@@ -7,9 +7,13 @@ import { roman, type SpellcastingState } from '../gameplay/spellcasting';
 export function SpellcastingEditor({
     character,
     campaignId,
+    onDirtyChange,
+    onSaved,
 }: {
     character: Character;
     campaignId: string;
+    onDirtyChange?: (dirty: boolean) => void;
+    onSaved?: (character: Character) => void;
 }) {
     const [state, setState] = useState<SpellcastingState>(
         () =>
@@ -23,6 +27,10 @@ export function SpellcastingEditor({
                 verbal_blocked: false,
             },
     );
+    const [savedState, setSavedState] = useState(() => JSON.stringify(state));
+    useEffect(() => {
+        onDirtyChange?.(JSON.stringify(state) !== savedState);
+    }, [state, savedState, onDirtyChange]);
     const [busy, setBusy] = useState(false),
         [message, setMessage] = useState('');
     const [pending, setPending] = useState<{ id: string; name: string }[]>([]);
@@ -66,6 +74,8 @@ export function SpellcastingEditor({
                 { action, characterId: character.id, clientMutationId: commandId(), ...extra },
             );
             setState(result.character.spellcasting!);
+            setSavedState(JSON.stringify(result.character.spellcasting!));
+            onSaved?.(result.character);
             setMessage('Состояние заклинаний сохранено.');
         } catch (e) {
             setMessage((e as Error).message);

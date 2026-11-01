@@ -69,7 +69,7 @@ class ItemRules
         if (isset($g['use'])) {
             abort_if(($g['use']['scroll'] ?? false) && (empty($g['use']['ability']['spell']['source_key']) || ! $g['use']['consume']), 422, 'Свиток требует связанное SRD-заклинание и расход экземпляра.');
             $data = Validator::make(['abilities' => [$g['use']['ability']]], CharacterGameplay::rules())->validate();
-            app(CharacterGameplay::class)->validate($d->campaign_id ? Campaign::findOrFail($d->campaign_id) : abort(422), $data, null);
+            app(CharacterGameplay::class)->validate($d->campaign_id ? Campaign::findOrFail($d->campaign_id) : null, $data, null);
             $g['use']['ability'] = $data['abilities'][0];
             $d->gameplay = $g;
         }

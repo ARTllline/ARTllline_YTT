@@ -3,12 +3,15 @@
 namespace App\Actions;
 
 use App\Combat\LifeCycle;
+use App\Compendium\CopyCompendiumEntry;
 use App\Models\Asset;
 use App\Models\Campaign;
 use App\Models\CampaignMember;
 use App\Models\Character;
+use App\Models\CompendiumEntry;
 use App\Models\Token;
 use App\Models\User;
+use App\Realtime\CommandContext;
 use App\Services\CharacterGameplay;
 use App\Services\CharacterRules;
 use App\Services\SceneSnapshotBuilder;
@@ -17,30 +20,50 @@ use App\Spells\SpellEffects;
 use App\Support\RequestPerformance;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class CharacterActions
 {
-    public function validate(Campaign $campaign, array $data, ?Character $character = null): void
+    public function validate(?Campaign $campaign, array $data, ?Character $character = null): void
     {
+        if (! $campaign && ! empty($data['owner_user_id'])) {
+            throw ValidationException::withMessages(['campaign_id' => 'Сначала назначьте кампанию для игрока или приватного портрета.']);
+        }
         if (! empty($data['owner_user_id']) && ! CampaignMember::where('campaign_id', $campaign->id)->where('user_id', $data['owner_user_id'])->where('role', 'player')->exists()) {
             throw ValidationException::withMessages(['owner_user_id' => 'Назначьте игрока этой кампании.']);
         }
-        if (! empty($data['portrait_asset_id']) && ! Asset::where('campaign_id', $campaign->id)->where('kind', 'token')->whereKey($data['portrait_asset_id'])->exists()) {
-            throw ValidationException::withMessages(['portrait_asset_id' => 'Выберите портрет этой кампании.']);
+        if (! empty($data['portrait_asset_id'])) {
+            $portrait = Asset::whereNull('duration_ms')->whereKey($data['portrait_asset_id'])->sharedLock()->first();
+            if (! $portrait || ! Gate::allows('view', $portrait)) {
+                throw ValidationException::withMessages(['portrait_asset_id' => 'Выберите изображение из библиотеки Assets.']);
+            }
         }
         if (($data['hp'] ?? $character?->hp ?? 10) > ($data['max_hp'] ?? $character?->max_hp ?? 10)) {
             throw ValidationException::withMessages(['hp' => 'HP cannot exceed maximum HP.']);
         }
+        foreach ($data['hit_point_dice'] ?? [] as $pool) {
+            if ($pool['current'] > $pool['max']) {
+                throw ValidationException::withMessages(['hit_point_dice' => 'Остаток Hit Dice не может превышать максимум.']);
+            }
+        }
     }
 
-    public function save(User $user, Campaign $campaign, array $data): array
+    public function save(User $user, ?Campaign $campaign, array $data, ?Character $libraryCharacter = null): array
     {
-        return DB::transaction(function () use ($user, $campaign, $data) {
-            $campaign = Campaign::whereKey($campaign->id)->lockForUpdate()->firstOrFail();
-            Gate::forUser($user)->authorize('update', $campaign);
-            $character = isset($data['id']) ? $campaign->characters()->findOrFail($data['id']) : null;
-            unset($data['id']);
+        return DB::transaction(function () use ($user, $campaign, $data, $libraryCharacter) {
+            if ($campaign) {
+                $campaign = Campaign::whereKey($campaign->id)->lockForUpdate()->firstOrFail();
+                Gate::forUser($user)->authorize('update', $campaign);
+            }
+            $character = $libraryCharacter ?? (isset($data['id']) ? $campaign?->characters()->findOrFail($data['id']) : null);
+            abort_if(! $campaign && (! empty($data['starting_items']) || ! empty($data['starting_spells'])), 422, 'Назначьте кампанию перед выбором её снаряжения и заклинаний.');
+            abort_if($character && (! empty($data['starting_items']) || ! empty($data['starting_spells'])), 422, 'Starting loadout is only available on creation.');
+            $items = $data['starting_items'] ?? [];
+            $spells = $data['starting_spells'] ?? [];
+            unset($data['id'], $data['starting_items'], $data['starting_spells']);
+            $exhaustion = $data['exhaustion'] ?? null;
+            unset($data['exhaustion']);
             $this->validate($campaign, $data, $character);
             app(CharacterRules::class)->prepare($data);
             app(CharacterGameplay::class)->validate($campaign, $data, $character);
@@ -55,14 +78,48 @@ class CharacterActions
                     app(LifeCycle::class)->hpChanged($user, $character, $beforeHp);
                 }
             } else {
-                $character = $campaign->characters()->create($data)->refresh();
+                $character = (new Character)->forceFill(['campaign_id' => $campaign?->id, 'library_user_id' => ($data['kind'] ?? 'player_character') === 'player_character' ? $user->id : null, ...$data]);
+                $character->save();
+                $character->refresh();
                 if ($character->hp === 0) {
                     app(LifeCycle::class)->save($user, $character, app(LifeCycle::class)->state($character), 'created_at_zero');
                 }
             }
+            if ($exhaustion !== null && $exhaustion !== $character->exhaustion) {
+                app(LifeCycle::class)->exhaustion($user, $character, $exhaustion);
+            }
+            foreach ($items as $item) {
+                $context = app(CommandContext::class);
+                $parentId = $context->mutationId;
+                try {
+                    $context->mutationId = (string) Str::uuid();
+                    app(InventoryActions::class)->command($user, $campaign, $character, ['action' => 'give', ...$item]);
+                } finally {
+                    $context->mutationId = $parentId;
+                }
+            }
+            foreach ($spells as $id) {
+                $entry = CompendiumEntry::where('entity_type', 'spells')->findOrFail($id);
+                app(CopyCompendiumEntry::class)->copy($user, $campaign, $entry, $character->id);
+            }
+            $character = $character->fresh();
             $this->publish($user, $character);
 
             return ['character' => $this->projection($character)];
+        }, 3);
+    }
+
+    public function delete(User $user, Campaign $campaign, Character $character): array
+    {
+        return DB::transaction(function () use ($user, $campaign, $character) {
+            $campaign = Campaign::whereKey($campaign->id)->lockForUpdate()->firstOrFail();
+            Gate::forUser($user)->authorize('update', $campaign);
+            $character = $campaign->characters()->findOrFail($character->id);
+            abort_if($character->tokens()->exists(), 409, 'Сначала уберите все представления персонажа со сцен.');
+            $character->delete();
+            $this->publish($user, $character);
+
+            return ['deletedCharacterId' => (string) $character->id];
         }, 3);
     }
 
@@ -90,6 +147,9 @@ class CharacterActions
 
     public function publish(User $user, Character $character, ?int $exceptScene = null): void
     {
+        if (! $character->campaign) {
+            return;
+        }
         // Existing campaign-first writer serialization also serializes damage from different scenes.
         foreach ($character->campaign->scenes()->when($exceptScene, fn ($q) => $q->where('id', '!=', $exceptScene))->orderBy('id')->get() as $scene) {
             app(SceneTransaction::class)->run($scene, function ($scene) use ($character, $user) {
@@ -103,11 +163,14 @@ class CharacterActions
     public function projection(Character $character, bool $gm = true): array
     {
         return app(SpellEffects::class)->project(fn () => ['lifecycle' => app(LifeCycle::class)->state($character), 'exhaustion' => $character->exhaustion, 'hitPointDice' => $character->hit_point_dice ?? [], 'rest' => $character->rest_state, 'temporaryHp' => $character->temporary_hp ?? 0, 'spellcasting' => app(SpellCasting::class)->state($character), 'spellEffects' => app(SpellEffects::class)->projection($character), 'rules' => app(CharacterRules::class)->state($character), 'derived' => app(CharacterRules::class)->derived($character),
-            ...($gm ? ['rulesSuggestion' => app(CharacterRules::class)->suggestion($character)] : []),
+            ...($gm ? ['combatProfile' => $character->combat_profile, 'npcLootBackpack' => (bool) $character->npc_loot_backpack, 'npcSource' => $character->npc_source, 'rulesSuggestion' => app(CharacterRules::class)->suggestion($character)] : []),
             'inventoryRevision' => $this->inventoryRevision($character),
+            'campaignId' => $character->campaign_id ? (string) $character->campaign_id : null,
+            'campaignName' => $character->campaign?->name,
+            'origin' => $character->origin,
             'id' => (string) $character->id, 'name' => $character->name,
             'portrait' => app(SceneSnapshotBuilder::class)->asset($character->portraitAsset),
-            'ownerUserId' => $character->owner_user_id ? (string) $character->owner_user_id : null,
+            'ownerUserId' => $character->campaign_id && $character->owner_user_id ? (string) $character->owner_user_id : null,
             'kind' => $character->kind, 'disposition' => $character->disposition,
             'ac' => $gm ? $character->getRawOriginal('ac') : $character->ac, 'speed' => $gm ? $character->getRawOriginal('speed') : $character->speed,
             'resources' => collect($character->resources ?? [])->sortBy('sort_order')->values()->all(),

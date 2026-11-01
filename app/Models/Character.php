@@ -25,11 +25,11 @@ class Character extends Model
         };
     }
 
-    protected $guarded = ['id', 'campaign_id'];
+    protected $guarded = ['id', 'campaign_id', 'library_user_id', 'npc_source'];
 
     protected function casts(): array
     {
-        return ['recovery_baseline' => 'array', 'lifecycle' => 'array', 'exhaustion' => 'integer', 'hit_point_dice' => 'array', 'rest_state' => 'array', 'spellcasting' => 'array', 'temporary_hp' => 'integer', 'combat_profile' => 'array', 'rules' => 'array', 'check_stats' => 'array', 'resources' => 'array', 'abilities' => 'array', 'ac' => 'integer', 'speed' => 'integer', 'hp' => 'integer', 'max_hp' => 'integer', 'owner_user_id' => 'integer'];
+        return ['npc_source' => 'array', 'npc_loot_backpack' => 'boolean', 'campaign_id' => 'integer', 'library_user_id' => 'integer', 'origin' => 'array', 'recovery_baseline' => 'array', 'lifecycle' => 'array', 'exhaustion' => 'integer', 'hit_point_dice' => 'array', 'rest_state' => 'array', 'spellcasting' => 'array', 'temporary_hp' => 'integer', 'combat_profile' => 'array', 'rules' => 'array', 'check_stats' => 'array', 'resources' => 'array', 'abilities' => 'array', 'ac' => 'integer', 'speed' => 'integer', 'hp' => 'integer', 'max_hp' => 'integer', 'owner_user_id' => 'integer'];
     }
 
     public function campaign(): BelongsTo

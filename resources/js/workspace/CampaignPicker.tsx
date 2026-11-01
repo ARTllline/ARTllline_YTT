@@ -1,6 +1,6 @@
 import { t } from '../i18n';
 import { useEffect, useState, type FormEvent } from 'react';
-import { Box, Plus, ArrowUpRight, LogOut } from 'lucide-react';
+import { Box, Plus, ArrowUpRight, LogOut, Users } from 'lucide-react';
 import { api, type CampaignSummary, type User } from '../api/workspace';
 import { Dialog } from './Dialog';
 export function CampaignPicker({ user }: { user: User }) {
@@ -45,6 +45,9 @@ export function CampaignPicker({ user }: { user: User }) {
                 </a>
                 <span className="muted"> {t('Your workspaces')} </span>
                 <div className="topbar-actions">
+                    <a className="secondary-button" href="/control/characters">
+                        GM Control Center
+                    </a>
                     <span className="muted">{user.name}</span>
                     <button
                         className="icon-button"
@@ -62,6 +65,18 @@ export function CampaignPicker({ user }: { user: User }) {
                 </div>
             </header>
             <main className="project-main">
+                <a className="project-hub-entry" href="/control/characters">
+                    <Users size={30} />
+                    <div>
+                        <span className="eyebrow">GM CONTROL CENTER</span>
+                        <h2>Библиотека ваших героев</h2>
+                        <p>
+                            Создавайте персонажей, готовьте их к игре и назначайте кампанию, когда
+                            будете готовы.
+                        </p>
+                    </div>
+                    <ArrowUpRight size={22} />
+                </a>
                 <span className="eyebrow"> {t('MAKE ROOM FOR ADVENTURE')} </span>
                 <div className="project-title">
                     <h1> {t('Your campaigns')} </h1>

@@ -16,7 +16,7 @@ class PropActions
             Gate::forUser($user)->authorize('update', $scene);
             $previous = ['tokens' => [], 'props' => []];
             if ($data['action'] === 'create') {
-                $asset = Asset::where('campaign_id', $scene->campaign_id)->where('kind', 'prop')->findOrFail($data['assetId']);
+                $asset = Asset::available($scene->campaign_id)->where('kind', 'prop')->findOrFail($data['assetId']);
                 $size = $scene->grid_visible ? $scene->grid_size * 2 : 120;
                 $prop = SceneProp::create(['scene_id' => $scene->id, 'asset_id' => $asset->id, 'name' => mb_substr($asset->name, 0, 160),
                     'x' => $data['x'], 'y' => $data['y'], 'scale_x' => $size / max($asset->width, $asset->height),

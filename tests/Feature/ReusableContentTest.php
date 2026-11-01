@@ -151,7 +151,7 @@ class ReusableContentTest extends TestCase
         $this->assertDatabaseCount('scene_props', 1);
         $template = $this->template('prefab', [], [$p['id']]);
         $this->postJson('/api/scenes/'.$scene->id.'/spawn', ['templateId' => $template['id'], 'x' => 0, 'y' => 0])->assertNotFound();
-        $this->postJson('/api/scenes/'.$scene->id.'/props', ['action' => 'create', 'assetId' => $this->asset, 'x' => 0, 'y' => 0])->assertNotFound();
+        $this->postJson('/api/scenes/'.$scene->id.'/props', ['action' => 'create', 'assetId' => $this->asset, 'x' => 0, 'y' => 0])->assertOk();
         SceneProp::find($p['id'])->update(['is_locked' => true]);
         $this->postJson($this->base.'/selection', ['action' => 'move', 'tokenIds' => [], 'propIds' => [$p['id']], 'anchorKind' => 'prop', 'anchorId' => $p['id'], 'x' => 900, 'y' => 900])->assertConflict();
         $this->assertSame(1, $this->scene->fresh()->revision);

@@ -31,7 +31,7 @@ class InventoryActions
             'useAbilities' => app(CharacterGameplay::class)->abilities($c, false, true),
             'width' => InventoryGrid::WIDTH, 'height' => InventoryGrid::HEIGHT, 'slots' => self::SLOTS,
             'character' => app(CharacterActions::class)->projection($c, false),
-            'recipients' => app(LootActions::class)->recipients(auth()->user(), $c->campaign, $c),
+            'recipients' => ($c->campaign ? app(LootActions::class)->recipients(auth()->user(), $c->campaign, $c) : []),
             'base' => ['ac' => $c->getRawOriginal('ac'), 'speed' => $c->getRawOriginal('speed')]];
     }
 
@@ -53,30 +53,46 @@ class InventoryActions
         return $result;
     }
 
-    public function command(User $user, Campaign $campaign, Character $character, array $data): array
+    public function command(User $user, ?Campaign $campaign, Character $character, array $data, bool $library = false): array
     {
-        return DB::transaction(function () use ($user, $campaign, $character, $data) {
-            $campaign = Campaign::whereKey($campaign->id)->lockForUpdate()->firstOrFail();
-            $c = app(AbilityActions::class)->authorize($user, $campaign, $character->id);
+        return DB::transaction(function () use ($user, $campaign, $character, $data, $library) {
+            $campaign = $campaign ? Campaign::whereKey($campaign->id)->lockForUpdate()->firstOrFail() : null;
+            $c = $library ? app(CharacterLibrary::class)->query($user)->whereKey($character->id)->lockForUpdate()->firstOrFail() : app(AbilityActions::class)->authorize($user, $campaign, $character->id);
+            abort_if($c->campaign_id !== $campaign?->id, 409, 'Назначение изменилось. Обновите персонажа.');
+            if ($library && $campaign) {
+                Gate::forUser($user)->authorize('update', $campaign);
+            }
             if ($r = $this->replay($user, $c, $data)) {
                 return $r;
             }
             $op = $data['action'];
-            if (in_array($op, ['give', 'remove', 'put']) || ($op === 'configure' && array_key_exists('weapon_proficient', $data))) {
+            if ($campaign && (in_array($op, ['give', 'remove', 'put']) || ($op === 'configure' && array_key_exists('weapon_proficient', $data)))) {
                 Gate::forUser($user)->authorize('update', $campaign);
             }
             $grid = app(InventoryGrid::class);
             $items = fn () => $c->inventory()->with('definition')->get()->toArray();
             if ($op === 'give') {
-                $def = ItemDefinition::where('campaign_id', $campaign->id)->findOrFail($data['definitionId']);
+                $def = isset($data['libraryItemId'])
+                    ? app(ItemLibrary::class)->instantiate($user, $data['libraryItemId'], $c)
+                    : ItemDefinition::where('campaign_id', $campaign?->id)->findOrFail($data['definitionId']);
+                abort_unless(isset($data['libraryItemId']) || $campaign, 422);
                 $remaining = $data['quantity'];
+                if (isset($data['slot'])) {
+                    $direct = $c->inventory()->create(['item_definition_id' => $def->id, 'quantity' => 1]);
+                    $remaining = 0;
+                }
                 foreach ($c->inventory()->where('item_definition_id', $def->id)->whereNull('equipped_slot')->where('quantity', '>', 0)->get() as $stack) {
                     $amount = min($remaining, $def->max_stack - $stack->quantity);
                     $stack->increment('quantity', $amount);
                     $remaining -= $amount;
                 }
                 while ($remaining > 0) {
-                    $position = $grid->free($items(), $def->toArray());
+                    $position = isset($data['x'], $data['y']) && $remaining === $data['quantity']
+                        ? ['x' => $data['x'], 'y' => $data['y']]
+                        : $grid->free($items(), $def->toArray());
+                    if ($position) {
+                        abort_unless($grid->fits($items(), $def->toArray(), $position['x'], $position['y']), 422, 'Ячейка рюкзака занята.');
+                    }
                     abort_unless($position, 422, 'В рюкзаке нет места.');
                     $amount = min($remaining, $def->max_stack);
                     $c->inventory()->create(['item_definition_id' => $def->id, 'quantity' => $amount, 'weapon_proficient' => (bool) ($data['weapon_proficient'] ?? false), ...$position]);
@@ -97,14 +113,21 @@ class InventoryActions
                 $item = $c->inventory()->with('definition')->where('quantity', '>', 0)->findOrFail($data['itemId']);
                 $all = $items();
                 if ($op === 'configure') {
-                    $w = $item->definition->gameplay['weapon'] ?? null;
-                    abort_unless($w, 422, 'Настройки хвата доступны для боевого оружия.');
-                    $patch = array_intersect_key($data, array_flip(['grip', 'attack_ability', 'weapon_proficient']));
-                    abort_if(isset($patch['attack_ability']) && $patch['attack_ability'] !== 'auto' && ! in_array('finesse', $w['properties']), 422, 'Выбор характеристики разрешён только для Finesse.');
-                    if (isset($patch['grip']) && $patch['grip'] === 'two') {
-                        abort_unless(in_array('two_handed', $w['properties']) || in_array('versatile', $w['properties']), 422, 'Оружие не поддерживает двуручный хват.');
+                    if (array_key_exists('charges', $data)) {
+                        abort_unless($library && $item->quantity === 1 && $item->definition->max_stack === 1, 422, 'Заряды учитываются для штучных предметов без стопок.');
+                        $item->update(['charges' => $data['charges']]);
                     }
-                    $item->update($patch);
+                    $weaponPatch = array_intersect_key($data, array_flip(['grip', 'attack_ability', 'weapon_proficient']));
+                    if ($weaponPatch) {
+                        $w = $item->definition->gameplay['weapon'] ?? null;
+                        abort_unless($w, 422, 'Настройки хвата доступны для боевого оружия.');
+                        $patch = array_intersect_key($data, array_flip(['grip', 'attack_ability', 'weapon_proficient']));
+                        abort_if(isset($patch['attack_ability']) && $patch['attack_ability'] !== 'auto' && ! in_array('finesse', $w['properties']), 422, 'Выбор характеристики разрешён только для Finesse.');
+                        if (isset($patch['grip']) && $patch['grip'] === 'two') {
+                            abort_unless(in_array('two_handed', $w['properties']) || in_array('versatile', $w['properties']), 422, 'Оружие не поддерживает двуручный хват.');
+                        }
+                        $item->update($patch);
+                    }
                 } elseif ($op === 'transfer') {
                     $recipient = $campaign->characters()->findOrFail($data['recipientId']);
                     abort_if($recipient->id === $c->id, 422, 'Выберите другого персонажа.');
@@ -146,21 +169,7 @@ class InventoryActions
                         $item->update(['x' => $x, 'y' => $y, 'equipped_slot' => null]);
                     }
                 } elseif ($op === 'equip') {
-                    $slot = $data['slot'];
-                    abort_unless(in_array($slot, $item->definition->equipment_slots, true) && $item->quantity === 1, 422, 'Этот предмет не подходит слоту. Отделите один предмет от стопки.');
-                    $other = $c->inventory()->with('definition')->where('equipped_slot', $slot)->where('id', '!=', $item->id)->first();
-                    $old = $item->equipped_slot;
-                    $item->update(['equipped_slot' => null]);
-                    if ($other) {
-                        if ($old && in_array($old, $other->definition->equipment_slots, true)) {
-                            $other->update(['equipped_slot' => $old]);
-                        } else {
-                            $p = ! $old && $grid->fits($all, $other->definition->toArray(), $item->x, $item->y, [$item->id, $other->id]) ? ['x' => $item->x, 'y' => $item->y] : $grid->free($all, $other->definition->toArray(), [$item->id, $other->id]);
-                            abort_unless($p, 422, 'В рюкзаке нет места для снятого предмета.');
-                            $other->update([...$p, 'equipped_slot' => null]);
-                        }
-                    }
-                    $item->update(['equipped_slot' => $slot, 'x' => null, 'y' => null, 'grip' => in_array('two_handed', $item->definition->gameplay['weapon']['properties'] ?? []) ? 'two' : $item->grip]);
+                    $this->equip($c, $item, $data['slot'], $grid, $all);
                 } elseif ($op === 'unequip') {
                     abort_unless($item->equipped_slot, 422);
                     $p = $grid->free($all, $item->definition->toArray(), [$item->id]);
@@ -171,14 +180,35 @@ class InventoryActions
                     $p = $grid->free($all, $item->definition->toArray());
                     abort_unless($p, 422, 'В рюкзаке нет места.');
                     $item->decrement('quantity', $data['quantity']);
-                    $c->inventory()->create(['item_definition_id' => $item->item_definition_id, 'quantity' => $data['quantity'], ...$p]);
+                    $c->inventory()->create(['item_definition_id' => $item->item_definition_id, 'charges' => $item->charges, 'quantity' => $data['quantity'], ...$p]);
                 }
+            }
+            if ($op === 'give' && isset($data['slot'])) {
+                $this->equip($c, $direct, $data['slot'], $grid, $items());
             }
             app(ItemRules::class)->validateEquipment($c->fresh());
             app(CharacterActions::class)->publish($user, $c->fresh());
 
             return $this->record($user, $c, $data, $this->snapshot($c));
         }, 3);
+    }
+
+    private function equip(Character $c, InventoryItem $item, string $slot, InventoryGrid $grid, array $all): void
+    {
+        abort_unless(in_array($slot, $item->definition->equipment_slots, true) && $item->quantity === 1, 422, 'Этот предмет не подходит слоту. Отделите один предмет от стопки.');
+        $other = $c->inventory()->with('definition')->where('equipped_slot', $slot)->where('id', '!=', $item->id)->first();
+        $old = $item->equipped_slot;
+        $item->update(['equipped_slot' => null]);
+        if ($other) {
+            if ($old && in_array($old, $other->definition->equipment_slots, true)) {
+                $other->update(['equipped_slot' => $old]);
+            } else {
+                $p = ! $old && $item->x !== null && $grid->fits($all, $other->definition->toArray(), $item->x, $item->y, [$item->id, $other->id]) ? ['x' => $item->x, 'y' => $item->y] : $grid->free($all, $other->definition->toArray(), [$item->id, $other->id]);
+                abort_unless($p, 422, 'В рюкзаке нет места для снятого предмета.');
+                $other->update([...$p, 'equipped_slot' => null]);
+            }
+        }
+        $item->update(['equipped_slot' => $slot, 'x' => null, 'y' => null, 'grip' => in_array('two_handed', $item->definition->gameplay['weapon']['properties'] ?? []) ? 'two' : ($item->grip ?? 'one')]);
     }
 
     public function useItem(User $user, Scene $scene, array $data): array

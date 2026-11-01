@@ -82,6 +82,19 @@ export interface Scene {
     tokens: readonly Token[];
 }
 export interface Character {
+    npcLootBackpack?: boolean;
+    combatProfile?: Record<string, unknown> | null;
+    npcSource?: {
+        name: string;
+        version?: string;
+        license?: string;
+        url?: string;
+        attribution?: string;
+        reference?: Record<string, unknown>;
+    } | null;
+    campaignId?: string | null;
+    campaignName?: string | null;
+    origin?: { species?: string; background?: string } | null;
     inventoryRevision?: string;
     lifecycle?: import('../../gameplay/adventuring').LifeState;
     exhaustion?: number;

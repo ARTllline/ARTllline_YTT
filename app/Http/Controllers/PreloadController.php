@@ -43,9 +43,8 @@ class PreloadController extends Controller
         $asset = Asset::where('delivery_key', $key)->firstOrFail();
 
         return DB::transaction(function () use ($request, $asset, $service) {
-            $campaign = Campaign::whereKey($asset->campaign_id)->sharedLock()->firstOrFail();
-            abort_unless($campaign->roleFor($request->user()), 403);
-            abort_unless(Gate::allows('view', $asset) || $service->authorized($campaign, $asset), 403);
+            $campaigns = Campaign::whereHas('members', fn ($q) => $q->where('users.id', $request->user()->id))->get();
+            abort_unless(Gate::allows('view', $asset) || $campaigns->contains(fn ($c) => $service->authorized($c, $asset)), 403);
 
             return response()->file(Storage::disk('campaigns')->path($asset->storage_path), [
                 'Content-Type' => $asset->mime_type, 'Content-Disposition' => 'inline; filename="resource"',

@@ -84,6 +84,10 @@ export function Workspace({
 }) {
     const [campaign, setCampaign] = useState(initialCampaign);
     const [workspace, dispatch] = useReducer(workspaceReducer, initialWorkspace, (initial) => {
+        const requestedMode = new URLSearchParams(location.search).get('mode');
+        if (requestedMode === 'prepare' || requestedMode === 'session') {
+            return workspaceReducer(initial, { type: 'mode', mode: requestedMode });
+        }
         try {
             return localStorage.getItem(`ytt.session-mode.${initialCampaign.id}`) === 'true'
                 ? { ...initial, mode: 'session' as const, left: 'session' as const }
@@ -355,7 +359,16 @@ export function Workspace({
             if (panelGuard.current) throw new Error(panelGuard.current);
             await queue.flush();
             const at = snapPoint(point, store.getSnapshot().scene.grid);
-            if (item.type === 'token') {
+            if (item.type === 'libraryActor') {
+                const result = await api.placeLibraryActor(
+                    scene.id!,
+                    item.library,
+                    item.actorId,
+                    at,
+                );
+                store.addToken(result.token!, result.revision);
+                store.accept(result, true);
+            } else if (item.type === 'token') {
                 const result = await api.createToken(scene.id!, at, item.draft.asset, item.draft);
                 store.addToken(result.token!, result.revision);
             } else if (item.type === 'prop') {
@@ -463,7 +476,12 @@ export function Workspace({
                     </strong>
                 </a>
                 <div className="breadcrumb">
-                    <button onClick={() => navigate('/')}>{campaign.name}</button>
+                    <button
+                        onClick={() => navigate(`/campaigns/${campaign.id}/scenes`)}
+                        title="Сцены кампании"
+                    >
+                        {campaign.name}
+                    </button>
                     <ChevronRight size={13} />
                     <button className="breadcrumb-scene" onClick={toggleLibrary}>
                         {scene.name ?? t('New workspace')}

@@ -19,7 +19,7 @@ class CompendiumController extends Controller
         Gate::authorize('update', $campaign);
         $data = $r->validate(['search' => 'sometimes|nullable|string|max:100', 'type' => ['sometimes', 'nullable', Rule::in(CompendiumSync::TYPES)],
             'source' => 'sometimes|nullable|integer|min:1', 'page' => 'sometimes|integer|min:1']);
-        $query = CompendiumEntry::with('source')->select(['id', 'source_id', 'entity_type', 'external_key', 'name', 'slug']);
+        $query = CompendiumEntry::with('source')->whereNull('library_user_id')->select(['id', 'source_id', 'entity_type', 'external_key', 'name', 'slug']);
         if ($data['type'] ?? null) {
             $query->where('entity_type', $data['type']);
         }
@@ -40,6 +40,8 @@ class CompendiumController extends Controller
     {
         Gate::authorize('update', $campaign);
 
+        abort_if($entry->library_user_id !== null, 404);
+
         return ['entry' => $entry->load('source'), 'copies' => CompendiumCopy::where('campaign_id', $campaign->id)->where('compendium_entry_id', $entry->id)->orderByDesc('id')->limit(20)->get()];
     }
 
@@ -48,6 +50,6 @@ class CompendiumController extends Controller
         Gate::authorize('update', $campaign);
         $data = $r->validate(['entry_id' => 'required|integer|min:1', 'character_id' => 'sometimes|nullable|integer|min:1', 'clientMutationId' => 'required|uuid']);
 
-        return $copy->copy($r->user(), $campaign, CompendiumEntry::findOrFail($data['entry_id']), $data['character_id'] ?? null);
+        return $copy->copy($r->user(), $campaign, CompendiumEntry::whereNull('library_user_id')->findOrFail($data['entry_id']), $data['character_id'] ?? null);
     }
 }

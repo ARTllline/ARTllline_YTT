@@ -8,6 +8,7 @@ use App\Models\Character;
 use App\Models\Cue;
 use App\Models\Handout;
 use App\Models\ItemDefinition;
+use App\Rules\AssetIcon;
 use App\Spells\SpellCasting;
 use App\Spells\SpellMetadata;
 use Illuminate\Support\Facades\Validator;
@@ -44,7 +45,7 @@ class CharacterGameplay
             'abilities.*.spell.ritual' => 'sometimes|boolean',
             'abilities.*.spell.concentration' => 'sometimes|boolean',
             'abilities.*.id' => 'required|uuid|distinct', 'abilities.*.name' => 'required|string|max:60',
-            'abilities.*.icon' => 'required|in:spark,focus,flame,heart,shield,bolt,sword,eye,potion,footprints,bow',
+            'abilities.*.icon' => ['required', new AssetIcon(explode(',', 'spark,focus,flame,heart,shield,bolt,sword,eye,potion,footprints,bow'))],
             'abilities.*.description' => 'present|nullable|string|max:800',
             'abilities.*.category' => 'required|in:utility,check,attack,effect',
             'abilities.*.attack_type' => 'sometimes|in:melee,ranged,spell,check,utility',
@@ -71,7 +72,7 @@ class CharacterGameplay
         ] + CombatMetadata::abilityRules() + SpellMetadata::rules();
     }
 
-    public function validate(Campaign $campaign, array &$data, ?Character $character): void
+    public function validate(?Campaign $campaign, array &$data, ?Character $character): void
     {
         $resources = $data['resources'] ?? $character?->resources ?? [];
         $abilities = $data['abilities'] ?? $character?->abilities ?? [];
@@ -89,7 +90,7 @@ class CharacterGameplay
                 }
             }
             if (! empty($ability['spell']['material_definition_id'])) {
-                abort_unless(ItemDefinition::where('campaign_id', $campaign->id)->whereKey($ability['spell']['material_definition_id'])->exists(), 422, 'Компонент должен принадлежать кампании.');
+                abort_unless($campaign && ItemDefinition::where('campaign_id', $campaign->id)->whereKey($ability['spell']['material_definition_id'])->exists(), 422, 'Компонент должен принадлежать кампании.');
             }
             $check = $ability['check'];
             if ($check !== null) {
@@ -140,8 +141,8 @@ class CharacterGameplay
             $valid = match ($result['type']) {
                 'nothing' => true,
                 'heal' => in_array($ability['target'], ['self', 'token']) && ($result['amount'] > 0 || ! empty($result['dice'])),
-                'handout' => Handout::where('campaign_id', $campaign->id)->whereKey($result['target'])->exists(),
-                'cue' => Cue::whereHas('scene', fn ($q) => $q->where('campaign_id', $campaign->id))->whereKey($result['target'])->exists(),
+                'handout' => $campaign && Handout::where('campaign_id', $campaign->id)->whereKey($result['target'])->exists(),
+                'cue' => $campaign && Cue::whereHas('scene', fn ($q) => $q->where('campaign_id', $campaign->id))->whereKey($result['target'])->exists(),
             };
             if (! $valid) {
                 $this->invalid('Выберите доступный результат этой кампании.');

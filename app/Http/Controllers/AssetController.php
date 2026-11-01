@@ -13,6 +13,7 @@ use App\Models\Handout;
 use App\Services\AssetLibrary;
 use App\Services\AssetThumbnail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -24,7 +25,7 @@ class AssetController extends Controller
     {
         Gate::authorize('update', $campaign);
         $data = $request->validate(['kind' => 'nullable|in:map,token,handout,prop,music,ambient,sfx', 'search' => 'nullable|string|max:120', 'tag' => 'nullable|integer', 'collection' => 'nullable|integer', 'sort' => 'nullable|in:newest,name', 'page' => 'nullable|integer|min:1']);
-        $query = Asset::where('campaign_id', $campaign->id)->with(['tags', 'collections']);
+        $query = Asset::available($campaign->id)->with(['tags', 'collections']);
         if (! empty($data['kind'])) {
             $query->where('kind', $data['kind']);
         }
@@ -34,7 +35,7 @@ class AssetController extends Controller
         }
         foreach (['tag' => 'tags', 'collection' => 'collections'] as $key => $relation) {
             if (! empty($data[$key])) {
-                $query->whereHas($relation, fn ($q) => $q->whereKey($data[$key])->where('campaign_id', $campaign->id));
+                $query->whereHas($relation, fn ($q) => $q->whereKey($data[$key]));
             }
         }
         if (($data['sort'] ?? '') === 'name') {
@@ -44,13 +45,13 @@ class AssetController extends Controller
 
         return ['assets' => $page->getCollection()->map(fn ($a) => $library->projection($a))->all(),
             'page' => $page->currentPage(), 'pages' => $page->lastPage(), 'total' => $page->total(),
-            'tags' => AssetTag::where('campaign_id', $campaign->id)->orderBy('name')->get()->map(fn ($t) => $library->label($t))->all(),
-            'collections' => AssetCollection::where('campaign_id', $campaign->id)->orderBy('sort_order')->orderBy('name')->get()->map(fn ($t) => $library->label($t))->all()];
+            'tags' => AssetTag::whereIn('id', DB::table('asset_tag')->whereIn('asset_id', Asset::available($campaign->id)->select('assets.id'))->select('asset_tag_id'))->orderBy('name')->get()->map(fn ($t) => $library->label($t))->all(),
+            'collections' => AssetCollection::whereIn('id', DB::table('asset_collection')->whereIn('asset_id', Asset::available($campaign->id)->select('assets.id'))->select('asset_collection_id'))->orderBy('sort_order')->orderBy('name')->get()->map(fn ($t) => $library->label($t))->all()];
     }
 
     public function detail(Asset $asset, AssetLibrary $library): array
     {
-        Gate::authorize('update', $asset->campaign);
+        $library->authorizeEdit($asset);
         $handout = Handout::where('asset_id', $asset->id)->where('campaign_id', $asset->campaign_id)->first();
 
         return $library->projection($asset->load(['tags', 'collections'])) + ['usage' => $library->usage($asset), 'handout' => $handout ? app(HandoutActions::class)->projection($handout) : null];
@@ -58,9 +59,9 @@ class AssetController extends Controller
 
     public function update(Request $request, Asset $asset, AssetLibrary $library): array
     {
-        Gate::authorize('update', $asset->campaign);
+        $library->authorizeEdit($asset);
 
-        return $library->update($asset, $request->validate(['name' => 'sometimes|required|string|max:255',
+        return $library->update($asset, $request->validate(['name' => 'sometimes|required|string|max:255', 'category' => 'sometimes|in:'.GlobalAssetController::CATEGORIES,
             'tags' => 'sometimes|array|max:30', 'tags.*' => 'required|string|max:80',
             'collections' => 'sometimes|array|max:20', 'collections.*' => 'required|string|max:80']));
     }

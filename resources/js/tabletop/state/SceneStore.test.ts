@@ -2,6 +2,26 @@ import { describe, expect, it, vi } from 'vitest';
 import { SceneStore } from './SceneStore';
 import { createDemoScene } from './demoScene';
 describe('local scene operations', () => {
+    it('accepts a placed library actor immediately and ignores an older character response', () => {
+        const store = new SceneStore(createDemoScene());
+        const actor = {
+            id: 'actor',
+            name: 'Scout',
+            portrait: null,
+            ownerUserId: null,
+            kind: 'npc' as const,
+            disposition: 'hostile' as const,
+            hp: 12,
+            maxHp: 12,
+            checkStats: [],
+        };
+        store.accept({ revision: 4, character: actor }, true);
+        expect(store.getSnapshot().scene.characters).toEqual([actor]);
+        store.accept({ revision: 5, character: { ...actor, hp: 8 } }, true);
+        expect(store.getSnapshot().scene.characters).toHaveLength(1);
+        store.accept({ revision: 4, character: actor }, true);
+        expect(store.getSnapshot().scene.characters?.[0].hp).toBe(8);
+    });
     it('publishes immutable snapshots and preserves unrelated tokens', () => {
         const store = new SceneStore(createDemoScene());
         const before = store.getSnapshot();

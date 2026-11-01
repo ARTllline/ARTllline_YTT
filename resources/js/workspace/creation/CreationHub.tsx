@@ -15,7 +15,7 @@ import {
 import { AssetLibrary } from '../assets/LazyAssets';
 import { TemplateLibrary } from '../objects/TemplateLibrary';
 import { presets, tokenDraft, type Placement, type TokenDraft } from './model';
-import { CharacterBrowser } from './CharacterBrowser';
+import { SceneActorLibrary } from './SceneActorLibrary';
 import { CompendiumBrowser } from '../../compendium/CompendiumBrowser';
 
 const categories = [
@@ -189,7 +189,20 @@ export function CreationHub({
                         ) : (
                             <>
                                 {category === 'characters' && (
-                                    <CharacterBrowser campaignId={campaignId} onPlace={onPlace} />
+                                    <SceneActorLibrary
+                                        key="characters"
+                                        campaignId={campaignId}
+                                        kind="characters"
+                                        onPlace={onPlace}
+                                    />
+                                )}
+                                {category === 'creatures' && (
+                                    <SceneActorLibrary
+                                        key="npcs"
+                                        campaignId={campaignId}
+                                        kind="npcs"
+                                        onPlace={onPlace}
+                                    />
                                 )}
                                 <div className="creation-section-title">
                                     <h3>{categories.find((c) => c[0] === category)?.[1]}</h3>

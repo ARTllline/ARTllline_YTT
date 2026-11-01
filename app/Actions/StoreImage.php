@@ -13,9 +13,11 @@ use Illuminate\Validation\ValidationException;
 
 class StoreImage
 {
-    public function execute(User $user, Campaign $campaign, UploadedFile $file, string $kind): Asset
+    public function execute(User $user, ?Campaign $campaign, UploadedFile $file, string $kind): Asset
     {
-        Gate::forUser($user)->authorize('update', $campaign);
+        if ($campaign) {
+            Gate::forUser($user)->authorize('update', $campaign);
+        }
         abort_unless(in_array($kind, ['map', 'token', 'handout', 'prop'], true), 422);
         $dimensions = @getimagesize($file->getRealPath());
         $formats = [IMAGETYPE_PNG => ['image/png', 'png'], IMAGETYPE_JPEG => ['image/jpeg', 'jpg'], IMAGETYPE_WEBP => ['image/webp', 'webp']];
@@ -24,12 +26,12 @@ class StoreImage
             || $dimensions[0] > 8192 || $dimensions[1] > 8192 || $dimensions[0] * $dimensions[1] > 32000000) {
             throw ValidationException::withMessages(['file' => 'Use a PNG, JPEG or WebP up to 16 MB, 8192 px per side and 32 megapixels.']);
         }
-        $path = 'campaigns/'.$campaign->id.'/'.$kind.'/'.Str::uuid().'.'.$format[1];
+        $path = ($campaign ? 'campaigns/'.$campaign->id : 'library/'.$user->id).'/'.$kind.'/'.Str::uuid().'.'.$format[1];
         Storage::disk('campaigns')->putFileAs(dirname($path), $file, basename($path));
         try {
             $original = basename(str_replace('\\', '/', $file->getClientOriginalName()));
 
-            return Asset::create(['campaign_id' => $campaign->id, 'uploaded_by' => $user->id, 'kind' => $kind,
+            return Asset::create(['campaign_id' => $campaign?->id, 'library_user_id' => $user->id, 'uploaded_by' => $user->id, 'kind' => $kind,
                 'name' => mb_substr(trim(preg_replace('/[_-]+/u', ' ', pathinfo($original, PATHINFO_FILENAME))) ?: __('ui.untitled_asset'), 0, 255),
                 'original_name' => mb_substr(basename(str_replace('\\', '/', $file->getClientOriginalName())), 0, 255),
                 'storage_path' => $path, 'mime_type' => $format[0], 'file_size' => $file->getSize(),

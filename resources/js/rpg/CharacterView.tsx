@@ -1,5 +1,5 @@
 import { ExhaustionBadge, LifeSummary } from '../gameplay/adventuring';
-import { equipmentDropReason } from './itemGameplay';
+import { equipmentDropReason, ItemFacts } from './itemGameplay';
 import { Shield, Footprints, Heart, UserRound } from 'lucide-react';
 import { RpgIcon } from '../gameplay/RpgIcon';
 import { ResourceControls } from './ResourceControls';
@@ -96,7 +96,11 @@ export function HeroEquipment({
     send,
     busy,
     onInspect,
+    externalItems = [],
+    onExternalDrop,
 }: {
+    externalItems?: InventoryItem[];
+    onExternalDrop?: (i: InventoryItem, slot: string) => void;
     state: InventoryState;
     send: InventoryHook['send'];
     busy: boolean;
@@ -114,7 +118,7 @@ export function HeroEquipment({
                         <UserRound size={140} />
                     )}
                     <strong>{c.name}</strong>
-                    <span>ГЕРОЙ КАМПАНИИ</span>
+                    <span>СНАРЯЖЕНИЕ ГЕРОЯ</span>
                 </div>
                 {Object.entries(state.slots).map(([key, label], index) => {
                     const equipped = state.items.find(
@@ -123,31 +127,37 @@ export function HeroEquipment({
                         pos = positions[key] ?? [(index % 4) + 1, Math.floor(index / 4) + 6],
                         target = `equipment:${key}`,
                         over = drag.over?.key === target;
-                    const lifted = state.items.find((i) => i.id === drag.active?.sourceId);
+                    const lifted = [...state.items, ...externalItems].find(
+                        (i) => i.id === drag.active?.sourceId,
+                    );
                     const dropReason = lifted ? equipmentDropReason(lifted, key, state.items) : '';
                     return (
                         <div
                             key={key}
                             title={dropReason || label}
-                            className={`equipment-slot ${equipped ? `has-item rarity-${equipped.definition.rarity}` : ''} ${drag.active?.sourceType === 'inventory_item' && state.items.some((i) => i.id === drag.active?.sourceId && i.quantity === 1 && i.definition.equipment_slots.includes(key)) ? 'is-compatible' : ''} ${over ? (drag.over!.valid ? 'drop-valid' : 'drop-invalid') : ''}`}
+                            className={`equipment-slot ${equipped ? `has-item rarity-${equipped.definition.rarity}` : ''} ${drag.active?.sourceType === 'inventory_item' && [...state.items, ...externalItems].some((i) => i.id === drag.active?.sourceId && i.quantity === 1 && i.definition.equipment_slots.includes(key)) ? 'is-compatible' : ''} ${over ? (drag.over!.valid ? 'drop-valid' : 'drop-invalid') : ''}`}
                             style={{ gridColumn: pos[0], gridRow: pos[1] }}
                             {...drag.destination(
                                 target,
                                 (b) =>
                                     !busy &&
                                     b.sourceType === 'inventory_item' &&
-                                    !!state.items.find(
+                                    !![...state.items, ...externalItems].find(
                                         (i) =>
                                             i.id === b.sourceId &&
                                             i.quantity === 1 &&
                                             !equipmentDropReason(i, key, state.items),
                                     ),
-                                (b) =>
-                                    void send({
-                                        action: 'equip',
-                                        itemId: b.sourceId,
-                                        slot: key,
-                                    }),
+                                (b) => {
+                                    const ext = externalItems.find((i) => i.id === b.sourceId);
+                                    if (ext && onExternalDrop) onExternalDrop(ext, key);
+                                    else
+                                        void send({
+                                            action: 'equip',
+                                            itemId: b.sourceId,
+                                            slot: key,
+                                        });
+                                },
                             )}
                         >
                             <button
@@ -173,6 +183,12 @@ export function HeroEquipment({
                                 <span>{label}</span>
                                 <span className="rpg-tooltip">
                                     <strong>{equipped?.definition.name ?? label}</strong>
+                                    {equipped && (
+                                        <ItemFacts
+                                            definition={equipped.definition}
+                                            item={equipped}
+                                        />
+                                    )}
                                     <small>
                                         {equipped
                                             ? 'Перетащите в рюкзак · Двойной щелчок — снять'

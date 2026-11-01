@@ -155,7 +155,7 @@ class SpellCasting
     public function availability(Character $c, array $a): array
     {
         $reads = app(SpellEffects::class);
-        if ($c->exists && $a['spell']['level'] > 0 && ($scene = $reads->read('casting-scene:'.$c->campaign_id, fn () => Scene::find($c->campaign->active_scene_id))) && ($combat = $reads->read('casting-combat:'.$scene->id, fn () => app(TurnBudget::class)->active($scene->id)))) {
+        if ($c->exists && $c->campaign_id && $a['spell']['level'] > 0 && ($scene = $reads->read('casting-scene:'.$c->campaign_id, fn () => Scene::find($c->campaign->active_scene_id))) && ($combat = $reads->read('casting-combat:'.$scene->id, fn () => app(TurnBudget::class)->active($scene->id)))) {
             if ($reads->read('casting-slot:'.$combat->id.':'.$combat->turn_sequence.':'.$c->id, fn () => DB::table('spell_turn_slots')->where('combat_id', $combat->id)->where('character_id', $c->id)->where('turn_sequence', $combat->turn_sequence)->exists())) {
                 return ['available' => false, 'reason' => 'На этом ходу уже потрачена ячейка заклинания (SRD 2024).', 'levels' => []];
             }

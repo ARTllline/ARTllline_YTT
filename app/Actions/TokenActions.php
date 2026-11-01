@@ -50,7 +50,7 @@ class TokenActions
                 throw ValidationException::withMessages(['owner_user_id' => 'The controller must be a member of this campaign.']);
             }
             if (! empty($data['token_image_asset_id'])) {
-                $asset = Asset::whereKey($data['token_image_asset_id'])->where('campaign_id', $scene->campaign_id)->where('kind', 'token')->first();
+                $asset = Asset::whereKey($data['token_image_asset_id'])->available($scene->campaign_id)->where('kind', 'token')->first();
                 if (! $asset) {
                     throw ValidationException::withMessages(['token_image_asset_id' => 'Choose a token image belonging to this campaign.']);
                 }
@@ -99,7 +99,7 @@ class TokenActions
                 if (! empty($data['owner_user_id']) && ! CampaignMember::where('campaign_id', $scene->campaign_id)->where('user_id', $data['owner_user_id'])->exists()) {
                     throw ValidationException::withMessages(['owner_user_id' => 'The controller must be a member of this campaign.']);
                 }
-                if (! empty($data['token_image_asset_id']) && ! Asset::whereKey($data['token_image_asset_id'])->where('campaign_id', $scene->campaign_id)->where('kind', 'token')->exists()) {
+                if (! empty($data['token_image_asset_id']) && ! Asset::whereKey($data['token_image_asset_id'])->available($scene->campaign_id)->where('kind', 'token')->exists()) {
                     throw ValidationException::withMessages(['token_image_asset_id' => 'Choose a token image belonging to this campaign.']);
                 }
                 $maxHp = $data['max_hp'] ?? $token->max_hp;

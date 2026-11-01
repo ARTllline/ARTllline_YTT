@@ -93,6 +93,7 @@ export function ItemFacts({
         a = g?.armor;
     return (
         <div className="item-gameplay-facts">
+            {item?.charges != null && <span>Заряды: {item.charges}</span>}
             {g?.use?.scroll && (
                 <span>
                     Свиток SRD · без ячейки Character · Сл{' '}

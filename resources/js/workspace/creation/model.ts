@@ -17,6 +17,7 @@ export interface TokenDraft {
     asset?: LibraryAsset;
 }
 export type Placement =
+    | { type: 'libraryActor'; actorId: string; library: 'characters' | 'npcs'; name: string }
     | { type: 'token'; draft: TokenDraft; name: string }
     | { type: 'prop'; asset: LibraryAsset; name: string }
     | { type: 'template'; template: Pick<ContentTemplate, 'id' | 'kind' | 'name'>; name: string }

@@ -6,6 +6,7 @@ use App\Models\ContentTemplate;
 use App\Models\Handout;
 use App\Models\Scene;
 use App\Models\SceneProp;
+use App\Models\User;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -35,10 +36,10 @@ class CueDefinition
         return $data;
     }
 
-    public function config(Scene $scene, string $type, array $input): array
+    public function config(Scene $scene, string $type, array $input, ?User $user = null): array
     {
         if (in_array($type, MediaConfig::TYPES)) {
-            return app(MediaConfig::class)->validate($scene->campaign_id, $type, $input);
+            return app(MediaConfig::class)->validate($scene->campaign_id, $type, $input, $user);
         }
         $point = ['x' => 'required|numeric|between:-1000000,1000000', 'y' => 'required|numeric|between:-1000000,1000000'];
         $duration = ['duration' => 'required|integer|between:0,10000'];

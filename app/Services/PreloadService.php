@@ -29,7 +29,7 @@ class PreloadService
     private function assets(Scene $scene, bool $audio): array
     {
         $ids = array_filter([$scene->map_asset_id,
-            ...Token::with('character')->where('scene_id', $scene->id)->where('is_hidden', false)->get()->map(fn ($t) => $t->token_image_asset_id)->all(),
+            ...Token::with('character')->where('scene_id', $scene->id)->where('is_hidden', false)->get()->map(fn ($t) => $t->character?->portrait_asset_id ?? $t->token_image_asset_id)->all(),
             ...SceneProp::where('scene_id', $scene->id)->where('is_hidden', false)->pluck('asset_id')->all()]);
         if ($audio) {
             foreach (CueStep::whereIn('cue_id', DB::table('cues')->where('scene_id', $scene->id)->select('id'))
@@ -39,7 +39,7 @@ class PreloadService
         }
 
         // Handouts are never eligible, even if referenced accidentally by old data.
-        return Asset::where('campaign_id', $scene->campaign_id)->whereIn('id', array_unique(array_filter($ids)))
+        return Asset::whereIn('id', array_unique(array_filter($ids)))
             ->whereIn('kind', ['map', 'token', 'prop', ...($audio ? ['music', 'ambient', 'sfx'] : [])])->orderBy('id')->get()->all();
     }
 

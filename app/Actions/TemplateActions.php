@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Models\Asset;
 use App\Models\Campaign;
 use App\Models\ContentTemplate;
 use App\Models\Scene;
@@ -54,7 +55,7 @@ class TemplateActions
             $baseZ = (SceneProp::where('scene_id', $scene->id)->max('z_index') ?? -1) + 1;
             $originZ = $template->items->where('kind', 'prop')->min(fn ($item) => $item->data['z_index']) ?? 0;
             foreach ($template->items as $item) {
-                abort_if($item->asset_id && (! $item->asset || $item->asset->campaign_id !== $scene->campaign_id || $item->asset->kind !== $item->kind), 422, 'Материал заготовки недоступен в этой кампании.');
+                abort_if($item->asset_id && (! $item->asset || ! Asset::available($scene->campaign_id, $user)->whereKey($item->asset_id)->exists() || $item->asset->kind !== $item->kind), 422, 'Материал заготовки недоступен в этой кампании.');
                 $values = $item->data;
                 $values['x'] += $data['x'];
                 $values['y'] += $data['y'];

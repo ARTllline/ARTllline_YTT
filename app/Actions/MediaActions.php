@@ -18,7 +18,7 @@ class MediaActions
         return DB::transaction(function () use ($user, $campaign, $type, $input) {
             $campaign = Campaign::whereKey($campaign->id)->lockForUpdate()->firstOrFail();
             Gate::forUser($user)->authorize('update', $campaign);
-            $data = app(MediaConfig::class)->validate($campaign->id, $type, $input);
+            $data = app(MediaConfig::class)->validate($campaign->id, $type, $input, $user);
             $media = app(LiveMedia::class);
             $state = $media->read($campaign);
             // Bind scene-scoped commands to the scene the GM actually saw.

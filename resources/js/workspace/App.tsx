@@ -3,9 +3,15 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { api, type User, type Campaign } from '../api/workspace';
 import { AuthScreen } from './AuthScreen';
 import { CampaignPicker } from './CampaignPicker';
+const CampaignScenes = lazy(() =>
+    import('./scenes/CampaignScenes').then((m) => ({ default: m.CampaignScenes })),
+);
 const Workspace = lazy(() => import('./Workspace').then((m) => ({ default: m.Workspace })));
 import type { Scene } from '../tabletop/types/scene';
 const PlayerView = lazy(() => import('./PlayerView').then((m) => ({ default: m.PlayerView })));
+const ControlCenter = lazy(() =>
+    import('../control/ControlCenter').then((m) => ({ default: m.ControlCenter })),
+);
 import { JoinScreen, authReturn } from './JoinScreen';
 type Loaded = { user: User; campaign?: Campaign; scene?: Scene };
 export function App() {
@@ -30,7 +36,9 @@ export function App() {
                 location.replace(authReturn());
                 return;
             }
-            const path = location.pathname.match(/^\/campaigns\/(\d+)(?:\/scenes\/(\d+)|\/play)?$/);
+            const path = location.pathname.match(
+                /^\/campaigns\/(\d+)(?:\/scenes(?:\/(\d+))?|\/play|\/control(?:\/characters(?:\/(?:new|\d+))?)?)?$/,
+            );
             if (!path) {
                 setLoaded({ user });
                 return;
@@ -45,9 +53,6 @@ export function App() {
                 scene = await api.snapshot(path[2], abort.signal);
                 if (scene.campaignId !== campaign.id)
                     throw new Error(t('This scene does not belong to the campaign.'));
-            } else if (campaign.scenes.length) {
-                location.replace(`/campaigns/${campaign.id}/scenes/${campaign.scenes[0].id}`);
-                return;
             }
             if (active) setLoaded({ user, campaign, scene });
         })().catch((error) => {
@@ -77,9 +82,15 @@ export function App() {
         );
     return (
         <Suspense fallback={<div className="boot">Открываем игровой стол…</div>}>
-            {loaded.campaign ? (
+            {location.pathname.startsWith('/control') ? (
+                <ControlCenter />
+            ) : loaded.campaign ? (
                 loaded.campaign.role === 'player' ? (
                     <PlayerView user={loaded.user} campaign={loaded.campaign} />
+                ) : location.pathname.includes('/control') ? (
+                    <ControlCenter />
+                ) : !loaded.scene ? (
+                    <CampaignScenes campaign={loaded.campaign} />
                 ) : (
                     <Workspace
                         user={loaded.user}

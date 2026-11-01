@@ -56,7 +56,7 @@ class PreparationTest extends TestCase
         return $this->post($this->base().'/assets', ['kind' => $kind, 'file' => UploadedFile::fake()->image($name, 800, 600)], ['Accept' => 'application/json'])->assertOk()->json();
     }
 
-    public function test_library_search_taxonomy_pagination_is_campaign_scoped_and_private(): void
+    public function test_library_search_taxonomy_pagination_is_reusable_and_private(): void
     {
         $a = $this->image();
         $this->assertSame('Moonlit Forest', $a['name']);
@@ -65,7 +65,7 @@ class PreparationTest extends TestCase
         $this->getJson($this->base().'/assets?search=forest&kind=map&tag='.$a['tags'][0]['id'].'&collection='.$a['collections'][0]['id'])->assertOk()->assertJsonPath('total', 1);
         $other = Campaign::create(['name' => 'Other']);
         $other->members()->attach($this->gm, ['role' => 'gm']);
-        $this->getJson('/api/campaigns/'.$other->id.'/assets?tag='.$a['tags'][0]['id'])->assertOk()->assertJsonPath('total', 0)->assertJsonPath('tags', []);
+        $this->getJson('/api/campaigns/'.$other->id.'/assets?tag='.$a['tags'][0]['id'])->assertOk()->assertJsonPath('total', 1)->assertJsonCount(2, 'tags');
         $this->patchJson('/api/assets/'.$a['id'], ['tags' => [], 'collections' => []])->assertOk()->assertJsonPath('tags', [])->assertJsonPath('collections', []);
         $model = Asset::findOrFail($a['id']);
         for ($i = 0; $i < 305; $i++) {
@@ -129,8 +129,8 @@ class PreparationTest extends TestCase
         $other = Campaign::create(['name' => 'foreign']);
         $other->members()->attach($this->gm, ['role' => 'gm']);
         $foreign = $other->scenes()->create(['name' => 'foreign scene']);
-        $this->actingAs($this->gm)->postJson('/api/scenes/'.$foreign->id.'/tokens', ['name' => 'x', 'x' => 0, 'y' => 0, 'token_image_asset_id' => $a['id']])->assertUnprocessable();
-        $this->assertEquals(0, $foreign->fresh()->revision);
+        $this->actingAs($this->gm)->postJson('/api/scenes/'.$foreign->id.'/tokens', ['name' => 'x', 'x' => 0, 'y' => 0, 'token_image_asset_id' => $a['id']])->assertOk();
+        $this->assertEquals(1, $foreign->fresh()->revision);
     }
 
     public function test_handout_discovery_is_persistent_recipient_scoped_and_show_is_idempotent(): void
@@ -195,7 +195,7 @@ class PreparationTest extends TestCase
         $h = $this->postJson($this->base().'/handouts', ['assetId' => $a['id'], 'title' => 'Private'])->assertOk()->json();
         $other = Campaign::create(['name' => 'Other campaign']);
         $other->members()->attach($this->gm, ['role' => 'gm']);
-        $this->postJson('/api/campaigns/'.$other->id.'/handouts', ['assetId' => $a['id'], 'title' => 'Foreign'])->assertUnprocessable();
+        $this->postJson('/api/campaigns/'.$other->id.'/handouts', ['assetId' => $a['id'], 'title' => 'Foreign'])->assertOk();
         $this->postJson('/api/campaigns/'.$other->id.'/handouts/show', ['handoutId' => $h['id']])->assertNotFound();
         $this->assertDatabaseCount('handout_reveals', 0);
         config(['broadcasting.default' => 'reverb', 'broadcasting.connections.reverb.key' => 'test', 'broadcasting.connections.reverb.secret' => 'test', 'broadcasting.connections.reverb.app_id' => 'test']);

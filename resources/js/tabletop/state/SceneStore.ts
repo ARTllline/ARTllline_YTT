@@ -482,6 +482,14 @@ export class SceneStore {
             revision: Math.max(this.snapshot.scene.revision ?? 0, result.revision),
         };
         if (apply && !stale) {
+            if (result.character)
+                scene = {
+                    ...scene,
+                    characters: [
+                        ...(scene.characters ?? []).filter((c) => c.id !== result.character!.id),
+                        result.character,
+                    ],
+                };
             scene = {
                 ...applyRegionPatch(
                     applyObjectPatch(scene, result),

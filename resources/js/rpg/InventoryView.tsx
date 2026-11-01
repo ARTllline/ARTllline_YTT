@@ -17,7 +17,7 @@ export function InventoryGridView({
     onExternalDrop,
 }: {
     externalItems?: InventoryItem[];
-    onExternalDrop?: (i: InventoryItem) => void;
+    onExternalDrop?: (i: InventoryItem, x?: number, y?: number) => void;
     selectedId?: string | null;
     search?: string;
     state: InventoryState;
@@ -60,7 +60,7 @@ export function InventoryGridView({
                                     b.sourceType === 'inventory_item' && accepted(b.sourceId, x, y),
                                 (b) => {
                                     const ext = externalItems.find((i) => i.id === b.sourceId);
-                                    if (ext && onExternalDrop) onExternalDrop(ext);
+                                    if (ext && onExternalDrop) onExternalDrop(ext, x, y);
                                     else void send({ action: 'move', itemId: b.sourceId, x, y });
                                 },
                             )}

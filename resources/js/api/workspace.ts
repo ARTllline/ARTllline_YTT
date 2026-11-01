@@ -29,6 +29,7 @@ export interface Campaign extends CampaignSummary {
     members?: { id: string; name: string; role: string }[];
 }
 export interface Mutation extends importObjectPatch {
+    character?: import('../tabletop/types/scene').Character;
     region?: import('../automation/model').Region;
     deletedRegionId?: string;
     note?: import('../tabletop/types/scene').SceneNote;
@@ -141,6 +142,17 @@ export const api = {
                   }
                 : { assetId: null, x: 0, y: 0, width: 1440, height: 1080, clientMutationId },
         ),
+    placeLibraryActor: (
+        scene: string,
+        library: 'characters' | 'npcs',
+        actorId: string,
+        point: Point,
+    ) =>
+        request<Mutation>(`/scenes/${scene}/${library}`, 'POST', {
+            [library === 'npcs' ? 'npcId' : 'characterId']: actorId,
+            ...point,
+            clientMutationId: commandId(),
+        }),
     createToken: (
         scene: string,
         point: Point,

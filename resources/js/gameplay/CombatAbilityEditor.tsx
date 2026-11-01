@@ -26,7 +26,9 @@ export function CombatAbilityEditor({
     useEffect(() => {
         const abort = new AbortController();
         void request<typeof catalog>(
-            `/campaigns/${campaignId}/character-rules/catalog`,
+            campaignId
+                ? `/campaigns/${campaignId}/character-rules/catalog`
+                : '/library/character-rules/catalog',
             'GET',
             undefined,
             abort.signal,

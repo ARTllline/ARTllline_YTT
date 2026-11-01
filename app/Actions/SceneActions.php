@@ -24,7 +24,7 @@ class SceneActions
             $campaign = Campaign::whereKey($campaign->id)->lockForUpdate()->firstOrFail();
             Gate::forUser($user)->authorize('update', $campaign);
 
-            $map = $mapAssetId ? Asset::where('campaign_id', $campaign->id)->where('kind', 'map')->find($mapAssetId) : null;
+            $map = $mapAssetId ? Asset::available($campaign->id)->where('kind', 'map')->find($mapAssetId) : null;
             if ($mapAssetId && ! $map) {
                 throw ValidationException::withMessages(['mapAssetId' => 'Choose a map belonging to this campaign.']);
             }
@@ -63,7 +63,7 @@ class SceneActions
     {
         return $this->transaction->run($scene, function ($scene) use ($user, $data) {
             Gate::forUser($user)->authorize('update', $scene);
-            if (! empty($data['assetId']) && ! Asset::whereKey($data['assetId'])->where('campaign_id', $scene->campaign_id)->where('kind', 'map')->exists()) {
+            if (! empty($data['assetId']) && ! Asset::whereKey($data['assetId'])->available($scene->campaign_id)->where('kind', 'map')->exists()) {
                 throw ValidationException::withMessages(['assetId' => 'Choose a map belonging to this campaign.']);
             }
             $scene->update(['map_asset_id' => $data['assetId'], 'map_x' => $data['x'], 'map_y' => $data['y'],

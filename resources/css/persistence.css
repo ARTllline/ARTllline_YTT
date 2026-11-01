@@ -640,3 +640,48 @@ select:focus-visible {
         font-size: 10px;
     }
 }
+
+.project-hub-entry {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 28px;
+    margin-bottom: 44px;
+    border: 1px solid #456858;
+    border-radius: 12px;
+    background: linear-gradient(115deg, #29413666, #1b202b);
+    text-decoration: none;
+    color: var(--text);
+}
+.project-hub-entry > svg {
+    flex-shrink: 0;
+    color: var(--accent);
+}
+.project-hub-entry > svg:last-child {
+    margin-left: auto;
+}
+.project-hub-entry h2 {
+    margin: 8px 0;
+    font-size: 24px;
+}
+.project-hub-entry p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+}
+.project-hub-entry:hover {
+    border-color: var(--accent);
+}
+@media (max-width: 760px) {
+    .project-hub-entry {
+        padding: 20px;
+        gap: 16px;
+    }
+    .project-hub-entry h2 {
+        font-size: 20px;
+    }
+    .project-hub-entry > svg:first-child {
+        display: none;
+    }
+}

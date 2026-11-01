@@ -26,7 +26,7 @@ class HandoutActions
         return DB::transaction(function () use ($user, $campaign, $data) {
             $campaign = Campaign::whereKey($campaign->id)->lockForUpdate()->firstOrFail();
             Gate::forUser($user)->authorize('update', $campaign);
-            $asset = Asset::whereKey($data['assetId'])->where('campaign_id', $campaign->id)->where('kind', 'handout')->first();
+            $asset = Asset::whereKey($data['assetId'])->available($campaign->id)->where('kind', 'handout')->first();
             abort_unless($asset, 422, 'Choose a handout image from this campaign.');
             $handout = Handout::firstOrCreate(['campaign_id' => $campaign->id, 'asset_id' => $asset->id],
                 ['title' => $data['title'], 'description' => $data['description'] ?? null, 'created_by' => $user->id]);

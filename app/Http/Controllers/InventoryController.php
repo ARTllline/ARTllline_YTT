@@ -12,6 +12,7 @@ use App\Models\Character;
 use App\Models\ItemDefinition;
 use App\Models\LootContainer;
 use App\Models\Scene;
+use App\Rules\AssetIcon;
 use App\Services\InventoryGrid;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -57,15 +58,20 @@ class InventoryController extends Controller
         return ['definitions' => ItemDefinition::where('campaign_id', $campaign->id)->orderBy('name')->get()];
     }
 
-    public function saveDefinition(Request $r, Campaign $campaign): array
+    public static function definitionRules(): array
     {
-        Gate::authorize('update', $campaign);
-        $data = $r->validate(['id' => 'sometimes|uuid', 'name' => 'required|string|max:80', 'icon' => 'required|in:item_sword,item_shield,item_potion,item_scroll,item_armor,item_boots,item_helmet,item_ring,item_amulet,item_cloak,item_gloves,sword,shield,potion,book,flame,focus',
+        return ['id' => 'sometimes|uuid', 'name' => 'required|string|max:80', 'icon' => ['required', new AssetIcon(explode(',', 'item_sword,item_shield,item_potion,item_scroll,item_armor,item_boots,item_helmet,item_ring,item_amulet,item_cloak,item_gloves,sword,shield,potion,book,flame,focus'))],
             'description' => 'nullable|string|max:1000', 'category' => ['required', Rule::in(ItemRules::CATEGORIES)], 'rarity' => 'required|in:common,uncommon,rare,epic,legendary',
             'width' => 'required|integer|between:1,4', 'height' => 'required|integer|between:1,4', 'max_stack' => 'required|integer|between:1,99',
             'equipment_slots' => 'present|array|list|max:16', 'equipment_slots.*' => 'required|string|max:32|regex:/^[a-z][a-z0-9_]*$/|distinct',
             'modifiers' => 'present|array:ac,speed,checks,weapon_attack,weapon_damage', 'modifiers.weapon_attack' => 'sometimes|integer|between:-20,20', 'modifiers.weapon_damage' => 'sometimes|integer|between:-20,20', 'modifiers.ac' => 'sometimes|integer|between:-20,20', 'modifiers.speed' => 'sometimes|integer|between:-100,100',
-            'modifiers.checks' => 'sometimes|array|max:30', 'modifiers.checks.*' => 'integer|between:-20,20', 'use_ability_id' => 'nullable|uuid'] + ItemRules::validation());
+            'modifiers.checks' => 'sometimes|array|max:30', 'modifiers.checks.*' => 'integer|between:-20,20', 'use_ability_id' => 'nullable|uuid'] + ItemRules::validation();
+    }
+
+    public function saveDefinition(Request $r, Campaign $campaign): array
+    {
+        Gate::authorize('update', $campaign);
+        $data = $r->validate(self::definitionRules());
 
         // Accept old clients' size fields, but all newly saved definitions are single-cell.
         $data['width'] = $data['height'] = 1;
