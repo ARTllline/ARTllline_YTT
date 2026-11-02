@@ -32,13 +32,13 @@ class GMCorrections
     {
         $combat = app(TurnBudget::class)->active($token->scene_id);
         $after = $this->state($token);
-        if (! $combat || $before === $after) {
+        if ($before === $after) {
             return;
         }
         app(CombatLog::class)->write($combat, 'gm.correction', ['tokenId' => (string) $token->id, 'name' => $token->name,
             'operation' => $command, 'userId' => $user->id, 'before' => $before, 'after' => $after,
             'revision' => Scene::findOrFail($token->scene_id)->revision + 1,
-            'reversible' => $before['exhaustion'] === $after['exhaustion'] && $effects === $this->effects($token->scene) && ! (($before['lifecycle']['status'] ?? 'alive') !== ($after['lifecycle']['status'] ?? 'alive') && $token->kind !== 'player_character')]);
+            'reversible' => $before['exhaustion'] === $after['exhaustion'] && $effects === $this->effects($token->scene) && ! (($before['lifecycle']['status'] ?? 'alive') !== ($after['lifecycle']['status'] ?? 'alive') && $token->kind !== 'player_character')], $token->scene_id);
     }
 
     public function available(Scene $scene): ?object

@@ -36,7 +36,7 @@ class NpcConsequences
                     'roll' => null, 'outcomes' => [], 'success' => true, 'reference' => $effect['reference'] ?? '', 'gmContext' => ['description' => $effect['description'], 'remaining' => $label.' · '.$token->name.' · разрешите подготовленное последствие.', 'activation' => 'lifecycle', 'appliedSummary' => $token->name.': '.$token->hp.' HP · '.$outcome, 'slotSpent' => 0, 'sourceTokenId' => (string) $token->id, 'reference' => $effect['reference'] ?? '',
                         'reasons' => [$effect['trigger'].' · '.$token->name, 'Автоматически: '.$after['status'].'. GM: разрешите подготовленное последствие.', $effect['reference'] ?? '']],
                     'lifecycleTrigger' => $effect['trigger'], 'cause' => $cause], 'created_at' => now()]);
-            app(CombatLog::class)->write(app(TurnBudget::class)->active($token->scene_id), 'lifecycle.consequence', ['tokenId' => (string) $token->id, 'abilityName' => $effect['name'], 'executionId' => $id, 'trigger' => $effect['trigger']]);
+            app(CombatLog::class)->write(app(TurnBudget::class)->active($token->scene_id), 'lifecycle.consequence', ['tokenId' => (string) $token->id, 'abilityName' => $effect['name'], 'executionId' => $id, 'trigger' => $effect['trigger']], $token->scene_id);
         }
     }
 }

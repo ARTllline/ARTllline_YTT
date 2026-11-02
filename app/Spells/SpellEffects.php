@@ -210,7 +210,7 @@ class SpellEffects
             app(AppliedConditions::class)->remove($condition, 'spell_'.$reason);
         }
         $e->update(['ended_at' => now(), 'end_reason' => $reason]);
-        app(CombatLog::class)->write(app(TurnBudget::class)->active($e->scene_id), 'spell.effect.ended', ['effectId' => $e->id, 'spell' => $e->name, 'cause' => $reason]);
+        app(CombatLog::class)->write(app(TurnBudget::class)->active($e->scene_id), 'spell.effect.ended', ['effectId' => $e->id, 'spell' => $e->name, 'cause' => $reason], $e->scene_id);
         $this->publish($e);
     }
 
@@ -248,7 +248,7 @@ class SpellEffects
         $p = app(CombatStats::class)->save($target, 'con');
         $ctx = app(ConditionRules::class)->context($target, 'save', 'normal', null, 0, 'con');
         $roll = app(CombatExecution::class)->roll($p, $dc, $ctx, false, $target, 'save');
-        app(CombatLog::class)->write(app(TurnBudget::class)->active($target->scene_id), 'concentration.save', ['targetId' => (string) $target->id, 'spell' => $effects[0]->name, 'effectId' => $effects[0]->id, 'damage' => $damage, 'dc' => $dc, 'roll' => $roll, 'provenance' => $p, 'cause' => 'damage']);
+        app(CombatLog::class)->write(app(TurnBudget::class)->active($target->scene_id), 'concentration.save', ['targetId' => (string) $target->id, 'spell' => $effects[0]->name, 'effectId' => $effects[0]->id, 'damage' => $damage, 'dc' => $dc, 'roll' => $roll, 'provenance' => $p, 'cause' => 'damage'], $target->scene_id);
         if (! $roll['success']) {
             $this->stop($target->character, 'damage_save_failed');
         }

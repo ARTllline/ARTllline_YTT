@@ -75,6 +75,10 @@ class ObjectCheckActions
             'natural' => $natural, 'modifier' => $provenance['finalModifier'], 'total' => $total, 'dc' => $config['dc'],
             'dc_visible' => $config['dc_visible'] ?? false, 'success' => $success, 'branch' => $branch, 'created_at' => now()]);
         $result = app(ObjectInteraction::class)->result($user, $scene, $action['author_id'], $branch);
+        app(\App\Combat\CombatLog::class)->write(app(\App\Combat\TurnBudget::class)->active($scene->id), 'check.resolved', [
+            'abilityName' => $action['label'], 'stat' => $stat ?: $config['label'],
+            'outcomes' => [['tokenId' => $token ? (string) $token->id : '', 'name' => $token?->name ?? $user->name, 'roll' => $roll, 'provenance' => $provenance]],
+        ], $scene->id);
         $event = new TabletopEvent(ChannelAccess::gm($scene->campaign_id, $scene->id), [
             'type' => 'check.resolved', 'sceneId' => (string) $scene->id, 'check' => $check->projection(true),
             'actor' => ['id' => (string) $user->id, 'name' => $user->name],

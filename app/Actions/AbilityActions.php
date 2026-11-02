@@ -219,7 +219,7 @@ class AbilityActions
                 'mutationId' => app(CommandContext::class)->id(), 'resolvedAt' => now()->toIso8601String(),
             ]);
 
-            app(CombatLog::class)->write(app(TurnBudget::class)->active($scene->id), 'ability.resolved', ['executionId' => $execution['id'], 'abilityName' => $ability['name'], 'actorName' => $character->name, 'sourceId' => $actor ? (string) $actor->id : null, 'result' => $execution]);
+            app(CombatLog::class)->write(app(TurnBudget::class)->active($scene->id), 'ability.resolved', ['executionId' => $execution['id'], 'abilityName' => $ability['name'], 'actorName' => $character->name, 'sourceId' => $actor ? (string) $actor->id : null, 'result' => $execution], $scene->id);
 
             return ['execution' => $execution];
         }, 3);

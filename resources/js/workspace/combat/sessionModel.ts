@@ -63,9 +63,13 @@ export interface SessionState {
 }
 export interface CombatEvent {
     id: string;
+    combatId?: string | null;
     type: string;
     createdAt: string;
     data: {
+        names?: Record<string, string>;
+        message?: string;
+        summary?: { name: string; changes: string[] }[];
         tokenId?: string;
         actorId?: string;
         targetId?: string;

@@ -154,6 +154,7 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::get('/scenes/{scene}/combat/session', [GMCombatController::class, 'index']);
         Route::post('/scenes/{scene}/combat/session', [GMCombatController::class, 'command'])->name('scene.combat.session')->middleware(IdempotentMutation::class);
         Route::get('/scenes/{scene}/combat/history', [CombatController::class, 'history']);
+        Route::get('/scenes/{scene}/session-log', \App\Http\Controllers\SessionLogController::class);
         foreach (['override', 'prepare', 'add', 'remove', 'initiative', 'sort', 'reorder', 'begin', 'next', 'previous', 'current', 'end'] as $command) {
             Route::post('/scenes/{scene}/combat/'.$command, [CombatController::class, 'combat'])->defaults('command', $command)->name('scene.combat.'.$command)->middleware(IdempotentMutation::class);
         }

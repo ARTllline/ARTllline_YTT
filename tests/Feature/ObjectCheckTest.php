@@ -102,6 +102,8 @@ class ObjectCheckTest extends TestCase
         // Reconnect/resubmit with a new UUID is still once per player.
         $this->postJson($this->base.'/interact', $this->command())->assertOk()->assertJsonPath('check.id', $response->json('check.id'));
         $this->assertDatabaseCount('object_checks', 1);
+        $this->assertDatabaseHas('combat_events', ['scene_id' => $this->scene->id, 'type' => 'check.resolved']);
+        $this->assertSame(1, DB::table('combat_events')->where('type', 'check.resolved')->count());
         $this->assertDatabaseCount('cue_runs', 1);
         $run = CueRun::sole();
         app(CueRunner::class)->advance($this->scene->campaign_id, $run->id, 0);

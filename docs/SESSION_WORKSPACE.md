@@ -114,3 +114,38 @@ automatic preloading. Linked Cue controls use live mode without an authoring edi
 
 Deferred: Director/Cue rewrite, audio redesign, Map Editor, Fog/LOS/Lighting,
 new authoring layers and new session/rules mechanics.
+
+## Session Log · Live Feed
+
+Session has a GM-only compact «Журнал» entry. It starts closed; a new significant
+event briefly shows a one-line recent activity card and an unread count. Opening
+the floating Live Feed clears the count. Escape, outside click and Close dismiss
+it. This surface never changes canvas bounds or camera state. Rows show readable
+outcomes; a click reveals existing roll/result details. Dates, combat/outside-combat
+filters and cursor-based older pages keep long histories usable.
+
+The existing `combat_events` journal now also has scene scope and a nullable
+combat reference. Existing combat history is backfilled to its owning scene;
+new out-of-combat results use the same journal inside their authoritative command
+transactions. No alternate rules or outcome calculation was added. Names are
+captured on new records; older records retain the existing token-name fallback.
+The feed spans this scene's combats and runtime activity, not a campaign-wide
+history page. Old out-of-combat receipts are not retrospectively reconstructed.
+
+Covered: resolved abilities (attacks, applied damage/healing, checks and target
+saves in details), GM checks/saves and resolved object interaction checks,
+HP/condition corrections, applied/removed/immune
+conditions, concentration and spell-effect endings, turn/round/combat start/end,
+turn-budget overrides, manual resolutions/notes, lifecycle outcomes, confirmed
+short/long rests, rest dice/completion and stabilization. Only meaningful recorded
+types are queried; movement, selection, camera and menu activity are excluded.
+
+The read endpoint authorizes scene update (GM) before returning any private data.
+Player UI and broadcast payloads are unchanged; a Player-safe feed is deferred.
+Reload restores saved records and resets open/unread presentation. Scene revisions
+refresh the feed; focus and a six-second fallback reconcile late-committed receipts
+and reconnect gaps with ascending cursor catch-up and ID deduplication.
+
+Deferred: Player-safe log, cross-scene/session-wide aggregation, imported historical
+out-of-combat receipts, arbitrary free-form GM notes, rolls/interactions without
+reliable persisted outcomes in this journal, and richer automatic rules resolution.

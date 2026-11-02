@@ -50,6 +50,14 @@ class AdventuringActions
             }
             $author = $scene->campaign->members()->wherePivot('role', 'gm')->orderBy('users.id')->firstOrFail();
             $result = $this->change($user, $author, $scene, $d);
+            // Rest receipts already contain authoritative recovery and dice outcomes.
+            if (in_array($d['action'], ['short-rest', 'long-rest', 'spend-die', 'finish-rest', 'stabilize'])) {
+                app(CombatLog::class)->write(app(TurnBudget::class)->active($scene->id), 'runtime.'.$d['action'], [
+                    'tokenId' => isset($d['tokenId']) ? (string) $d['tokenId'] : null,
+                    'message' => $result['message'] ?? null, 'summary' => $result['summary'] ?? [],
+                    'roll' => $result['roll'] ?? null,
+                ], $scene->id);
+            }
             $result += ['charactersChanged' => true, '_combatChanged' => true];
             // Publish only touched creatures; ScenePublisher applies viewer redaction.
             $result['tokens'] = $scene->tokens()->whereIn('id', $result['_tokenIds'] ?? [])->get()->map(fn ($t) => app(SceneSnapshotBuilder::class)->token($t, true, $user))->all();

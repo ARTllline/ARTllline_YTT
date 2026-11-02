@@ -34,7 +34,11 @@ class CombatActions
                 $type = $previousStatus === 'preparing' && $combat->status === 'active' ? 'combat.started'
                     : ($previousStatus === 'active' && $combat->round > $previousRound ? 'combat.round' : null);
                 if ($type) {
+                    app(CombatLog::class)->write($combat, $type, ['round' => $combat->round]);
                     app(TriggerEvents::class)->event($scene, $type, 'scene:'.$scene->id.':revision:'.($scene->revision + 1).':combat:'.$combat->id, ['round' => $combat->round]);
+                }
+                if ($command === 'end') {
+                    app(CombatLog::class)->write($combat, 'combat.ended', ['round' => $combat->round]);
                 }
             }
 

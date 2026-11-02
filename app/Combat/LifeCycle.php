@@ -80,7 +80,7 @@ class LifeCycle
                 }
             }
             $combat = app(TurnBudget::class)->active($t->scene_id);
-            app(CombatLog::class)->write($combat, 'lifecycle.changed', ['tokenId' => (string) $t->id, 'name' => $t->name, 'before' => $before, 'after' => $state, 'cause' => $cause] + $detail);
+            app(CombatLog::class)->write($combat, 'lifecycle.changed', ['tokenId' => (string) $t->id, 'name' => $t->name, 'before' => $before, 'after' => $state, 'cause' => $cause] + $detail, $t->scene_id);
             $sourceScene = $s instanceof Token ? $s->scene_id : $owner->campaign->active_scene_id;
             if ($owner->kind !== 'player_character' && $t->scene_id === $sourceScene) {
                 app(NpcConsequences::class)->transition($user, $t, $before, $state, $cause);

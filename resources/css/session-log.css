@@ -1,0 +1,187 @@
+.session-log {
+    position: relative;
+    flex-shrink: 0;
+}
+.session-log-entry {
+    gap: 7px;
+}
+.session-log-unread {
+    border-radius: 10px;
+    background: #b99550;
+    color: #161a20;
+    padding: 1px 5px;
+    font-size: 10px;
+}
+.session-log-recent {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 360px;
+    max-width: 65vw;
+    padding: 10px 12px !important;
+    border: 1px solid #4b493a;
+    border-radius: 10px;
+    background: #1b2028f5;
+    box-shadow: 0 8px 28px #0006;
+    color: #dad4bf;
+    font-size: 11px;
+    text-align: left;
+}
+.session-log-recent span {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.5;
+}
+.session-log-recent svg {
+    flex-shrink: 0;
+    color: #c3ac76;
+}
+.session-live-feed {
+    pointer-events: auto;
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    width: min(430px, calc(100vw - 48px));
+    max-height: min(680px, calc(100dvh - 190px));
+    display: flex;
+    flex-direction: column;
+    background: #171d25f7;
+    backdrop-filter: blur(18px);
+    border: 1px solid #49505b;
+    border-radius: 16px;
+    box-shadow: 0 18px 65px #0008;
+    overflow: hidden;
+    color: #dce0e5;
+    z-index: 45;
+    text-align: left;
+}
+.session-live-feed header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 18px 12px;
+}
+.session-live-feed .eyebrow {
+    font-size: 9px;
+    color: #9d9278;
+    letter-spacing: 0.12em;
+}
+.session-live-feed h2 {
+    margin: 5px 0 0;
+    font-size: 20px;
+    font-weight: 550;
+    letter-spacing: -0.03em;
+}
+.session-live-feed nav {
+    display: flex;
+    gap: 5px;
+    padding: 0 18px 12px;
+    border-bottom: 1px solid #ffffff0d;
+}
+.session-live-feed nav button {
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: 7px;
+}
+.session-live-feed nav button[aria-pressed='true'] {
+    background: #c2a36820;
+    color: #dfc594;
+    border-color: #9b835a66;
+}
+.session-live-feed nav button:last-child {
+    margin-left: auto;
+}
+.session-feed-list {
+    overflow-y: auto;
+    min-height: 100px;
+    padding: 0 16px 16px;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+.session-feed-date {
+    color: #7f8b9a;
+    font-size: 10px;
+    padding: 16px 0 9px;
+}
+.session-feed-event {
+    border-left: 2px solid #637e88;
+    padding: 0 0 0 12px;
+    margin: 0 0 10px;
+}
+.session-feed-event.in-combat {
+    border-left-color: #b79a63;
+}
+.session-feed-event summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 8px 4px;
+    border-radius: 6px;
+}
+.session-feed-event summary::-webkit-details-marker {
+    display: none;
+}
+.session-feed-event summary:hover {
+    background: #ffffff05;
+}
+.session-feed-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: #8996a5;
+}
+.session-feed-event.in-combat .session-feed-meta > span {
+    color: #bda374;
+}
+.session-feed-event p {
+    font-size: 12px;
+    line-height: 1.65;
+    margin: 5px 0 0;
+    overflow-wrap: anywhere;
+}
+.session-feed-detail {
+    padding: 8px;
+    background: #0d121959;
+    border-radius: 8px;
+    font-size: 11px;
+}
+.session-feed-detail small {
+    display: block;
+    margin-top: 10px;
+    color: #80909f;
+    font-size: 9px;
+}
+.session-live-feed footer {
+    padding: 12px 18px;
+    border-top: 1px solid #ffffff0c;
+    font-size: 9px;
+    color: #8d98a5;
+}
+.session-feed-empty {
+    font-size: 12px;
+    color: #929eae;
+    padding: 24px 6px;
+    line-height: 1.7;
+}
+.session-feed-older {
+    width: 100%;
+    margin-top: 10px;
+}
+@media (max-width: 720px) {
+    .session-live-feed {
+        position: fixed;
+        left: 16px;
+        right: 16px;
+        top: 120px;
+        width: auto;
+        max-height: calc(100dvh - 155px);
+    }
+    .session-log-recent {
+        left: auto;
+        right: 0;
+    }
+}

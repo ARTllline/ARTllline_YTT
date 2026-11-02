@@ -1,4 +1,5 @@
 import { SessionRuntimeControls } from './session/SessionRuntimeControls';
+import { SessionLog } from './session/SessionLog';
 import { LootOverlay } from '../rpg/loot';
 import { CreationHub } from './creation/CreationHub';
 import { SessionAddMenu } from './session/SessionAddMenu';
@@ -886,6 +887,7 @@ export function Workspace({
                                 }}
                             />
                         )}
+                        {sessionMode && scene.id && <SessionLog key={scene.id} scene={scene} />}
                         {scene.id && (
                             <button
                                 className="creation-launch primary-button"

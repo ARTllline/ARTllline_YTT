@@ -29,19 +29,72 @@ export function logMatches(type: string, filter: LogFilter) {
 export function eventSummary(e: CombatEvent, scene: Scene) {
     const d = e.data;
     const token = scene.tokens.find((t) => t.id === String(d.tokenId ?? d.targetId ?? d.actorId));
-    const name = d.name ?? token?.name ?? 'Участник';
+    const name =
+        d.name ??
+        d.names?.[String(d.tokenId ?? d.targetId ?? d.actorId)] ??
+        token?.name ??
+        'Участник';
+    if (e.type.startsWith('runtime.')) {
+        const labels: Record<string, string> = {
+            'runtime.short-rest': 'Короткий отдых подтверждён',
+            'runtime.long-rest': 'Длительный отдых завершён',
+        };
+        return labels[e.type]
+            ? `${labels[e.type]} · ${d.summary?.map((s) => s.name).join(', ')}`
+            : (d.message ?? `${name} · отдых`);
+    }
+    if (e.type === 'combat.started') return 'Бой начался · раунд 1';
+    if (e.type === 'combat.round') return `Начало раунда ${d.round}`;
+    if (e.type === 'combat.ended') return `Бой завершён · раунд ${d.round}`;
     if (e.type === 'ability.resolved') {
         const r = d.result,
             roll = r?.roll;
+        const targetId = r?.target?.kind === 'token' ? r.target.id : null;
         const target =
             r?.outcomes?.length === 1
-                ? (scene.tokens.find((t) => t.id === r.outcomes![0].tokenId)?.name ??
+                ? (d.names?.[r.outcomes[0].tokenId] ??
+                  scene.tokens.find((t) => t.id === r.outcomes![0].tokenId)?.name ??
                   'удалённая цель')
                 : r?.outcomes?.length
                   ? `целей: ${r.outcomes.length}`
-                  : '';
+                  : targetId
+                    ? (d.names?.[targetId] ??
+                      scene.tokens.find((t) => t.id === targetId)?.name ??
+                      'цель')
+                    : '';
         const damage = r?.outcomes?.reduce((n, o) => n + o.damage, 0) ?? 0;
-        return `${d.actorName}${target ? ' → ' + target : ''} · ${d.abilityName}${roll ? ` — ${roll.total}${roll.dc !== undefined ? ` vs ${r?.category === 'attack' ? 'AC' : 'Сл'} ${roll.dc}` : ''} · ${r?.success ? (r.category === 'attack' ? 'попадание' : 'успех') : r?.category === 'attack' ? 'промах' : 'провал'}` : ''}${damage ? ` · урон ${damage}` : ''}${r?.healing ? ` · лечение +${r.healing}` : ''}`;
+        const types: Record<string, string> = {
+            slashing: 'рубящего',
+            piercing: 'колющего',
+            bludgeoning: 'дробящего',
+            fire: 'огнём',
+            cold: 'холодом',
+            lightning: 'молнией',
+            thunder: 'звуком',
+            acid: 'кислотой',
+            poison: 'ядом',
+            psychic: 'психического',
+            necrotic: 'некротического',
+            radiant: 'излучением',
+            force: 'силовым полем',
+        };
+        const components =
+            r?.outcomes?.length === 1 ? r.outcomes[0].damageDetail?.components : undefined;
+        const damageText = components?.length
+            ? components
+                  .map(
+                      (c) =>
+                          `${c.amount ?? c.total ?? '?'} ${types[c.type ?? ''] ?? c.type ?? 'урона'}`,
+                  )
+                  .join(' + ')
+            : damage
+              ? `урон ${damage}`
+              : '';
+        const outcome =
+            roll?.dc !== undefined && r?.success !== undefined
+                ? ` · ${r.success ? (r.category === 'attack' ? 'попадание' : 'успех') : r.category === 'attack' ? 'промах' : 'провал'}`
+                : '';
+        return `${d.actorName ?? r?.actorName ?? name}${target ? ' → ' + target : ''} · ${d.abilityName ?? r?.abilityName}${roll ? ` — ${roll.total}${roll.dc !== undefined ? ` против ${r?.category === 'attack' ? 'AC' : 'Сл'} ${roll.dc}` : ''}${outcome}` : ''}${damageText ? ` · ${damageText}` : ''}${r?.healing ? ` · лечение +${r.healing}` : ''}`;
     }
     if (e.type === 'lifecycle.changed') {
         const labels: Record<string, string> = {
@@ -64,11 +117,21 @@ export function eventSummary(e: CombatEvent, scene: Scene) {
     if (e.type === 'budget.override') return `ГМ · ресурсы хода · ${name}`;
     if (e.type === 'manual.resolved')
         return `${d.abilityName} · ${d.status === 'dismissed' ? 'закрыто без эффекта' : 'ручной шаг завершён'}`;
-    if (e.type === 'gm.check')
-        return `ГМ · ${d.stat?.toUpperCase()} · целей: ${d.outcomes?.length}`;
+    if (e.type === 'gm.check' || e.type === 'check.resolved')
+        return `${d.abilityName ? `${d.abilityName} · ` : ''}${d.stat?.startsWith('save_') ? 'Спасбросок' : 'Проверка'} ${d.stat?.replace('save_', '').toUpperCase()} · ${d.outcomes?.map((o) => `${o.name}: ${o.roll.total}${o.roll.dc !== undefined ? ` против Сл ${o.roll.dc}` : ''}${o.roll.success !== undefined ? ` · ${o.roll.success ? 'успех' : 'провал'}` : ''}`).join(' · ')}`;
     if (e.type === 'concentration.save')
         return `${name} · концентрация ${d.spell}: ${d.roll?.success ? 'сохранена' : 'прервана'}`;
-    if (e.type === 'spell.effect.ended') return `${d.spell} · эффект завершён (${d.cause})`;
+    if (e.type === 'spell.effect.ended') {
+        const reasons: Record<string, string> = {
+            duration: 'срок истёк',
+            concentration: 'концентрация прервана',
+            damage_save_failed: 'провален спасбросок концентрации',
+            long_rest_sleep: 'длительный отдых',
+            combat_end: 'бой завершён',
+            gm: 'решение ГМ',
+        };
+        return `${d.spell} · эффект завершён${reasons[d.cause ?? ''] ? ` · ${reasons[d.cause!]}` : ''}`;
+    }
     if (e.type.startsWith('condition.'))
         return `${name} · ${conditionLabel({ key: d.key ?? null, label: d.key ?? '' })} · ${e.type === 'condition.applied' ? 'применено' : e.type === 'condition.immune' ? 'иммунитет' : d.reason === 'duration' ? 'срок истёк' : 'снято'}`;
     return `${d.abilityName ?? name} · ${d.roll?.total ?? d.save?.total ?? ''}`;

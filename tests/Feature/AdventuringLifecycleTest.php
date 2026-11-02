@@ -293,6 +293,7 @@ class AdventuringLifecycleTest extends TestCase
         $this->assertSame(4, $c->spellcasting['slots'][1]['current']);
         $this->assertTrue($this->token->conditions()->where('key', 'poisoned')->exists());
         $this->assertDatabaseCount('lifecycle_commands', 1);
+        $this->assertSame(1, DB::table('combat_events')->where('scene_id', $this->scene->id)->where('type', 'runtime.long-rest')->count());
     }
 
     public function test_recovery_policies_are_explicit_and_short_rest_does_not_restore_normal_slots(): void

@@ -22,7 +22,7 @@ class GMSessionChecks
             }
             $outcomes[] = ['tokenId' => (string) $token->id, 'name' => $token->name, 'roll' => $roll, 'provenance' => $p];
         }
-        app(CombatLog::class)->write(app(TurnBudget::class)->active($scene->id), 'gm.check', ['stat' => $d['stat'], 'outcomes' => $outcomes, 'visibility' => $d['visibility'], 'dcVisible' => $d['dcVisible'] ?? false]);
+        app(CombatLog::class)->write(app(TurnBudget::class)->active($scene->id), 'gm.check', ['stat' => $d['stat'], 'outcomes' => $outcomes, 'visibility' => $d['visibility'], 'dcVisible' => $d['dcVisible'] ?? false], $scene->id);
         $feedback = $d['visibility'] === 'public' ? array_map(fn ($o) => ['tokenId' => $o['tokenId'], 'tone' => 'heal', 'text' => strtoupper($d['stat']).': '.$o['roll']['total'].(($d['dcVisible'] ?? false) && isset($d['dc']) ? ' / Сл '.$d['dc'] : '')], $outcomes) : [];
 
         return ['outcomes' => $outcomes, 'gameplayFeedbacks' => $feedback];

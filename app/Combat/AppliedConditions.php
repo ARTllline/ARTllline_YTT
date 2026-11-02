@@ -20,7 +20,7 @@ class AppliedConditions
         abort_unless($definition, 422, 'Состояние недоступно в локальном компендии.');
         $combat = app(TurnBudget::class)->active($target->scene_id);
         if (in_array($key, app(CombatStats::class)->profile($target)['condition_immunities'] ?? [], true)) {
-            app(CombatLog::class)->write($combat, 'condition.immune', ['targetId' => (string) $target->id, 'key' => $key]);
+            app(CombatLog::class)->write($combat, 'condition.immune', ['targetId' => (string) $target->id, 'key' => $key], $target->scene_id);
 
             return null;
         }
@@ -46,7 +46,7 @@ class AppliedConditions
         if ($key === 'unconscious' && ! $target->conditions()->where('key', 'prone')->exists()) {
             $this->apply($author, $target, ['key' => 'prone'], $source, null, $visibility);
         }
-        app(CombatLog::class)->write($combat, 'condition.applied', ['targetId' => (string) $target->id, 'conditionId' => (string) $condition->id, 'key' => $key, 'duration' => $mode, 'remainingRounds' => $condition->remaining_rounds, 'sourceTokenId' => $source?->id, 'sourceAbilityId' => $ability]);
+        app(CombatLog::class)->write($combat, 'condition.applied', ['targetId' => (string) $target->id, 'conditionId' => (string) $condition->id, 'key' => $key, 'duration' => $mode, 'remainingRounds' => $condition->remaining_rounds, 'sourceTokenId' => $source?->id, 'sourceAbilityId' => $ability], $target->scene_id);
 
         return $condition;
     }
@@ -63,7 +63,7 @@ class AppliedConditions
             }
         }
         $combat = $condition->combat_id ? Combat::find($condition->combat_id) : null;
-        app(CombatLog::class)->write($combat, 'condition.removed', ['targetId' => (string) $condition->token_id, 'conditionId' => (string) $condition->id, 'key' => $condition->key, 'reason' => $reason]);
+        app(CombatLog::class)->write($combat, 'condition.removed', ['targetId' => (string) $condition->token_id, 'conditionId' => (string) $condition->id, 'key' => $condition->key, 'reason' => $reason], Token::find($condition->token_id)?->scene_id);
         $condition->delete();
     }
 

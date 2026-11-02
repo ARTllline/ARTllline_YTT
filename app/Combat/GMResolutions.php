@@ -29,6 +29,6 @@ class GMResolutions
         $result['manualResolution'] = $status === 'dismissed' ? 'dismissed_by_gm' : 'resolved_by_gm';
         $result['resolution'] = ['status' => $status, 'note' => $note, 'userId' => $user->id, 'resolvedAt' => now()->toIso8601String()];
         $cast->update(['result' => $result]);
-        app(CombatLog::class)->write(app(TurnBudget::class)->active($scene->id), 'manual.resolved', ['executionId' => $cast->id, 'abilityName' => $result['abilityName'], 'status' => $status, 'note' => $note, 'userId' => $user->id]);
+        app(CombatLog::class)->write(app(TurnBudget::class)->active($scene->id), 'manual.resolved', ['executionId' => $cast->id, 'abilityName' => $result['abilityName'], 'status' => $status, 'note' => $note, 'userId' => $user->id], $scene->id);
     }
 }
