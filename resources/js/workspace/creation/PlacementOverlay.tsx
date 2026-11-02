@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, type RefObject } from 'react';
 import { MousePointer2, X } from 'lucide-react';
 import type { TabletopRenderer } from '../../tabletop/renderer/TabletopRenderer';
 import type { Point } from '../../tabletop/types/scene';
-import type { Placement } from './model';
+import { repeatsPlacement, type Placement } from './model';
 
 export function PlacementOverlay({
     item,
@@ -23,6 +23,16 @@ export function PlacementOverlay({
     useLayoutEffect(() => {
         latest.current = { busy, onPlace, onCancel };
     }, [busy, onPlace, onCancel]);
+    const asset =
+        item.type === 'token' ? item.draft.asset : item.type === 'prop' ? item.asset : undefined;
+    const url = item.type === 'libraryActor' ? item.previewUrl : asset?.url;
+    useLayoutEffect(() => {
+        const current = renderer.current;
+        current?.beginPlacement(item.name, url, item.type === 'prop' ? item.asset : undefined);
+        return () => {
+            current?.endPlacement();
+        };
+    }, [renderer, item, url]);
     useLayoutEffect(() => {
         const host = marker.current!.parentElement!,
             canvas = host.querySelector('canvas');
@@ -67,6 +77,7 @@ export function PlacementOverlay({
         };
         const hide = () => {
             if (marker.current) marker.current.hidden = true;
+            renderer.current?.hidePlacement();
         };
         const key = (e: KeyboardEvent) => {
             if ((e.target as HTMLElement).closest('input,textarea,select,dialog')) return;
@@ -112,8 +123,6 @@ export function PlacementOverlay({
             window.removeEventListener('blur', cancel);
         };
     }, [renderer]);
-    const asset =
-        item.type === 'token' ? item.draft.asset : item.type === 'prop' ? item.asset : undefined;
     return (
         <>
             <div className="creation-placement-bar" role="status">
@@ -121,7 +130,7 @@ export function PlacementOverlay({
                 <div>
                     <strong>{busy ? 'Размещаем…' : item.name}</strong>
                     <small>
-                        {item.type === 'prop'
+                        {repeatsPlacement(item)
                             ? 'Клик — копия · Esc — закончить'
                             : 'Клик — разместить · Enter — в центре · Esc — отменить'}
                     </small>
@@ -140,7 +149,6 @@ export function PlacementOverlay({
                 className={`creation-ghost ${item.type === 'token' ? `disposition-${item.draft.disposition}` : ''}`}
                 aria-hidden="true"
             >
-                {asset ? <img src={asset.thumbnailUrl} alt="" /> : <MousePointer2 size={27} />}
                 <span>{item.name}</span>
             </div>
         </>

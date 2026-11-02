@@ -60,6 +60,21 @@ class ReusableContentTest extends TestCase
         return $this->postJson('/api/campaigns/'.$this->campaign->id.'/templates', ['kind' => $kind, 'name' => 'Reusable group', 'sceneId' => (string) $this->scene->id, 'tokenIds' => $tokens, 'propIds' => $props])->assertOk()->json('template');
     }
 
+    public function test_runtime_prop_presets_are_atomic_persistent_filtered_and_retry_safe(): void
+    {
+        $payload = ['action' => 'create', 'assetId' => $this->asset, 'purpose' => 'container', 'x' => 400, 'y' => 300, 'clientMutationId' => (string) Str::uuid()];
+        $id = $this->postJson($this->base.'/props', $payload)->assertOk()->assertJsonPath('props.0.loot.kind', 'container')->assertJsonPath('props.0.loot.empty', true)->json('props.0.id');
+        $this->postJson($this->base.'/props', $payload)->assertOk()->assertHeader('Idempotent-Replay', 'true');
+        $this->assertDatabaseCount('loot_containers', 1);
+        $this->assertDatabaseCount('scene_props', 1);
+        $interaction = $this->postJson($this->base.'/props', array_merge($payload, ['purpose' => 'interaction', 'clientMutationId' => (string) Str::uuid()]))->assertOk()->assertJsonPath('props.0.interactions.0.result_type', 'nothing')->json('props.0.id');
+        $this->actingAs($this->player)->getJson($this->base.'/snapshot')->assertJsonCount(2, 'props')->assertJsonPath('props.1.interactions.0.label', 'Осмотреть')->assertJsonMissingPath('props.1.interactions.0.result_type');
+        $this->postJson($this->base.'/props', array_merge($payload, ['clientMutationId' => (string) Str::uuid()]))->assertForbidden();
+        $this->actingAs($this->gm)->postJson($this->base.'/props', ['action' => 'update', 'id' => $interaction, 'patch' => ['is_hidden' => true]])->assertOk();
+        $this->actingAs($this->player)->getJson($this->base.'/snapshot')->assertJsonCount(1, 'props')->assertJsonPath('props.0.id', $id);
+        Event::assertDispatched(TabletopEvent::class, fn ($event) => $event->envelope['type'] === 'objects.changed');
+    }
+
     public function test_props_persist_and_hidden_transitions_filter_events_and_media(): void
     {
         $prop = $this->prop();

@@ -16,18 +16,25 @@ export interface WorkspaceState {
     left: LeftPanel | null;
     right: RightPanel;
     dismissedSelection: string | null;
+    expanded: boolean;
+    pinned: boolean;
 }
 export type WorkspaceAction =
     | { type: 'mode'; mode: WorkspaceMode }
     | { type: 'left'; panel: LeftPanel | null }
     | { type: 'right'; panel: RightPanel; compact?: boolean; force?: boolean }
     | { type: 'close-right'; selection: string }
-    | { type: 'selection'; key: string };
+    | { type: 'selection'; key: string }
+    | { type: 'expand'; value: boolean }
+    | { type: 'pin' };
+// Surface preferences are local presentation state, never scene data.
 export const initialWorkspace: WorkspaceState = {
     mode: 'table',
     left: null,
     right: 'context',
     dismissedSelection: null,
+    expanded: false,
+    pinned: false,
 };
 export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
     switch (action.type) {
@@ -38,39 +45,53 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
                 left:
                     action.mode === 'prepare'
                         ? 'scenes'
-                        : action.mode === 'session'
-                          ? 'session'
-                          : action.mode === 'library'
-                            ? 'assets'
-                            : null,
+                        : action.mode === 'library'
+                          ? 'assets'
+                          : null,
             };
         case 'left':
-            return { ...state, left: action.panel, right: 'context', dismissedSelection: null };
+            return {
+                ...state,
+                left: action.panel,
+                right: 'context',
+                dismissedSelection: null,
+                expanded: false,
+                pinned: false,
+            };
         case 'right':
             return {
                 ...state,
                 right: state.right === action.panel && !action.force ? 'context' : action.panel,
-                left: state.mode === 'session' && !action.compact ? state.left : null,
+                left: null,
                 dismissedSelection: null,
+                expanded: state.mode === 'session' && action.panel === 'context',
+                pinned: false,
             };
         case 'close-right':
             return {
                 ...state,
                 right: 'context',
-                dismissedSelection: state.right === 'context' ? action.selection : null,
+                dismissedSelection:
+                    state.right === 'context' && !state.expanded ? action.selection : null,
+                expanded: false,
+                pinned: false,
             };
         case 'selection':
             return {
                 ...state,
                 dismissedSelection: null,
-                left:
-                    action.key && state.mode !== 'session' && state.right === 'context'
-                        ? null
-                        : state.left,
+                expanded: state.pinned ? state.expanded : false,
+                left: action.key && state.right === 'context' ? null : state.left,
             };
+        case 'expand':
+            return { ...state, expanded: action.value, pinned: action.value && state.pinned };
+        case 'pin':
+            return { ...state, pinned: !state.pinned, expanded: true };
     }
 }
 export function contextualPanel(state: WorkspaceState, selection: string): RightPanel | null {
+    if (state.left) return null;
     if (state.right !== 'context') return state.right;
+    if (state.pinned) return 'context';
     return selection && state.dismissedSelection !== selection ? 'context' : null;
 }

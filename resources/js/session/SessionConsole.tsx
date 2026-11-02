@@ -167,7 +167,8 @@ export function SessionConsole({
         await notesQueue.flush();
         await queue.flush();
         await api.activate(campaign.id, id);
-        if (scene.id !== id) onNavigate(`/campaigns/${campaign.id}/scenes/${id}`);
+        if (scene.id !== id)
+            onNavigate(`/campaigns/${campaign.id}/scenes/${id}${liveMode ? '?mode=session' : ''}`);
     };
     const perform = async (item: SessionItem) => {
         if (!item.referenceId || item.missing) return;
@@ -210,13 +211,16 @@ export function SessionConsole({
               : false;
     const target = session ? nextScene(session)?.referenceId : null;
     return (
-        <aside className="session-console panel" aria-label="Пульт сессии">
+        <aside
+            className={`session-console panel ${liveMode ? 'session-runtime-plan' : ''}`}
+            aria-label={liveMode ? 'План сессии' : 'Пульт сессии'}
+        >
             <header>
                 <div>
                     <span className="eyebrow">{liveMode ? 'РЕЖИМ СЕССИИ' : 'ПОДГОТОВКА'}</span>
                     <strong>
                         <ListOrdered size={17} />
-                        {liveMode ? 'За игровым столом' : 'Сессии'}
+                        {liveMode ? 'План сессии' : 'Сессии'}
                     </strong>
                 </div>
                 <button
@@ -249,26 +253,39 @@ export function SessionConsole({
                         </option>
                     ))}
                 </select>
-                <button
-                    className="icon-button"
-                    aria-label="Создать сессию"
-                    onClick={() => setCreate(true)}
-                >
-                    <Plus size={17} />
-                </button>
+                {!liveMode && (
+                    <button
+                        className="icon-button"
+                        aria-label="Создать сессию"
+                        onClick={() => setCreate(true)}
+                    >
+                        <Plus size={17} />
+                    </button>
+                )}
             </div>
             {!session && (
                 <p className="session-empty">
                     {selected
                         ? 'Открываем план…'
-                        : 'Соберите сцены и важные моменты в один план. Во время игры порядок остаётся свободным.'}
+                        : liveMode
+                          ? 'Плана пока нет. Подготовьте его в режиме Подготовка; live-инструменты доступны рядом с картой.'
+                          : 'Соберите сцены и важные моменты в один план. Во время игры порядок остаётся свободным.'}
                 </p>
             )}
             {session && (
                 <>
                     <div className="session-controls">
                         <h2>{session.name}</h2>
-                        {!completed && (
+                        {liveMode && (
+                            <span className="hint">
+                                {session.status === 'active'
+                                    ? 'Сессия идёт'
+                                    : session.status === 'planned'
+                                      ? 'План готов к запуску'
+                                      : ''}
+                            </span>
+                        )}
+                        {!liveMode && !completed && (
                             <button
                                 disabled={busy}
                                 className="secondary-button"
@@ -293,7 +310,7 @@ export function SessionConsole({
                                 Начать сессию
                             </button>
                         )}
-                        {session.status === 'active' && (
+                        {!liveMode && session.status === 'active' && (
                             <button className="secondary-button" onClick={() => onMode(!liveMode)}>
                                 {liveMode ? 'Вернуться к редактору' : 'Режим сессии'}
                             </button>
@@ -315,7 +332,8 @@ export function SessionConsole({
                             {current.notes && <p>{current.notes}</p>}
                             {current.missing ? (
                                 <p className="form-error">
-                                    Исходный материал удалён. Измените план или пропустите пункт.
+                                    Исходный материал удалён. Пропустите пункт; изменить план можно
+                                    в Подготовке.
                                 </p>
                             ) : (
                                 actionLabel[current.type] &&
@@ -348,7 +366,11 @@ export function SessionConsole({
                                 Предыдущий
                             </button>
                             <button
-                                disabled={busy || position >= session.items.length - 1}
+                                disabled={
+                                    busy ||
+                                    !session.items.length ||
+                                    position >= session.items.length - 1
+                                }
                                 onClick={() => focus(session.items[position + 1])}
                             >
                                 Следующий
@@ -365,6 +387,11 @@ export function SessionConsole({
                         </div>
                     )}
                     <p className="session-focus-hint">Переход меняет только фокус плана.</p>
+                    {!session.items.length && (
+                        <p className="session-empty">
+                            В плане пока нет шагов. Добавьте их в Подготовке.
+                        </p>
+                    )}
                     <ol className="session-run-list">
                         {session.items.map((item, index) => {
                             const BeatIcon = {
@@ -430,7 +457,7 @@ export function SessionConsole({
                             }}
                         />
                     </details>
-                    {!completed && (
+                    {!liveMode && !completed && (
                         <label className="check-row session-auto">
                             <input
                                 type="checkbox"
@@ -447,6 +474,7 @@ export function SessionConsole({
                         </label>
                     )}
                     <PreloadPanel
+                        runtime={liveMode}
                         campaign={campaign}
                         members={members}
                         target={session.autoPreload && !completed ? target : null}
@@ -456,19 +484,25 @@ export function SessionConsole({
                     <div className="session-ending">
                         {session.status === 'active' ? (
                             <button onClick={() => setEnding(true)}>Завершить сессию</button>
-                        ) : (
+                        ) : !liveMode ? (
                             <button onClick={() => setDeleting(true)}>Удалить план</button>
-                        )}
+                        ) : null}
                     </div>
                 </>
             )}
-            <nav className="session-quick" aria-label="Быстрый доступ">
-                <button onClick={() => setQuick('scene')}>Сцены</button>
-                <button onClick={() => setQuick('events')}>События</button>
-                <button onClick={() => setQuick('handout')}>Материалы</button>
-                <button onClick={() => setQuick('encounter')}>Столкновения</button>
-            </nav>
-            <p className="session-focus-hint">Бой, звук и события — в пульте справа от сцены.</p>
+            {!liveMode && (
+                <nav className="session-quick" aria-label="Быстрый доступ">
+                    <button onClick={() => setQuick('scene')}>Сцены</button>
+                    <button onClick={() => setQuick('events')}>События</button>
+                    <button onClick={() => setQuick('handout')}>Материалы</button>
+                    <button onClick={() => setQuick('encounter')}>Столкновения</button>
+                </nav>
+            )}
+            {!liveMode && (
+                <p className="session-focus-hint">
+                    Бой, звук и события — в пульте справа от сцены.
+                </p>
+            )}
             {(error || noteState.error) && (
                 <p role="alert" className="session-error">
                     {error || noteState.error}
@@ -524,7 +558,7 @@ export function SessionConsole({
                     submit={async () => {
                         await notesQueue.flush();
                         await command('complete');
-                        onMode(false);
+                        if (!liveMode) onMode(false);
                     }}
                 />
             )}
@@ -559,6 +593,7 @@ export function SessionConsole({
                         scene.id ? (
                             <Suspense fallback={<p>Загрузка событий…</p>}>
                                 <CueLibrary
+                                    live={liveMode}
                                     scene={scene}
                                     active={scene.id === campaign.activeSceneId}
                                 />

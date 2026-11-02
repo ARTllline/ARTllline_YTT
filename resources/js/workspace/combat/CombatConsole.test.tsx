@@ -40,6 +40,19 @@ function fixture(role: 'gm' | 'player' = 'gm') {
     return new SceneStore(s, role);
 }
 afterEach(() => vi.unstubAllGlobals());
+it('keeps the floating session workspace focused on encounter management', () => {
+    const html = renderToStaticMarkup(
+        <CombatPanel store={fixture()} queue={new SaveQueue()} encounterOnly />,
+    );
+    expect(html).toContain('Следующий ход');
+    expect(html).toContain('Убрать');
+    expect(html).toContain('Ручные шаги');
+    expect(html).toContain('initiative-input');
+    expect(html).not.toContain('Установить HP');
+    expect(html).not.toContain('Найти состояние');
+    expect(html).not.toContain('Осмотр');
+    expect(html).not.toContain('Проверка / спасбросок');
+});
 it('makes the current turn, round, HP, AC and primary turn command visible together', () => {
     const html = renderToStaticMarkup(<CombatPanel store={fixture()} queue={new SaveQueue()} />);
     expect(html).toContain('РАУНД 3');

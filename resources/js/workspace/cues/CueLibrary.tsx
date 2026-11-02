@@ -233,14 +233,20 @@ export function CueLibrary({
                 <div className="cue-empty-detail">
                     <Film size={28} />
                     <p>Засада, появление босса или тихое открытие тайны.</p>
-                    <button
-                        className="secondary-button"
-                        onClick={() =>
-                            setEditor({ name: '', description: '', sort_order: 0, steps: [] })
-                        }
-                    >
-                        Создать первое событие
-                    </button>
+                    {live ? (
+                        <p className="hint">
+                            Нет подготовленных событий. Добавьте их в Подготовке.
+                        </p>
+                    ) : (
+                        <button
+                            className="secondary-button"
+                            onClick={() =>
+                                setEditor({ name: '', description: '', sort_order: 0, steps: [] })
+                            }
+                        >
+                            Создать первое событие
+                        </button>
+                    )}
                 </div>
             )}
             {!loaded && <p className="hint">Загрузка событий…</p>}

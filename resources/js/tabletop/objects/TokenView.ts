@@ -97,11 +97,6 @@ export class TokenView extends Container {
             .poly([-3, -r + 6, 0, -r + 1, 3, -r + 6])
             .fill({ color: c, alpha: 0.85 });
         this.facing.rotation = this.portraitImage.rotation;
-        this.nameplate.text = token.name.length > 26 ? `${token.name.slice(0, 24)}…` : token.name;
-        this.captionGroupBackground
-            .clear()
-            .roundRect(-this.nameplate.width / 2 - 7, -3, this.nameplate.width + 14, 22, 5)
-            .fill({ color: 0x11151e, alpha: 0.94 });
         this.health.clear();
         if (token.hp !== undefined && token.maxHp) {
             const w = Math.max(4, r * 1.35),
@@ -127,6 +122,13 @@ export class TokenView extends Container {
         this.drawTurn();
     }
     private drawTurn() {
+        const name = this.model.name;
+        this.nameplate.text = `${name.length > 26 ? `${name.slice(0, 24)}…` : name}${this.activeTurn ? ' · ХОД' : ''}`;
+        this.nameplate.style.fill = this.activeTurn ? 0xf3d49e : 0xeceef4;
+        this.captionGroupBackground
+            .clear()
+            .roundRect(-this.nameplate.width / 2 - 7, -3, this.nameplate.width + 14, 22, 5)
+            .fill({ color: this.activeTurn ? 0x342a1c : 0x11151e, alpha: 0.94 });
         this.turnRing.clear();
         if (this.activeTurn)
             this.turnRing

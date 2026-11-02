@@ -84,10 +84,12 @@ export function TokenCombatControls({
     token,
     store,
     disabled,
+    compact = false,
 }: {
     token: Token;
     store: SceneStore;
     disabled: boolean;
+    compact?: boolean;
 }) {
     const [amount, setAmount] = useState('5');
     const [condition, setCondition] = useState('poisoned');
@@ -177,17 +179,19 @@ export function TokenCombatControls({
                     {t('Apply signed HP change')}{' '}
                 </button>
             </form>
-            <button
-                className="quiet-button"
-                disabled={disabled || !valid || value < 0}
-                title="Установить HP без поглощения временными HP"
-                onClick={() => {
-                    if (valid && value >= 0)
-                        store.tokenCombat(token.id, { action: 'hp-set', value });
-                }}
-            >
-                Установить HP
-            </button>
+            {!compact && (
+                <button
+                    className="quiet-button"
+                    disabled={disabled || !valid || value < 0}
+                    title="Установить HP без поглощения временными HP"
+                    onClick={() => {
+                        if (valid && value >= 0)
+                            store.tokenCombat(token.id, { action: 'hp-set', value });
+                    }}
+                >
+                    Установить HP
+                </button>
+            )}
             <ConditionList token={token} store={store} disabled={disabled} />
             <details className="condition-disclosure">
                 <summary>Добавить состояние</summary>

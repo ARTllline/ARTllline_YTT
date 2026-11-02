@@ -1,8 +1,15 @@
+import { SessionRuntimeControls } from './session/SessionRuntimeControls';
 import { LootOverlay } from '../rpg/loot';
 import { CreationHub } from './creation/CreationHub';
+import { SessionAddMenu } from './session/SessionAddMenu';
 import { PlacementOverlay } from './creation/PlacementOverlay';
 import { SceneCreation } from './creation/SceneCreation';
-import { CREATION_MIME, creationFromAsset, type Placement } from './creation/model';
+import {
+    CREATION_MIME,
+    creationFromAsset,
+    repeatsPlacement,
+    type Placement,
+} from './creation/model';
 import { t } from '../i18n';
 import { currentTokenId } from '../tabletop/types/combat';
 import { RadialMenu } from './radial/RadialMenu';
@@ -56,6 +63,10 @@ import { useSceneLive } from '../realtime/useSceneLive';
 import { ConnectionBadge } from './PlayersPanel';
 import { NavigationRail, LiveDock } from './WorkspaceNavigation';
 import { WorkspaceDock } from './WorkspaceDock';
+import { TokenQuickActions } from './session/TokenQuickActions';
+import { SessionNavigation } from './session/SessionNavigation';
+import { InitiativeTimeline } from './combat/InitiativeTimeline';
+import '../../css/session-shell.css';
 import { PanelGuard } from './ui/PanelGuard';
 import { useWorkspaceSelection } from './useWorkspaceSelection';
 import {
@@ -90,12 +101,13 @@ export function Workspace({
         }
         try {
             return localStorage.getItem(`ytt.session-mode.${initialCampaign.id}`) === 'true'
-                ? { ...initial, mode: 'session' as const, left: 'session' as const }
+                ? { ...initial, mode: 'session' as const }
                 : initial;
         } catch {
             return initial;
         }
     });
+    const [runtimeOpen, setRuntimeOpen] = useState(false);
     const sessionMode = workspace.mode === 'session';
     const sessionOpen = workspace.left === 'session';
     const sessionFlush = useRef<(() => Promise<void>) | null>(null);
@@ -108,6 +120,7 @@ export function Workspace({
             await sessionFlush.current?.();
             leaveSurface('.workspace-body > .workspace-left');
             leaveSurface('.workspace-body > .workspace-dock');
+            setRuntimeOpen(false);
             dispatch({ type: 'mode', mode });
             if (mode === 'session') renderer.current?.setTool('select');
             try {
@@ -167,7 +180,7 @@ export function Workspace({
     const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
     const { scene } = snapshot;
     useEffect(() => {
-        if (scene.combat?.status === 'active' && !panelGuard.current) {
+        if (!sessionMode && scene.combat?.status === 'active' && !panelGuard.current) {
             dispatch({
                 type: 'right',
                 panel: 'combat',
@@ -175,7 +188,7 @@ export function Workspace({
                 compact: window.innerWidth <= 1100,
             });
         }
-    }, [scene.combat?.id, scene.combat?.status]);
+    }, [scene.combat?.id, scene.combat?.status, sessionMode]);
     const selectionKey = useWorkspaceSelection(store);
     const [hubOpen, setHubOpen] = useState(false);
     const [placement, setPlacement] = useState<Placement | null>(null);
@@ -183,6 +196,8 @@ export function Workspace({
         placement || (workspace.left && !sessionMode)
             ? null
             : contextualPanel(workspace, selectionKey);
+    const selectedToken = scene.tokens.find((token) => token.id === snapshot.selectedIds[0]);
+    const compactContext = sessionMode && rightPanel === 'context' && !workspace.expanded;
     const openRight = (panel: RightPanel) =>
         void run(async () => {
             if (panelGuard.current) throw new Error(panelGuard.current);
@@ -368,13 +383,19 @@ export function Workspace({
                 );
                 store.addToken(result.token!, result.revision);
                 store.accept(result, true);
+                store.select(result.token!.id);
             } else if (item.type === 'token') {
                 const result = await api.createToken(scene.id!, at, item.draft.asset, item.draft);
                 store.addToken(result.token!, result.revision);
             } else if (item.type === 'prop') {
                 store.objectCommand({
                     endpoint: 'props',
-                    data: { action: 'create', assetId: item.asset.id, ...at },
+                    data: {
+                        action: 'create',
+                        assetId: item.asset.id,
+                        purpose: item.purpose,
+                        ...at,
+                    },
                 });
             } else if (item.type === 'template') placeTemplate(item.template, at);
             else if (item.type === 'note') {
@@ -391,7 +412,7 @@ export function Workspace({
             }
             await queue.flush();
             setPlaced(`${item.name} · на сцене`);
-            if (item.type !== 'prop')
+            if (!repeatsPlacement(item))
                 setPlacement((current) => (current === item ? null : current));
         });
     const [zoom, setZoom] = useState(100);
@@ -412,6 +433,7 @@ export function Workspace({
     }, [queue]);
     const toggleLibrary = () =>
         void run(async () => {
+            setRuntimeOpen(false);
             if (panelGuard.current) throw new Error(panelGuard.current);
             await sessionFlush.current?.();
             dispatch({
@@ -441,7 +463,7 @@ export function Workspace({
     };
     return (
         <div
-            className={`workspace redesigned-workspace mode-${workspace.mode} ${sessionMode ? 'session-mode' : ''}`}
+            className={`workspace redesigned-workspace mode-${workspace.mode} ${sessionMode ? 'session-mode map-first-session' : ''}`}
             onKeyDownCapture={(event) => {
                 if (
                     event.key !== 'Escape' ||
@@ -451,7 +473,7 @@ export function Workspace({
                     )
                 )
                     return;
-                if (rightPanel && workspace.right !== 'context') {
+                if (rightPanel && (sessionMode || workspace.right !== 'context')) {
                     event.stopPropagation();
                     closeRight();
                 } else if (workspace.left) {
@@ -461,6 +483,12 @@ export function Workspace({
             }}
         >
             <header className="topbar">
+                {sessionMode && (
+                    <SessionNavigation
+                        onMode={changeMode}
+                        onSettings={() => openRight('settings')}
+                    />
+                )}
                 <a
                     className="brand"
                     href="/"
@@ -533,15 +561,19 @@ export function Workspace({
                 </div>
             </header>
             <div
-                className={`workspace-body ${workspace.left ? 'has-left' : ''} ${rightPanel ? 'has-right' : ''}`}
+                className={`workspace-body ${workspace.left ? 'has-left' : ''} ${rightPanel ? 'has-right' : ''} ${sessionMode && workspace.pinned && rightPanel && rightPanel !== 'combat' ? 'has-pinned-surface' : ''}`}
             >
-                <NavigationRail
-                    mode={workspace.mode}
-                    onMode={changeMode}
-                    onSettings={() => openRight('settings')}
-                />
+                {!sessionMode && (
+                    <NavigationRail
+                        mode={workspace.mode}
+                        onMode={changeMode}
+                        onSettings={() => openRight('settings')}
+                    />
+                )}
                 {workspace.left && (
-                    <div className="workspace-left">
+                    <div
+                        className={`workspace-left ${sessionMode && sessionOpen ? 'runtime-plan-overlay' : ''}`}
+                    >
                         {sessionOpen && (
                             <Suspense
                                 fallback={
@@ -673,7 +705,25 @@ export function Workspace({
                 >
                     {scene.id && <Tabletop store={store} rendererRef={renderer} onZoom={setZoom} />}
                     <DropMarker />
-                    {scene.id && hubOpen && (
+                    {sessionMode && scene.id && (
+                        <TokenQuickActions
+                            disabled={save.status !== 'saved'}
+                            store={store}
+                            renderer={renderer}
+                            onMore={() => dispatch({ type: 'selection', key: selectionKey })}
+                        />
+                    )}
+                    {scene.id && hubOpen && sessionMode && (
+                        <SessionAddMenu
+                            campaignId={campaign.id}
+                            placedCharacterIds={scene.tokens.flatMap((token) =>
+                                token.characterId ? [token.characterId] : [],
+                            )}
+                            onPlace={armPlacement}
+                            onClose={closeHub}
+                        />
+                    )}
+                    {scene.id && hubOpen && !sessionMode && (
                         <CreationHub
                             campaignId={campaign.id}
                             refresh={templateRefresh}
@@ -720,6 +770,7 @@ export function Workspace({
                     )}
                     {scene.id && (
                         <SelectionControls
+                            runtime={sessionMode}
                             store={store}
                             queue={queue}
                             campaignId={campaign.id}
@@ -779,6 +830,17 @@ export function Workspace({
                         )
                     )}
                     {dropping && <div className="drop-overlay">{dropHint}</div>}
+                    {sessionMode &&
+                        !rightPanel &&
+                        selectionKey &&
+                        workspace.dismissedSelection === selectionKey && (
+                            <button
+                                className="selection-context-reopen"
+                                onClick={() => dispatch({ type: 'selection', key: selectionKey })}
+                            >
+                                Показать контекст выбора
+                            </button>
+                        )}
                     <div className="canvas-topline">
                         <button
                             className="scene-switch"
@@ -793,6 +855,37 @@ export function Workspace({
                             <PanelLeftOpen size={16} />
                             <span>{sessionMode ? 'План сессии' : 'Сцены'}</span>
                         </button>
+                        {sessionMode && (
+                            <SessionRuntimeControls
+                                campaign={campaign}
+                                sceneId={scene.id}
+                                open={runtimeOpen}
+                                onOpen={(value) => {
+                                    if (!value) {
+                                        setRuntimeOpen(false);
+                                        return;
+                                    }
+                                    void run(async () => {
+                                        if (panelGuard.current) throw new Error(panelGuard.current);
+                                        await sessionFlush.current?.();
+                                        dispatch({ type: 'left', panel: null });
+                                        setRuntimeOpen(true);
+                                    });
+                                }}
+                                onPanel={openRight}
+                                onActivate={async (id) => {
+                                    if (panelGuard.current) throw new Error(panelGuard.current);
+                                    await sessionFlush.current?.();
+                                    await queue.flush();
+                                    await api.activate(campaign.id, id);
+                                    setRuntimeOpen(false);
+                                    if (scene.id !== id)
+                                        navigate(
+                                            `/campaigns/${campaign.id}/scenes/${id}?mode=session`,
+                                        );
+                                }}
+                            />
+                        )}
                         {scene.id && (
                             <button
                                 className="creation-launch primary-button"
@@ -855,7 +948,13 @@ export function Workspace({
                             )}
                         </>
                     )}
+                    <InitiativeTimeline
+                        store={store}
+                        renderer={renderer}
+                        onSelect={sessionMode && rightPanel === 'combat' ? closeRight : undefined}
+                    />
                     <LiveDock
+                        compact={sessionMode}
                         panel={rightPanel}
                         currentName={
                             scene.tokens.find((token) => token.id === currentTokenId(scene.combat))
@@ -912,6 +1011,13 @@ export function Workspace({
                 {rightPanel && (
                     <PanelGuard.Provider value={panelGuard}>
                         <WorkspaceDock
+                            session={sessionMode}
+                            compact={compactContext}
+                            expanded={workspace.expanded}
+                            pinned={workspace.pinned}
+                            onExpand={(value) => dispatch({ type: 'expand', value })}
+                            onPin={() => dispatch({ type: 'pin' })}
+                            selectionToken={selectedToken}
                             panel={rightPanel}
                             renderer={renderer}
                             queue={queue}

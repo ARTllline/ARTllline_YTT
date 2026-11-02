@@ -1,0 +1,780 @@
+/* Session surfaces never participate in Pixi's layout, including when pinned.
+   Pin anchors a workspace to the edge; the camera keeps its full stable viewport. */
+.map-first-session.redesigned-workspace .topbar {
+    height: 48px;
+    min-height: 48px;
+    gap: 12px;
+}
+.map-first-session .brand strong,
+.map-first-session .command-launch span,
+.map-first-session .command-launch kbd {
+    display: none;
+}
+.map-first-session .statusbar {
+    min-height: 24px;
+    height: 24px;
+    font-size: 10px;
+}
+.map-first-session .statusbar > span:first-child {
+    display: none;
+}
+.map-first-session .workspace-body > .workspace-left,
+.map-first-session .workspace-body > .workspace-dock {
+    position: absolute;
+    z-index: 36;
+    top: 16px;
+    bottom: auto;
+    height: auto;
+    max-height: calc(100% - 104px);
+    min-width: 0;
+    border: 1px solid #ffffff18;
+    border-radius: 14px;
+    box-shadow: 0 14px 45px #0007;
+    background: #191d25f5;
+    backdrop-filter: blur(16px);
+    overscroll-behavior: contain;
+    resize: none;
+    animation: session-surface-enter 140ms ease-out;
+}
+.map-first-session .workspace-body > .workspace-left {
+    top: 66px;
+    left: 16px;
+    width: min(360px, calc(100% - 32px));
+    height: calc(100% - 150px);
+}
+.map-first-session .workspace-body.has-right .workspace-left {
+    visibility: visible;
+}
+.map-first-session .workspace-body > .session-surface {
+    right: 16px;
+    left: auto;
+    width: min(390px, calc(100% - 32px));
+    transition:
+        width 150ms ease-out,
+        border-radius 150ms ease-out,
+        right 150ms ease-out;
+}
+.map-first-session .workspace-body > .session-surface.is-compact {
+    width: min(304px, calc(100% - 32px));
+    max-height: calc(100% - 150px);
+}
+.map-first-session .workspace-body > .session-surface.is-pinned {
+    right: 0;
+    top: 0;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    border-top: 0;
+    border-bottom: 0;
+    border-right: 0;
+}
+.map-first-session .has-pinned-surface .live-dock,
+.map-first-session .has-pinned-surface .zoom-control {
+    margin-right: min(390px, 45vw);
+}
+.map-first-session .has-pinned-surface .canvas-topline .scene-state {
+    display: none;
+}
+.map-first-session .workspace-left .session-console {
+    background: transparent;
+}
+.map-first-session .session-surface-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    position: sticky;
+    top: 0;
+    background: #20252ef5;
+    border-bottom: 1px solid var(--border-soft);
+    z-index: 2;
+}
+.session-surface-controls button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    padding: 5px;
+    border-radius: 5px;
+}
+.session-surface-controls button[aria-pressed='true'] {
+    color: var(--accent);
+}
+.session-surface-controls button:last-child {
+    margin-left: auto;
+}
+.selection-context {
+    padding: 16px;
+}
+.map-first-session .selection-context-reopen {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 3;
+    padding: 10px 12px;
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--accent);
+    font-size: 12px;
+}
+.selection-context-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.selection-context-heading > div:nth-child(2) {
+    flex: 1;
+    min-width: 0;
+}
+.selection-context-heading h2 {
+    font-size: 16px;
+    line-height: 1.3;
+    margin: 3px 0;
+    overflow-wrap: anywhere;
+}
+.selection-context-heading .eyebrow {
+    font-size: 9px;
+}
+.selection-context-heading > button {
+    flex-shrink: 0;
+    margin-left: auto;
+}
+.context-portrait {
+    width: 38px;
+    height: 42px;
+    flex-shrink: 0;
+    border: 1px solid #ffffff25;
+    border-radius: 8px;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    color: var(--accent);
+    background: #ffffff08;
+}
+.context-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.context-vitals {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 0 12px;
+}
+.context-vitals strong {
+    font-size: 21px;
+    font-variant-numeric: tabular-nums;
+}
+.context-vitals strong > span {
+    font-size: 10px;
+    color: var(--accent);
+}
+.context-vitals small {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 400;
+}
+.context-vitals > span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #c0c8d4;
+}
+.selection-context .hp-actions {
+    gap: 5px;
+}
+.selection-context .hp-actions input {
+    width: 58px;
+    min-width: 0;
+}
+.selection-context .hp-actions button {
+    flex: 1;
+    justify-content: center;
+    padding: 9px 5px;
+    font-size: 11px;
+}
+.selection-context .condition-list:empty {
+    display: none;
+}
+.selection-context .condition-list {
+    max-height: 90px;
+    overflow: auto;
+    margin-top: 10px;
+}
+.selection-context .condition-chip {
+    font-size: 10px;
+}
+.selection-context .condition-disclosure > summary,
+.context-actions > summary {
+    padding: 10px 0;
+    font-size: 12px;
+    color: #bbc5d3;
+    cursor: pointer;
+}
+.context-actions > summary svg {
+    vertical-align: middle;
+    margin-right: 5px;
+}
+.selection-context .npc-actions {
+    max-height: 170px;
+    overflow-y: auto;
+}
+.selection-context .condition-grid {
+    max-height: 180px;
+}
+.selection-context .condition-add {
+    margin-bottom: 10px;
+}
+.context-expand {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 12px 0 0;
+    margin-top: 5px;
+    border-top: 1px solid var(--border-soft);
+    color: var(--accent);
+    font-size: 12px;
+}
+.session-surface.is-expanded .context-expand,
+.session-surface.is-expanded .selection-context-heading > button {
+    display: none;
+}
+.runtime-details-section {
+    border-top: 1px solid var(--border-soft);
+    padding: 0 16px;
+}
+.runtime-details-section > summary {
+    padding: 14px 0;
+    font-size: 12px;
+    color: #bbc5d3;
+    cursor: pointer;
+}
+.empty-pinned-context {
+    padding: 20px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+}
+.runtime-placement {
+    display: grid;
+    gap: 10px;
+    padding-bottom: 16px;
+    font-size: 12px;
+}
+.runtime-placement button {
+    background: var(--surface-raised);
+    padding: 8px;
+    border-radius: 6px;
+}
+.map-first-session .session-surface .panel-heading {
+    padding: 16px;
+}
+.map-first-session .toolbar-wrap {
+    top: 68px;
+    left: 16px;
+}
+.map-first-session .active-tool-label {
+    display: none;
+}
+.map-first-session .tabletop-toolbar {
+    gap: 2px;
+    padding: 4px;
+}
+.map-first-session .tabletop-toolbar i:has(+ i) {
+    display: none;
+}
+.map-first-session .canvas-topline {
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    gap: 8px;
+}
+.map-first-session .creation-launch {
+    font-size: 11px;
+    padding: 9px;
+}
+.map-first-session .scene-switch {
+    display: inline-flex;
+    font-size: 11px;
+    padding: 9px;
+}
+.map-first-session .canvas-topline > .scene-switch:first-child {
+    display: inline-flex;
+    visibility: visible;
+}
+.map-first-session .scene-state {
+    margin-left: auto;
+    font-size: 9px;
+}
+.map-first-session .workspace-body.has-right .scene-state {
+    visibility: hidden;
+}
+.map-first-session .live-dock {
+    bottom: 16px;
+    right: 218px;
+    padding: 3px;
+}
+.map-first-session .combat-launch span {
+    max-width: 230px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.map-first-session .canvas-bottomline {
+    justify-content: flex-end;
+    bottom: 16px;
+    right: 16px;
+}
+.map-first-session .canvas-tip {
+    display: none;
+}
+.session-navigation,
+.session-runtime-menu {
+    position: relative;
+}
+.session-navigation > summary,
+.session-runtime-menu > summary {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    border-radius: 6px;
+    color: var(--muted);
+    list-style: none;
+}
+.session-navigation[open] > summary,
+.session-runtime-menu[open] > summary {
+    color: var(--accent);
+    background: var(--accent-dim);
+}
+.session-navigation > nav,
+.session-runtime-menu > div {
+    position: absolute;
+    z-index: 60;
+    width: 246px;
+    padding: 8px;
+    border: 1px solid #ffffff18;
+    border-radius: 10px;
+    background: #1c212afa;
+    box-shadow: var(--shadow);
+    animation: session-surface-enter 100ms ease-out;
+}
+.session-navigation > nav {
+    top: 40px;
+    left: 0;
+}
+.session-runtime-menu > div {
+    bottom: 44px;
+    right: 0;
+}
+.session-navigation nav > span {
+    display: block;
+    padding: 10px;
+    font-size: 9px;
+}
+.session-navigation nav button,
+.session-runtime-menu > div button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 11px;
+    text-align: left;
+    font-size: 12px;
+    border-radius: 6px;
+}
+.session-navigation nav button:hover,
+.session-runtime-menu > div button:hover {
+    background: #ffffff08;
+    color: var(--accent);
+}
+@keyframes session-surface-enter {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+@media (max-width: 900px) {
+    .map-first-session .topbar-actions {
+        gap: 6px;
+    }
+    .map-first-session .scene-state {
+        display: none;
+    }
+    .map-first-session .has-pinned-surface .live-dock {
+        margin-right: 0;
+        left: 16px;
+        right: auto;
+    }
+    .map-first-session .has-pinned-surface .zoom-control {
+        margin-right: 0;
+    }
+}
+@media (max-width: 600px) {
+    .map-first-session .workspace-body > .session-surface {
+        top: 122px;
+        max-height: calc(100% - 188px);
+    }
+    .map-first-session .workspace-body > .session-surface.is-pinned {
+        top: 122px;
+        height: calc(100% - 188px);
+    }
+    .map-first-session .combat-launch span {
+        max-width: 90px;
+    }
+    .map-first-session .live-dock {
+        right: auto;
+        left: 16px;
+    }
+    .map-first-session .zoom-control {
+        max-width: 170px;
+    }
+    .map-first-session .zoom-control button:last-child {
+        display: none;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .map-first-session .workspace-body > .workspace-left,
+    .map-first-session .workspace-body > .session-surface,
+    .session-navigation > nav,
+    .session-runtime-menu > div {
+        animation: none;
+        transition: none;
+    }
+}
+
+/* RPG runtime selection: screen-space card, token-local affordances only. */
+.map-first-session .selection-context {
+    background: linear-gradient(145deg, #29313b66, transparent 65%);
+}
+.map-first-session .context-portrait {
+    width: 48px;
+    height: 54px;
+    border-color: #b6a27865;
+    box-shadow: 0 0 0 3px #0002;
+}
+.runtime-health-bar {
+    height: 5px;
+    overflow: hidden;
+    background: #080d1480;
+    border-radius: 4px;
+    margin: 0 0 16px;
+}
+.runtime-health-bar i {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #638c74, #a8cfab);
+    transition: width 140ms ease-out;
+}
+.runtime-quick-actions {
+    position: relative;
+}
+.runtime-quick-row {
+    display: flex;
+    gap: 5px;
+    margin: 12px 0 18px;
+}
+.runtime-quick-row button {
+    flex: 1;
+    font-size: 11px;
+    padding: 9px 4px;
+    border: 1px solid #ffffff13;
+    border-radius: 7px;
+    background: #ffffff06;
+}
+.runtime-quick-row button:first-child {
+    color: #e4ae9e;
+}
+.runtime-quick-row button:nth-child(2) {
+    color: #b7d5bd;
+}
+.runtime-popover {
+    padding: 12px;
+    margin-bottom: 16px;
+    border: 1px solid #b6a27844;
+    border-radius: 10px;
+    background: #111822;
+    animation: session-surface-enter 120ms ease-out;
+}
+.runtime-popover header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    margin-bottom: 12px;
+}
+.runtime-popover input {
+    width: 100%;
+    min-width: 0;
+    padding: 8px;
+    border: 1px solid #ffffff18;
+    border-radius: 6px;
+    font-size: 12px;
+}
+.runtime-amounts {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+.runtime-amounts button {
+    flex: 1;
+    border-radius: 5px;
+    padding: 7px;
+    background: #ffffff08;
+}
+.runtime-amounts button[aria-pressed='true'] {
+    background: #98c6ad25;
+    color: var(--accent);
+}
+.runtime-apply {
+    display: flex;
+    gap: 8px;
+}
+.runtime-apply input {
+    width: 70px;
+}
+.runtime-apply button {
+    flex: 1;
+    background: #98c6ad25;
+    color: var(--accent);
+    border-radius: 6px;
+    font-size: 12px;
+}
+.runtime-condition-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+    max-height: 180px;
+    overflow: auto;
+    margin: 10px 0;
+}
+.runtime-condition-options button {
+    text-align: left;
+    padding: 8px;
+    border-radius: 6px;
+    background: #ffffff07;
+    font-size: 11px;
+}
+.runtime-popover small {
+    color: var(--muted);
+    font-size: 10px;
+}
+.runtime-primary-actions > .eyebrow {
+    font-size: 9px;
+}
+.runtime-primary-actions .npc-actions {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+}
+.runtime-primary-actions .npc-actions button {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #ffffff0d;
+    background: #ffffff05;
+    border-radius: 7px;
+}
+.runtime-primary-actions .npc-actions small {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 4px;
+}
+.token-local-actions {
+    position: fixed;
+    z-index: 30;
+    transform: translate(-50%, -100%);
+    display: flex;
+    gap: 2px;
+    align-items: center;
+    padding: 3px;
+    border: 1px solid #adcfb44d;
+    border-radius: 8px;
+    background: #172029f2;
+    box-shadow: 0 3px 14px #0005;
+}
+.token-local-actions[hidden] {
+    display: none;
+}
+.token-local-actions > span {
+    font-size: 8px;
+    color: var(--accent);
+    padding: 0 3px;
+    pointer-events: none;
+}
+.token-local-actions button {
+    width: 27px;
+    height: 25px;
+    color: #c4d6ca;
+    border-radius: 5px;
+}
+.token-local-actions button:hover {
+    background: #ffffff12;
+}
+@media (prefers-reduced-motion: reduce) {
+    .runtime-health-bar i,
+    .runtime-popover {
+        transition: none;
+        animation: none;
+    }
+}
+/* Session plan and live controls float above a stable, full-size canvas. */
+.map-first-session .workspace-body > .runtime-plan-overlay {
+    left: 70px;
+    width: min(360px, calc(100% - 86px));
+    height: auto;
+    max-height: calc(100% - 150px);
+    overflow-y: auto;
+}
+.map-first-session .workspace-left .session-runtime-plan > header {
+    padding: 14px 16px;
+}
+.map-first-session .workspace-left .session-runtime-plan .session-selector {
+    padding: 10px 16px;
+}
+.map-first-session .workspace-left .session-runtime-plan .session-controls {
+    padding: 0 16px 10px;
+}
+.map-first-session .workspace-left .session-runtime-plan .session-controls h2 {
+    font-size: 15px;
+}
+.map-first-session .workspace-left .session-runtime-plan .session-current {
+    margin: 0 12px 10px;
+    padding: 14px;
+}
+.map-first-session .workspace-left .session-runtime-plan .session-current h3 {
+    font-size: 18px;
+}
+.map-first-session .workspace-left .session-runtime-plan .session-run-list {
+    max-height: 210px;
+    overflow-y: auto;
+}
+.map-first-session .workspace-left .session-runtime-plan .session-run-list button {
+    padding: 9px 12px;
+}
+.map-first-session .workspace-left .session-runtime-plan .session-notes-disclosure {
+    margin: 12px;
+}
+.map-first-session .workspace-left .session-runtime-plan .session-ending {
+    margin: 8px 12px;
+}
+.map-first-session .workspace-left .session-runtime-plan .session-ending button {
+    font-size: 11px;
+    color: var(--muted);
+}
+.session-runtime-controls {
+    position: relative;
+    pointer-events: auto;
+}
+.session-runtime-actions {
+    position: absolute;
+    top: 44px;
+    left: 0;
+    width: min(310px, calc(100vw - 48px));
+    max-height: calc(100dvh - 200px);
+    overflow-y: auto;
+    padding: 12px;
+    border: 1px solid #ffffff18;
+    border-radius: 14px;
+    background: #191d25fa;
+    box-shadow: 0 14px 45px #0007;
+    backdrop-filter: blur(16px);
+    animation: session-surface-enter 140ms ease-out;
+}
+.session-runtime-actions header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+.session-runtime-actions header > button:last-child {
+    margin-left: auto;
+}
+.runtime-scene-state {
+    display: grid;
+    gap: 6px;
+    margin: 14px 0 8px;
+    padding: 12px;
+    border-radius: 8px;
+    background: #ffffff05;
+}
+.runtime-scene-state strong {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+.runtime-scene-state small {
+    color: var(--muted);
+    font-size: 10px;
+}
+.session-runtime-actions nav button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    font-size: 12px;
+    padding: 11px 9px;
+    border-radius: 7px;
+}
+.session-runtime-actions nav button:hover {
+    background: #ffffff08;
+    color: var(--accent);
+}
+.session-runtime-actions fieldset {
+    padding: 0;
+    border: 0;
+    margin: 0;
+    min-width: 0;
+}
+.session-runtime-actions .session-resource-list {
+    max-height: 220px;
+    overflow-y: auto;
+}
+@media (max-width: 600px) {
+    .session-runtime-actions {
+        left: -100px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .session-runtime-actions {
+        animation: none;
+    }
+}
+.map-first-session .workspace-left .session-runtime-plan {
+    padding: 0;
+    gap: 10px;
+    border: 0;
+}
+.map-first-session .workspace-left .session-runtime-plan .session-pager,
+.map-first-session .workspace-left .session-runtime-plan .session-next,
+.map-first-session .workspace-left .session-runtime-plan .session-focus-hint,
+.map-first-session .workspace-left .session-runtime-plan .session-preload,
+.map-first-session .workspace-left .session-runtime-plan .session-empty,
+.map-first-session .workspace-left .session-runtime-plan .session-error {
+    margin-left: 14px;
+    margin-right: 14px;
+}
+.map-first-session .workspace-left .session-runtime-plan .session-run-list {
+    margin: 0 12px;
+}
+
+.map-first-session.redesigned-workspace .canvas-topline {
+    z-index: 37;
+}
+.map-first-session .workspace-left .session-runtime-plan {
+    height: auto;
+}
+.map-first-session .workspace-left .session-runtime-plan > header strong {
+    font-size: 16px;
+}
+.map-first-session .workspace-left .session-runtime-plan .session-controls h2 {
+    margin-bottom: 4px;
+}

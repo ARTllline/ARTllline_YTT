@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Models\Asset;
+use App\Models\LootContainer;
 use App\Models\Scene;
 use App\Models\SceneProp;
 use App\Models\User;
@@ -21,6 +22,11 @@ class PropActions
                 $prop = SceneProp::create(['scene_id' => $scene->id, 'asset_id' => $asset->id, 'name' => mb_substr($asset->name, 0, 160),
                     'x' => $data['x'], 'y' => $data['y'], 'scale_x' => $size / max($asset->width, $asset->height),
                     'scale_y' => $size / max($asset->width, $asset->height), 'z_index' => (SceneProp::where('scene_id', $scene->id)->max('z_index') ?? -1) + 1]);
+                if (($data['purpose'] ?? null) === 'container') {
+                    LootContainer::create(['scene_id' => $scene->id, 'prop_id' => $prop->id, 'name' => mb_substr($prop->name, 0, 80), 'kind' => 'container', 'created_by' => $user->id]);
+                } elseif (($data['purpose'] ?? null) === 'interaction') {
+                    $prop->update(['interactions' => [['id' => (string) \Illuminate\Support\Str::uuid(), 'author_id' => $user->id, 'label' => 'Осмотреть', 'icon' => 'eye', 'enabled' => true, 'result_type' => 'nothing']]]);
+                }
             } else {
                 $prop = SceneProp::where('scene_id', $scene->id)->findOrFail($data['id']);
                 if (! $prop->is_hidden) {

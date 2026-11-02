@@ -97,11 +97,13 @@ export function LiveDock({
     round,
     currentName,
     onPanel,
+    compact = false,
 }: {
     panel: RightPanel | null;
     round?: number;
     currentName?: string;
     onPanel: (panel: RightPanel) => void;
+    compact?: boolean;
 }) {
     return (
         <nav className="live-dock" aria-label="Управление игрой">
@@ -118,24 +120,28 @@ export function LiveDock({
                 </span>
             </button>
             <i />
-            {(
-                [
-                    { id: 'cues', label: 'События · запуск и очередь', Icon: Film },
-                    { id: 'handouts', label: 'Раздаточные материалы', Icon: BookOpen },
-                    { id: 'audio', label: 'Звук и атмосфера', Icon: Volume2 },
-                    { id: 'players', label: 'Игроки', Icon: Users },
-                    { id: 'triggers', label: 'Триггеры', Icon: Zap },
-                ] as const
-            ).map(({ id, label, Icon }) => (
-                <IconButton
-                    key={id}
-                    label={label}
-                    aria-pressed={panel === id}
-                    onClick={() => onPanel(id)}
-                >
-                    <Icon size={17} strokeWidth={1.7} />
-                </IconButton>
-            ))}
+            {!compact && (
+                <>
+                    {(
+                        [
+                            { id: 'cues', label: 'События · запуск и очередь', Icon: Film },
+                            { id: 'handouts', label: 'Раздаточные материалы', Icon: BookOpen },
+                            { id: 'audio', label: 'Звук и атмосфера', Icon: Volume2 },
+                            { id: 'players', label: 'Игроки', Icon: Users },
+                            { id: 'triggers', label: 'Триггеры', Icon: Zap },
+                        ] as const
+                    ).map(({ id, label, Icon }) => (
+                        <IconButton
+                            key={id}
+                            label={label}
+                            aria-pressed={panel === id}
+                            onClick={() => onPanel(id)}
+                        >
+                            <Icon size={17} strokeWidth={1.7} />
+                        </IconButton>
+                    ))}
+                </>
+            )}
         </nav>
     );
 }

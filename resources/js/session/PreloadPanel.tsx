@@ -18,12 +18,14 @@ const labels: Record<string, string> = {
     failed: 'Ошибка',
 };
 export function PreloadPanel({
+    runtime = false,
     campaign,
     members,
     target,
     automatic,
     onActivate,
 }: {
+    runtime?: boolean;
     campaign: Campaign;
     members: Member[];
     target?: string | null;
@@ -104,39 +106,46 @@ export function PreloadPanel({
     };
     return (
         <details className="session-preload">
-            <summary>Подготовка сцены</summary>
-            <select
-                aria-label="Сцена для предзагрузки"
-                value={selected}
-                onChange={(e) => setSceneId(e.target.value)}
-                disabled={!!target}
-            >
-                <option value="">Выберите сцену…</option>
-                {campaign.scenes.map((s) => (
-                    <option key={s.id} value={s.id}>
-                        {s.name}
-                    </option>
-                ))}
-            </select>
-            <label className="check-row">
-                <input
-                    type="checkbox"
-                    checked={audio}
-                    onChange={(e) => setAudio(e.target.checked)}
-                />
-                Также аудио её событий
-            </label>
-            <p className="hint">
-                Игроки получат файлы заранее и смогут их открыть. Названия скрыты; скрытые объекты и
-                материалы не загружаются.
-            </p>
-            <button
-                className="secondary-button"
-                disabled={!selected || busy}
-                onClick={() => void prepare()}
-            >
-                {busy ? 'Подготовка…' : 'Предзагрузить игрокам'}
-            </button>
+            <summary>
+                {runtime ? 'Готовность игроков · следующая сцена' : 'Подготовка сцены'}
+            </summary>
+            {!runtime && (
+                <>
+                    <select
+                        aria-label="Сцена для предзагрузки"
+                        value={selected}
+                        onChange={(e) => setSceneId(e.target.value)}
+                        disabled={!!target}
+                    >
+                        <option value="">Выберите сцену…</option>
+                        {campaign.scenes.map((s) => (
+                            <option key={s.id} value={s.id}>
+                                {s.name}
+                            </option>
+                        ))}
+                    </select>
+                    <label className="check-row">
+                        <input
+                            type="checkbox"
+                            checked={audio}
+                            onChange={(e) => setAudio(e.target.checked)}
+                        />
+                        Также аудио её событий
+                    </label>
+                    <p className="hint">
+                        Игроки получат файлы заранее и смогут их открыть. Названия скрыты; скрытые
+                        объекты и материалы не загружаются.
+                    </p>
+                    <button
+                        className="secondary-button"
+                        disabled={!selected || busy}
+                        onClick={() => void prepare()}
+                    >
+                        {busy ? 'Подготовка…' : 'Предзагрузить игрокам'}
+                    </button>
+                </>
+            )}
+            {runtime && !status && <p className="hint">Нет текущей предзагрузки.</p>}
             {status && (
                 <div className="preload-readiness">
                     <strong>

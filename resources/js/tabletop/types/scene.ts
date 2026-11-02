@@ -176,7 +176,13 @@ export type ObjectCommand =
     | {
           endpoint: 'props';
           data:
-              | { action: 'create'; assetId: string; x: number; y: number }
+              | {
+                    action: 'create';
+                    assetId: string;
+                    x: number;
+                    y: number;
+                    purpose?: 'container' | 'interaction';
+                }
               | {
                     action: 'update';
                     id: string;

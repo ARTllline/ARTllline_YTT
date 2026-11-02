@@ -21,7 +21,7 @@ class ObjectController extends Controller
     {
         Gate::authorize('update', $scene);
         $data = $request->validate(['action' => 'required|in:create,update', 'id' => 'required_if:action,update|integer',
-            'assetId' => 'required_if:action,create|integer', 'x' => 'required_if:action,create|numeric|between:-1000000,1000000',
+            'assetId' => 'required_if:action,create|integer', 'purpose' => 'sometimes|in:container,interaction', 'x' => 'required_if:action,create|numeric|between:-1000000,1000000',
             'y' => 'required_if:action,create|numeric|between:-1000000,1000000', 'order' => 'sometimes|in:front,back,forward,backward',
             'patch' => 'sometimes|array:name,x,y,rotation,scale_x,scale_y,is_hidden,is_locked',
             'patch.name' => 'sometimes|nullable|string|max:160', 'patch.x' => 'sometimes|numeric|between:-1000000,1000000',

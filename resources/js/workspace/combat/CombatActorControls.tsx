@@ -21,11 +21,15 @@ export function CombatActorControls({
     store,
     renderer,
     disabled = false,
+    compact = false,
+    actionLimit,
 }: {
     token: Token;
     store: SceneStore;
     renderer?: RefObject<TabletopRenderer | null>;
     disabled?: boolean;
+    compact?: boolean;
+    actionLimit?: number;
 }) {
     const { scene } = store.getSnapshot();
     const combat = scene.combat;
@@ -88,7 +92,14 @@ export function CombatActorControls({
     if (store.role !== 'gm') return null;
     return (
         <div className="combat-actor-controls">
-            <GMLifecycleControls key={token.id} token={token} store={store} disabled={disabled} />
+            {!compact && (
+                <GMLifecycleControls
+                    key={token.id}
+                    token={token}
+                    store={store}
+                    disabled={disabled}
+                />
+            )}
             {entry?.budget && (
                 <CombatBudgetView
                     budget={entry.budget}
@@ -99,10 +110,14 @@ export function CombatActorControls({
                     }
                 />
             )}
-            {(!character || character.kind === 'npc') && (
-                <div className="npc-actions" aria-label={`Действия NPC ${token.name}`}>
+            {(compact || !character || character.kind === 'npc') && (
+                <div
+                    className="npc-actions"
+                    aria-label={`Действия ${token.kind === 'npc' ? 'NPC ' : ''}${token.name}`}
+                >
                     {abilities
                         .filter((a) => a.enabled !== false && !a.item_only)
+                        .slice(0, actionLimit)
                         .map((a) => {
                             const reason =
                                 combatReason(a, entry?.budget) ||
@@ -143,7 +158,7 @@ export function CombatActorControls({
                                 </button>
                             );
                         })}
-                    {!abilities.length && <p className="hint">Нет подготовленных действий NPC.</p>}
+                    {!abilities.length && <p className="hint">Нет подготовленных действий.</p>}
                 </div>
             )}
             {aiming && renderer && (
@@ -186,7 +201,7 @@ export function CombatActorControls({
                 </div>
             )}
             {busy && <p role="status">Разрешение действия…</p>}
-            {combat && entry?.budget && (
+            {!compact && combat && entry?.budget && (
                 <details className="combat-overrides">
                     <summary>Коррекция ресурсов · GM override</summary>
                     <div className="combat-fields">

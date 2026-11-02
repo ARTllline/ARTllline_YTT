@@ -12,11 +12,13 @@ export function SelectionControls({
     queue,
     campaignId,
     onSaved,
+    runtime = false,
 }: {
     store: SceneStore;
     queue: SaveQueue;
     campaignId: string;
     onSaved: () => void;
+    runtime?: boolean;
 }) {
     const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
     const save = useSyncExternalStore(queue.subscribe, queue.getSnapshot);
@@ -61,7 +63,7 @@ export function SelectionControls({
     };
     return (
         <>
-            {count > 0 && (
+            {count > 0 && (!runtime || count > 1) && (
                 <div className="selection-actions surface" aria-label={t('Selection actions')}>
                     <span>
                         {count} {t('selected')}{' '}

@@ -21,7 +21,7 @@ import { useSceneLive } from '../realtime/useSceneLive';
 import { ConnectionBadge } from './PlayersPanel';
 import { Toolbar } from './Toolbar';
 import { Tabletop } from './Tabletop';
-import { CombatPanel } from './combat/CombatPanel';
+import { InitiativeTimeline } from './combat/InitiativeTimeline';
 import { ConditionList } from './combat/TokenCombatControls';
 import { HandoutShelf } from './handouts/HandoutShelf';
 const MediaPanel = lazy(() =>
@@ -248,7 +248,7 @@ function PlayerTabletop({
                 connection={connection}
                 renderer={renderer}
             />
-            <CombatPanel store={store} queue={queue} />
+            <InitiativeTimeline store={store} renderer={renderer} />
             <Toolbar store={store} onTool={(tool) => renderer.current?.setTool(tool)} />
             {(status || save.error) && (
                 <div className="player-notice" role="status">

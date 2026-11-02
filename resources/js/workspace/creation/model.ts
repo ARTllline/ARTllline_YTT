@@ -17,12 +17,20 @@ export interface TokenDraft {
     asset?: LibraryAsset;
 }
 export type Placement =
-    | { type: 'libraryActor'; actorId: string; library: 'characters' | 'npcs'; name: string }
+    | {
+          type: 'libraryActor';
+          actorId: string;
+          library: 'characters' | 'npcs';
+          name: string;
+          previewUrl?: string;
+      }
     | { type: 'token'; draft: TokenDraft; name: string }
-    | { type: 'prop'; asset: LibraryAsset; name: string }
+    | { type: 'prop'; asset: LibraryAsset; name: string; purpose?: 'container' | 'interaction' }
     | { type: 'template'; template: Pick<ContentTemplate, 'id' | 'kind' | 'name'>; name: string }
     | { type: 'note' | 'region'; name: string };
 export const CREATION_MIME = 'application/x-ytt-creation';
+export const repeatsPlacement = (item: Placement) =>
+    item.type === 'prop' || (item.type === 'libraryActor' && item.library === 'npcs');
 export function tokenDraft(asset: LibraryAsset | undefined, hero: boolean): TokenDraft {
     const { kind, disposition } = hero ? presets.hero : presets.enemy;
     return { name: asset?.name.slice(0, 80) ?? '', kind, disposition, hp: 10, asset };

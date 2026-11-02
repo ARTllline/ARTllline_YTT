@@ -6,6 +6,7 @@ import type { Effect, Intensity } from '../../media/model';
 import { DirectorCamera } from '../../director/DirectorCamera';
 import type { DirectorEvent } from '../../director/DirectorState';
 import { ScenePropLayer } from '../layers/ScenePropLayer';
+import { PlacementGhost } from '../layers/PlacementGhost';
 import { Application, Container, Texture, Graphics } from 'pixi.js';
 import { FogLayer } from '../layers/FogLayer';
 import { SpatialLayer } from '../layers/SpatialLayer';
@@ -43,6 +44,7 @@ export class TabletopRenderer {
     private regions?: RegionLayer;
     private overlay = new InteractionLayer();
     private response = new Graphics();
+    private placementGhost = new PlacementGhost();
     readonly gameplay = new GameplayLayer();
     setGameplayTarget(
         kind?: 'token' | 'prop' | 'point',
@@ -115,6 +117,7 @@ export class TabletopRenderer {
             this.overlay,
             this.response,
             this.gameplay,
+            this.placementGhost,
         );
         if (this.store.role === 'gm') {
             this.regions = new RegionLayer();
@@ -371,10 +374,38 @@ export class TabletopRenderer {
     }
     placementPreview(clientX: number, clientY: number) {
         const target = this.dropTarget(clientX, clientY);
+        this.placementGhost.position.copyFrom(
+            snapPoint(target.point, this.store.getSnapshot().scene.grid),
+        );
+        this.placementGhost.visible = true;
         return worldToScreen(
             snapPoint(target.point, this.store.getSnapshot().scene.grid),
             this.camera.state,
         );
+    }
+    beginPlacement(name: string, url?: string, prop?: { width: number; height: number }) {
+        const grid = this.store.getSnapshot().scene.grid;
+        const size = prop
+            ? grid.visible
+                ? grid.size * 2
+                : 120
+            : grid.visible
+              ? Math.max(20, Math.min(300, grid.size))
+              : 60;
+        const ratio = prop ? size / Math.max(prop.width, prop.height) : 1;
+        this.placementGhost.configure(
+            url,
+            prop ? prop.width * ratio : size,
+            prop ? prop.height * ratio : size,
+            !prop,
+            name,
+        );
+    }
+    hidePlacement() {
+        this.placementGhost.visible = false;
+    }
+    endPlacement() {
+        this.placementGhost.clear();
     }
     dropTarget(clientX: number, clientY: number) {
         const bounds = this.app.canvas.getBoundingClientRect();

@@ -22,6 +22,7 @@ import {
     X,
     Play,
     ArrowDownWideNarrow,
+    MoreHorizontal,
 } from 'lucide-react';
 import type { SceneStore } from '../../tabletop/state/SceneStore';
 import type { SaveQueue } from '../../tabletop/state/SaveQueue';
@@ -79,11 +80,13 @@ export function CombatPanel({
     queue,
     onClose,
     renderer,
+    encounterOnly = false,
 }: {
     store: SceneStore;
     queue: SaveQueue;
     onClose?: () => void;
     renderer?: RefObject<TabletopRenderer | null>;
+    encounterOnly?: boolean;
 }) {
     const { scene, selectedIds, combatNotice } = useSyncExternalStore(
         store.subscribe,
@@ -186,15 +189,36 @@ export function CombatPanel({
                 ?.querySelector(`[data-token-id="${current}"] .combat-row-main`)
                 ?.scrollIntoView({ block: 'nearest' });
     }, [gm, current]);
+    const encounterTools = combat && (
+        <div className="combat-toolbar">
+            <button disabled={disabled} onClick={() => setPicker(true)}>
+                <Plus size={13} /> {t('Add combatants')}
+            </button>
+            <button
+                disabled={disabled || !combat.combatants.length}
+                title={t('Re-sort by Initiative')}
+                aria-label={t('Re-sort by Initiative')}
+                onClick={() => store.combatCommand({ action: 'sort', combatId: combat.id })}
+            >
+                <ArrowDownWideNarrow size={15} />
+            </button>
+            {encounterOnly && (
+                <button className="end-combat" disabled={disabled} onClick={() => setEnding(true)}>
+                    {t('End Combat')}
+                </button>
+            )}
+        </div>
+    );
     if (!gm && !combat) return null;
     return (
         <aside
             ref={panelRef}
-            className={`combat-panel ${gm ? 'gm-combat' : 'player-combat'} ${collapsed ? 'collapsed' : ''}`}
+            className={`combat-panel ${gm ? 'gm-combat' : 'player-combat'} ${collapsed ? 'collapsed' : ''} ${encounterOnly ? 'encounter-workspace' : ''}`}
             aria-label={t('Combat tracker')}
         >
             <button
                 className="combat-heading"
+                aria-label={onClose ? 'Закрыть бой' : undefined}
                 title={onClose ? 'Закрыть бой' : 'Свернуть / развернуть бой'}
                 onClick={() => (onClose ? onClose() : setCollapsed(!collapsed))}
                 aria-expanded={!collapsed}
@@ -214,7 +238,7 @@ export function CombatPanel({
             </button>
             {!collapsed && (
                 <>
-                    {gm && <GMRestControls store={store} disabled={disabled} />}
+                    {gm && !encounterOnly && <GMRestControls store={store} disabled={disabled} />}
                     {!combat ? (
                         <div className="combat-empty">
                             <strong> {t('No active combat')} </strong>
@@ -234,7 +258,7 @@ export function CombatPanel({
                         </div>
                     ) : (
                         <>
-                            {combat.status === 'active' && (
+                            {combat.status === 'active' && !encounterOnly && (
                                 <div
                                     className="combat-spotlight"
                                     key={`${current}-${combat.round}`}
@@ -254,26 +278,7 @@ export function CombatPanel({
                                     </span>
                                 </div>
                             )}
-                            {gm && (
-                                <div className="combat-toolbar">
-                                    <button disabled={disabled} onClick={() => setPicker(true)}>
-                                        <Plus size={13} /> {t('Add combatants')}{' '}
-                                    </button>
-                                    <button
-                                        disabled={disabled || !combat.combatants.length}
-                                        title={t('Re-sort by Initiative')}
-                                        aria-label={t('Re-sort by Initiative')}
-                                        onClick={() =>
-                                            store.combatCommand({
-                                                action: 'sort',
-                                                combatId: combat.id,
-                                            })
-                                        }
-                                    >
-                                        <ArrowDownWideNarrow size={15} />
-                                    </button>
-                                </div>
-                            )}
+                            {gm && !encounterOnly && encounterTools}
 
                             {gm && (
                                 <div className="combat-footer">
@@ -320,343 +325,264 @@ export function CombatPanel({
                                             </button>
                                         </div>
                                     )}
-                                    <button
-                                        className="end-combat"
-                                        disabled={disabled}
-                                        onClick={() => setEnding(true)}
-                                    >
-                                        {' '}
-                                        {t('End Combat')}{' '}
-                                    </button>
+                                    {!encounterOnly && (
+                                        <button
+                                            className="end-combat"
+                                            disabled={disabled}
+                                            onClick={() => setEnding(true)}
+                                        >
+                                            {' '}
+                                            {t('End Combat')}{' '}
+                                        </button>
+                                    )}
                                 </div>
                             )}
-                            <div className="combat-rows">
-                                {!combat.combatants.length && (
-                                    <p className="combat-empty">
-                                        {gm
-                                            ? t('Add tokens from this scene to set the order.')
-                                            : t('The GM is taking the turn.')}
-                                    </p>
-                                )}
-                                {combat.combatants.map((entry, index) => {
-                                    const token = scene.tokens.find((t) => t.id === entry.tokenId);
-                                    if (!token) return null;
-                                    const active = current === token.id;
-                                    const expanded =
-                                        gm &&
-                                        (selected.turn === turnKey && selected.id
-                                            ? selected.id
-                                            : (current ?? selectedIds[0])) === token.id;
-                                    return (
-                                        <div
-                                            key={entry.id}
-                                            className={`combat-row ${active ? 'current' : ''} ${expanded ? 'expanded' : ''} ${drop === entry.id ? 'drop-target' : ''}`}
-                                            data-token-id={token.id}
-                                            onDragOver={(e) => {
-                                                if (gm && dragging) {
+                            {gm && encounterOnly && (
+                                <details className="encounter-options">
+                                    <summary
+                                        aria-label="Другие действия боя"
+                                        title="Другие действия боя"
+                                    >
+                                        <MoreHorizontal size={17} />
+                                    </summary>
+                                    <p className="encounter-edit-hint">Участники и порядок</p>
+                                    {encounterTools}
+                                </details>
+                            )}
+                            <details
+                                className="encounter-initiative-disclosure"
+                                open={!encounterOnly || combat.status === 'preparing'}
+                            >
+                                <summary hidden={!encounterOnly}>Инициатива · участники</summary>
+                                <div className="combat-rows">
+                                    {!combat.combatants.length && (
+                                        <p className="combat-empty">
+                                            {gm
+                                                ? t('Add tokens from this scene to set the order.')
+                                                : t('The GM is taking the turn.')}
+                                        </p>
+                                    )}
+                                    {combat.combatants.map((entry, index) => {
+                                        const token = scene.tokens.find(
+                                            (t) => t.id === entry.tokenId,
+                                        );
+                                        if (!token) return null;
+                                        const active = current === token.id;
+                                        const expanded =
+                                            gm &&
+                                            (selected.turn === turnKey && selected.id
+                                                ? selected.id
+                                                : (current ?? selectedIds[0])) === token.id;
+                                        return (
+                                            <div
+                                                key={entry.id}
+                                                className={`combat-row ${active ? 'current' : ''} ${expanded ? 'expanded' : ''} ${drop === entry.id ? 'drop-target' : ''}`}
+                                                data-token-id={token.id}
+                                                onDragOver={(e) => {
+                                                    if (gm && dragging) {
+                                                        e.preventDefault();
+                                                        setDrop(entry.id);
+                                                    }
+                                                }}
+                                                onDrop={(e) => {
                                                     e.preventDefault();
-                                                    setDrop(entry.id);
-                                                }
-                                            }}
-                                            onDrop={(e) => {
-                                                e.preventDefault();
-                                                if (dragging) reorder(dragging, entry.id);
-                                                setDragging(null);
-                                                setDrop(null);
-                                            }}
-                                        >
-                                            <div className="combat-row-main">
-                                                {gm && (
-                                                    <button
-                                                        className="drag-grip"
-                                                        draggable={!disabled}
-                                                        aria-label={t('reorderToken', {
-                                                            name: token.name,
-                                                        })}
-                                                        title={t(
-                                                            'Drag to reorder; arrow keys move in order',
-                                                        )}
-                                                        disabled={disabled}
-                                                        onDragStart={(e) => {
-                                                            setDragging(entry.id);
-                                                            e.dataTransfer.setData(
-                                                                'text/plain',
-                                                                entry.id,
-                                                            );
-                                                            e.dataTransfer.effectAllowed = 'move';
-                                                        }}
-                                                        onDragEnd={() => {
-                                                            setDragging(null);
-                                                            setDrop(null);
-                                                        }}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'ArrowUp' && index > 0) {
-                                                                e.preventDefault();
-                                                                reorder(
+                                                    if (dragging) reorder(dragging, entry.id);
+                                                    setDragging(null);
+                                                    setDrop(null);
+                                                }}
+                                            >
+                                                <div className="combat-row-main">
+                                                    {gm && (
+                                                        <button
+                                                            className="drag-grip"
+                                                            draggable={!disabled}
+                                                            aria-label={t('reorderToken', {
+                                                                name: token.name,
+                                                            })}
+                                                            title={t(
+                                                                'Drag to reorder; arrow keys move in order',
+                                                            )}
+                                                            disabled={disabled}
+                                                            onDragStart={(e) => {
+                                                                setDragging(entry.id);
+                                                                e.dataTransfer.setData(
+                                                                    'text/plain',
                                                                     entry.id,
-                                                                    combat.combatants[index - 1].id,
                                                                 );
-                                                            }
-                                                            if (
-                                                                e.key === 'ArrowDown' &&
-                                                                index < combat.combatants.length - 1
-                                                            ) {
-                                                                e.preventDefault();
-                                                                const ids = combat.combatants.map(
-                                                                    (c) => c.id,
-                                                                );
-                                                                [ids[index], ids[index + 1]] = [
-                                                                    ids[index + 1],
-                                                                    ids[index],
-                                                                ];
-                                                                store.combatCommand({
-                                                                    action: 'reorder',
-                                                                    combatId: combat.id,
-                                                                    combatantIds: ids,
-                                                                });
-                                                            }
-                                                        }}
-                                                    >
-                                                        <GripVertical size={14} />
-                                                    </button>
-                                                )}
-                                                <button
-                                                    className="combat-identity"
-                                                    onClick={() => {
-                                                        setSelected({
-                                                            id: token.id,
-                                                            turn: turnKey,
-                                                        });
-                                                        setInspecting(false);
-                                                        store.select(token.id);
-                                                    }}
-                                                    title={t('selectToken', { name: token.name })}
-                                                >
-                                                    <span className="combat-portrait">
-                                                        {token.image ? (
-                                                            <img
-                                                                src={resourceCache.imageUrl(
-                                                                    token.image.url,
-                                                                )}
-                                                                alt=""
-                                                            />
-                                                        ) : (
-                                                            <span className="combat-monogram">
-                                                                {tokenAppearance(token).initials}
-                                                            </span>
-                                                        )}
-                                                    </span>
-                                                    <span>
-                                                        <strong>
-                                                            {token.name}
-                                                            {token.isHidden && <EyeOff size={11} />}
-                                                        </strong>
-                                                        {token.hp !== undefined ? (
-                                                            <>
-                                                                <small>
-                                                                    {token.hp} / {token.maxHp} HP
-                                                                    {token.hp === 0
-                                                                        ? ' · ПОВЕРЖЕН'
-                                                                        : ''}
-                                                                    {gm && token.ac !== undefined
-                                                                        ? ` · AC ${token.ac}`
-                                                                        : ''}
-                                                                    {entry.budget?.incapacitated
-                                                                        ? ' · НЕДЕЕСПОСОБЕН'
-                                                                        : ''}
-                                                                </small>
-                                                                <span
-                                                                    className={`combat-hp ${token.hp === 0 ? 'empty' : ''}`}
-                                                                >
-                                                                    <i
-                                                                        style={{
-                                                                            width: `${(token.hp / (token.maxHp || 1)) * 100}%`,
-                                                                        }}
-                                                                    />
-                                                                </span>
-                                                            </>
-                                                        ) : (
-                                                            <small>
-                                                                {active
-                                                                    ? t('Current turn')
-                                                                    : t('Combatant')}
-                                                            </small>
-                                                        )}
-                                                    </span>
-                                                </button>
-                                                {gm ? (
-                                                    <Initiative
-                                                        entry={entry}
-                                                        disabled={disabled}
-                                                        change={(initiative) =>
-                                                            store.combatCommand({
-                                                                action: 'initiative',
-                                                                combatId: combat.id,
-                                                                combatantId: entry.id,
-                                                                initiative,
-                                                            })
-                                                        }
-                                                    />
-                                                ) : (
-                                                    <span
-                                                        className="initiative-value"
-                                                        title={t('Initiative')}
-                                                    >
-                                                        {entry.initiative ?? '—'}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {gm && expanded ? (
-                                                <div className="combat-row-detail">
-                                                    <div className="combat-quick-strip">
-                                                        <button
-                                                            title="HP · Alt+H"
-                                                            onClick={(e) =>
-                                                                e.currentTarget
-                                                                    .closest('.combat-row-detail')
-                                                                    ?.querySelector<HTMLInputElement>(
-                                                                        '.hp-actions input',
-                                                                    )
-                                                                    ?.focus()
-                                                            }
-                                                        >
-                                                            ± HP
-                                                        </button>
-                                                        <button
-                                                            title="Состояния · Alt+C"
-                                                            onClick={(e) => {
-                                                                const d = e.currentTarget
-                                                                    .closest('.combat-row-detail')
-                                                                    ?.querySelector<HTMLDetailsElement>(
-                                                                        '.condition-disclosure',
+                                                                e.dataTransfer.effectAllowed =
+                                                                    'move';
+                                                            }}
+                                                            onDragEnd={() => {
+                                                                setDragging(null);
+                                                                setDrop(null);
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                if (
+                                                                    e.key === 'ArrowUp' &&
+                                                                    index > 0
+                                                                ) {
+                                                                    e.preventDefault();
+                                                                    reorder(
+                                                                        entry.id,
+                                                                        combat.combatants[index - 1]
+                                                                            .id,
                                                                     );
-                                                                if (d) {
-                                                                    d.open = !d.open;
-                                                                    d.querySelector<HTMLInputElement>(
-                                                                        '.condition-search',
-                                                                    )?.focus();
+                                                                }
+                                                                if (
+                                                                    e.key === 'ArrowDown' &&
+                                                                    index <
+                                                                        combat.combatants.length - 1
+                                                                ) {
+                                                                    e.preventDefault();
+                                                                    const ids =
+                                                                        combat.combatants.map(
+                                                                            (c) => c.id,
+                                                                        );
+                                                                    [ids[index], ids[index + 1]] = [
+                                                                        ids[index + 1],
+                                                                        ids[index],
+                                                                    ];
+                                                                    store.combatCommand({
+                                                                        action: 'reorder',
+                                                                        combatId: combat.id,
+                                                                        combatantIds: ids,
+                                                                    });
                                                                 }
                                                             }}
                                                         >
-                                                            Состояние
+                                                            <GripVertical size={14} />
                                                         </button>
-                                                        <button
-                                                            title="Осмотреть без редактора"
-                                                            aria-pressed={inspecting}
-                                                            onClick={() =>
-                                                                setInspecting(!inspecting)
-                                                            }
-                                                        >
-                                                            Осмотр
-                                                        </button>
-                                                        <button
-                                                            title="Фокус камеры ГМ"
-                                                            onClick={() =>
+                                                    )}
+                                                    <button
+                                                        className="combat-identity"
+                                                        onClick={() => {
+                                                            setSelected({
+                                                                id: token.id,
+                                                                turn: turnKey,
+                                                            });
+                                                            setInspecting(false);
+                                                            store.select(token.id);
+                                                            if (encounterOnly) {
                                                                 renderer?.current?.focusToken(
                                                                     token.id,
-                                                                )
+                                                                );
+                                                                onClose?.();
                                                             }
-                                                        >
-                                                            Фокус
-                                                        </button>
-                                                    </div>
-                                                    <TokenCombatControls
-                                                        key={token.id}
-                                                        token={token}
-                                                        store={store}
-                                                        disabled={disabled}
-                                                    />
-                                                    <CombatActorControls
-                                                        key={'actor' + token.id}
-                                                        token={token}
-                                                        store={store}
-                                                        renderer={renderer}
-                                                        disabled={disabled}
-                                                    />
-                                                    {inspecting && (
-                                                        <div className="runtime-inspection">
-                                                            <strong>
-                                                                {token.name} · AC {token.ac ?? '—'}{' '}
-                                                                · {token.speed ?? '—'} ft
-                                                            </strong>
-                                                            <p>
-                                                                {(
-                                                                    scene.characters?.find(
-                                                                        (c) =>
-                                                                            c.id ===
-                                                                            token.characterId,
-                                                                    )?.checkStats ??
-                                                                    token.checkStats ??
-                                                                    []
-                                                                )
-                                                                    .map(
-                                                                        (s) =>
-                                                                            `${s.label} ${s.modifier >= 0 ? '+' : ''}${s.modifier}`,
-                                                                    )
-                                                                    .join(' · ')}
-                                                            </p>
-                                                            {[
-                                                                'saving_throws',
-                                                                'resistances',
-                                                                'vulnerabilities',
-                                                                'immunities',
-                                                                'condition_immunities',
-                                                            ].map((key) => (
-                                                                <p key={key}>
+                                                        }}
+                                                        title={t('selectToken', {
+                                                            name: token.name,
+                                                        })}
+                                                    >
+                                                        <span className="combat-portrait">
+                                                            {token.image ? (
+                                                                <img
+                                                                    src={resourceCache.imageUrl(
+                                                                        token.image.url,
+                                                                    )}
+                                                                    alt=""
+                                                                />
+                                                            ) : (
+                                                                <span className="combat-monogram">
                                                                     {
-                                                                        (
-                                                                            {
-                                                                                saving_throws:
-                                                                                    'Спасброски',
-                                                                                resistances:
-                                                                                    'Сопротивления',
-                                                                                vulnerabilities:
-                                                                                    'Уязвимости',
-                                                                                immunities:
-                                                                                    'Иммунитеты',
-                                                                                condition_immunities:
-                                                                                    'Иммунитет состояний',
-                                                                            } as Record<
-                                                                                string,
-                                                                                string
-                                                                            >
-                                                                        )[key]
+                                                                        tokenAppearance(token)
+                                                                            .initials
                                                                     }
-                                                                    :{' '}
-                                                                    {Array.isArray(
-                                                                        token.combatProfile?.[key],
-                                                                    )
-                                                                        ? (
-                                                                              token.combatProfile![
-                                                                                  key
-                                                                              ] as string[]
-                                                                          ).join(', ') || '—'
-                                                                        : token.combatProfile?.[
-                                                                                key
-                                                                            ] &&
-                                                                            typeof token
-                                                                                .combatProfile[
-                                                                                key
-                                                                            ] === 'object'
-                                                                          ? Object.entries(
-                                                                                token.combatProfile[
-                                                                                    key
-                                                                                ] as Record<
-                                                                                    string,
-                                                                                    number
-                                                                                >,
-                                                                            )
-                                                                                .map(
-                                                                                    ([k, v]) =>
-                                                                                        `${k.toUpperCase()} ${v >= 0 ? '+' : ''}${v}`,
-                                                                                )
-                                                                                .join(' · ')
-                                                                          : '—'}
-                                                                </p>
-                                                            ))}
-                                                        </div>
+                                                                </span>
+                                                            )}
+                                                        </span>
+                                                        <span>
+                                                            <strong>
+                                                                {token.name}
+                                                                {token.isHidden && (
+                                                                    <EyeOff size={11} />
+                                                                )}
+                                                            </strong>
+                                                            {token.hp !== undefined ? (
+                                                                <>
+                                                                    <small>
+                                                                        {encounterOnly ? (
+                                                                            <>
+                                                                                {token.hp}/
+                                                                                {token.maxHp ?? '—'}
+                                                                                {token.lifecycle
+                                                                                    ?.status ===
+                                                                                'dead'
+                                                                                    ? ' · Мёртв'
+                                                                                    : token.hp === 0
+                                                                                      ? ' · Повержен'
+                                                                                      : ''}
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                {token.hp} /{' '}
+                                                                                {token.maxHp} HP
+                                                                                {token.hp === 0
+                                                                                    ? ' · ПОВЕРЖЕН'
+                                                                                    : ''}
+                                                                                {gm &&
+                                                                                !encounterOnly &&
+                                                                                token.ac !==
+                                                                                    undefined
+                                                                                    ? ` · AC ${token.ac}`
+                                                                                    : ''}
+                                                                                {entry.budget
+                                                                                    ?.incapacitated
+                                                                                    ? ' · НЕДЕЕСПОСОБЕН'
+                                                                                    : ''}
+                                                                            </>
+                                                                        )}
+                                                                    </small>
+                                                                    <span
+                                                                        className={`combat-hp ${token.hp === 0 ? 'empty' : ''}`}
+                                                                    >
+                                                                        <i
+                                                                            style={{
+                                                                                width: `${(token.hp / (token.maxHp || 1)) * 100}%`,
+                                                                            }}
+                                                                        />
+                                                                    </span>
+                                                                </>
+                                                            ) : (
+                                                                <small>
+                                                                    {active
+                                                                        ? t('Current turn')
+                                                                        : t('Combatant')}
+                                                                </small>
+                                                            )}
+                                                        </span>
+                                                    </button>
+                                                    {gm ? (
+                                                        <Initiative
+                                                            entry={entry}
+                                                            disabled={disabled}
+                                                            change={(initiative) =>
+                                                                store.combatCommand({
+                                                                    action: 'initiative',
+                                                                    combatId: combat.id,
+                                                                    combatantId: entry.id,
+                                                                    initiative,
+                                                                })
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        <span
+                                                            className="initiative-value"
+                                                            title={t('Initiative')}
+                                                        >
+                                                            {entry.initiative ?? '—'}
+                                                        </span>
                                                     )}
-                                                    <div className="combat-row-actions">
+                                                    {gm && encounterOnly && (
+                                                        <span
+                                                            className="encounter-initiative"
+                                                            title={t('Initiative')}
+                                                        >
+                                                            {entry.initiative ?? '—'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {gm && encounterOnly ? (
+                                                    <div className="combat-row-actions encounter-row-actions">
                                                         {combat.status === 'active' && (
                                                             <button
                                                                 disabled={disabled || active}
@@ -669,7 +595,7 @@ export function CombatPanel({
                                                                 }
                                                             >
                                                                 <Crosshair size={12} />{' '}
-                                                                {t('Make current')}{' '}
+                                                                {t('Make current')}
                                                             </button>
                                                         )}
                                                         <button
@@ -682,36 +608,229 @@ export function CombatPanel({
                                                                 })
                                                             }
                                                         >
-                                                            <X size={12} /> {t('Remove')}{' '}
+                                                            <X size={12} /> {t('Remove')}
                                                         </button>
                                                     </div>
-                                                </div>
-                                            ) : (
-                                                <ConditionList token={token} />
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                                ) : gm && expanded ? (
+                                                    <div className="combat-row-detail">
+                                                        <div className="combat-quick-strip">
+                                                            <button
+                                                                title="HP · Alt+H"
+                                                                onClick={(e) =>
+                                                                    e.currentTarget
+                                                                        .closest(
+                                                                            '.combat-row-detail',
+                                                                        )
+                                                                        ?.querySelector<HTMLInputElement>(
+                                                                            '.hp-actions input',
+                                                                        )
+                                                                        ?.focus()
+                                                                }
+                                                            >
+                                                                ± HP
+                                                            </button>
+                                                            <button
+                                                                title="Состояния · Alt+C"
+                                                                onClick={(e) => {
+                                                                    const d = e.currentTarget
+                                                                        .closest(
+                                                                            '.combat-row-detail',
+                                                                        )
+                                                                        ?.querySelector<HTMLDetailsElement>(
+                                                                            '.condition-disclosure',
+                                                                        );
+                                                                    if (d) {
+                                                                        d.open = !d.open;
+                                                                        d.querySelector<HTMLInputElement>(
+                                                                            '.condition-search',
+                                                                        )?.focus();
+                                                                    }
+                                                                }}
+                                                            >
+                                                                Состояние
+                                                            </button>
+                                                            <button
+                                                                title="Осмотреть без редактора"
+                                                                aria-pressed={inspecting}
+                                                                onClick={() =>
+                                                                    setInspecting(!inspecting)
+                                                                }
+                                                            >
+                                                                Осмотр
+                                                            </button>
+                                                            <button
+                                                                title="Фокус камеры ГМ"
+                                                                onClick={() =>
+                                                                    renderer?.current?.focusToken(
+                                                                        token.id,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Фокус
+                                                            </button>
+                                                        </div>
+                                                        <TokenCombatControls
+                                                            key={token.id}
+                                                            token={token}
+                                                            store={store}
+                                                            disabled={disabled}
+                                                        />
+                                                        <CombatActorControls
+                                                            key={'actor' + token.id}
+                                                            token={token}
+                                                            store={store}
+                                                            renderer={renderer}
+                                                            disabled={disabled}
+                                                        />
+                                                        {inspecting && (
+                                                            <div className="runtime-inspection">
+                                                                <strong>
+                                                                    {token.name} · AC{' '}
+                                                                    {token.ac ?? '—'} ·{' '}
+                                                                    {token.speed ?? '—'} ft
+                                                                </strong>
+                                                                <p>
+                                                                    {(
+                                                                        scene.characters?.find(
+                                                                            (c) =>
+                                                                                c.id ===
+                                                                                token.characterId,
+                                                                        )?.checkStats ??
+                                                                        token.checkStats ??
+                                                                        []
+                                                                    )
+                                                                        .map(
+                                                                            (s) =>
+                                                                                `${s.label} ${s.modifier >= 0 ? '+' : ''}${s.modifier}`,
+                                                                        )
+                                                                        .join(' · ')}
+                                                                </p>
+                                                                {[
+                                                                    'saving_throws',
+                                                                    'resistances',
+                                                                    'vulnerabilities',
+                                                                    'immunities',
+                                                                    'condition_immunities',
+                                                                ].map((key) => (
+                                                                    <p key={key}>
+                                                                        {
+                                                                            (
+                                                                                {
+                                                                                    saving_throws:
+                                                                                        'Спасброски',
+                                                                                    resistances:
+                                                                                        'Сопротивления',
+                                                                                    vulnerabilities:
+                                                                                        'Уязвимости',
+                                                                                    immunities:
+                                                                                        'Иммунитеты',
+                                                                                    condition_immunities:
+                                                                                        'Иммунитет состояний',
+                                                                                } as Record<
+                                                                                    string,
+                                                                                    string
+                                                                                >
+                                                                            )[key]
+                                                                        }
+                                                                        :{' '}
+                                                                        {Array.isArray(
+                                                                            token.combatProfile?.[
+                                                                                key
+                                                                            ],
+                                                                        )
+                                                                            ? (
+                                                                                  token
+                                                                                      .combatProfile![
+                                                                                      key
+                                                                                  ] as string[]
+                                                                              ).join(', ') || '—'
+                                                                            : token.combatProfile?.[
+                                                                                    key
+                                                                                ] &&
+                                                                                typeof token
+                                                                                    .combatProfile[
+                                                                                    key
+                                                                                ] === 'object'
+                                                                              ? Object.entries(
+                                                                                    token
+                                                                                        .combatProfile[
+                                                                                        key
+                                                                                    ] as Record<
+                                                                                        string,
+                                                                                        number
+                                                                                    >,
+                                                                                )
+                                                                                    .map(
+                                                                                        ([k, v]) =>
+                                                                                            `${k.toUpperCase()} ${v >= 0 ? '+' : ''}${v}`,
+                                                                                    )
+                                                                                    .join(' · ')
+                                                                              : '—'}
+                                                                    </p>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                        <div className="combat-row-actions">
+                                                            {combat.status === 'active' && (
+                                                                <button
+                                                                    disabled={disabled || active}
+                                                                    onClick={() =>
+                                                                        store.combatCommand({
+                                                                            action: 'current',
+                                                                            combatId: combat.id,
+                                                                            combatantId: entry.id,
+                                                                        })
+                                                                    }
+                                                                >
+                                                                    <Crosshair size={12} />{' '}
+                                                                    {t('Make current')}{' '}
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                disabled={disabled}
+                                                                onClick={() =>
+                                                                    store.combatCommand({
+                                                                        action: 'remove',
+                                                                        combatId: combat.id,
+                                                                        combatantId: entry.id,
+                                                                    })
+                                                                }
+                                                            >
+                                                                <X size={12} /> {t('Remove')}{' '}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <ConditionList token={token} />
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </details>
                         </>
                     )}
                     {gm && scene.id && (
                         <>
-                            <GMQuickCheck
-                                store={store}
-                                tokenId={
-                                    selected.turn === turnKey && selected.id
-                                        ? selected.id
-                                        : (current ?? selectedIds[0])
-                                }
-                                disabled={disabled}
-                            />
+                            {!encounterOnly && (
+                                <GMQuickCheck
+                                    store={store}
+                                    tokenId={
+                                        selected.turn === turnKey && selected.id
+                                            ? selected.id
+                                            : (current ?? selectedIds[0])
+                                    }
+                                    disabled={disabled}
+                                />
+                            )}
                             <GMResolutionQueue store={store} disabled={disabled} />
-                            <CombatHistory
-                                sceneId={scene.id}
-                                revision={scene.revision}
-                                scene={scene}
-                            />
+                            {!encounterOnly && (
+                                <CombatHistory
+                                    sceneId={scene.id}
+                                    revision={scene.revision}
+                                    scene={scene}
+                                />
+                            )}
                         </>
                     )}
                     {combatNotice && (

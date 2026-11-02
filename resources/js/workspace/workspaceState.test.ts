@@ -32,15 +32,49 @@ describe('workspace navigation', () => {
         expect(workspaceReducer(assets, { type: 'selection', key: 'prop-1' }).left).toBeNull();
         expect(workspaceReducer(assets, { type: 'selection', key: '' }).left).toBe('assets');
     });
-    it('keeps the live plan beside one dock on desktop, but only one drawer on tablet', () => {
+    it('starts Session with only the map and opens runtime surfaces explicitly', () => {
         const live = workspaceReducer(initialWorkspace, { type: 'mode', mode: 'session' });
+        expect(live.left).toBeNull();
+        expect(contextualPanel(live, '')).toBeNull();
+        const plan = workspaceReducer(live, { type: 'left', panel: 'session' });
+        expect(contextualPanel(plan, 'token')).toBeNull();
+        expect(
+            contextualPanel(workspaceReducer(plan, { type: 'left', panel: null }), 'token'),
+        ).toBe('context');
         const audio = workspaceReducer(live, { type: 'right', panel: 'audio' });
-        expect(audio.left).toBe('session');
+        expect(audio.left).toBeNull();
         expect(audio.right).toBe('audio');
         const combat = workspaceReducer(audio, { type: 'right', panel: 'combat', compact: true });
         expect(combat.left).toBeNull();
         expect(combat.right).toBe('combat');
         expect(combat.mode).toBe('session');
+    });
+    it('discloses details, collapses back to context, and then dismisses selection', () => {
+        const live = workspaceReducer(initialWorkspace, { type: 'mode', mode: 'session' });
+        const details = workspaceReducer(live, { type: 'expand', value: true });
+        expect(details.expanded).toBe(true);
+        const compact = workspaceReducer(details, { type: 'close-right', selection: 'token' });
+        expect(compact.expanded).toBe(false);
+        expect(contextualPanel(compact, 'token')).toBe('context');
+        expect(
+            contextualPanel(
+                workspaceReducer(compact, { type: 'close-right', selection: 'token' }),
+                'token',
+            ),
+        ).toBeNull();
+    });
+    it('keeps pinned details until explicitly collapsed and resets floating details on selection', () => {
+        const details = workspaceReducer(initialWorkspace, { type: 'expand', value: true });
+        expect(workspaceReducer(details, { type: 'selection', key: 'next' }).expanded).toBe(false);
+        const pinned = workspaceReducer(details, { type: 'pin' });
+        expect(pinned.pinned).toBe(true);
+        expect(contextualPanel(workspaceReducer(pinned, { type: 'selection', key: '' }), '')).toBe(
+            'context',
+        );
+        expect(workspaceReducer(pinned, { type: 'selection', key: 'next' }).expanded).toBe(true);
+        expect(workspaceReducer(pinned, { type: 'pin' }).pinned).toBe(false);
+        expect(workspaceReducer(pinned, { type: 'expand', value: false }).pinned).toBe(false);
+        expect(workspaceReducer(pinned, { type: 'right', panel: 'combat' }).pinned).toBe(false);
     });
     it('returns from any busy layout to the clean table and keeps library distinct', () => {
         const live = workspaceReducer(initialWorkspace, { type: 'mode', mode: 'session' });
