@@ -70,6 +70,21 @@ export class SceneSubscriber {
                 if (this.alive && this.queue.getSnapshot().status === 'saved') void this.resync();
             });
         };
+        store.onDirectCommandSettled = () => {
+            if (!this.alive || this.loading) return;
+            const events = this.buffer.splice(0);
+            for (const event of events) this.receive(event);
+            if (this.deferred) void this.resync();
+        };
+        store.onDirectCommandReceipt = (revision) => {
+            if (!this.alive || this.loading) return;
+            const earlier = this.buffer.filter((event) => event.revision < revision);
+            this.buffer = this.buffer.filter((event) => event.revision >= revision);
+            store.directCommandPending = false;
+            for (const event of earlier.sort((a, b) => a.revision - b.revision))
+                this.receive(event);
+            store.directCommandPending = true;
+        };
         store.onPreview = (id, position, cancelled) => {
             const dragSessionId = store.dragSessionId;
             if (!dragSessionId || (this.inFlight && !cancelled)) return;
@@ -93,10 +108,14 @@ export class SceneSubscriber {
                 });
         };
         this.timer = setInterval(() => {
-            if (this.loading || !this.alive) return;
+            if (this.loading || !this.alive || store.directCommandPending) return;
             const scene = store.getSnapshot().scene;
             void request<{ revision: number }>(`/scenes/${scene.id}/revision`)
                 .then((value) => {
+                    // A delayed own HTTP receipt can explain this newer revision.
+                    // Its bounded event/receipt merge is authoritative; don't force
+                    // an unnecessary snapshot that would end held-key control.
+                    if (store.directCommandPending) return;
                     if (
                         this.alive &&
                         (value.revision !== store.getSnapshot().scene.revision || this.deferred)
@@ -159,6 +178,13 @@ export class SceneSubscriber {
             this.buffer.push(change);
             return;
         }
+        if (this.store.directCommandPending) {
+            // Hold only a bounded set of incremental events until the HTTP receipt
+            // fills our own revision. No snapshot storm during simultaneous WASD.
+            if (this.buffer.length < 64) this.buffer.push(change);
+            else this.deferred = true;
+            return;
+        }
         if (this.queue.getSnapshot().status !== 'saved') {
             this.deferred = true;
             // Permission revocation and hiding must cancel an active player gesture immediately,
@@ -179,10 +205,18 @@ export class SceneSubscriber {
         }
         const next = reduceEvent(scene, change);
         if (next === 'gap') void this.resync();
-        else if (next !== scene) this.store.reconcile(next);
+        else if (next !== scene)
+            this.store.reconcile(next, {
+                movements: change.payload.tokenMovements,
+                reset: change.type === 'combat.updated',
+            });
     };
     async resync() {
         if (!this.alive || this.loading) return;
+        if (this.store.directCommandPending) {
+            this.deferred = true;
+            return;
+        }
         if (this.queue.getSnapshot().status !== 'saved') {
             this.deferred = true;
             return;
@@ -217,7 +251,12 @@ export class SceneSubscriber {
             this.loading = false;
             const events = this.buffer;
             this.buffer = [];
-            events.forEach(this.receive);
+            events.forEach((event) =>
+                this.receive({
+                    ...event,
+                    payload: { ...event.payload, tokenMovements: undefined },
+                }),
+            );
             if (staleSnapshot) void this.resync();
         }
     }
@@ -231,6 +270,8 @@ export class SceneSubscriber {
         this.store.spatial.clear();
         this.store.onPreview = undefined;
         this.store.onRevisionGap = undefined;
+        this.store.onDirectCommandSettled = undefined;
+        this.store.onDirectCommandReceipt = undefined;
         this.store.remotePreviews.clear();
         this.echo.leave(this.channel);
     }

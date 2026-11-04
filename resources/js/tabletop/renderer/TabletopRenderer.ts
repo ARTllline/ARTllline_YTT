@@ -1,4 +1,10 @@
 import { performanceMark, observingPerformance } from '../../realtime/performance';
+import { WasdControl } from '../navigation/WasdControl';
+import { displayScene } from '../mapWorld';
+import { StructureLayer } from '../structure/StructureLayer';
+import type { PresetSettings } from '../objects/collider';
+import { StructureCollisionOverlay } from '../structure/StructureCollisionOverlay';
+import { TerrainLayer } from '../terrain/TerrainLayer';
 import { t } from '../../i18n';
 import { GameplayLayer } from '../layers/GameplayLayer';
 import { AtmosphereLayer } from '../layers/AtmosphereLayer';
@@ -35,6 +41,13 @@ export class TabletopRenderer {
     private director = new DirectorCamera(this.camera);
     private grid = new GridLayer();
     private map = new BattleMapLayer();
+    private terrain = new TerrainLayer(
+        (message) => this.store.editorNotice(message),
+        () => this.store.onRevisionGap?.(),
+    );
+    private structure = new StructureLayer();
+    private collision = new StructureCollisionOverlay();
+    private buildGuide = new Graphics();
     private textures = new Map<string, Texture>();
     private tokens = new TokenLayer();
     private props = new ScenePropLayer();
@@ -45,12 +58,14 @@ export class TabletopRenderer {
     private overlay = new InteractionLayer();
     private response = new Graphics();
     private placementGhost = new PlacementGhost();
+    private mapGuide = new Graphics();
     readonly gameplay = new GameplayLayer();
     setGameplayTarget(
         kind?: 'token' | 'prop' | 'point',
         ability?: import('../../gameplay/model').Ability,
         actorId?: string,
     ) {
+        if (kind) this.tokens.finishMovements();
         this.gameplay.targetKind = kind;
         this.gameplay.ability = ability;
         this.gameplay.actorId = actorId;
@@ -64,6 +79,7 @@ export class TabletopRenderer {
     }
     private responseTarget?: { kind: 'token' | 'prop'; id: string; until: number };
     private input?: PointerController;
+    private directControl?: WasdControl;
     private observer?: ResizeObserver;
     private unsubscribe?: () => void;
     private destroyed = false;
@@ -109,7 +125,10 @@ export class TabletopRenderer {
         this.world.eventMode = 'none';
         this.world.addChild(
             this.map,
+            this.terrain,
+            this.structure.floors,
             this.grid,
+            this.structure.walls,
             this.props,
             this.tokens,
             this.fog,
@@ -118,6 +137,9 @@ export class TabletopRenderer {
             this.response,
             this.gameplay,
             this.placementGhost,
+            this.mapGuide,
+            this.buildGuide,
+            this.collision,
         );
         if (this.store.role === 'gm') {
             this.regions = new RegionLayer();
@@ -149,11 +171,35 @@ export class TabletopRenderer {
             this.notes,
             this.props,
             this.regions,
+            this.terrain,
+            this.buildGuide,
         );
-        let previousScene = this.store.getSnapshot().scene;
+        this.directControl = new WasdControl(canvas, this.store, () => {
+            this.input?.cancel();
+            this.tokens.finishMovements();
+        });
+        let previousScene = displayScene(
+            this.store.getSnapshot().scene,
+            this.store.getSnapshot().mapDraft,
+        );
+        let movementUpdate = this.store.getSnapshot().movementUpdate;
+        let previousBuild = this.store.getSnapshot().build;
+        let previousEditor = this.store.getSnapshot().mapEditor;
         const sync = () => {
-            const { scene } = this.store.getSnapshot();
             const state = this.store.getSnapshot();
+            if (state.mapEditor !== previousEditor || state.build !== previousBuild)
+                this.input?.cancel();
+            previousBuild = state.build;
+            this.input?.refreshBuild();
+            previousEditor = state.mapEditor;
+            this.map.visible = state.mapEditor?.backgroundVisible !== false;
+            this.props.visible = state.mapEditor?.objectsVisible !== false;
+            this.tokens.alpha = state.mapEditor ? 0.35 : 1;
+            this.fog.visible = !state.mapEditor;
+            if (this.notes) this.notes.visible = !state.mapEditor;
+            if (this.regions) this.regions.visible = !state.mapEditor;
+            const scene = displayScene(state.scene, state.mapDraft);
+            this.terrain.sync(scene);
             this.regions?.sync(
                 scene.regions ?? [],
                 state.selectedRegionId,
@@ -170,12 +216,48 @@ export class TabletopRenderer {
                 scene.height !== previousScene.height
             )
                 this.grid.update(scene.grid, scene.width, scene.height);
+            const debug = this.store.role === 'gm' && !!state.mapEditor?.collisionDebug;
+            this.collision.sync(debug ? scene.structure : null);
             this.props.sync(scene.props ?? [], this.textures);
+            this.props.collisionDebug(debug);
+            const previousCombat = previousScene.combat;
+            const combat = scene.combat;
+            const movementReset =
+                state.movementUpdate?.reset && state.movementUpdate !== movementUpdate;
+            const contextChanged =
+                scene.id !== previousScene.id ||
+                scene.structure?.hash !== previousScene.structure?.hash ||
+                combat?.id !== previousCombat?.id ||
+                combat?.status !== previousCombat?.status ||
+                combat?.round !== previousCombat?.round ||
+                currentTokenId(combat) !== currentTokenId(previousCombat) ||
+                !!combat?.currentTurn !== !!previousCombat?.currentTurn;
+            const geometryChanged =
+                scene.width !== previousScene.width ||
+                scene.height !== previousScene.height ||
+                scene.grid !== previousScene.grid ||
+                scene.mapWorld !== previousScene.mapWorld ||
+                (scene.props !== previousScene.props &&
+                    (scene.props?.some(
+                        (prop) => prop.collider?.blocksMovement || prop.movementObstacle,
+                    ) ||
+                        previousScene.props?.some(
+                            (prop) => prop.collider?.blocksMovement || prop.movementObstacle,
+                        )));
+            if (movementReset || contextChanged || geometryChanged) this.tokens.finishMovements();
             this.tokens.sync(
                 scene.tokens,
                 this.store.role === 'player',
                 currentTokenId(scene.combat),
+                !movementReset &&
+                    !contextChanged &&
+                    !this.reducedMotion.matches &&
+                    !this.gameplay.targetKind &&
+                    movementUpdate !== state.movementUpdate
+                    ? state.movementUpdate?.movements
+                    : undefined,
             );
+            movementUpdate = state.movementUpdate;
             if (scene !== previousScene) this.syncImages();
             this.input?.reapplyPreview();
             this.input?.refresh();
@@ -227,39 +309,67 @@ export class TabletopRenderer {
             for (const [id, preview] of this.store.remotePreviews) {
                 if (preview.expires < now) this.store.remotePreviews.delete(id);
             }
+            if (this.camera.directed) this.directControl?.stop();
+            const controlled = this.directControl?.tick(ticker.elapsedMS, now);
+            const draggedToken = this.input?.draggingToken;
+            const draggedGroup = this.input?.draggingObjectTokens;
             for (const [id, view] of this.tokens.views) {
+                const dragging = draggedToken === id || !!draggedGroup?.includes(id);
                 view.tick(
                     ticker.deltaMS,
                     this.camera.state.zoom,
                     this.reducedMotion.matches,
-                    this.input?.draggingToken === id ||
-                        !!this.input?.draggingObjectTokens.includes(id),
+                    dragging,
                 );
-                if (
-                    this.input?.draggingToken === id ||
-                    this.input?.draggingObjectTokens.includes(id)
-                )
+                if (controlled?.id === id) {
+                    this.tokens.finishMovement(id);
+                    this.tokens.preview(id, controlled.position);
                     continue;
-                const target = this.store.remotePreviews.get(id);
-                if (target || Math.hypot(view.x - view.model.x, view.y - view.model.y) > 0.1) {
-                    const point = target ?? view.model;
-                    const blend = this.reducedMotion.matches
-                        ? 1
-                        : 1 - Math.exp(-ticker.deltaMS / 45);
-                    view.position.set(
-                        view.x + (point.x - view.x) * blend,
-                        view.y + (point.y - view.y) * blend,
-                    );
                 }
+                if (dragging) {
+                    this.tokens.finishMovement(id);
+                    continue;
+                }
+                if (this.tokens.tickMovement(id, ticker.elapsedMS, this.reducedMotion.matches))
+                    continue;
+                if (view.x !== view.model.x || view.y !== view.model.y)
+                    view.position.set(view.model.x, view.model.y);
             }
+            this.tokens.drawMovements(this.camera.state.zoom, this.store.getSnapshot().selectedIds);
             this.camera.tick(ticker.deltaMS);
+            if (controlled?.follow && !this.camera.directed) {
+                const { x, y, zoom } = this.camera.state;
+                const factor = this.reducedMotion.matches
+                    ? 1
+                    : 1 - Math.exp(-ticker.elapsedMS / 180);
+                // Follow shifts translation without cancelling the wheel's zoom target.
+                this.camera.state = {
+                    x: x + (this.width / 2 - x - controlled.position.x * zoom) * factor,
+                    y: y + (this.height / 2 - y - controlled.position.y * zoom) * factor,
+                    zoom,
+                };
+            }
+            this.input?.updateTerrainCursor();
+            this.input?.updateBuildZoom();
             this.weather.configure(this.effects, this.reducedMotion.matches);
             this.weather.tick(ticker.deltaMS, this.width, this.height, this.reducedMotion.matches);
             this.director.tick(ticker.deltaMS);
             const camera = this.camera.state;
+            this.terrain.tick(camera, this.width, this.height);
             this.notes?.zoom(camera.zoom);
             this.regions?.zoom(camera.zoom);
-            const scene = this.store.getSnapshot().scene;
+            const state = this.store.getSnapshot();
+            const scene = displayScene(state.scene, state.mapDraft);
+            this.mapGuide.clear();
+            for (const p of state.mapCalibrationPoints ?? []) {
+                const r = 9 / camera.zoom;
+                this.mapGuide
+                    .moveTo(p.x - r, p.y)
+                    .lineTo(p.x + r, p.y)
+                    .moveTo(p.x, p.y - r)
+                    .lineTo(p.x, p.y + r)
+                    .stroke({ color: 0xb7e1ce, width: 2 / camera.zoom });
+            }
             this.fog.update(
                 this.app.renderer,
                 scene.fog,
@@ -299,7 +409,8 @@ export class TabletopRenderer {
     fit() {
         if (this.camera.directed) return;
         this.input?.cancel();
-        const scene = this.store.getSnapshot().scene;
+        const state = this.store.getSnapshot();
+        const scene = displayScene(state.scene, state.mapDraft);
         this.camera.fit(this.width, this.height, scene.width, scene.height);
     }
     contextTarget(clientX: number, clientY: number) {
@@ -310,16 +421,28 @@ export class TabletopRenderer {
             this.camera.state,
         );
         const token = this.tokens.hit(point);
-        if (token) return { kind: 'token' as const, id: token };
+        if (token) {
+            this.tokens.finishMovement(token);
+            return { kind: 'token' as const, id: token };
+        }
         const prop = this.props.hit(point);
         if (prop) return { kind: 'prop' as const, id: prop };
         const region = this.regions?.hit(point);
         if (region) return { kind: 'region' as const, id: region };
     }
+    isTokenInMotion(id: string) {
+        return (
+            this.store.getSnapshot().directControl?.tokenId === id ||
+            this.tokens.isMoving(id) ||
+            this.input?.draggingToken === id ||
+            !!this.input?.draggingObjectTokens.includes(id)
+        );
+    }
     focusToken(id: string) {
         if (this.camera.directed) return;
         const token = this.store.getSnapshot().scene.tokens.find((t) => t.id === id);
         if (!token) return;
+        this.tokens.finishMovement(id);
         this.input?.cancel();
         const center = this.center();
         this.camera.pan(
@@ -383,7 +506,12 @@ export class TabletopRenderer {
             this.camera.state,
         );
     }
-    beginPlacement(name: string, url?: string, prop?: { width: number; height: number }) {
+    beginPlacement(
+        name: string,
+        url?: string,
+        prop?: { width: number; height: number },
+        preset?: PresetSettings,
+    ) {
         const grid = this.store.getSnapshot().scene.grid;
         const size = prop
             ? grid.visible
@@ -395,11 +523,16 @@ export class TabletopRenderer {
         const ratio = prop ? size / Math.max(prop.width, prop.height) : 1;
         this.placementGhost.configure(
             url,
-            prop ? prop.width * ratio : size,
-            prop ? prop.height * ratio : size,
-            !prop,
+            preset ? preset.width * preset.scaleX : prop ? prop.width * ratio : size,
+            preset ? preset.height * preset.scaleY : prop ? prop.height * ratio : size,
+            !prop && !preset,
             name,
+            preset?.pivotX,
+            preset?.pivotY,
         );
+    }
+    rotatePlacement(rotation: number) {
+        this.placementGhost.angle = rotation;
     }
     hidePlacement() {
         this.placementGhost.visible = false;
@@ -413,7 +546,9 @@ export class TabletopRenderer {
             { x: clientX - bounds.left, y: clientY - bounds.top },
             this.camera.state,
         );
-        return { point, tokenId: this.tokens.hit(point) };
+        const tokenId = this.tokens.hit(point);
+        if (tokenId) this.tokens.finishMovement(tokenId);
+        return { point, tokenId };
     }
     setImages(images: Map<string, HTMLImageElement>) {
         for (const [id, image] of images) {
@@ -422,16 +557,23 @@ export class TabletopRenderer {
         this.syncImages();
     }
     private syncImages() {
-        const scene = this.store.getSnapshot().scene;
-        this.map.update(scene, scene.map ? this.textures.get(scene.map.asset.id) : undefined);
+        const state = this.store.getSnapshot();
+        const scene = displayScene(state.scene, state.mapDraft);
+        this.map.update(
+            scene,
+            scene.map ? this.textures.get(scene.map.asset.id) : undefined,
+            !!state.mapDraft,
+        );
         this.tokens.views.forEach((view) =>
             view.setImage(view.model.image ? this.textures.get(view.model.image.id) : undefined),
         );
         this.props.sync(scene.props ?? [], this.textures);
+        this.structure.sync(scene.structure, this.textures);
         const used = new Set([
             scene.map?.asset.id,
             ...scene.tokens.map((t) => t.image?.id),
             ...(scene.props ?? []).map((p) => p.image.id),
+            ...(scene.structure?.materials ?? []).map((material) => material.asset.id),
         ]);
         for (const [id, texture] of this.textures)
             if (!used.has(id)) {
@@ -453,6 +595,7 @@ export class TabletopRenderer {
     destroy() {
         this.destroyed = true;
         this.observer?.disconnect();
+        this.directControl?.destroy();
         this.input?.destroy();
         this.store.onGameplayFeedback = undefined;
         this.unsubscribe?.();
@@ -460,6 +603,7 @@ export class TabletopRenderer {
     }
     private release() {
         this.app.canvas.removeEventListener('webglcontextlost', this.contextLost);
+        this.tokens.finishMovements();
         this.app.destroy(true, { children: true });
         this.textures.forEach((texture) => texture.destroy(true));
         this.textures.clear();

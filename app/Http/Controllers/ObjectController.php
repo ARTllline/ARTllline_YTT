@@ -21,9 +21,12 @@ class ObjectController extends Controller
     {
         Gate::authorize('update', $scene);
         $data = $request->validate(['action' => 'required|in:create,update', 'id' => 'required_if:action,update|integer',
-            'assetId' => 'required_if:action,create|integer', 'purpose' => 'sometimes|in:container,interaction', 'x' => 'required_if:action,create|numeric|between:-1000000,1000000',
+            'assetId' => 'exclude_if:action,update|required_without:presetId|integer|prohibits:presetId', 'presetId' => 'exclude_if:action,update|sometimes|integer',
+            'rotation' => 'sometimes|numeric|between:-360,360',
+            'purpose' => 'sometimes|in:container,interaction', 'x' => 'required_if:action,create|numeric|between:-1000000,1000000',
             'y' => 'required_if:action,create|numeric|between:-1000000,1000000', 'order' => 'sometimes|in:front,back,forward,backward',
-            'patch' => 'sometimes|array:name,x,y,rotation,scale_x,scale_y,is_hidden,is_locked',
+            'patch' => 'sometimes|array:name,x,y,rotation,scale_x,scale_y,is_hidden,is_locked,collider',
+            'patch.collider' => 'sometimes|array',
             'patch.name' => 'sometimes|nullable|string|max:160', 'patch.x' => 'sometimes|numeric|between:-1000000,1000000',
             'patch.y' => 'sometimes|numeric|between:-1000000,1000000', 'patch.rotation' => 'sometimes|numeric|between:-360,360',
             'patch.scale_x' => 'sometimes|numeric|between:0.001,100', 'patch.scale_y' => 'sometimes|numeric|between:0.001,100',

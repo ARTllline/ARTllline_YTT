@@ -31,6 +31,23 @@ class AssetPolicy
     private function inCampaign(User $user, Asset $asset, Campaign $campaign): bool
     {
         $role = $campaign->roleFor($user);
+        if (in_array($role, ['gm', 'player'], true) && \Illuminate\Support\Facades\DB::table('terrain_masks')
+            ->join('terrain_chunks', 'terrain_chunks.id', '=', 'terrain_masks.terrain_chunk_id')
+            ->join('map_worlds', 'map_worlds.id', '=', 'terrain_chunks.map_world_id')
+            ->join('scenes', 'scenes.id', '=', 'map_worlds.scene_id')
+            ->join('map_material_versions', 'map_material_versions.id', '=', 'terrain_masks.map_material_version_id')
+            ->where('scenes.campaign_id', $campaign->id)->where('map_material_versions.asset_id', $asset->id)
+            ->when($role === 'player', fn ($q) => $q->where('scenes.id', $campaign->active_scene_id ?? 0))->exists()) {
+            return true;
+        }
+        if (in_array($role, ['gm', 'player'], true) && \Illuminate\Support\Facades\DB::table('map_structure_materials')
+            ->join('map_worlds', 'map_worlds.id', '=', 'map_structure_materials.map_world_id')
+            ->join('scenes', 'scenes.id', '=', 'map_worlds.scene_id')
+            ->join('map_material_versions', 'map_material_versions.id', '=', 'map_structure_materials.map_material_version_id')
+            ->where('scenes.campaign_id', $campaign->id)->where('map_material_versions.asset_id', $asset->id)
+            ->when($role === 'player', fn ($q) => $q->where('scenes.id', $campaign->active_scene_id ?? 0))->exists()) {
+            return true;
+        }
         if ($role === 'gm') {
             return $asset->campaign_id === $campaign->id || $this->characterUse($asset, $campaign, $user, true)
                 || Scene::where('campaign_id', $campaign->id)->where('map_asset_id', $asset->id)->exists()

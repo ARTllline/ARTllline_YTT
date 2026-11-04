@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ObjectPresetLibrary } from '../workspace/maps/ObjectPresetLibrary';
 import { ArrowLeft, ArrowUpRight, Box, Plus, Users, Heart, Shield, BookOpen } from 'lucide-react';
 import { api, type CampaignSummary } from '../api/workspace';
 import { charactersApi } from '../api/characters';
@@ -132,7 +133,10 @@ export function ControlCenter() {
             </aside>
             <main className="control-main">
                 {assetsPage ? (
-                    <AssetLibrary />
+                    <>
+                        <ObjectPresetLibrary />
+                        <AssetLibrary />
+                    </>
                 ) : npcsPage ? (
                     <NpcLibrary campaigns={campaigns} />
                 ) : spellsPage ? (

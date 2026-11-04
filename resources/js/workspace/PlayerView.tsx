@@ -250,9 +250,9 @@ function PlayerTabletop({
             />
             <InitiativeTimeline store={store} renderer={renderer} />
             <Toolbar store={store} onTool={(tool) => renderer.current?.setTool(tool)} />
-            {(status || save.error) && (
+            {(status || save.error || snapshot.combatNotice) && (
                 <div className="player-notice" role="status">
-                    <span>{save.error || status}</span>
+                    <span>{save.error || status || snapshot.combatNotice}</span>
                     {save.error && (
                         <>
                             <button onClick={queue.retry}> {t('Retry move')} </button>

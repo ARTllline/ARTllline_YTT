@@ -33,6 +33,9 @@ class MovePreviewController extends Controller
             if ((int) $data['baseRevision'] !== $scene->revision) {
                 return ['accepted' => false];
             }
+            if ($scene->mapWorld) {
+                return ['accepted' => false];
+            }
             unset($data['baseRevision']);
             $publisher->preview($scene, $current, $data);
 

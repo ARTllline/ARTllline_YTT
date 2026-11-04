@@ -4,7 +4,14 @@ GM campaigns now open a scene collection at `/campaigns/{campaign}/scenes`.
 Create a scene, choose a map from the global Asset Library, configure dimensions
 and grid, then open the existing tabletop in Prepare mode. Blank scenes work too.
 Scene settings save atomically, including map validation, through the existing
-command receipts and SceneActions. No new persistence format or migration is needed.
+command receipts and SceneActions. Legacy image preparation keeps its existing format.
+
+Optional editable maps now start from **Create editable map / Edit map** inside
+Prepare. [MapWorld foundation](MAP_WORLD.md) adds bounds, reference placement/crop and
+visual grid calibration, using the same viewport, Scene state and Session runtime.
+The MAP-02 Map Editor now opens here with object placement/Inspector, local layer
+visibility/locks, edit history and a personal material library. Foundation/grid
+settings remain available from its settings button.
 
 The read-only GM preview uses the existing Pixi renderer and image loader and
 includes hidden objects. Campaign scene lists and preparation commands require

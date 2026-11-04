@@ -71,7 +71,8 @@ describe('persistent scene commands', () => {
         vi.spyOn(api, 'move').mockRejectedValue(new ApiError('Permission changed', 403));
         vi.spyOn(api, 'snapshot').mockResolvedValue(scene);
         store.moveToken('kern', { x: 999, y: 999 });
-        await expect(persistence.queue.flush()).rejects.toThrow('Permission changed');
+        await persistence.queue.flush();
+        expect(store.getSnapshot().combatNotice).toBe('Permission changed');
         expect(store.getSnapshot().scene).toEqual(scene);
     });
     it('reuses the mutation ID on an ambiguous failure instead of creating a second command', async () => {
@@ -109,6 +110,9 @@ describe('persistent scene commands', () => {
             'kern',
             { x: 120.25, y: 44.75 },
             expect.any(String),
+            undefined,
+            undefined,
+            undefined,
             undefined,
         );
         expect(patch).not.toHaveBeenCalled();

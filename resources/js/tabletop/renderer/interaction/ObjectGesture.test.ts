@@ -5,6 +5,7 @@ import { createDemoScene } from '../../state/demoScene';
 import type { SceneProp } from '../../types/scene';
 import type { TokenLayer } from '../../layers/TokenLayer';
 import type { ScenePropLayer } from '../../layers/ScenePropLayer';
+import type { InteractionLayer } from '../../layers/InteractionLayer';
 
 function fixture(resize = false, locked = false) {
     const prop: SceneProp = {
@@ -25,7 +26,7 @@ function fixture(resize = false, locked = false) {
         grid: { ...scene.grid, size: 60, offset: { x: 0, y: 0 }, snap: true },
         props: [prop],
     });
-    const tokens = { hit: vi.fn(() => null), preview: vi.fn() };
+    const tokens = { hit: vi.fn(() => null), finishMovement: vi.fn() };
     const props = {
         hit: vi.fn(() => 'p'),
         resizeHit: vi.fn(() => (resize ? 'p' : null)),
@@ -36,6 +37,7 @@ function fixture(resize = false, locked = false) {
         store,
         tokens as unknown as TokenLayer,
         props as unknown as ScenePropLayer,
+        { showMovement: vi.fn() } as unknown as InteractionLayer,
     );
     const command = vi.fn();
     store.bindCommands(command);
@@ -45,9 +47,9 @@ it('previews mixed movement without commands and commits one snapped anchor on r
     const { store, props, gesture, command } = fixture();
     store.selectObjects({ tokenIds: ['kern'], propIds: ['p'] });
     gesture.down({ x: 100, y: 200 }, false, 1);
-    gesture.move({ x: 180, y: 250 });
+    gesture.move({ x: 180, y: 250 }, 1);
     expect(command).not.toHaveBeenCalled();
-    expect(props.preview).toHaveBeenLastCalledWith('p', { x: 180, y: 250 });
+    expect(props.preview).toHaveBeenLastCalledWith('p', { x: 210, y: 270 });
     store.subscribe(() => gesture.preview());
     props.preview.mockClear();
     gesture.up({ x: 180, y: 250 });
@@ -60,13 +62,13 @@ it('previews mixed movement without commands and commits one snapped anchor on r
         x: 210,
         y: 270,
     });
-    expect(props.preview).toHaveBeenCalledTimes(1); // final pointer sample only, no stale preview after optimistic emit
-    expect(store.getSnapshot().scene.props?.[0]).toMatchObject({ x: 210, y: 270 });
+    expect(props.preview).toHaveBeenCalledTimes(1); // The unchanged final sample reuses the preview.
+    expect(store.getSnapshot().scene.props?.[0]).toMatchObject({ x: 100, y: 200 });
 });
 it('resizes in rotated local coordinates and restores preview on cancellation', () => {
     const { props, gesture, command } = fixture(true);
     gesture.down({ x: 0, y: 0 }, false, 1);
-    gesture.move({ x: 0, y: 40 });
+    gesture.move({ x: 0, y: 40 }, 1);
     expect(props.resize).toHaveBeenLastCalledWith('p', 1.2, 1);
     gesture.cancel();
     expect(props.resize).toHaveBeenLastCalledWith('p', 1, 1);
@@ -78,7 +80,7 @@ it('Shift toggles selection without drag and a locked group never emits movement
     gesture.down({ x: 100, y: 200 }, true, 1);
     expect(store.selection()).toEqual({ tokenIds: ['kern'], propIds: ['p'] });
     gesture.down({ x: 100, y: 200 }, false, 1);
-    gesture.move({ x: 500, y: 500 });
+    gesture.move({ x: 500, y: 500 }, 1);
     gesture.up({ x: 500, y: 500 });
     expect(command).not.toHaveBeenCalled();
 });

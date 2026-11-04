@@ -28,6 +28,7 @@ export function TokenQuickActions({
                     ?.getBoundingClientRect();
                 node.hidden =
                     !!state.preview ||
+                    renderer.current.isTokenInMotion(token.id) ||
                     store.abilityTargeting ||
                     state.selectedIds.length !== 1 ||
                     !canvas ||

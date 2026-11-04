@@ -37,10 +37,20 @@ it('toggles mixed selection, preserves relative layout and removes stale selecti
             y: 500,
         },
     });
-    expect(store.getSnapshot().scene.tokens.find((t) => t.id === 'kern')).toMatchObject({
-        x: original.x + 200,
-        y: original.y + 300,
-    });
+    expect(store.getSnapshot().scene.tokens.find((t) => t.id === 'kern')).toBe(original);
+    const moved = { ...original, x: original.x + 200, y: original.y + 300 };
+    const tokenMovements = [{ tokenId: moved.id, path: [original, moved] }];
+    const receipt = {
+        revision: 2,
+        tokens: [moved],
+        props: [{ ...prop, x: 300, y: 500 }],
+        tokenMovements,
+    };
+    store.accept(receipt, true);
+    expect(store.getSnapshot().scene.tokens.find((t) => t.id === 'kern')).toBe(moved);
+    expect(store.getSnapshot().movementUpdate?.movements).toBe(tokenMovements);
+    store.accept(receipt, true);
+    expect(store.getSnapshot().movementUpdate?.movements).toBeUndefined();
     store.selectObject('token', 'kern', true);
     expect(store.selection().tokenIds).toEqual([]);
     store.reconcile({ ...scene(), props: [] });

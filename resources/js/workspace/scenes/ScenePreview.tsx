@@ -30,6 +30,7 @@ export function ScenePreview({ scene }: { scene: Scene }) {
             const assets = [
                 ...(scene.map ? [scene.map.asset] : []),
                 ...(scene.props ?? []).map((p) => p.image),
+                ...(scene.structure?.materials ?? []).map((material) => material.asset),
                 ...scene.tokens.flatMap((t) => (t.image ? [t.image] : [])),
             ];
             const images = await loadImages(

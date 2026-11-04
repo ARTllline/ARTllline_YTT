@@ -1,4 +1,6 @@
 import { applyObjectPatch } from '../tabletop/state/objectPatch';
+import { applyStructurePatch, emptyHash, type StructurePatch } from '../tabletop/structure/model';
+import { terrainPatch } from '../tabletop/terrain/model';
 import { applyRegionPatch } from '../automation/model';
 import type { Scene, Token, Point } from '../tabletop/types/scene';
 import type { Mutation } from '../api/workspace';
@@ -10,6 +12,7 @@ export interface SceneEvent {
     dragSessionId?: string;
     payload: Pick<
         Mutation,
+        | 'tokenMovements'
         | 'tokens'
         | 'props'
         | 'deletedIds'
@@ -17,6 +20,8 @@ export interface SceneEvent {
         | 'token'
         | 'grid'
         | 'map'
+        | 'mapWorld'
+        | 'terrain'
         | 'deletedId'
         | 'fog'
         | 'fogAction'
@@ -27,6 +32,8 @@ export interface SceneEvent {
         | 'deletedRegionId'
     > & {
         scene?: Partial<Scene>;
+        structurePatch?: StructurePatch;
+        structureRefresh?: boolean;
         gameplayFeedbacks?: import('../gameplay/model').GameplayFeedback[];
         gameplayFeedback?: import('../gameplay/model').GameplayFeedback;
     };
@@ -46,7 +53,16 @@ export function reduceEvent(scene: Scene, event: SceneEvent): Scene | 'gap' {
     // Older servers encode an empty PHP payload as []. Array.prototype.map must
     // never be mistaken for a scene map update by the property checks below.
     const payload = Array.isArray(event.payload) ? {} : event.payload;
-    const patched = applyRegionPatch(applyObjectPatch(scene, payload), payload);
+    if (
+        payload.structureRefresh ||
+        (payload.structurePatch &&
+            payload.structurePatch.base !== (scene.structure?.hash ?? emptyHash))
+    )
+        return 'gap';
+    const patched = terrainPatch(
+        applyRegionPatch(applyObjectPatch(scene, payload), payload),
+        payload.terrain,
+    );
     let tokens = patched.tokens;
     if (payload.token) {
         const token: Token = payload.token;
@@ -84,6 +100,12 @@ export function reduceEvent(scene: Scene, event: SceneEvent): Scene | 'gap' {
         revision: event.revision,
         ...(payload.grid ? { grid: payload.grid } : {}),
         ...('map' in payload ? { map: payload.map } : {}),
+        ...('mapWorld' in payload ? { mapWorld: payload.mapWorld } : {}),
+        ...(payload.structurePatch
+            ? { structure: applyStructurePatch(scene.structure, payload.structurePatch) }
+            : payload.mapWorld === null
+              ? { structure: null }
+              : {}),
     };
 }
 /** Transient order tracking is separate from persisted revisions. */

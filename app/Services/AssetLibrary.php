@@ -12,6 +12,8 @@ use App\Models\ContentTemplate;
 use App\Models\Handout;
 use App\Models\ItemDefinition;
 use App\Models\LibraryItem;
+use App\Models\MapMaterialVersion;
+use App\Models\ObjectPreset;
 use App\Models\Scene;
 use App\Models\SceneProp;
 use App\Models\Token;
@@ -54,6 +56,9 @@ class AssetLibrary
         }
 
         return array_merge(
+            ObjectPreset::where('asset_id', $asset->id)->get()->map(fn ($preset) => $preset->library_user_id === auth()->id()
+                ? 'Пресет объекта · '.$preset->name : 'Используется в другой библиотеке')->all(),
+            MapMaterialVersion::with('material')->where('asset_id', $asset->id)->get()->map(fn ($m) => $this->reference((object) ['library_user_id' => $m->material->user_id, 'user_id' => null, 'campaign_id' => null], 'Материал · '.$m->name.' / v'.$m->version))->all(),
             $this->iconUsage($asset),
             Character::where('portrait_asset_id', $asset->id)->get()->map(fn ($c) => $this->reference($c, 'Персонаж · '.$c->name))->all(),
             SceneProp::where('asset_id', $asset->id)->with('scene:id,name,campaign_id')->get()->map(fn ($p) => $this->reference($p->scene, 'Объект · '.$p->name.' / '.$p->scene->name))->all(),

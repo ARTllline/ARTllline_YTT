@@ -44,7 +44,9 @@ class SceneSnapshotBuilder
                 'liveRevision' => $campaign->live_revision,
                 'width' => $scene->width, 'height' => $scene->height,
                 'fog' => ['base' => $scene->fog_base, 'actions' => $scene->fogActions()->get()->map(fn ($action) => $action->projection())->all()],
-                'grid' => $this->grid($scene), 'map' => $this->map($scene),
+                'grid' => $this->grid($scene), 'map' => $this->map($scene), 'mapWorld' => $this->mapWorld($scene, $gm),
+                'structure' => $scene->mapWorld ? StructureData::projection($scene, $gm) : null,
+                'terrain' => app(TerrainData::class)->manifest($scene, $gm),
                 'tokens' => $tokens->map(fn ($token) => $this->token($token, $gm, $user))->all(),
                 ...app(CharacterActions::class)->roster($campaign, $user),
                 'props' => SceneProp::with('asset')->where('scene_id', $scene->id)->when(! $gm, fn ($q) => $q->where('is_hidden', false))->orderBy('z_index')->orderBy('id')->get()->map(fn ($p) => $p->projection($gm))->all(),
@@ -73,7 +75,14 @@ class SceneSnapshotBuilder
     {
         return $scene->map_asset_id ? ['asset' => $this->asset($scene->mapAsset),
             'x' => (float) $scene->map_x, 'y' => (float) $scene->map_y,
-            'width' => (float) $scene->map_width, 'height' => (float) $scene->map_height] : null;
+            'width' => (float) $scene->map_width, 'height' => (float) $scene->map_height,
+            ...($scene->mapWorld?->reference_crop ? ['crop' => $scene->mapWorld->reference_crop] : [])] : null;
+    }
+
+    public function mapWorld(Scene $scene, bool $gm): ?array
+    {
+        return $scene->mapWorld ? ['bounds' => ['x' => 0, 'y' => 0, 'width' => $scene->width, 'height' => $scene->height],
+            ...($gm ? ['schemaVersion' => $scene->mapWorld->schema_version] : [])] : null;
     }
 
     public function token(Token $token, bool $gm, User $user): array

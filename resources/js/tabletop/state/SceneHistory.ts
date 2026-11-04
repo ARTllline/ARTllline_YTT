@@ -1,11 +1,20 @@
 import { request, ApiError } from '../../api/client';
+import { mapSettings, mapState } from '../mapWorld';
 import { api, commandId, type Mutation } from '../../api/workspace';
 import type { Scene } from '../types/scene';
 import type { SceneCommand, SceneStore } from './SceneStore';
 import type { SaveQueue } from './SaveQueue';
 
 export interface EditChange {
-    kind: 'token' | 'prop' | 'note' | 'region';
+    kind:
+        | 'token'
+        | 'prop'
+        | 'note'
+        | 'region'
+        | 'mapWorld'
+        | 'propPresence'
+        | 'terrain'
+        | 'structure';
     id: string;
     expected: Record<string, unknown>;
     value: Record<string, unknown>;
@@ -17,6 +26,63 @@ export function historyEntry(
     before: Scene,
     result: Mutation,
 ): Entry | undefined {
+    if (command.type === 'structure' && result.structureEdit) {
+        const { before: old, after } = result.structureEdit;
+        if (old.hash === after.hash) return;
+        return {
+            label: 'Правка структуры',
+            changes: [{ kind: 'structure', id: before.id!, expected: after, value: old }],
+        };
+    }
+    if (command.type === 'terrain' && result.terrainEdit) {
+        return {
+            label:
+                command.stroke.operation === 'paint' ? 'Рисование покрытия' : 'Стирание покрытия',
+            changes: [
+                {
+                    kind: 'terrain',
+                    id: before.id!,
+                    expected: {
+                        ...result.terrainEdit.after.hashes,
+                        snapshot: result.terrainEdit.after.snapshot,
+                    },
+                    value: {
+                        ...result.terrainEdit.before.hashes,
+                        snapshot: result.terrainEdit.before.snapshot,
+                    },
+                },
+            ],
+        };
+    }
+    if (command.type === 'objects' && result.propEdits?.length) {
+        return {
+            label: result.propEdits[0].present ? 'Добавление объектов' : 'Удаление объектов',
+            changes: result.propEdits.map(({ id, present, snapshot }) => ({
+                kind: 'propPresence',
+                id,
+                expected: { present, snapshot },
+                value: { present: !present, snapshot },
+            })),
+        };
+    }
+    if (command.type === 'mapWorld') {
+        const accepted = {
+            ...before,
+            ...result.scene,
+            map: result.map,
+            grid: result.grid ?? before.grid,
+            mapWorld: result.mapWorld,
+        };
+        const next = mapState(mapSettings(accepted), !!accepted.mapWorld);
+        return equal(command.expected, next)
+            ? undefined
+            : {
+                  label: before.mapWorld ? 'Настройка карты' : 'Создание карты',
+                  changes: [
+                      { kind: 'mapWorld', id: before.id!, expected: next, value: command.expected },
+                  ],
+              };
+    }
     const changes: EditChange[] = [];
     const add = (
         kind: EditChange['kind'],
@@ -67,21 +133,25 @@ export function historyEntry(
                     ['x', 'y'],
                 ),
             );
-        } else if (
-            c.endpoint === 'props' &&
-            c.data.action === 'update' &&
-            !c.data.order &&
-            Object.keys(c.data.patch ?? {}).every((k) =>
-                ['x', 'y', 'rotation', 'scale_x', 'scale_y'].includes(k),
-            )
-        ) {
-            label = 'Положение объекта';
+        } else if (c.endpoint === 'props' && c.data.action === 'update') {
+            label = 'Изменение объекта';
             result.props?.forEach((p) =>
                 add(
                     'prop',
                     before.props?.find((v) => v.id === p.id),
                     p,
-                    ['x', 'y', 'rotation', 'scaleX', 'scaleY'],
+                    [
+                        'name',
+                        'x',
+                        'y',
+                        'rotation',
+                        'scaleX',
+                        'scaleY',
+                        'zIndex',
+                        'isHidden',
+                        'isLocked',
+                        'collider',
+                    ],
                 ),
             );
         }
@@ -149,6 +219,12 @@ export class SceneHistory {
         if (entry) {
             this.undo.push(entry);
             if (this.undo.length > 50) this.undo.shift();
+            // Alpha snapshots can outweigh ordinary object edits. Keep tab-local history bounded by bytes too.
+            while (
+                this.undo.length > 1 &&
+                this.undo.reduce((sum, e) => sum + JSON.stringify(e).length, 0) > 8 * 1024 * 1024
+            )
+                this.undo.shift();
         }
         this.publish({ notice: '' });
     }

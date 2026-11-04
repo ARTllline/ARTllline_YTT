@@ -10,29 +10,37 @@ export function PlacementOverlay({
     busy,
     onPlace,
     onCancel,
+    onRotate,
 }: {
     item: Placement;
     renderer: RefObject<TabletopRenderer | null>;
     busy: boolean;
     onPlace: (point: Point) => Promise<void>;
     onCancel: () => void;
+    onRotate: (delta: number) => void;
 }) {
     const marker = useRef<HTMLDivElement>(null);
     const placing = useRef(false);
-    const latest = useRef({ busy, onPlace, onCancel });
+    const latest = useRef({ busy, onPlace, onCancel, onRotate, item });
     useLayoutEffect(() => {
-        latest.current = { busy, onPlace, onCancel };
-    }, [busy, onPlace, onCancel]);
+        latest.current = { busy, onPlace, onCancel, onRotate, item };
+    }, [busy, onPlace, onCancel, onRotate, item]);
     const asset =
         item.type === 'token' ? item.draft.asset : item.type === 'prop' ? item.asset : undefined;
-    const url = item.type === 'libraryActor' ? item.previewUrl : asset?.url;
+    const preset = item.type === 'objectPreset' ? item.preset : undefined;
+    const prop = item.type === 'prop' ? item.asset : undefined;
+    const rotation = item.type === 'objectPreset' ? item.rotation : 0;
+    const url = item.type === 'libraryActor' ? item.previewUrl : (preset?.asset.url ?? asset?.url);
     useLayoutEffect(() => {
         const current = renderer.current;
-        current?.beginPlacement(item.name, url, item.type === 'prop' ? item.asset : undefined);
+        current?.beginPlacement(item.name, url, prop, preset?.settings);
         return () => {
             current?.endPlacement();
         };
-    }, [renderer, item, url]);
+    }, [renderer, item.name, prop, preset, url]);
+    useLayoutEffect(() => {
+        renderer.current?.rotatePlacement(rotation);
+    }, [renderer, rotation, preset, prop, url, item.name]);
     useLayoutEffect(() => {
         const host = marker.current!.parentElement!,
             canvas = host.querySelector('canvas');
@@ -82,6 +90,23 @@ export function PlacementOverlay({
         const key = (e: KeyboardEvent) => {
             if ((e.target as HTMLElement).closest('input,textarea,select,dialog')) return;
             if (e.code === 'Space') pan = true;
+            if (
+                e.code === 'KeyR' &&
+                latest.current.item.type === 'objectPreset' &&
+                !e.ctrlKey &&
+                !e.metaKey &&
+                !e.altKey &&
+                !e.repeat
+            ) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                latest.current.onRotate(e.shiftKey ? -15 : 15);
+            }
+            if (['KeyV', 'KeyH'].includes(e.code) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                latest.current.onCancel();
+                renderer.current?.setTool(e.code === 'KeyH' ? 'pan' : 'select');
+                return;
+            }
             if (e.key === 'Escape') {
                 e.preventDefault();
                 e.stopImmediatePropagation();
@@ -130,9 +155,11 @@ export function PlacementOverlay({
                 <div>
                     <strong>{busy ? 'Размещаем…' : item.name}</strong>
                     <small>
-                        {repeatsPlacement(item)
-                            ? 'Клик — копия · Esc — закончить'
-                            : 'Клик — разместить · Enter — в центре · Esc — отменить'}
+                        {item.type === 'objectPreset'
+                            ? `Клик — штамп · R / Shift+R — ${rotation}° · Esc — закончить`
+                            : repeatsPlacement(item)
+                              ? 'Клик — копия · Esc — закончить'
+                              : 'Клик — разместить · Enter — в центре · Esc — отменить'}
                     </small>
                 </div>
                 <button

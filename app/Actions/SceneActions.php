@@ -8,6 +8,7 @@ use App\Models\Scene;
 use App\Models\User;
 use App\Realtime\ScenePublisher;
 use App\Services\LiveMedia;
+use App\Services\SceneBounds;
 use App\Services\SceneSnapshotBuilder;
 use App\Services\TriggerEvents;
 use Illuminate\Support\Facades\DB;
@@ -40,10 +41,14 @@ class SceneActions
     {
         return $this->transaction->run($scene, function ($scene) use ($user, $data) {
             Gate::forUser($user)->authorize('update', $scene);
+            if ($scene->mapWorld) {
+                SceneBounds::validateResize($scene, $data['width'] ?? $scene->width, $data['height'] ?? $scene->height);
+            }
             $scene->update($data);
             app(ScenePublisher::class)->campaign($scene->campaign);
 
-            return ['scene' => ['id' => (string) $scene->id, 'name' => $scene->name, 'width' => $scene->width, 'height' => $scene->height]];
+            return ['scene' => ['id' => (string) $scene->id, 'name' => $scene->name, 'width' => $scene->width, 'height' => $scene->height],
+                ...($scene->mapWorld ? ['mapWorld' => $this->snapshots->mapWorld($scene, true)] : [])];
         });
     }
 
@@ -65,6 +70,9 @@ class SceneActions
             Gate::forUser($user)->authorize('update', $scene);
             if (! empty($data['assetId']) && ! Asset::whereKey($data['assetId'])->available($scene->campaign_id)->where('kind', 'map')->exists()) {
                 throw ValidationException::withMessages(['assetId' => 'Choose a map belonging to this campaign.']);
+            }
+            if ($scene->mapWorld && (string) $scene->map_asset_id !== (string) $data['assetId']) {
+                $scene->mapWorld->update(['reference_crop' => null]);
             }
             $scene->update(['map_asset_id' => $data['assetId'], 'map_x' => $data['x'], 'map_y' => $data['y'],
                 'map_width' => $data['width'], 'map_height' => $data['height']]);

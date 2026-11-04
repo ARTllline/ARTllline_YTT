@@ -27,7 +27,7 @@ class CueRunner
             abort_unless($campaign->active_scene_id === $scene->id, 409, 'Сначала активируйте эту сцену для игроков.');
             $pending = CueRun::where('campaign_id', $campaign->id)->whereIn('status', ['queued', 'running', 'failed'])->count();
             abort_if(! $automatic && $pending > 0, 409, 'Сначала завершите или остановите текущее событие.');
-            abort_if($pending >= 100, 409, 'Очередь событий заполнена. Мастеру нужно завершить или остановить ожидающие события.');
+            abort_if($pending >= 100, 409, $automatic ? 'Действие сейчас недоступно.' : 'Очередь событий заполнена. Мастеру нужно завершить или остановить ожидающие события.');
             $cue = Cue::where('scene_id', $scene->id)->with('steps')->findOrFail($cue->id);
             $run = CueRun::create(['id' => (string) Str::uuid(), 'campaign_id' => $campaign->id, 'scene_id' => $scene->id,
                 'cue_id' => $cue->id, 'created_by' => $user->id, 'name' => $cue->name, 'epoch' => $campaign->live_revision, 'due_at' => now(),

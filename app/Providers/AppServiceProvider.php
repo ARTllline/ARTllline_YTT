@@ -37,6 +37,7 @@ class AppServiceProvider extends ServiceProvider
             }
         }
         RateLimiter::for('spatial', fn ($request) => Limit::perSecond($request->input('kind') === 'ping' ? 4 : 20)->by($request->user()->id.($request->input('kind') === 'ping' ? ':ping' : ':spatial')));
+        RateLimiter::for('direct-control', fn ($request) => Limit::perSecond(7)->by($request->user()->id));
         RateLimiter::for('preview', fn ($request) => Limit::perSecond(20)->by($request->user()->id));
     }
 }

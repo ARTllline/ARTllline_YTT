@@ -46,6 +46,18 @@ class ScenePreparation
             $copy->name = $name;
             $copy->sort_order = ($campaign->scenes()->max('sort_order') ?? -1) + 1;
             $copy->save();
+            if ($source->mapWorld) {
+                $copy->mapWorld()->create($source->mapWorld->only(['schema_version', 'reference_crop']));
+                $structure = \App\Services\StructureData::graph($source);
+                if ($structure['edges']) {
+                    \App\Services\StructureData::write($copy, $structure);
+                }
+                $terrain = app(\App\Services\TerrainData::class);
+                foreach ($terrain->chunks($source)->get() as $chunk) {
+                    $key = $chunk->x.':'.$chunk->y;
+                    $terrain->write($copy, $key, $terrain->read($source, $key));
+                }
+            }
             foreach ($source->tokens()->with(['character', 'conditions'])->get() as $token) {
                 $next = $token->replicate();
                 $next->scene_id = $copy->id;

@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Actions\StoreAudio;
 use App\Actions\StoreImage;
 use App\Models\Asset;
+use App\Models\MapMaterialVersion;
+use App\Models\ObjectPreset;
+use App\Models\SceneProp;
 use App\Services\AssetLibrary;
 use App\Services\AssetThumbnail;
 use Illuminate\Http\Request;
@@ -18,8 +21,11 @@ class GlobalAssetController extends Controller
 
     public function index(Request $r, AssetLibrary $library): array
     {
-        $data = $r->validate(['search' => 'nullable|string|max:120', 'category' => 'nullable|in:'.self::CATEGORIES, 'images' => 'nullable|boolean', 'page' => 'nullable|integer|min:1']);
+        $data = $r->validate(['search' => 'nullable|string|max:120', 'category' => 'nullable|in:'.self::CATEGORIES, 'images' => 'nullable|boolean', 'personal' => 'nullable|boolean', 'page' => 'nullable|integer|min:1']);
         $query = Asset::available()->with(['tags', 'collections']);
+        if ($data['personal'] ?? false) {
+            $query->where('library_user_id', $r->user()->id);
+        }
         if ($data['images'] ?? false) {
             $query->whereNull('duration_ms');
         }
@@ -75,6 +81,10 @@ class GlobalAssetController extends Controller
         try {
             return DB::transaction(function () use ($asset, $new, $library) {
                 $asset = Asset::whereKey($asset->id)->lockForUpdate()->firstOrFail();
+                abort_if(MapMaterialVersion::where('asset_id', $asset->id)->exists(), 409, 'Текстура используется в версии материала. Загрузите новый Asset для новой версии.');
+                abort_if(ObjectPreset::where('asset_id', $asset->id)->exists()
+                    || SceneProp::where('asset_id', $asset->id)->whereNotNull('preset_snapshot')->exists(),
+                    409, 'Изображение используется в пресете или его экземпляре. Загрузите новый Asset.');
                 $paths = [$asset->storage_path, app(AssetThumbnail::class)->path($asset), $asset->storage_path.'.thumb.lock'];
                 $new->delete();
                 $asset->fill($new->only(['storage_path', 'original_name', 'mime_type', 'file_size', 'width', 'height', 'duration_ms']))->save();

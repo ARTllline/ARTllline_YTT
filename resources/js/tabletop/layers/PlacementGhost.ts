@@ -26,6 +26,8 @@ export class PlacementGhost extends Container {
         height: number,
         round: boolean,
         name: string,
+        pivotX = 0.5,
+        pivotY = 0.5,
     ) {
         this.clear();
         this.outline.clear();
@@ -33,8 +35,9 @@ export class PlacementGhost extends Container {
         this.initials.text = name.trim().slice(0, 1).toLocaleUpperCase();
         this.initials.style.fontSize = Math.max(12, width * 0.4);
         this.initials.visible = true;
+        this.initials.position.set((0.5 - pivotX) * width, (0.5 - pivotY) * height);
         if (round) this.outline.circle(0, 0, width / 2);
-        else this.outline.rect(-width / 2, -height / 2, width, height);
+        else this.outline.rect(-width * pivotX, -height * pivotY, width, height);
         this.outline.fill({ color: 0x84d9bc, alpha: 0.15 }).stroke({ color: 0xa9e8cc, width: 2 });
         if (!url) return;
         const image = new Image();
@@ -43,7 +46,7 @@ export class PlacementGhost extends Container {
             if (this.pending !== image || this.destroyed) return;
             this.texture = Texture.from(image);
             this.sprite = new Sprite(this.texture);
-            this.sprite.anchor.set(0.5);
+            this.sprite.anchor.set(pivotX, pivotY);
             this.sprite.width = width;
             this.sprite.height = height;
             this.initials.visible = false;

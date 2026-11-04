@@ -1,0 +1,132 @@
+.map-preparation {
+    position: absolute;
+    z-index: 24;
+    right: 18px;
+    top: 74px;
+    bottom: 76px;
+    width: min(350px, calc(100% - 36px));
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+    border: 1px solid #61766c66;
+    border-radius: 16px;
+    background: #151e20f7;
+    box-shadow: 0 16px 55px #0008;
+    scrollbar-width: thin;
+}
+.map-preparation .panel-heading {
+    position: sticky;
+    top: 0;
+    background: #182225;
+    z-index: 1;
+    flex-shrink: 0;
+}
+.map-preparation .panel-heading span,
+.map-section-title,
+.map-preparation h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.map-preparation-intro {
+    padding: 18px 20px 4px;
+}
+.map-preparation-intro h2 {
+    font-size: 19px;
+    margin: 7px 0;
+}
+.map-preparation-intro p {
+    color: #a4b5b1;
+    font-size: 12px;
+    line-height: 1.6;
+}
+.map-preparation-fields {
+    border: 0;
+    padding: 0 20px;
+    margin: 0;
+    min-width: 0;
+}
+.map-preparation-fields section {
+    padding: 16px 0;
+    border-bottom: 1px solid #a6c2b315;
+}
+.map-preparation h3 {
+    font-size: 13px;
+    color: #d4e3dc;
+    margin: 0 0 12px;
+}
+.map-section-title {
+    justify-content: space-between;
+}
+.map-section-title .text-button {
+    font-size: 11px;
+}
+.map-preparation .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.map-preparation .field,
+.map-preparation .toggle-row {
+    margin: 9px 0;
+}
+.map-preparation .field input,
+.map-preparation .field select {
+    width: 100%;
+    min-width: 0;
+}
+.map-preparation .hint {
+    font-size: 11px;
+    line-height: 1.6;
+}
+.map-preparation .map-live-notice {
+    color: #d6bd87;
+    font-size: 11px;
+    line-height: 1.5;
+}
+.map-image-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 0;
+}
+.map-preparation details summary {
+    color: #a9bdb5;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 10px 0;
+}
+.map-calibration {
+    padding: 9px 12px;
+    background: #9fcdb609;
+    border: 1px solid #9fcdb61c;
+    border-radius: 10px;
+}
+.map-calibration .secondary-button {
+    width: 100%;
+    justify-content: center;
+}
+.map-preparation-footer {
+    padding: 14px 20px;
+    position: sticky;
+    bottom: 0;
+    background: #182225;
+    border-top: 1px solid #a6c2b321;
+}
+.map-preparation-footer .primary-button {
+    width: 100%;
+    justify-content: center;
+}
+.map-preparation-footer [role='alert'] {
+    color: #e8b9a5;
+    font-size: 12px;
+    line-height: 1.5;
+}
+@media (max-width: 700px) {
+    .map-preparation {
+        right: 8px;
+        top: 62px;
+        bottom: 60px;
+        width: min(320px, calc(100% - 16px));
+    }
+}

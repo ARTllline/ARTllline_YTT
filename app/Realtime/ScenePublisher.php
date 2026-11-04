@@ -35,7 +35,11 @@ class ScenePublisher
         $gm = $members->first(fn ($member) => $member->pivot->role === 'gm');
         if ($gm) {
             $payload = $result;
-            unset($payload['revision'], $payload['mutationId']);
+            unset($payload['revision'], $payload['mutationId'], $payload['propEdits'], $payload['terrainEdit'],
+                $payload['structure'], $payload['structureEdit'], $payload['_structureBefore']);
+            if (isset($result['_structureBefore'])) {
+                $payload += \App\Services\StructureData::patch($scene, $result['_structureBefore'], true);
+            }
             if ($result['charactersChanged'] ?? false) {
                 $payload['scene'] = app(CharacterActions::class)->roster($scene->campaign, $gm);
             }
@@ -59,6 +63,7 @@ class ScenePublisher
                 $event['type'] = 'scene.revision';
             }
             $payload = [];
+            $visibleTokens = [];
             if ($token) {
                 if (! $token->is_hidden) {
                     $event['type'] = $wasVisible ? $type : 'token.created';
@@ -80,6 +85,20 @@ class ScenePublisher
                         $payload[$key] = $result[$key];
                     }
                 }
+                if (array_key_exists('mapWorld', $result)) {
+                    $payload['mapWorld'] = $this->snapshots->mapWorld($scene, false);
+                }
+                if (isset($result['_structureBefore'])) {
+                    $structure = \App\Services\StructureData::patch($scene, $result['_structureBefore'], false);
+                    if ($structure) {
+                        $payload += $structure;
+                    } else {
+                        $event['type'] = 'scene.revision';
+                    }
+                }
+                if (isset($result['terrain'])) {
+                    $payload['terrain'] = app(\App\Services\TerrainData::class)->manifest($scene, false, array_column($result['terrain']['chunks'], 'key'));
+                }
             }
             if (array_key_exists('combat', $result)) {
                 $payload['combat'] = app(CombatView::class)->build($scene, false, $member);
@@ -97,6 +116,16 @@ class ScenePublisher
                 if (! $payload['tokens'] && ! $payload['props'] && ! $payload['deletedIds'] && ! $payload['deletedPropIds'] && ! isset($payload['deletedId']) && ! isset($payload['token'])) {
                     $event['type'] = 'scene.revision';
                     $payload = array_key_exists('combat', $result) ? ['combat' => app(CombatView::class)->build($scene, false, $member)] : [];
+                }
+            }
+            if (! empty($result['tokenMovements'])) {
+                $visible = array_intersect($previousVisibility['tokens'], $visibleTokens);
+                if ($token && $wasVisible && ! $token->is_hidden) {
+                    $visible[] = (string) $token->id;
+                }
+                $movements = array_values(array_filter($result['tokenMovements'], fn ($move) => in_array($move['tokenId'], $visible, true)));
+                if ($movements) {
+                    $payload['tokenMovements'] = $movements;
                 }
             }
             if (! empty($result['gameplayFeedbacks'])) {

@@ -1,0 +1,88 @@
+.editor-dialog:has(.object-preset-dialog) {
+    width: min(692px, calc(100vw - 24px));
+    max-height: calc(100dvh - 32px);
+    padding: 10px 16px 16px;
+    overflow-x: hidden;
+}
+.object-preset-dialog {
+    width: 100%;
+    min-width: 0;
+    padding-top: 12px;
+    display: grid;
+    gap: 12px;
+}
+.map-editor-object-add .collision-legend {
+    max-width: 245px;
+    line-height: 1.45;
+}
+.object-preset-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.object-preset-actions > button:not([class]) {
+    border: 1px solid #465653;
+    background: #202c2b;
+    color: #deebe6;
+    border-radius: 6px;
+    padding: 5px 9px;
+}
+.object-preset-actions > button:disabled {
+    opacity: 0.5;
+}
+.object-preset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+    gap: 10px;
+}
+.object-preset-grid article {
+    display: grid;
+    gap: 5px;
+    padding: 10px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.object-preset-grid img {
+    width: 100%;
+    height: 92px;
+    object-fit: contain;
+    background: #111a1a;
+    border-radius: 6px;
+}
+.object-preset-form,
+.collider-editor {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    border: 0;
+    padding: 0;
+}
+.object-preset-form .field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+    gap: 10px;
+}
+.object-preset-form input:not([type='checkbox'], [type='range']) {
+    width: 100%;
+    min-width: 0;
+}
+.object-preset-numbers {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(75px, 1fr));
+    gap: 8px;
+}
+.collider-preview {
+    width: 100%;
+    height: clamp(140px, 28vh, 300px);
+    touch-action: none;
+    background: #121d1d;
+    border: 1px solid #3c514d;
+    border-radius: 8px;
+}
+.collider-preview [data-handle] {
+    cursor: grab;
+}
+.collider-preview [data-handle]:active {
+    cursor: grabbing;
+}

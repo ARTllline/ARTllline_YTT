@@ -8,6 +8,7 @@ export interface CameraState extends Point {
     zoom: number;
 }
 export interface GridSettings {
+    type?: 'square';
     distancePerCell?: number;
     distanceUnit?: string;
     visible: boolean;
@@ -58,11 +59,15 @@ export interface ImageAsset {
     height: number;
 }
 export interface SceneMap extends Point {
+    crop?: { x: number; y: number; width: number; height: number } | null;
     asset: ImageAsset;
     width: number;
     height: number;
 }
 export interface Scene {
+    structure?: import('../structure/model').Structure | null;
+    terrain?: import('../terrain/model').Terrain;
+    mapWorld?: import('../mapWorld').MapWorld | null;
     characters?: readonly Character[];
     activeCharacterId?: string | null;
     regions?: readonly import('../../automation/model').Region[];
@@ -156,6 +161,14 @@ export interface SceneNote extends Point {
     icon: 'note' | 'warning' | 'secret' | 'encounter' | 'clue';
 }
 export interface SceneProp extends Point {
+    movementObstacle?: import('../utils/movement').MovementObstacle | null;
+    pivotX?: number;
+    pivotY?: number;
+    collider?: import('../objects/collider').Collider;
+    preset?: Omit<import('../objects/collider').PresetSettings, 'collider'> & {
+        presetId: string;
+        category: string;
+    };
     loot?: import('../../rpg/loot').LootSummary;
     interactions?: import('../../workspace/interactions/model').ObjectInteraction[];
     id: string;
@@ -178,7 +191,9 @@ export type ObjectCommand =
           data:
               | {
                     action: 'create';
-                    assetId: string;
+                    assetId?: string;
+                    presetId?: string;
+                    rotation?: number;
                     x: number;
                     y: number;
                     purpose?: 'container' | 'interaction';
@@ -195,6 +210,7 @@ export type ObjectCommand =
                         scale_y: number;
                         is_hidden: boolean;
                         is_locked: boolean;
+                        collider: import('../objects/collider').Collider;
                     }>;
                     order?: 'front' | 'back' | 'forward' | 'backward';
                 };
@@ -219,6 +235,8 @@ export type NoteCommand =
     | { action: 'update'; id: string; patch: Partial<Omit<SceneNote, 'id'>> }
     | { action: 'delete'; id: string };
 export type Tool =
+    | 'build'
+    | 'terrain'
     | 'select'
     | 'pan'
     | 'fog'

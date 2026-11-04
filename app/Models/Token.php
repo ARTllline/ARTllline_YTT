@@ -17,6 +17,17 @@ class Token extends Model
 
     protected $guarded = ['id', 'scene_id'];
 
+    protected $hidden = ['direct_control'];
+
+    protected static function booted(): void
+    {
+        static::updating(function (Token $token) {
+            if ($token->isDirty(['x', 'y', 'size', 'scale', 'is_locked', 'is_hidden', 'owner_user_id']) && ! $token->isDirty('direct_control')) {
+                $token->direct_control = null;
+            }
+        });
+    }
+
     public function character(): BelongsTo
     {
         return $this->belongsTo(Character::class);
@@ -38,7 +49,7 @@ class Token extends Model
 
     protected function casts(): array
     {
-        return ['lifecycle' => 'array', 'exhaustion' => 'integer', 'temporary_hp' => 'integer', 'combat_profile' => 'array', 'abilities' => 'array', 'resources' => 'array', 'is_hidden' => 'boolean', 'is_locked' => 'boolean', 'interactions' => 'array', 'check_stats' => 'array'];
+        return ['direct_control' => 'array', 'lifecycle' => 'array', 'exhaustion' => 'integer', 'temporary_hp' => 'integer', 'combat_profile' => 'array', 'abilities' => 'array', 'resources' => 'array', 'is_hidden' => 'boolean', 'is_locked' => 'boolean', 'interactions' => 'array', 'check_stats' => 'array'];
     }
 
     public function scene(): BelongsTo

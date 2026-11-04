@@ -13,6 +13,19 @@ export function useSceneLive(
 ) {
     const [status, setStatus] = useState(t('Syncing scene…'));
     useEffect(() => {
+        const transport = echo?.connector.pusher.connection;
+        const stop = ({ current }: { current: string }) => {
+            if (current !== 'connected' && store.getSnapshot().directControl) {
+                store.stopDirectControl?.();
+                store.setDirectNotice('Связь прервана. Включите WASD снова после синхронизации.');
+            }
+        };
+        transport?.bind('state_change', stop);
+        return () => {
+            transport?.unbind('state_change', stop);
+        };
+    }, [echo, store]);
+    useEffect(() => {
         if (!echo || !channel) return;
         const subscriber = new SceneSubscriber(echo, channel, store, queue, setStatus);
         return () => subscriber.destroy();

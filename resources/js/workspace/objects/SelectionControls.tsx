@@ -13,12 +13,14 @@ export function SelectionControls({
     campaignId,
     onSaved,
     runtime = false,
+    editor = false,
 }: {
     store: SceneStore;
     queue: SaveQueue;
     campaignId: string;
     onSaved: () => void;
     runtime?: boolean;
+    editor?: boolean;
 }) {
     const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
     const save = useSyncExternalStore(queue.subscribe, queue.getSnapshot);
@@ -84,11 +86,13 @@ export function SelectionControls({
                         <Trash2 size={14} />
                         <span> {t('Delete')} </span>
                     </button>
-                    <button disabled={busy} onClick={() => setModal('prefab')}>
-                        <PackagePlus size={14} />
-                        <span> {t('Save as prefab')} </span>
-                    </button>
-                    {!state.selectedPropIds?.length && (
+                    {!editor && (
+                        <button disabled={busy} onClick={() => setModal('prefab')}>
+                            <PackagePlus size={14} />
+                            <span> {t('Save as prefab')} </span>
+                        </button>
+                    )}
+                    {!editor && !state.selectedPropIds?.length && (
                         <button disabled={busy} onClick={() => setModal('encounter')}>
                             <Swords size={14} />
                             <span> {t('Save as encounter')} </span>
@@ -121,9 +125,13 @@ export function SelectionControls({
             {modal === 'delete' && (
                 <ConfirmDialog
                     title={t('Delete selection?')}
-                    description={t(
-                        'Selected objects will be removed from this scene. Saved templates remain available.',
-                    )}
+                    description={
+                        editor
+                            ? 'Декоративные объекты можно вернуть через Undo. Удаление объектов с игровыми связями не входит в историю отмены.'
+                            : t(
+                                  'Selected objects will be removed from this scene. Saved templates remain available.',
+                              )
+                    }
                     onClose={() => setModal(null)}
                     submit={async () => {
                         store.objectCommand({

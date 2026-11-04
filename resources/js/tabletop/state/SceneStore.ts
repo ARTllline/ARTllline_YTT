@@ -1,4 +1,15 @@
 import { performanceMark } from '../../realtime/performance';
+import { mapState, type MapSettings, type MapState } from '../mapWorld';
+import {
+    emptyHash,
+    openingsError,
+    type DoorCommand,
+    defaultBuild,
+    type BuildSettings,
+    type Graph,
+    type Selection,
+} from '../structure/model';
+import { terrainPatch, type TerrainStroke } from '../terrain/model';
 import { applyObjectPatch } from './objectPatch';
 import { applyRegionPatch, type Region, type RegionCommand } from '../../automation/model';
 import type { ObjectCommand, ObjectSelection } from '../types/scene';
@@ -19,6 +30,22 @@ import { clamp } from '../utils/coordinates';
 import type { CombatCommand, TokenCombatCommand } from '../types/combat';
 
 export interface WorkspaceSnapshot {
+    directNotice?: string;
+    directControl?: { tokenId: string; follow: boolean };
+    routePreview?: {
+        status: 'searching' | 'ready' | 'sending' | 'error';
+        tokenId: string;
+        message: string;
+        cost?: number;
+        remaining?: number;
+        allowed?: boolean;
+    };
+    build?: BuildSettings;
+    structureSelection?: Selection;
+    editorNotice?: string;
+    mapEditor?: import('../mapEditor').MapEditorView | null;
+    mapDraft?: MapSettings | null;
+    mapCalibrationPoints?: readonly Point[];
     actingTokenId?: string;
     selectedRegionId?: string;
     showRegions?: boolean;
@@ -29,16 +56,30 @@ export interface WorkspaceSnapshot {
     showNotes?: boolean;
     combatNotice?: string;
     scene: Scene;
+    movementUpdate?: { movements?: Mutation['tokenMovements']; reset?: boolean };
     selectedIds: readonly string[];
     preview: { id: string; position: Point } | null;
 }
 export type SceneCommand =
+    | ({ type: 'structure'; expected: string } & (
+          { value: Graph; door?: never } | { door: DoorCommand; value?: never }
+      ))
+    | { type: 'terrain'; stroke: TerrainStroke; complete?: (error?: Error) => void }
+    | { type: 'mapWorld'; value: MapState; expected: MapState; complete: (error?: Error) => void }
     | { type: 'region'; command: RegionCommand }
     | { type: 'objects'; command: ObjectCommand }
     | { type: 'note'; command: NoteCommand; debounce?: boolean }
     | { type: 'combat'; command: CombatCommand }
     | { type: 'tokenCombat'; id: string; command: TokenCombatCommand }
-    | { type: 'move'; id: string; position: Point; dragSessionId?: string }
+    | {
+          type: 'move';
+          id: string;
+          position: Point;
+          dragSessionId?: string;
+          intent?: 'override' | 'teleport';
+          waypoints?: Point[];
+          instant?: boolean;
+      }
     | { type: 'token'; id: string; patch: TokenPatch }
     | { type: 'fog'; stroke: FogStroke; localId: string }
     | { type: 'fogReset'; base: FogBase }
@@ -46,6 +87,22 @@ export type SceneCommand =
     | { type: 'map'; map: SceneMap | null };
 /** Observable domain projection. Network requests are delegated to the persistence adapter. */
 export class SceneStore {
+    toggleDirectControl?: () => void;
+    stopDirectControl?: () => void;
+    directCommandPending = false;
+    onDirectCommandSettled?: () => void;
+    onDirectCommandReceipt?: (revision: number) => void;
+    setDirectControl(directControl: WorkspaceSnapshot['directControl']) {
+        this.emit({ ...this.snapshot, directControl });
+    }
+    setDirectNotice(directNotice?: string) {
+        this.emit({ ...this.snapshot, directNotice });
+    }
+    confirmRoute?: () => void;
+    cancelRoute?: () => void;
+    setRoutePreview(routePreview: WorkspaceSnapshot['routePreview']) {
+        this.emit({ ...this.snapshot, routePreview });
+    }
     onGameplayFeedback?: (event: import('../../gameplay/model').GameplayFeedback) => void;
     history?: import('./SceneHistory').SceneHistory;
     readonly spatial = new SpatialState();
@@ -55,6 +112,99 @@ export class SceneStore {
     }
     movementEnabled = true;
     objectEditingEnabled = true;
+    onStructureAction?: (action: 'split' | 'delete' | 'apply' | 'reverse' | 'join') => void;
+    canBuild() {
+        return (
+            this.role === 'gm' &&
+            !!this.snapshot.mapEditor &&
+            !this.snapshot.mapDraft &&
+            !!this.snapshot.scene.mapWorld &&
+            this.spatial.tool === 'build' &&
+            this.objectEditingEnabled
+        );
+    }
+    saveStructure(value: Graph) {
+        if (!this.canBuild()) return;
+        const error = openingsError(value);
+        if (error) {
+            this.editorNotice(error);
+            return;
+        }
+        const current = this.snapshot.scene.structure;
+        this.command?.(
+            { type: 'structure', value, expected: current?.hash ?? emptyHash },
+            this.snapshot.scene,
+        );
+    }
+    changeDoor(door: DoorCommand) {
+        const scene = this.snapshot.scene;
+        if (this.role !== 'gm' || !this.objectEditingEnabled || !scene.structure) return;
+        this.command?.({ type: 'structure', door, expected: scene.structure.hash }, scene);
+    }
+    configureBuild(patch: Partial<BuildSettings>) {
+        if (this.role !== 'gm' || !this.snapshot.mapEditor) return;
+        const build = { ...(this.snapshot.build ?? defaultBuild), ...patch };
+        this.emit({
+            ...this.snapshot,
+            build,
+            structureSelection: patch.mode ? undefined : this.snapshot.structureSelection,
+        });
+    }
+    selectStructure(structureSelection: Selection | undefined) {
+        this.emit({ ...this.snapshot, structureSelection });
+    }
+    terrainStroke(stroke: TerrainStroke, complete?: (error?: Error) => void) {
+        if (
+            this.role !== 'gm' ||
+            !this.snapshot.mapEditor ||
+            !this.objectEditingEnabled ||
+            !this.snapshot.scene.mapWorld ||
+            !this.command
+        ) {
+            complete?.(new Error('Рисование сейчас недоступно.'));
+            return;
+        }
+        this.command?.({ type: 'terrain', stroke, complete }, this.snapshot.scene);
+    }
+    editorNotice(editorNotice: string) {
+        this.emit({ ...this.snapshot, editorNotice });
+    }
+    setMapEditor(mapEditor: import('../mapEditor').MapEditorView | null) {
+        if (this.role !== 'gm') return;
+        this.emit({
+            ...this.snapshot,
+            mapEditor,
+            build: mapEditor ? this.snapshot.build : undefined,
+            structureSelection: mapEditor ? this.snapshot.structureSelection : undefined,
+            selectedIds: [],
+            selectedPropIds: [],
+            selectedNoteId: undefined,
+            selectedRegionId: undefined,
+        });
+    }
+    onMapCalibration?: (point: Point) => void;
+    bindMapCalibration(handler?: (point: Point) => void) {
+        this.onMapCalibration = handler;
+    }
+    previewMap(mapDraft: MapSettings | null, mapCalibrationPoints: readonly Point[] = []) {
+        if (this.role === 'gm') this.emit({ ...this.snapshot, mapDraft, mapCalibrationPoints });
+    }
+    saveMapWorld(settings: MapSettings, expected: MapState): Promise<void> {
+        if (this.role !== 'gm' || !this.command)
+            return Promise.reject(new Error('Карту может изменять только мастер.'));
+        const before = this.snapshot.scene;
+        return new Promise((resolve, reject) =>
+            this.command?.(
+                {
+                    type: 'mapWorld',
+                    value: mapState(settings, true),
+                    expected,
+                    complete: (error) => (error ? reject(error) : resolve()),
+                },
+                before,
+            ),
+        );
+    }
     onRevisionGap?: () => void;
     onSelectionAction?: (action: 'duplicate' | 'delete') => void;
     bindSelectionActions(handler?: (action: 'duplicate' | 'delete') => void) {
@@ -84,10 +234,11 @@ export class SceneStore {
             (this.role === 'gm' || token.canMove === true)
         );
     }
-    reconcile(scene: Scene) {
+    reconcile(scene: Scene, movementUpdate: WorkspaceSnapshot['movementUpdate'] = { reset: true }) {
         this.emit({
             ...this.snapshot,
             scene,
+            movementUpdate,
             selectedRegionId: scene.regions?.some((r) => r.id === this.snapshot.selectedRegionId)
                 ? this.snapshot.selectedRegionId
                 : undefined,
@@ -170,6 +321,7 @@ export class SceneStore {
         });
     }
     select(id: string | null) {
+        if (id && this.snapshot.mapEditor) return;
         if (id && !this.snapshot.scene.tokens.some((token) => token.id === id)) return;
         this.emit({
             ...this.snapshot,
@@ -210,6 +362,12 @@ export class SceneStore {
     }
     selectObjects(selection: ObjectSelection) {
         if (this.role !== 'gm') return;
+        const editor = this.snapshot.mapEditor;
+        if (editor)
+            selection = {
+                tokenIds: [],
+                propIds: editor.objectsVisible && !editor.objectsLocked ? selection.propIds : [],
+            };
         this.emit({
             ...this.snapshot,
             selectedIds: selection.tokenIds,
@@ -221,6 +379,15 @@ export class SceneStore {
     }
     objectCommand(command: ObjectCommand) {
         if (this.role !== 'gm') return;
+        const editor = this.snapshot.mapEditor;
+        if (
+            editor &&
+            (editor.objectsLocked ||
+                !editor.objectsVisible ||
+                command.endpoint === 'spawn' ||
+                (command.endpoint === 'selection' && command.data.tokenIds.length))
+        )
+            return;
         const before = this.snapshot.scene;
         let scene = this.snapshot.scene;
         if (
@@ -243,12 +410,17 @@ export class SceneStore {
                               ...('scale_y' in patch ? { scaleY: patch.scale_y! } : {}),
                               ...('is_hidden' in patch ? { isHidden: patch.is_hidden! } : {}),
                               ...('is_locked' in patch ? { isLocked: patch.is_locked! } : {}),
+                              ...(patch.collider ? { collider: patch.collider } : {}),
                           }
                         : p,
                 ),
             };
         }
-        if (command.endpoint === 'selection' && command.data.action === 'move') {
+        if (
+            command.endpoint === 'selection' &&
+            command.data.action === 'move' &&
+            !command.data.tokenIds.length
+        ) {
             const d = command.data;
             const anchor = (d.anchorKind === 'token' ? scene.tokens : (scene.props ?? [])).find(
                 (o) => o.id === d.anchorId,
@@ -258,15 +430,12 @@ export class SceneStore {
                 dy = d.y - anchor.y;
             scene = {
                 ...scene,
-                tokens: scene.tokens.map((t) =>
-                    d.tokenIds.includes(t.id) ? { ...t, x: t.x + dx, y: t.y + dy } : t,
-                ),
                 props: scene.props?.map((p) =>
                     d.propIds.includes(p.id) ? { ...p, x: p.x + dx, y: p.y + dy } : p,
                 ),
             };
         }
-        this.emit({ ...this.snapshot, scene });
+        this.emit({ ...this.snapshot, scene, editorNotice: undefined });
         this.command?.({ type: 'objects', command }, before);
     }
     encounterPlaced(name: string, tokenIds: string[]) {
@@ -387,11 +556,28 @@ export class SceneStore {
             }
         }
     }
-    moveToken(id: string, position: Point) {
+    moveToken(
+        id: string,
+        position: Point,
+        intent?: 'override' | 'teleport',
+        waypoints?: Point[],
+        instant?: boolean,
+    ) {
         this.combatNotice('');
         const before = this.snapshot.scene;
-        this.updateToken(id, position, false);
-        this.command?.({ type: 'move', id, position, dragSessionId: this.dragSessionId }, before);
+        this.clearPreview();
+        this.command?.(
+            {
+                type: 'move',
+                id,
+                position,
+                dragSessionId: this.dragSessionId,
+                intent,
+                waypoints,
+                instant,
+            },
+            before,
+        );
         this.dragSessionId = undefined;
     }
     applyFog(stroke: FogStroke) {
@@ -482,6 +668,15 @@ export class SceneStore {
             revision: Math.max(this.snapshot.scene.revision ?? 0, result.revision),
         };
         if (apply && !stale) {
+            scene = { ...terrainPatch(scene, result.terrain), revision: scene.revision };
+            if (result.scene) scene = { ...scene, ...result.scene, revision: scene.revision };
+            if ('mapWorld' in result)
+                scene = {
+                    ...scene,
+                    mapWorld: result.mapWorld,
+                    structure: result.mapWorld ? scene.structure : null,
+                };
+            if (result.structure) scene = { ...scene, structure: result.structure };
             if (result.character)
                 scene = {
                     ...scene,
@@ -526,6 +721,12 @@ export class SceneStore {
         this.emit({
             ...this.snapshot,
             scene,
+            movementUpdate: {
+                movements:
+                    apply && result.revision === (this.snapshot.scene.revision ?? 0) + 1
+                        ? result.tokenMovements
+                        : undefined,
+            },
             selectedPropIds: this.snapshot.selectedPropIds?.filter((id) =>
                 scene.props?.some((p) => p.id === id),
             ),

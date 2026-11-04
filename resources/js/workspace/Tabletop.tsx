@@ -1,9 +1,13 @@
 import { t } from '../i18n';
+import { displayScene } from '../tabletop/mapWorld';
 import { audioEngine } from '../media/AudioEngine';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { TabletopRenderer } from '../tabletop/renderer/TabletopRenderer';
 import type { SceneStore } from '../tabletop/state/SceneStore';
 import { loadImages } from '../api/images';
+import { RouteControls } from './session/RouteControls';
+import { DirectControlControls } from './session/DirectControlControls';
+import '../../css/route-controls.css';
 export function Tabletop({
     store,
     rendererRef,
@@ -34,10 +38,12 @@ export function Tabletop({
         const decoded = new Map<string, HTMLImageElement>();
         const syncMedia = () => {
             if (!instanceReady) return;
-            const scene = store.getSnapshot().scene;
+            const state = store.getSnapshot();
+            const scene = displayScene(state.scene, state.mapDraft);
             const assets = [
                 ...(scene.map ? [scene.map.asset] : []),
                 ...(scene.props ?? []).map((p) => p.image),
+                ...(scene.structure?.materials ?? []).map((material) => material.asset),
                 ...scene.tokens.flatMap((t) => (t.image ? [t.image] : [])),
             ];
             const unique = [...new Map(assets.map((asset) => [asset.id, asset])).values()];
@@ -103,6 +109,8 @@ export function Tabletop({
     }, [store, rendererRef, onZoom]);
     return (
         <>
+            <RouteControls store={store} />
+            <DirectControlControls store={store} />
             <div className="canvas-host" ref={host} />
             {store.role === 'player' && (
                 <div

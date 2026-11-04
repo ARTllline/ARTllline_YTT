@@ -24,11 +24,13 @@ export function AssetPicker({
     onChange,
     label = 'Выбрать из Assets',
     category,
+    personalOnly = false,
 }: {
     value?: ImageAsset | null;
     onChange: (a: GlobalAsset) => void;
     label?: string;
     category?: Category;
+    personalOnly?: boolean;
 }) {
     const [open, setOpen] = useState(false);
     return (
@@ -42,6 +44,7 @@ export function AssetPicker({
                     <AssetLibrary
                         images
                         onlyCategory={category}
+                        personalOnly={personalOnly}
                         onSelect={(a) => {
                             onChange(a);
                             setOpen(false);
@@ -82,10 +85,12 @@ export function AssetLibrary({
     images = false,
     onSelect,
     onlyCategory,
+    personalOnly = false,
 }: {
     images?: boolean;
     onSelect?: (a: GlobalAsset) => void;
     onlyCategory?: Category;
+    personalOnly?: boolean;
 }) {
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState<Category | ''>(onlyCategory ?? '');
@@ -107,7 +112,7 @@ export function AssetLibrary({
         const timer = setTimeout(() => {
             setAssets(null);
             void request<{ assets: GlobalAsset[]; pages: number; total: number }>(
-                `/library/assets?${new URLSearchParams({ search, category, page: String(page), images: images ? '1' : '0' })}`,
+                `/library/assets?${new URLSearchParams({ search, category, page: String(page), images: images ? '1' : '0', personal: personalOnly ? '1' : '0' })}`,
                 'GET',
                 undefined,
                 abort.signal,
@@ -125,7 +130,7 @@ export function AssetLibrary({
             abort.abort();
             clearTimeout(timer);
         };
-    }, [search, category, page, images, revision]);
+    }, [search, category, page, images, revision, personalOnly]);
     const changed = (a?: GlobalAsset) => {
         setSelected(a);
         setRevision((n) => n + 1);

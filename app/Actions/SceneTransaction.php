@@ -33,6 +33,7 @@ class SceneTransaction
             $locked->setRelation('campaign', $campaign);
             app(ScenePublisher::class)->changed($locked, $type, $result, $wasVisible, $previousVisibility);
 
+            unset($result['_structureBefore']);
             $viewer = auth()->user();
             if ($viewer && $campaign->roleFor($viewer) === 'player' && array_key_exists('combat', $result)) {
                 $result['combat'] = app(CombatView::class)->build($locked, false, $viewer);

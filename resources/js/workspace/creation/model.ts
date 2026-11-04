@@ -1,6 +1,7 @@
 import type { LibraryAsset } from '../../api/preparation';
 import type { ContentTemplate } from '../../api/objects';
 import type { Token } from '../../tabletop/types/scene';
+import type { ObjectPreset } from '../../tabletop/objects/collider';
 
 export const presets = {
     hero: { label: 'Герой', kind: 'player_character', disposition: 'friendly' },
@@ -26,11 +27,14 @@ export type Placement =
       }
     | { type: 'token'; draft: TokenDraft; name: string }
     | { type: 'prop'; asset: LibraryAsset; name: string; purpose?: 'container' | 'interaction' }
+    | { type: 'objectPreset'; preset: ObjectPreset; name: string; rotation: number }
     | { type: 'template'; template: Pick<ContentTemplate, 'id' | 'kind' | 'name'>; name: string }
     | { type: 'note' | 'region'; name: string };
 export const CREATION_MIME = 'application/x-ytt-creation';
 export const repeatsPlacement = (item: Placement) =>
-    item.type === 'prop' || (item.type === 'libraryActor' && item.library === 'npcs');
+    item.type === 'prop' ||
+    item.type === 'objectPreset' ||
+    (item.type === 'libraryActor' && item.library === 'npcs');
 export function tokenDraft(asset: LibraryAsset | undefined, hero: boolean): TokenDraft {
     const { kind, disposition } = hero ? presets.hero : presets.enemy;
     return { name: asset?.name.slice(0, 80) ?? '', kind, disposition, hp: 10, asset };

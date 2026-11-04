@@ -73,6 +73,11 @@ class TurnBudget
 
     public function move(Token $actor, float $x, float $y): void
     {
+        $this->spendMovement($actor, hypot($x - $actor->x, $y - $actor->y));
+    }
+
+    public function spendMovement(Token $actor, float $length): void
+    {
         abort_if(app(ConditionRules::class)->inactive($actor), 422, 'Персонаж недееспособен и не может перемещаться.');
         $combat = $this->active($actor->scene_id);
         if (! $combat) {
@@ -80,8 +85,10 @@ class TurnBudget
         }
         $entry = $combat->combatants()->where('token_id', $actor->id)->first();
         abort_unless($entry && $combat->current_combatant_id === $entry->id, 422, 'Перемещение доступно в свой ход участника боя.');
-        $distance = hypot($x - $actor->x, $y - $actor->y) * (float) $actor->scene->distance_per_cell / (float) $actor->scene->grid_size;
-        $cost = round($distance * (app(ConditionRules::class)->prone($actor) ? 2 : 1), 4);
+        $distance = $length * (float) $actor->scene->distance_per_cell / (float) $actor->scene->grid_size;
+        $cost = $distance * (app(ConditionRules::class)->prone($actor) ? 2 : 1);
+        // Match persisted precision without letting repeated tiny moves round down.
+        $cost = $cost > 0 ? max(1, ceil($cost * 10000 - 0.00000001)) / 10000 : 0;
         if ($cost <= 0) {
             return;
         }

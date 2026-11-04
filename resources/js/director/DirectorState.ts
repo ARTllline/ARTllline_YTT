@@ -130,7 +130,9 @@ export class DirectorState {
         this.reset();
     };
     reset = () => {
-        this.onCamera(null);
+        // A wait/trigger-only Cue never took the camera. Its terminal clear must
+        // not cancel an unrelated Drag, double-click, route preview or wheel zoom.
+        if (this.snapshot.directed) this.onCamera(null);
         this.snapshot = empty();
         this.expires = 0;
         this.messageUntil = 0;

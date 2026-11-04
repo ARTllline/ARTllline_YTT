@@ -1,4 +1,9 @@
 import { ObjectGesture } from './ObjectGesture';
+import type { Graphics } from 'pixi.js';
+import { BuildGesture } from '../../structure/BuildGesture';
+import { TerrainGesture } from '../../terrain/TerrainGesture';
+import type { TerrainLayer } from '../../terrain/TerrainLayer';
+import { editorInteractionScene } from '../../mapEditor';
 import { marqueeSelection } from '../../utils/marquee';
 import type { ObjectSelection } from '../../types/scene';
 import { RegionGesture } from './RegionGesture';
@@ -12,8 +17,14 @@ import type { TokenLayer } from '../../layers/TokenLayer';
 import type { InteractionLayer } from '../../layers/InteractionLayer';
 import type { GMLayer } from '../../layers/GMLayer';
 import { screenToWorld, snapPoint } from '../../utils/coordinates';
+import { movementBlocked, movementObstacles, movementRange } from '../../utils/movement';
+import type { Scene } from '../../types/scene';
+import { ClickToMove } from '../../navigation/ClickToMove';
+import { DragRoutePreview } from '../../navigation/DragRoutePreview';
 
 type Gesture = {
+    build?: boolean;
+    terrain?: boolean;
     marquee?: { previous?: ObjectSelection };
     region?: boolean;
     objects?: boolean;
@@ -24,6 +35,8 @@ type Gesture = {
     last: Point;
     token: string | null;
     origin: Point;
+    pointerOrigin?: Point;
+    override?: boolean;
     moved: boolean;
 };
 const isEditing = (target: EventTarget | null) =>
@@ -31,9 +44,15 @@ const isEditing = (target: EventTarget | null) =>
     !!target.closest('input,textarea,select,[contenteditable="true"]');
 
 export class PointerController {
+    private clickMove: ClickToMove;
+    private dragRoute: DragRoutePreview;
+    private emptyClick?: { id: string; time: number; point: Point };
     private spatial: SpatialGesture;
     private objects?: ObjectGesture;
     private regionGesture?: RegionGesture;
+    private buildGesture?: BuildGesture;
+    private buildZoom = 0;
+    private terrainGesture?: TerrainGesture;
     get tool(): Tool {
         return this.store.spatial.tool;
     }
@@ -42,10 +61,14 @@ export class PointerController {
     }
     private gesture: Gesture | null = null;
     private space = false;
+    private inside = false;
+    private terrainCursor?: Point;
+    private terrainCursorState?: string;
     private hover: string | null = null;
     private propHover: string | null = null;
-    private lastPreview = 0;
-    private previewTimer: ReturnType<typeof setTimeout> | undefined;
+    private geometryScene?: Scene;
+    private obstacles: ReturnType<typeof movementObstacles> = [];
+    private movementFrame?: { scene: Scene; point: Point; camera: Camera['state'] };
     private abort = new AbortController();
     constructor(
         private canvas: HTMLCanvasElement,
@@ -56,19 +79,82 @@ export class PointerController {
         private notes?: GMLayer,
         private props?: ScenePropLayer,
         private regions?: RegionLayer,
+        terrain?: TerrainLayer,
+        buildGuide?: Graphics,
     ) {
+        this.clickMove = new ClickToMove(store, overlay);
+        this.dragRoute = new DragRoutePreview(overlay);
         this.spatial = new SpatialGesture(store);
-        if (props) this.objects = new ObjectGesture(store, tokens, props);
+        if (buildGuide) {
+            this.buildGesture = new BuildGesture(store, buildGuide);
+            if (store.role === 'gm')
+                store.onStructureAction = (action) => this.buildGesture?.action(action);
+        }
+        if (terrain) this.terrainGesture = new TerrainGesture(store, terrain);
+        if (props) this.objects = new ObjectGesture(store, tokens, props, overlay);
         if (regions) this.regionGesture = new RegionGesture(store, regions);
         const signal = this.abort.signal;
         canvas.addEventListener('pointerdown', this.down, { signal });
+        canvas.addEventListener(
+            'dblclick',
+            (e) => {
+                if (this.tool === 'build') {
+                    this.buildGesture?.commit();
+                    return;
+                }
+                const click = this.emptyClick;
+                this.emptyClick = undefined;
+                if (
+                    !click ||
+                    this.camera.directed ||
+                    this.space ||
+                    e.button !== 0 ||
+                    e.shiftKey ||
+                    e.altKey ||
+                    e.ctrlKey ||
+                    e.metaKey ||
+                    performance.now() - click.time > 800 ||
+                    !this.clickMove.eligible(click.id)
+                )
+                    return;
+                const point = this.local(e),
+                    world = screenToWorld(point, this.camera.state);
+                if (
+                    Math.hypot(point.x - click.point.x, point.y - click.point.y) > 5 ||
+                    this.tokens.hit(world) ||
+                    this.props?.hit(world) ||
+                    this.notes?.hit(world, this.camera.state.zoom)
+                )
+                    return;
+                this.store.select(click.id);
+                this.clickMove.request(click.id, world);
+            },
+            { signal },
+        );
+        canvas.addEventListener(
+            'pointerenter',
+            () => {
+                this.inside = true;
+            },
+            { signal },
+        );
         canvas.addEventListener('pointermove', this.move, { signal });
         canvas.addEventListener('pointerup', this.up, { signal });
         canvas.addEventListener('pointercancel', this.cancel, { signal });
-        canvas.addEventListener('lostpointercapture', this.cancel, { signal });
+        canvas.addEventListener(
+            'lostpointercapture',
+            () => {
+                if (this.gesture) this.cancel();
+            },
+            { signal },
+        );
         canvas.addEventListener(
             'pointerleave',
             () => {
+                this.inside = false;
+                this.terrainCursor = undefined;
+                if (this.tool === 'build' && !this.gesture)
+                    this.buildGesture?.draw(undefined, this.camera.state.zoom);
                 if (!this.gesture) {
                     this.hover = null;
                     this.propHover = null;
@@ -114,14 +200,53 @@ export class PointerController {
                           : 'default';
     };
     private down = (e: PointerEvent) => {
+        this.terrainCursorState = undefined;
         if (this.camera.directed) return;
         if (this.gesture || !e.isPrimary || (e.button !== 0 && e.button !== 1)) return;
+        const previousClick = this.emptyClick;
+        this.emptyClick = undefined;
+        this.clickMove.cancel();
         e.preventDefault();
         this.canvas.focus({ preventScroll: true });
         this.camera.stop();
         const point = this.local(e),
             world = screenToWorld(point, this.camera.state);
         const panning = e.button === 1 || this.space || this.tool === 'pan';
+        if (e.button === 0 && !panning && this.store.onMapCalibration) {
+            this.store.onMapCalibration(world);
+            return;
+        }
+        if (this.store.getSnapshot().mapDraft && !panning) return;
+        if (!panning && this.tool === 'build') {
+            if (!this.buildGesture?.down(world, this.camera.state.zoom)) return;
+            this.gesture = {
+                build: true,
+                pointer: e.pointerId,
+                start: point,
+                last: point,
+                origin: world,
+                token: null,
+                moved: false,
+            };
+            this.canvas.setPointerCapture(e.pointerId);
+            this.refresh();
+            return;
+        }
+        if (!panning && this.tool === 'terrain') {
+            if (!this.terrainGesture?.down(world)) return;
+            this.gesture = {
+                terrain: true,
+                pointer: e.pointerId,
+                start: point,
+                last: point,
+                token: null,
+                origin: world,
+                moved: false,
+            };
+            this.canvas.setPointerCapture(e.pointerId);
+            this.refresh();
+            return;
+        }
         if (!panning && this.tool === 'region' && this.regionGesture) {
             this.regionGesture.down(world);
             this.gesture = {
@@ -144,7 +269,7 @@ export class PointerController {
             return;
         }
         const noteId =
-            !panning && this.tool === 'select'
+            !panning && this.tool === 'select' && !this.store.getSnapshot().mapEditor
                 ? this.notes?.hit(world, this.camera.state.zoom)
                 : null;
         if (noteId) {
@@ -164,6 +289,7 @@ export class PointerController {
             return;
         }
         if (!panning && !['select', 'pan'].includes(this.tool)) {
+            this.tokens.finishMovements();
             if (this.store.role === 'player' && !this.store.movementEnabled) return;
             this.gesture = {
                 pointer: e.pointerId,
@@ -179,7 +305,11 @@ export class PointerController {
             this.refresh();
             return;
         }
-        if (!panning && this.objects?.down(world, e.shiftKey, this.camera.state.zoom)) {
+        if (
+            !panning &&
+            (!e.altKey || this.store.getSnapshot().mapEditor || !this.tokens.hit(world)) &&
+            this.objects?.down(world, e.shiftKey, this.camera.state.zoom)
+        ) {
             this.gesture = {
                 pointer: e.pointerId,
                 start: point,
@@ -193,7 +323,7 @@ export class PointerController {
             this.refresh();
             return;
         }
-        const token = panning ? null : this.tokens.hit(world);
+        const token = panning || this.store.getSnapshot().mapEditor ? null : this.tokens.hit(world);
         const prop =
             !panning && !token && this.store.role === 'player' ? this.props?.hit(world) : null;
         if (prop) {
@@ -202,6 +332,27 @@ export class PointerController {
             return;
         }
         if (!panning && !token) {
+            const state = this.store.getSnapshot();
+            const id =
+                state.selectedIds.length === 1 && !state.selectedPropIds?.length
+                    ? state.selectedIds[0]
+                    : previousClick &&
+                        performance.now() - previousClick.time < 800 &&
+                        Math.hypot(
+                            point.x - previousClick.point.x,
+                            point.y - previousClick.point.y,
+                        ) <= 5
+                      ? previousClick.id
+                      : undefined;
+            if (
+                id &&
+                this.clickMove.eligible(id) &&
+                !e.shiftKey &&
+                !e.ctrlKey &&
+                !e.metaKey &&
+                !e.altKey
+            )
+                this.emptyClick = { id, time: performance.now(), point };
             if (this.store.role === 'gm') {
                 this.gesture = {
                     pointer: e.pointerId,
@@ -218,6 +369,7 @@ export class PointerController {
             return;
         }
         if (!panning) this.store.select(token);
+        if (token) this.tokens.finishMovement(token);
         const model = this.store.getSnapshot().scene.tokens.find((item) => item.id === token);
         if (model && !this.store.canMove(model.id)) {
             this.refresh();
@@ -229,6 +381,8 @@ export class PointerController {
             last: point,
             token,
             origin: model ? { x: model.x, y: model.y } : world,
+            pointerOrigin: world,
+            override: e.altKey && this.store.role === 'gm',
             moved: false,
         };
         if (token) this.store.dragSessionId = crypto.randomUUID();
@@ -238,12 +392,38 @@ export class PointerController {
     private move = (e: PointerEvent) => {
         const point = this.local(e),
             gesture = this.gesture;
+        this.terrainCursor = point;
+        this.inside =
+            point.x >= 0 &&
+            point.y >= 0 &&
+            point.x < this.canvas.clientWidth &&
+            point.y < this.canvas.clientHeight;
+        if (
+            this.tool === 'build' &&
+            !this.space &&
+            (!gesture || (gesture.build && e.pointerId === gesture.pointer))
+        ) {
+            const world = screenToWorld(point, this.camera.state);
+            if (gesture?.build) {
+                this.buildGesture?.move(world, this.camera.state.zoom, gesture.origin);
+            } else this.buildGesture?.draw(world, this.camera.state.zoom);
+            return;
+        }
         if (!gesture) {
             const world = screenToWorld(point, this.camera.state);
             this.regions?.hover(this.tool === 'region' ? this.regions.hit(world) : undefined);
-            this.hover = this.tokens.hit(world);
-            this.propHover = this.hover ? null : (this.props?.hit(world) ?? null);
-            if (this.tool === 'fog' && this.store.spatial.settings.shape === 'brush' && !this.space)
+            const editor = this.store.getSnapshot().mapEditor;
+            this.hover = editor ? null : this.tokens.hit(world);
+            this.propHover =
+                this.hover || (editor && (!editor.objectsVisible || editor.objectsLocked))
+                    ? null
+                    : (this.props?.hit(world) ?? null);
+            if (this.tool === 'terrain') this.updateTerrainCursor();
+            else if (
+                this.tool === 'fog' &&
+                this.store.spatial.settings.shape === 'brush' &&
+                !this.space
+            )
                 this.overlay.showBrush(
                     world,
                     this.store.spatial.settings.radius,
@@ -255,8 +435,15 @@ export class PointerController {
             return;
         }
         if (e.pointerId !== gesture.pointer) return;
+        if (gesture.terrain) {
+            const world = screenToWorld(point, this.camera.state);
+            this.terrainGesture?.move(world);
+            this.updateTerrainCursor();
+            return;
+        }
         if (gesture.marquee) {
             gesture.moved ||= Math.hypot(point.x - gesture.start.x, point.y - gesture.start.y) > 3;
+            if (gesture.moved) this.emptyClick = undefined;
             if (gesture.moved)
                 this.overlay.showMarquee(
                     gesture.origin,
@@ -270,7 +457,8 @@ export class PointerController {
             return;
         }
         if (gesture.objects) {
-            this.objects?.move(screenToWorld(point, this.camera.state));
+            gesture.last = point;
+            this.objects?.move(screenToWorld(point, this.camera.state), this.camera.state.zoom);
             return;
         }
         if (gesture.spatial) {
@@ -288,42 +476,94 @@ export class PointerController {
         if (!gesture.token) this.camera.pan(point.x - gesture.last.x, point.y - gesture.last.y);
         else {
             gesture.last = point;
-            const position = this.dragPosition(point, gesture);
-            this.tokens.preview(gesture.token, position);
-            const grid = this.store.getSnapshot().scene.grid;
-            this.overlay.showSnap(snapPoint(position, grid), grid);
-            clearTimeout(this.previewTimer);
-            if (performance.now() - this.lastPreview > 80) {
-                this.lastPreview = performance.now();
-                this.store.previewMove(gesture.token, position);
-            } else {
-                this.previewTimer = setTimeout(
-                    () => {
-                        if (this.gesture?.token) {
-                            this.lastPreview = performance.now();
-                            this.store.previewMove(this.gesture.token, position);
-                        }
-                    },
-                    80 - (performance.now() - this.lastPreview),
-                );
-            }
+            this.previewDrag(gesture, point);
         }
         gesture.last = point;
     };
+    private previewDrag(gesture: Gesture, point: Point) {
+        const { scene } = this.store.getSnapshot();
+        const camera = this.camera.state;
+        const previous = this.movementFrame;
+        const token = scene.tokens.find((item) => item.id === gesture.token);
+        if (!token) return;
+        const position = snapPoint(this.dragPosition(point, gesture), scene.grid);
+        if (scene.mapWorld && !gesture.override) {
+            this.dragRoute.preview(scene, token, position, camera.zoom);
+            return;
+        }
+        if (previous?.scene === scene && previous.point === point && previous.camera === camera)
+            return;
+        const radius = (token.size * token.scale) / 2;
+        const gm = this.store.role === 'gm';
+        if (
+            gm &&
+            (scene.structure !== this.geometryScene?.structure ||
+                scene.props !== this.geometryScene?.props ||
+                scene.mapWorld !== this.geometryScene?.mapWorld)
+        ) {
+            this.obstacles = movementObstacles(scene);
+            this.geometryScene = scene;
+        }
+        const range = gesture.override ? undefined : movementRange(scene, token);
+        const distance = Math.hypot(position.x - gesture.origin.x, position.y - gesture.origin.y);
+        const blocked =
+            !gesture.override &&
+            ((range !== undefined && distance > range + 0.001) ||
+                (gm &&
+                    distance > 0 &&
+                    movementBlocked(gesture.origin, position, radius, this.obstacles)));
+        if (gesture.override) this.tokens.preview(token.id, position);
+        this.overlay.showMovement(
+            gesture.origin,
+            position,
+            radius,
+            this.camera.state.zoom,
+            blocked,
+            scene.grid,
+            range,
+            gm,
+        );
+        this.movementFrame = { scene, point, camera };
+    }
     private dragPosition(point: Point, gesture: Gesture): Point {
+        if (gesture.token && gesture.pointerOrigin) {
+            const world = screenToWorld(point, this.camera.state);
+            return {
+                x: gesture.origin.x + world.x - gesture.pointerOrigin.x,
+                y: gesture.origin.y + world.y - gesture.pointerOrigin.y,
+            };
+        }
         return {
             x: gesture.origin.x + (point.x - gesture.start.x) / this.camera.state.zoom,
             y: gesture.origin.y + (point.y - gesture.start.y) / this.camera.state.zoom,
         };
     }
     private up = (e: PointerEvent) => {
+        this.terrainCursorState = undefined;
         const gesture = this.gesture;
         if (!gesture || gesture.pointer !== e.pointerId) return;
+        if (gesture.build) {
+            this.buildGesture?.up(
+                screenToWorld(this.local(e), this.camera.state),
+                gesture.origin,
+                this.camera.state.zoom,
+            );
+            this.finish();
+            return;
+        }
+        if (gesture.terrain) {
+            void this.terrainGesture?.up(screenToWorld(this.local(e), this.camera.state));
+            this.finish();
+            return;
+        }
         if (gesture.marquee) {
             if (gesture.moved)
                 this.store.selectObjects(
                     marqueeSelection(
-                        this.store.getSnapshot().scene,
+                        editorInteractionScene(
+                            this.store.getSnapshot().scene,
+                            this.store.getSnapshot().mapEditor,
+                        ),
                         gesture.origin,
                         screenToWorld(this.local(e), this.camera.state),
                         gesture.marquee.previous,
@@ -360,13 +600,25 @@ export class PointerController {
                 this.store.getSnapshot().scene.grid,
             );
             this.finish();
-            this.store.moveToken(gesture.token, position);
+            if (!gesture.override && this.store.getSnapshot().scene.mapWorld) {
+                this.clickMove.request(gesture.token, position, true);
+                return;
+            }
+            this.store.moveToken(
+                gesture.token,
+                position,
+                gesture.override ? 'override' : undefined,
+            );
             return;
         }
         this.finish();
     };
     private finish() {
-        clearTimeout(this.previewTimer);
+        this.dragRoute.cancel();
+        this.movementFrame = undefined;
+        const tokenId = this.gesture?.token;
+        const token = this.store.getSnapshot().scene.tokens.find((item) => item.id === tokenId);
+        if (token) this.tokens.preview(token.id, token);
         const pointer = this.gesture?.pointer;
         this.gesture = null;
         if (pointer !== undefined && this.canvas.hasPointerCapture(pointer))
@@ -376,6 +628,11 @@ export class PointerController {
         this.refresh();
     }
     cancel = () => {
+        this.dragRoute.cancel();
+        this.emptyClick = undefined;
+        this.clickMove.cancel();
+        this.buildGesture?.cancel();
+        this.terrainGesture?.cancel();
         this.spatial.cancel();
         this.objects?.cancel();
         this.regionGesture?.cancel();
@@ -386,34 +643,78 @@ export class PointerController {
                 .scene.notes?.find((n) => n.id === this.gesture!.note);
             if (note) this.notes?.preview(note.id, note);
         }
-        if (this.gesture.token) {
-            const token = this.store
-                .getSnapshot()
-                .scene.tokens.find((t) => t.id === this.gesture!.token);
-            const position = token ?? this.gesture.origin;
-            this.store.onPreview?.(this.gesture.token, position, true);
-            this.tokens.preview(this.gesture.token, position);
-        }
         this.store.dragSessionId = undefined;
         this.finish();
     };
     reapplyPreview() {
+        this.clickMove.sync(this.camera.state.zoom);
         this.spatial.tick();
-        this.objects?.preview();
         this.regionGesture?.preview();
         const gesture = this.gesture;
+        if (gesture?.objects)
+            this.objects?.move(
+                screenToWorld(gesture.last, this.camera.state),
+                this.camera.state.zoom,
+            );
         if (gesture?.note && gesture.moved)
             this.notes?.preview(gesture.note, this.dragPosition(gesture.last, gesture));
         if (gesture?.spatial && this.store.role === 'player' && !this.store.movementEnabled) {
             this.cancel();
             return;
         }
-        if (gesture?.token && !this.store.canMove(gesture.token)) {
+        const token = this.store.getSnapshot().scene.tokens.find((t) => t.id === gesture?.token);
+        if (
+            gesture?.token &&
+            (!token ||
+                !this.store.canMove(gesture.token) ||
+                token.x !== gesture.origin.x ||
+                token.y !== gesture.origin.y)
+        ) {
             this.cancel();
             return;
         }
-        if (gesture?.token && gesture.moved)
-            this.tokens.preview(gesture.token, this.dragPosition(gesture.last, gesture));
+        if (gesture?.token && gesture.moved) this.previewDrag(gesture, gesture.last);
+    }
+    refreshBuild() {
+        if (this.tool === 'build') this.buildGesture?.refresh(this.camera.state.zoom);
+    }
+    updateBuildZoom() {
+        const zoom = this.camera.state.zoom;
+        if (zoom === this.buildZoom) return;
+        this.buildZoom = zoom;
+        this.refreshBuild();
+    }
+    updateTerrainCursor() {
+        if (this.tool !== 'terrain') {
+            if (this.terrainCursorState) this.overlay.clear();
+            this.terrainCursorState = undefined;
+            return;
+        }
+        const brush = this.terrainGesture?.brush ?? this.store.getSnapshot().mapEditor?.terrain;
+        const point = this.terrainCursor;
+        if (
+            !brush ||
+            !point ||
+            !this.inside ||
+            this.space ||
+            (this.gesture && !this.gesture.terrain)
+        ) {
+            this.overlay.clear();
+            this.terrainCursorState = undefined;
+            return;
+        }
+        const { zoom, x, y } = this.camera.state;
+        const signature = `${point.x}/${point.y}/${zoom}/${x}/${y}/${brush.size}/${brush.softness}/${brush.operation}`;
+        if (signature === this.terrainCursorState) return;
+        this.terrainCursorState = signature;
+        const radius = brush.size / 2;
+        this.overlay.showBrush(
+            screenToWorld(point, this.camera.state),
+            radius,
+            zoom,
+            brush.operation === 'erase',
+            radius * (1 - brush.softness / 255),
+        );
     }
     get draggingObjectTokens() {
         return this.objects?.tokenIds ?? [];
@@ -423,6 +724,7 @@ export class PointerController {
     }
     private blur = () => {
         this.space = false;
+        this.terrainCursor = undefined;
         this.cancel();
         this.refresh();
     };
@@ -439,6 +741,7 @@ export class PointerController {
     };
     private keyDown = (e: KeyboardEvent) => {
         if (isEditing(e.target) || document.querySelector('dialog[open]')) return;
+        if (this.store.getSnapshot().mapDraft && e.code !== 'Space') return;
         if (
             this.store.role === 'gm' &&
             (e.ctrlKey || e.metaKey) &&
@@ -447,6 +750,16 @@ export class PointerController {
         ) {
             e.preventDefault();
             if (!e.repeat && !this.gesture) this.store.history?.run(e.shiftKey);
+            return;
+        }
+        if (this.tool === 'build' && ['Enter', 'Escape', 'Delete'].includes(e.key)) {
+            e.preventDefault();
+            if (e.repeat) return;
+            if (e.key === 'Escape') {
+                this.cancel();
+                this.store.selectStructure(undefined);
+            } else if (!this.gesture && e.key === 'Enter') this.buildGesture?.commit();
+            else if (!this.gesture && e.key === 'Delete') this.buildGesture?.action('delete');
             return;
         }
         if (
@@ -458,7 +771,7 @@ export class PointerController {
             this.store.onSelectionAction?.(e.key === 'Delete' ? 'delete' : 'duplicate');
             return;
         }
-        if (e.code === 'Space' && document.activeElement === this.canvas) {
+        if (e.code === 'Space' && (document.activeElement === this.canvas || this.inside)) {
             e.preventDefault();
             this.space = true;
             this.refresh();
@@ -469,6 +782,8 @@ export class PointerController {
                 Tool
             >
         )[e.code];
+        if (this.store.getSnapshot().mapEditor && shortcut && !['select', 'pan'].includes(shortcut))
+            return;
         if (
             shortcut &&
             !e.ctrlKey &&
@@ -495,6 +810,9 @@ export class PointerController {
     };
     destroy() {
         this.cancel();
+        this.clickMove.destroy();
+        this.dragRoute.cancel();
         this.abort.abort();
+        if (this.buildGesture) this.store.onStructureAction = undefined;
     }
 }

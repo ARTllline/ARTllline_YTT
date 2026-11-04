@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SceneSubscriber } from './SceneSubscriber';
+import * as client from '../api/client';
 import type { LiveEcho } from './useCampaignLive';
 import { SceneStore } from '../tabletop/state/SceneStore';
 import { SaveQueue } from '../tabletop/state/SaveQueue';
@@ -58,6 +59,30 @@ function setup() {
     };
 }
 describe('scene subscription recovery', () => {
+    it('restores MapWorld, cropped reference and grid through the existing reconnect snapshot', async () => {
+        const s = setup();
+        const world = { bounds: { x: 0, y: 0, width: 2200, height: 1400 } };
+        const snapshot = {
+            ...s.scene,
+            revision: 12,
+            width: 2200,
+            height: 1400,
+            mapWorld: world,
+            grid: { ...s.scene.grid, size: 80 },
+        };
+        const read = vi.spyOn(api, 'snapshot').mockResolvedValue(snapshot);
+        try {
+            await s.subscriber.resync();
+            expect(s.store.getSnapshot().scene).toEqual(snapshot);
+            s.receive({ ...s.event(13), type: 'map-world.updated', payload: { mapWorld: null } });
+            expect(s.store.getSnapshot().scene.mapWorld).toBeNull();
+            read.mockResolvedValue({ ...snapshot, revision: 14 });
+            s.subscribed();
+            await vi.waitFor(() => expect(s.store.getSnapshot().scene.mapWorld).toEqual(world));
+        } finally {
+            s.subscriber.destroy();
+        }
+    });
     it('recovers an HTTP probe failure even when the scene revision did not change', async () => {
         const s = setup();
         vi.stubGlobal(
@@ -189,4 +214,39 @@ it('ignores other spatial epochs and clears ephemeral projections on disposal', 
     s.subscriber.destroy();
     s.receive({ ...event, epoch: 2, sequence: 2 });
     expect(s.store.spatial.overlays.size).toBe(0);
+});
+
+it('orders concurrent direct-control events before an HTTP receipt without a snapshot or dropped projection', () => {
+    const s = setup();
+    const snapshot = vi.spyOn(api, 'snapshot');
+    s.store.directCommandPending = true;
+    const grid = { ...s.scene.grid, size: 123 };
+    s.receive({ ...s.event(11), payload: { grid } });
+    expect(s.store.getSnapshot().scene.revision).toBe(10);
+    s.store.onDirectCommandReceipt?.(12);
+    s.store.accept({ revision: 12 }, true);
+    s.store.directCommandPending = false;
+    s.store.onDirectCommandSettled?.();
+    expect(s.store.getSnapshot().scene.revision).toBe(12);
+    expect(s.store.getSnapshot().scene.grid.size).toBe(123);
+    expect(snapshot).not.toHaveBeenCalled();
+    s.subscriber.destroy();
+    expect(s.store.onDirectCommandReceipt).toBeUndefined();
+});
+
+it('does not turn periodic revision probes into snapshot resets during a delayed direct-control receipt', async () => {
+    const s = setup();
+    const read = vi.spyOn(client, 'request').mockResolvedValue({ revision: 11 });
+    const snapshot = vi.spyOn(api, 'snapshot');
+    s.store.directCommandPending = true;
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(read).not.toHaveBeenCalled();
+    expect(snapshot).not.toHaveBeenCalled();
+    s.store.accept({ revision: 11 }, true);
+    s.store.directCommandPending = false;
+    s.store.onDirectCommandSettled?.();
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(read).toHaveBeenCalledOnce();
+    expect(snapshot).not.toHaveBeenCalled();
+    s.subscriber.destroy();
 });

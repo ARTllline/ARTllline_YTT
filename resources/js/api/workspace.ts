@@ -28,7 +28,29 @@ export interface Campaign extends CampaignSummary {
     scenes: { id: string; name: string }[];
     members?: { id: string; name: string; role: string }[];
 }
+export interface TokenMovement {
+    instant?: boolean;
+    continuous?: boolean;
+    duration?: number;
+    tokenId: string;
+    path: Point[];
+}
+
 export interface Mutation extends importObjectPatch {
+    tokenMovements?: TokenMovement[];
+    structure?: import('../tabletop/structure/model').Structure;
+    structureEdit?: {
+        before: { hash: string; snapshot: string };
+        after: { hash: string; snapshot: string };
+    };
+    terrain?: import('../tabletop/terrain/model').Terrain;
+    terrainEdit?: {
+        before: import('../tabletop/terrain/model').TerrainEditState;
+        after: import('../tabletop/terrain/model').TerrainEditState;
+    };
+    propEdits?: { id: string; present: boolean; snapshot: string }[];
+    mapWorld?: import('../tabletop/mapWorld').MapWorld | null;
+    scene?: Partial<Scene>;
     character?: import('../tabletop/types/scene').Character;
     region?: import('../automation/model').Region;
     deletedRegionId?: string;
@@ -53,6 +75,35 @@ export interface RealtimeConfig {
 export let realtimeConfig: RealtimeConfig;
 export const commandId = () => crypto.randomUUID();
 export const api = {
+    structure: (
+        scene: string,
+        change:
+            | { value: import('../tabletop/structure/model').Graph }
+            | { door: import('../tabletop/structure/model').DoorCommand },
+        expected: string,
+        clientMutationId: string,
+    ) =>
+        request<Mutation>(`/scenes/${scene}/structure`, 'POST', {
+            ...change,
+            expected,
+            clientMutationId,
+        }),
+    terrain: (
+        scene: string,
+        stroke: import('../tabletop/terrain/model').TerrainStroke,
+        clientMutationId: string,
+    ) => request<Mutation>(`/scenes/${scene}/terrain`, 'POST', { ...stroke, clientMutationId }),
+    mapWorld: (
+        scene: string,
+        value: import('../tabletop/mapWorld').MapState,
+        expected: import('../tabletop/mapWorld').MapState,
+        clientMutationId: string,
+    ) =>
+        request<Mutation>(`/scenes/${scene}/map-world`, 'POST', {
+            value,
+            expected,
+            clientMutationId,
+        }),
     note: (
         scene: string,
         command: import('../tabletop/types/scene').NoteCommand,
@@ -181,11 +232,23 @@ export const api = {
                 : {}),
             clientMutationId: commandId(),
         }),
-    move: (id: string, point: Point, clientMutationId = commandId(), dragSessionId?: string) =>
+    move: (
+        id: string,
+        point: Point,
+        clientMutationId = commandId(),
+        dragSessionId?: string,
+        intent?: 'override' | 'teleport',
+        waypoints?: Point[],
+        instant = waypoints === undefined,
+    ) =>
         request<Mutation>(`/tokens/${id}/move`, 'POST', {
             ...point,
             clientMutationId,
             dragSessionId,
+            intent,
+            waypoints,
+            instant,
+            routeStep: !instant && waypoints !== undefined,
         }),
     token: (id: string, patch: TokenPatch, clientMutationId = commandId()) => {
         const fields: Record<string, unknown> = {};

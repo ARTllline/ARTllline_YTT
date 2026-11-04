@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Scene extends Model
 {
@@ -23,6 +24,11 @@ class Scene extends Model
     public function mapAsset(): BelongsTo
     {
         return $this->belongsTo(Asset::class, 'map_asset_id');
+    }
+
+    public function mapWorld(): HasOne
+    {
+        return $this->hasOne(MapWorld::class);
     }
 
     public function fogActions(): HasMany

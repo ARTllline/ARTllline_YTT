@@ -17,6 +17,27 @@ const event = (patch: Partial<DirectorEvent> = {}): DirectorEvent => ({
     ...patch,
 });
 describe('director presentation', () => {
+    it('completion of a Cue without camera control leaves movement and zoom alone', () => {
+        const state = new DirectorState('1', 3);
+        state.onCamera = vi.fn();
+        state.accept(event({ action: 'clear', config: {}, eventId: 'wait-done' }), 1000);
+        expect(state.onCamera).not.toHaveBeenCalled();
+        state.accept(
+            event({
+                runId: 'message-run',
+                eventId: 'message',
+                action: 'message',
+                config: { text: 'Ready' },
+            }),
+            1100,
+        );
+        state.release();
+        expect(state.onCamera).not.toHaveBeenCalled();
+        state.accept(event({ runId: 'camera-run', eventId: 'focus' }), 1200);
+        state.release();
+        expect(state.onCamera).toHaveBeenLastCalledWith(null);
+        expect(state.onCamera).toHaveBeenCalledTimes(2);
+    });
     it('a delayed terminal event from a previous run cannot clear the new run', () => {
         const state = new DirectorState('1', 3);
         state.accept(event(), 1000);

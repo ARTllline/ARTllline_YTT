@@ -13,6 +13,7 @@ use App\Realtime\CommandContext;
 use App\Realtime\DirectorPublisher;
 use App\Services\CueDefinition;
 use App\Services\MediaConfig;
+use App\Services\TokenMovement;
 use Illuminate\Support\Str;
 
 /** Orchestration adapters only: canonical mutations remain in their existing actions. */
@@ -45,7 +46,7 @@ class CueStepActions
             case 'object.move':
                 $patch = ['x' => $data['x'], 'y' => $data['y']];
                 if ($data['kind'] === 'token') {
-                    app(TokenActions::class)->update($user, $scene->tokens()->findOrFail($data['id']), $patch);
+                    app(TokenActions::class)->update($user, $scene->tokens()->findOrFail($data['id']), $patch + ['intent' => TokenMovement::TELEPORT]);
                 } else {
                     app(PropActions::class)->execute($user, $scene, ['action' => 'update', 'id' => $data['id'], 'patch' => $patch]);
                 }

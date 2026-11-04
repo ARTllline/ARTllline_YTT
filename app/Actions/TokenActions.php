@@ -3,7 +3,6 @@
 namespace App\Actions;
 
 use App\Combat\LifeCycle;
-use App\Combat\TurnBudget;
 use App\Models\Asset;
 use App\Models\CampaignMember;
 use App\Models\Combat;
@@ -12,6 +11,7 @@ use App\Models\Scene;
 use App\Models\Token;
 use App\Models\User;
 use App\Services\SceneSnapshotBuilder;
+use App\Services\TokenMovement;
 use App\Services\TriggerEvents;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -77,8 +77,25 @@ class TokenActions
             Gate::forUser($user)->authorize($move ? 'move' : 'update', $token);
             $wasVisible = ! $token->is_hidden;
             $before = clone $token;
-            if ($move) {
-                app(TurnBudget::class)->move($token, (float) ($data['x'] ?? $token->x), (float) ($data['y'] ?? $token->y));
+            $path = [];
+            $acceptedPath = [];
+            $control = $data['_directControl'] ?? null;
+            $instant = $data['instant'] ?? false;
+            $routeStep = $data['routeStep'] ?? false;
+            unset($data['_directControl'], $data['instant'], $data['routeStep']);
+            if ($control) {
+                $data['direct_control'] = app(\App\Services\DirectControl::class)->step($user, $token, $control);
+            }
+            if ($move || array_key_exists('x', $data) || array_key_exists('y', $data)) {
+                $intent = $data['intent'] ?? ($move ? TokenMovement::NORMAL : TokenMovement::EDIT);
+                $movement = app(TokenMovement::class)->resolve($user, $token,
+                    ['x' => $data['x'] ?? $token->x, 'y' => $data['y'] ?? $token->y], $data['waypoints'] ?? [], $intent);
+                unset($data['intent'], $data['waypoints']);
+                $data = $movement['position'] + $data;
+                $acceptedPath = $movement['path'];
+                if ($move) {
+                    $path = $movement['path'];
+                }
             }
             if (! $move) {
                 if ($token->character_id) {
@@ -125,10 +142,19 @@ class TokenActions
             $token->setRelation('scene', $scene);
 
             if (array_key_exists('x', $data) || array_key_exists('y', $data)) {
-                app(TriggerEvents::class)->movement($scene, [[$before, $token]]);
+                app(TriggerEvents::class)->movement($scene, [[$before, $token, $acceptedPath]]);
             }
 
-            return ['token' => $this->snapshots->token($token, $scene->campaign->roleFor($user) === 'gm', $user), 'charactersChanged' => $token->character_id !== null && ! $move, '_wasVisible' => $wasVisible, '_combatChanged' => $move || array_key_exists('is_hidden', $data) || Combat::where('scene_id', $scene->id)->where('status', 'active')->exists()];
+            $presentation = [];
+            if ($routeStep && $path) {
+                $length = 0;
+                foreach (array_slice($path, 1) as $i => $point) {
+                    $length += hypot($point['x'] - $path[$i]['x'], $point['y'] - $path[$i]['y']);
+                }
+                $presentation = ['continuous' => true, 'duration' => max(1, min(600, $length / 360 * 1000))];
+            }
+            return ($path ? ['tokenMovements' => [['tokenId' => (string) $token->id, 'path' => $path, 'instant' => $instant] + ($control ? ['continuous' => true, 'duration' => $data['direct_control']['duration']] : $presentation)]] : [])
+                + ['token' => $this->snapshots->token($token, $scene->campaign->roleFor($user) === 'gm', $user), 'charactersChanged' => $token->character_id !== null && ! $move, '_wasVisible' => $wasVisible, '_combatChanged' => (! $control && $move) || array_key_exists('is_hidden', $data) || Combat::where('scene_id', $scene->id)->where('status', 'active')->exists()];
         }, $move ? 'token.moved' : 'token.updated');
     }
 

@@ -68,7 +68,11 @@ class IdempotentCommand
                                 Gate::forUser($user)->authorize('update', $libraryCharacter->campaign);
                             }
                         }
-                    } elseif ($operation === 'token.move' && $campaign->roleFor($user) !== 'gm') {
+                    } elseif ($operation === 'token.control.start') {
+                        $token = Token::findOrFail($resource);
+                        app(\App\Services\DirectControl::class)->authorize($user, $token);
+                        abort_unless(($token->direct_control['id'] ?? null) === $result['streamId'], 409, 'Управление устарело.');
+                    } elseif (in_array($operation, ['token.move', 'token.control.step']) && $campaign->roleFor($user) !== 'gm') {
                         abort_if(array_key_exists('isHidden', $result['token']), 403, 'Your role changed. Reload the scene before moving again.');
                         $token = Token::findOrFail($resource);
                         Gate::forUser($user)->authorize('move', $token);

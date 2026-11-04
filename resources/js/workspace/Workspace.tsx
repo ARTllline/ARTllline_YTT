@@ -1,4 +1,6 @@
+import { SessionDoors } from './maps/DoorControls';
 import { SessionRuntimeControls } from './session/SessionRuntimeControls';
+import { MapEditor } from './maps/MapEditor';
 import { SessionLog } from './session/SessionLog';
 import { LootOverlay } from '../rpg/loot';
 import { CreationHub } from './creation/CreationHub';
@@ -109,6 +111,7 @@ export function Workspace({
         }
     });
     const [runtimeOpen, setRuntimeOpen] = useState(false);
+    const [mapOpen, setMapOpen] = useState(false);
     const sessionMode = workspace.mode === 'session';
     const sessionOpen = workspace.left === 'session';
     const sessionFlush = useRef<(() => Promise<void>) | null>(null);
@@ -122,6 +125,7 @@ export function Workspace({
             leaveSurface('.workspace-body > .workspace-left');
             leaveSurface('.workspace-body > .workspace-dock');
             setRuntimeOpen(false);
+            setMapOpen(false);
             dispatch({ type: 'mode', mode });
             if (mode === 'session') renderer.current?.setTool('select');
             try {
@@ -194,7 +198,7 @@ export function Workspace({
     const [hubOpen, setHubOpen] = useState(false);
     const [placement, setPlacement] = useState<Placement | null>(null);
     const rightPanel =
-        placement || (workspace.left && !sessionMode)
+        mapOpen || placement || (workspace.left && !sessionMode)
             ? null
             : contextualPanel(workspace, selectionKey);
     const selectedToken = scene.tokens.find((token) => token.id === snapshot.selectedIds[0]);
@@ -388,13 +392,14 @@ export function Workspace({
             } else if (item.type === 'token') {
                 const result = await api.createToken(scene.id!, at, item.draft.asset, item.draft);
                 store.addToken(result.token!, result.revision);
-            } else if (item.type === 'prop') {
+            } else if (item.type === 'prop' || item.type === 'objectPreset') {
                 store.objectCommand({
                     endpoint: 'props',
                     data: {
                         action: 'create',
-                        assetId: item.asset.id,
-                        purpose: item.purpose,
+                        ...(item.type === 'prop'
+                            ? { assetId: item.asset.id, purpose: item.purpose }
+                            : { presetId: item.preset.id, rotation: item.rotation }),
                         ...at,
                     },
                 });
@@ -424,7 +429,10 @@ export function Workspace({
     }, [scene.name, campaign.name]);
     useEffect(() => {
         const guard = (event: BeforeUnloadEvent) => {
-            if (!allowExit.current && queue.getSnapshot().status !== 'saved') {
+            if (
+                !allowExit.current &&
+                (queue.getSnapshot().status !== 'saved' || panelGuard.current)
+            ) {
                 event.preventDefault();
                 event.returnValue = '';
             }
@@ -464,7 +472,7 @@ export function Workspace({
     };
     return (
         <div
-            className={`workspace redesigned-workspace mode-${workspace.mode} ${sessionMode ? 'session-mode map-first-session' : ''}`}
+            className={`workspace redesigned-workspace mode-${workspace.mode} ${mapOpen ? 'map-editor-open' : ''} ${sessionMode ? 'session-mode map-first-session' : ''}`}
             onKeyDownCapture={(event) => {
                 if (
                     event.key !== 'Escape' ||
@@ -621,6 +629,10 @@ export function Workspace({
                     className="tabletop"
                     aria-label={t('Tabletop workspace')}
                     onDragOver={(event) => {
+                        if (mapOpen) {
+                            event.preventDefault();
+                            return;
+                        }
                         if ((event.target as HTMLElement).closest('.creation-hub')) {
                             setDropping(false);
                             return;
@@ -666,6 +678,10 @@ export function Workspace({
                             setDropping(false);
                     }}
                     onDrop={(event) => {
+                        if (mapOpen) {
+                            event.preventDefault();
+                            return;
+                        }
                         if ((event.target as HTMLElement).closest('.creation-hub')) {
                             setDropping(false);
                             return;
@@ -724,7 +740,7 @@ export function Workspace({
                             onClose={closeHub}
                         />
                     )}
-                    {scene.id && hubOpen && !sessionMode && (
+                    {scene.id && hubOpen && !sessionMode && !mapOpen && (
                         <CreationHub
                             campaignId={campaign.id}
                             refresh={templateRefresh}
@@ -738,6 +754,16 @@ export function Workspace({
                             renderer={renderer}
                             busy={busy || save.status !== 'saved'}
                             onCancel={() => setPlacement(null)}
+                            onRotate={(delta) =>
+                                setPlacement((current) =>
+                                    current?.type === 'objectPreset'
+                                        ? {
+                                              ...current,
+                                              rotation: (current.rotation + delta + 360) % 360,
+                                          }
+                                        : current,
+                                )
+                            }
                             onPlace={(point) => commitPlacement(placement, point)}
                         />
                     )}
@@ -750,6 +776,7 @@ export function Workspace({
                     <LootOverlay store={store} />
                     {scene.id && !placement && (
                         <RadialMenu
+                            disabled={mapOpen}
                             store={store}
                             queue={queue}
                             renderer={renderer}
@@ -769,8 +796,9 @@ export function Workspace({
                             }}
                         />
                     )}
-                    {scene.id && (
+                    {scene.id && !snapshot.mapDraft && (
                         <SelectionControls
+                            editor={mapOpen}
                             runtime={sessionMode}
                             store={store}
                             queue={queue}
@@ -797,6 +825,7 @@ export function Workspace({
                         </div>
                     ) : (
                         !placement &&
+                        !mapOpen &&
                         !hubOpen &&
                         !scene.map &&
                         scene.tokens.length === 0 &&
@@ -887,8 +916,15 @@ export function Workspace({
                                 }}
                             />
                         )}
+                        {sessionMode && (
+                            <SessionDoors
+                                scene={scene}
+                                store={store}
+                                busy={save.status !== 'saved'}
+                            />
+                        )}
                         {sessionMode && scene.id && <SessionLog key={scene.id} scene={scene} />}
-                        {scene.id && (
+                        {scene.id && !mapOpen && (
                             <button
                                 className="creation-launch primary-button"
                                 aria-expanded={hubOpen}
@@ -919,14 +955,38 @@ export function Workspace({
                     </div>
                     {scene.id && (
                         <>
-                            <Toolbar
-                                store={store}
-                                onTool={changeTool}
-                                preparation={workspace.mode !== 'session'}
-                                dockedRegions
-                            />
-                            {!sessionMode && (
+                            {!mapOpen && (
+                                <Toolbar
+                                    store={store}
+                                    onTool={changeTool}
+                                    preparation={workspace.mode !== 'session'}
+                                    dockedRegions
+                                />
+                            )}
+                            {!sessionMode && !mapOpen && (
                                 <div className="scene-quick-actions">
+                                    <button
+                                        className="secondary-button"
+                                        aria-expanded={mapOpen}
+                                        disabled={mapOpen}
+                                        onClick={() =>
+                                            void run(async () => {
+                                                if (panelGuard.current)
+                                                    throw new Error(panelGuard.current);
+                                                await queue.flush();
+                                                setPlacement(null);
+                                                setHubOpen(false);
+                                                store.select(null);
+                                                dispatch({ type: 'left', panel: null });
+                                                renderer.current?.setTool('select');
+                                                setMapOpen(true);
+                                            })
+                                        }
+                                    >
+                                        {scene.mapWorld
+                                            ? 'Редактировать карту'
+                                            : 'Создать редактируемую карту'}
+                                    </button>
                                     <button
                                         className="icon-button surface"
                                         title={t('Show / hide GM notes')}
@@ -955,6 +1015,32 @@ export function Workspace({
                         renderer={renderer}
                         onSelect={sessionMode && rightPanel === 'combat' ? closeRight : undefined}
                     />
+                    {!sessionMode && mapOpen && (
+                        <PanelGuard.Provider value={panelGuard}>
+                            <MapEditor
+                                store={store}
+                                queue={queue}
+                                active={campaign.activeSceneId === scene.id}
+                                onClose={() => setMapOpen(false)}
+                                onFit={() => renderer.current?.fit()}
+                                onTool={(tool) => renderer.current?.setTool(tool)}
+                                onPlace={(asset) =>
+                                    armPlacement({ type: 'prop', asset, name: asset.name })
+                                }
+                                onPlacePreset={(preset) =>
+                                    armPlacement({
+                                        type: 'objectPreset',
+                                        preset,
+                                        name: preset.name,
+                                        rotation: preset.settings.rotation,
+                                    })
+                                }
+                                onCancelPlacement={() => setPlacement(null)}
+                                placing={!!placement}
+                                guard={panelGuard}
+                            />
+                        </PanelGuard.Provider>
+                    )}
                     <LiveDock
                         compact={sessionMode}
                         panel={rightPanel}

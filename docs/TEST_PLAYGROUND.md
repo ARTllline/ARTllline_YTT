@@ -89,3 +89,22 @@ with six d6, explicitly (no Character levels inferred), plus a short-rest resour
 The existing Magmin has a prepared on-death consequence in the GM manual queue.
 Reset restores lifecycle, exhaustion, rest/dice/resources and pending tasks. See
 [adventuring lifecycle rules and acceptance](ADVENTURING_LIFECYCLE.md).
+
+## Ручной полигон движения (2026-11-04)
+
+По прямому запросу пользователя создана дополнительная постоянная Scene **7** —
+**Полигон · движение и коллизии**, в той же кампании 5. Она активирована для ручной
+проверки Игроком 1: <http://localhost:8090/campaigns/5/play>.
+GM: <http://localhost:8090/campaigns/5/scenes/7?mode=session>.
+
+Керн (существующий Character 5) размещён в (180, 260), размер 60, Лира — рядом.
+Шесть подписанных зон: стены/торцы, закрытая и открытая двери, блокирующее и
+проходимое окна, обход углов через Click-to-Move, проходы разной ширины, rotated
+rectangle/circle blocking props и проходимый ковёр. Grid snap выключен. Бой только
+подготовлен: исследование/WASD доступно до его явного запуска GM.
+
+Это намеренно сохранённая пользовательская карта, не одноразовые QA artifacts.
+Не удалять и не перезаписывать её при обычных проверках. Исходная Townhouse Scene 5
+сохранена. Старые автоматизированные QA scripts рассчитаны на активную Scene 5:
+перед ними переключить кампанию обратно на неё через GM, после вернуть нужную
+пользователю Scene. `qa:townhouse` не является reset новой Scene 7.
