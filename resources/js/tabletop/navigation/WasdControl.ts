@@ -1,3 +1,4 @@
+import { sameMovementGeometry } from './movementContext';
 import { request } from '../../api/client';
 import { commandId, type Mutation } from '../../api/workspace';
 import type { SceneStore } from '../state/SceneStore';
@@ -206,6 +207,10 @@ export class WasdControl {
             before = this.context!;
         const token = scene.tokens.find((t) => t.id === id);
         const reset = this.update !== state.movementUpdate && state.movementUpdate?.reset;
+        const geometryChanged =
+            this.update !== state.movementUpdate
+                ? state.movementUpdate?.geometryChanged
+                : undefined;
         this.update = state.movementUpdate;
         if (
             !token ||
@@ -217,15 +222,13 @@ export class WasdControl {
             scene.height !== before.height ||
             state.selectedIds.length !== 1 ||
             state.selectedIds[0] !== id ||
-            scene.structure !== before.structure ||
-            scene.props !== before.props ||
-            scene.mapWorld !== before.mapWorld ||
-            scene.grid !== before.grid ||
+            (scene !== before && !sameMovementGeometry(scene, before, geometryChanged)) ||
             distance(token, this.authority!) > 0.002
         ) {
             this.stop();
             return;
         }
+        if (scene.props !== before.props) this.obstacles = movementObstacles(scene);
         this.context = scene;
         const input = inputDirection(this.keys);
         const moving = !!(input.x || input.y);
@@ -373,7 +376,7 @@ export class WasdControl {
                 this.networkMs = Math.max(measured, this.networkMs * 0.7 + measured * 0.3);
             }
             if (this.store.getSnapshot().scene.id === sceneId) {
-                this.store.onDirectCommandReceipt?.(result.revision);
+                this.store.onMovementReceipt?.(result.revision);
                 this.store.accept(result, true);
             }
         } catch {
@@ -381,7 +384,7 @@ export class WasdControl {
         } finally {
             this.busy = false;
             this.store.directCommandPending = false;
-            this.store.onDirectCommandSettled?.();
+            this.store.onMovementSettled?.();
         }
     }
     private fail() {

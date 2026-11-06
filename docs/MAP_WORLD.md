@@ -1130,7 +1130,128 @@ Screenshots, timestamped Pixi frames, GIF и WebM video:
   HUD redesign и новый pathfinding не добавлены.
 - Удаление существующего героя не выполняется destructive browser-тестом:
   deletion lifecycle проверяется изолированным TokenLayer test.
-- LOS/Fog/Lighting, NPC AI и MAP-08 не начаты.
+- LOS/Fog/Lighting, NPC AI и MAP-08 не начаты в этом проходе MAP-07.
+
+## MAP-08A — серверный Line of Sight
+
+`LineOfSight` — неизменяемый контекст пакетных запросов по существующему
+`StructuralGeometry::forScene`. Нового авторского формата геометрии нет.
+Движение и LOS используют общий `ShapeIntersection`, который не знает о
+blocking flags. Каждый потребитель отдельно выбирает свой флаг; LOS читает
+только `blocksVision`, включая скрытые GM props. `blocksMovement` и
+`blocksLight` не влияют на обзор. Legacy Scene без MapWorld имеет пустую
+структуру, но существующие preset colliders по-прежнему учитываются.
+
+### Алгоритм и границы
+
+Отрезок в мировых координатах Scene пересекается с полной толщиной wall bands,
+круглыми топологическими торцами, плоскими торцами проёмов, transformed
+polygons и точными повёрнутыми эллипсами. Открытая дверь удаляет панель из
+compiled geometry; закрытая дверь и окно используют собственный `blocksVision`
+(для двери без явного флага — true). Повернутая открытая створка остаётся
+визуальной, как в существующем geometry contract.
+
+Касание препятствия, движение луча вдоль его поверхности, попадание конечной
+точки на поверхность и observer внутри препятствия блокируют LOS. Зазор больше
+`1e-7` мировой единицы пропускает луч; это численный допуск, не игровой размер.
+Нулевой луч виден, если точка вне препятствий. Дальность — евклидово расстояние
+в мировых единицах; граница включительна, null означает отсутствие ограничения.
+За пределами дальности запрос не возвращает сведения о препятствии.
+
+### Sampling токенов
+
+Политика `center-to-inset-disc-9-v1`: observer — центр токена; цель — центр и
+восемь равномерных точек на 80% радиуса круглого footprint
+`size × scale / 2`. Rotation не меняет круглый footprint. Достаточно одного
+видимого sample. Результат `none / partial / full` означает 0 / 1–8 / 9
+видимых samples. Range проверяется отдельно для каждого sample, поэтому край
+цели может быть видим при центре вне дальности. Это направленный запрос:
+обмен observer и target может изменить результат. Observer footprint не
+расширяет точку зрения и не позволяет «подглядывать» из-за стены.
+
+Это дискретная оценка частичной видимости, не процент открытой площади и не
+Cover. Между samples может оставаться видимая полоска; `full` не доказывает
+видимость каждой точки footprint. Перед MAP-08B эту политику следует учитывать
+при проектировании Player Vision, а не превращать samples в security boundary.
+
+### Контракт запросов и permissions
+
+Сервис предоставляет `point(observer, target, range?, diagnostics=false)` и
+`token(observerToken, targetToken, range?, diagnostics=false)`. Обычный point
+result: `visible`, `reason: clear|blocked|out_of_range`, `distance`. Token result:
+`visible`, `visibility`, `visibleSamples`, `sampleCount`, `policy`.
+Диагностика добавляет ближайший `blocker {id, source, point}` либо sample rays.
+Первый контакт находится монотонной бисекцией по префиксу луча (32 шага).
+
+`POST /api/scenes/{scene}/los` — **только GM**, через ScenePolicy `update`, с
+CSRF и throttle 120/min. Observer и 1–64 targets имеют вид `{point:{x,y}}`
+или `{tokenId}`; одновременно оба поля запрещены. Token IDs разрешаются
+только внутри запрошенной Scene. Входные точки ограничены миром Scene, range
+0–40000 либо null. Ответ schemaVersion 1 содержит `sceneId`, `revision`,
+`geometryKey`, `policy`, `observer`, `range`, упорядоченные `results`.
+HTTP-адаптер возвращает диагностику GM; обычные сервисные запросы — без неё.
+Авторизация выполняется до валидации содержимого. Campaign/Scene shared locks
+в порядке существующих writers дают один согласованный снимок на пакет.
+
+Player не имеет HTTP-доступа даже к boolean oracle LOS. Новых geometry/debug
+полей в Player snapshot или событиях нет; существующая фильтрация hidden props,
+colliders и vision/light flags сохранена. MAP-08A не фильтрует токены, не меняет
+targeting, Combat Rules, ручной Fog и освещение. Будущему player adapter нужны
+собственные разрешения и безопасная проекция; GM diagnostic DTO ему не подходит.
+
+### Индекс, жизненный цикл и debug
+
+Контекст компилируется один раз на пакет и переиспользуется всеми лучами.
+Broad phase — sparse grid с ячейкой 256 мировых единиц по AABB blockers.
+Форма, занимающая больше 256 ячеек, хранится в общем списке; очень длинный
+луч с AABB больше 4096 ячеек использует линейный fallback. Эти ограничения
+сдерживают память и обход пустых ячеек; точный kernel определяет результат.
+`geometryKey` — SHA-256 compiled vision blockers с их transforms и flags.
+Между HTTP-запросами кэш не хранится: каждый пакет читает актуальную геометрию,
+так что wall/door/prop изменения не оставляют stale cache. Будущий длительный
+кэш должен учитывать Scene identity и geometryKey, а результаты — также
+позиции/footprints токенов, range и sampling policy.
+
+Map Editor → **LOS** включает локальную компактную панель и Pixi overlay.
+При включении выбирается «Выбор», боковая панель Objects скрывается;
+несохранённые настройки защищены существующим guard редактора.
+GM выбирает observer token, range, target token или точку кликом в режиме
+«Выбор». 32 обзорных луча — диагностические замеры, **не visibility polygon**.
+Мятный показывает clear, красный — блокировку с точкой первого контакта,
+янтарный — превышение дальности. Стены и двери можно править в Build при
+включённом debug. Запросы debounced на 180 мс после domain revision / параметров,
+старые запросы отменяются; ответ другой revision не применяется и вызывает
+синхронизацию. Pan/zoom/render frames LOS не пересчитывают. Ошибка скрывает
+overlay; доступен повтор запроса. Debug не сохраняется, не транслируется и
+после закрытия/перезагрузки выключен.
+
+### Проверки MAP-08A
+
+- Backend: `LineOfSightTest`, `TokenMovementTest`, `DirectControlTest`,
+  `StructureTest`, `MapEditorPropsTest` — 31 tests / 639 assertions, включая
+  узкий диагональный проём, касание повёрнутого эллипса и вогнутый prop collider.
+- Frontend: vision model, SceneStore, mapEditor, structure, renderer и movement —
+  39 tests; build/lint проходят.
+- `php scripts/qa/los-benchmark.php`: 500 препятствий, 3000 лучей; compile +
+  index 3.19 мс; indexed 45.54 мс (p95 0.0436 мс/луч), linear 334.63 мс,
+  diagnostic 486.55 мс (p95 0.4829 мс/луч), peak 10 MiB. Геометрические
+  результаты трёх режимов совпадают. Это локальный pure-geometry benchmark,
+  без HTTP/DB/Pixi и не гарантия production latency.
+- `node scripts/qa/map08a.cjs`: коридор/дверь, окна с разными flags, мебель,
+  диагональная стена, общий угол и соединённые помещения; token/point debug,
+  range, realtime invalidation и reload; Player denial/projection. Ошибок JS
+  нет. Временные правки Scene 5 восстановлены с точной сверкой; Scene 7 не
+  меняется этим временным QA-скриптом. Скриншоты и отчёт — `artifacts/map08a`.
+- По прямому запросу постоянная Scene 7 дополнена отдельным LOS-крылом справа
+  (`x=2100..3200`), без замены исходных movement zones, props и позиций героев.
+  `node scripts/qa/los-playground.cjs` только читает состояние; `--apply`
+  добавляет недостающие элементы, сверяет сохранность существующих и проверяет
+  point/token LOS через браузер. Повторное применение не сбрасывает ручные
+  изменения готового крыла. Инструкция — `docs/TEST_PLAYGROUND.md`.
+
+На момент MAP-08A Player visibility filtering и targeting restrictions ещё не
+реализованы; их контракт описан в MAP-08B ниже. Fog v2, explored areas,
+Lighting, Darkvision, Cover и MAP-07E.2 остаются вне этого прохода.
 
 ## Уточнение после MAP-07E.3 — быстрый Click-to-Move, instant Drag и Esc
 
@@ -1213,3 +1334,478 @@ commands. GM override и legacy/group Drag сохраняют свои суще�
 длину и совпадение с принятым path после отпускания; также недоступную цель и Combat.
 GM + два Players синхронизированы, JavaScript errors 0, исходный полигон восстановлен.
 Снимки: `artifacts/map07e3/drag-route/live-preview-0.png` и `live-preview-2.png`.
+
+## MAP-08B — Player Vision 360°
+
+### Настройка и совместимость
+
+Player Vision включается GM для конкретной Scene: **Map Editor → LOS → Обзор
+игроков**. Для выбранного наблюдателя кнопка «Сохранить дальность персонажа»
+сохраняет `Token.vision_range`: 0–40000 мировых единиц, по умолчанию 600.
+Это явная настройка GM, без вывода Darkvision, освещения или правил системы.
+`Scene.vision_enabled` по умолчанию false, поэтому существующие сцены и ручной
+Fog сохраняют прежнее поведение. Поддерживаются MapWorld и legacy Scene.
+
+Наблюдатели Player — все принадлежащие ему `player_character` токены этой
+Scene, кроме GM-hidden. Выбор активного персонажа, rotation, направление
+движения и спрайта не меняют обзор. Области объединяются; это личный обзор
+игрока, а не автоматически общий обзор всей партии. Без наблюдателей или при
+нулевой дальности маска закрыта. GM видит всю Scene; заливка в LOS debug
+показывает серверный polygon выбранного токена, поверх точных LOS-замеров.
+
+### Геометрия и маска
+
+`VisibilityPolygon` использует тот же `StructuralGeometry`/`blocksVision`, что
+MAP-08A, включая hidden props. Угловые события включают углы полигонов,
+плоские jambs, круглые торцы и точные касательные transformed ellipses.
+Контакты лучей с отрезками/эллипсами аналитические; MAP-08A epsilon проверяется
+точным LOS, с уточнением первого контакта при касании. Broad phase ограничен
+дальностью и 512 угловыми секторами. Адаптивное уточнение между событиями
+обрабатывает пересекающиеся силуэты; прямые участки сокращаются без сглаживания
+проёмов. Кривые и окружность дальности имеют субпиксельную мировую аппроксимацию
+(шаг уточнения .15 world units), а не зависят от камеры.
+
+Player получает только результирующие polygons, без observer IDs, blocker IDs,
+geometryKey, private colliders и vision/light flags. Существующая публичная
+структура стен и movement-проекция уже видимых props остаются контрактом MAP-07;
+новая приватная геометрия для клиентского LOS не передаётся. Статические map и
+material assets по-прежнему доставляются для рендера; маска не шифрует их.
+
+`PlayerVisionLayer` объединяет polygons на одной GPU RenderTexture, ограниченной
+4096 px по длинной стороне, с antialias. Маска обновляется только при новой
+серверной проекции/размере мира. Камера и render ticker ничего не рассчитывают.
+Она закрывает пространство вне текущего обзора; существующий Fog независимо
+закрывает вручную выбранные участки. Видимый результат — пересечение двух
+масок. Vision не стирает Fog, не сохраняет территорию и не добавляет explored areas.
+
+### Серверная граница
+
+Request-scoped `SceneVisibility` использует coherent Scene revision. Для токенов
+применяется консервативная политика **точный center-to-center LOS + range** от
+хотя бы одного наблюдателя; собственные доступные токены известны владельцу.
+Это осознанно отличается от диагностического `inset-disc-9-v1` MAP-08A:
+дискретные footprint samples не используются как security boundary. Токен с
+видимым краем, но закрытым центром пока не раскрывается. Для prop проверяется
+центр, причём первый контакт с его собственным collider считается видимой
+передней поверхностью. GM-hidden всегда имеет приоритет.
+
+Фильтрация применяется к snapshots, CombatView, targeting/area candidate lists,
+interactions, stabilization, loot, feedback, изображениям/thumbnail/media и
+повторным mutation receipts. Preload для Vision Scene не включает token/prop
+assets: предварительная загрузка не раскрывает ещё неизвестные сущности.
+Старый GM-hidden 403-контракт сохранён; недоступная по обзору цель даёт 404.
+Устаревший Player receipt с прежней маской отклоняется 409; клиент синхронизируется.
+
+Writers сравнивают безопасные проекции до/после mutation под существующими
+campaign → scene locks. Персональные Reverb events содержат только изменённые/
+раскрывшиеся entities и удаления ранее доставленных IDs, а не полный snapshot.
+Movement, rotation-independent observer range/ownership, стены, двери и props
+инвалидируют соответствующий обзор. Polygon отправляется только при смене
+observer/geometry signature; HP, камера и frames его не пересчитывают.
+Чужие пути и transient move previews в Vision Scene не передаются Player:
+видимые конечные позиции приходят через delta. Собственный WASD/Click-to-Move
+сохраняет обычный authoritative receipt и playback. Удаления и ограничение маски
+применяются даже при ожидающем movement receipt; поздний ответ не возвращает
+ранее скрытые entities. Reconnect восстанавливает актуальную маску со snapshot.
+
+### Проверки и артефакты
+
+- `PlayerVisionTest`: 360°, личные наблюдатели/union, zero observers, двери,
+  permissions, incremental reveal/remove, range/movement receipts, targeting,
+  Combat, assets/preload и stale replay. Polygon проверяется по внутренним
+  точкам и точному LOS; отдельные диагональные проёмы 20 и .05 единиц с точками
+  в .0002 от jamb, углы, повёрнутый ellipse и вогнутый prop.
+- Frontend: reducer/store/reconnect и immediate revocation при pending WASD,
+  включая поздний HTTP receipt. Общий suite: 324 tests / 63 files.
+- Backend: полный suite — 388 tests / 12359 assertions; build и ESLint проходят.
+  После финального уточнения viewer/caching также повторены затронутые tests.
+- `node scripts/qa/map08b.cjs`: существующие GM + 2 Players на Scene 7,
+  прозрачное/непрозрачное окно, стены/двери/props, GM-hidden, union, настоящий
+  WASD и double-click Click-to-Move, reconnect, API privacy, Reverb и GM debug.
+  Изменённые позиции, ownership, ranges, geometry, grid, activation и включение
+  Vision восстанавливаются; точные проекции сверяются. Никаких новых fixture
+  аккаунтов, кампаний, сцен или sessions не создаётся.
+- `php scripts/qa/vision-benchmark.php`: 500 blockers, 12 observer queries,
+  range 600; отдельный pure-geometry benchmark, без DB/HTTP/GPU. JSON с временем,
+  памятью, числом вершин и проверкой boundary LOS сохраняется в
+  `artifacts/map08b/benchmark.json`. Browser report отдельно измеряет CPU submission
+  маски в Pixi; это не GPU timer query и не обещание production latency.
+  Локальный результат: compile 2.76 мс, median 36.66 мс, p95 47.86 мс на
+  observer, максимум 395 вершин, peak 12 MiB, 0 boundary LOS mismatches.
+  В браузере два измеренных обновления маски: около .4 мс CPU submission каждое.
+- Реальные screenshots: `artifacts/map08b/player1-door-closed.png`,
+  `player1-door-open.png`, `player2-window.png`, `player1-observer-union.png`,
+  `gm-vision-debug.png`; отчёт — `artifacts/map08b/report.json`.
+
+MAP-09, explored areas, память территории, Fog v2, Dynamic Lighting,
+Darkvision и Cover не реализуются в MAP-08B.
+
+## MAP-09 — Fog of War v2
+
+### Память территории и политика
+
+При включённом Player Vision Fog v2 использует готовые 360° polygons MAP-08B
+как current visibility. `fog_memories` хранит только разведанную территорию:
+`scene_id + scope`, размеры raster, `cell_size` и base64 bitset. Сетка привязана
+к world origin; ячейка `max(4, ceil(max(width,height)/512))` world units, длинная
+сторона не больше 512 cells. Максимум 32 KiB raw / 43 KiB base64 на scope.
+Scan conversion отмечает centers cells внутри серверных visibility polygons;
+области монотонно объединяются. Entity IDs, картинки сущностей, private geometry
+и исторические состояния дверей в памяти отсутствуют.
+
+`Scene.fog_memory_policy` по умолчанию `player`: каждый участник сохраняет
+территорию от всех своих доступных player_character observers. GM может выбрать
+`party` в **Map Editor → LOS → Память карты**: общий накопленный scope партии,
+но current vision, entities, targeting и права остаются личными. Party начинает
+запоминать текущую территорию при включении; старые личные карты автоматически
+не объединяются. Личная память продолжает накапливаться и в party mode; возврат
+к личной политике не копирует общую память. Общая память сохраняет историю партии,
+включая территорию прежних участников. Наличие открытого браузера не требуется.
+
+Память записывается под campaign → scene locks в той же транзакции, что движение,
+двери, изменения геометрии или настройки Vision, **до** построения персональных
+realtime delta. Пересчитываются изменившиеся наблюдатели; HP, камера и frames
+не обновляют территорию. Snapshot также инициализирует текущую память под такими
+же locks. Reconnect и Scene activation восстанавливают отдельный scope этой Scene.
+При изменении размеров raster/cell size несовместимая память безопасно начинается
+заново; изменение мира с сохранением той же сетки оставляет world-aligned cells.
+Отключение Vision сохраняет память. GM может явно сбросить все scopes текущей
+Scene кнопкой **Сбросить память карты…**; при включённом Vision текущий обзор
+сразу запоминается снова. Endpoint настроек/сброса остаётся GM-only.
+
+### Три состояния в Pixi
+
+- **Visible:** фон без затемнения, доступные entities и интерактивы в текущей маске.
+- **Explored:** фон с затемнением около 62%, без актуальных entities/дверей вне обзора.
+- **Unexplored:** затемнение около 94% оттенком `#0b1119`, без абсолютного чёрного;
+  слабо читаются уже публичные map/terrain/floor assets и статическая кладка стен.
+
+Фоновая кладка использует только существующую публичную structure projection;
+из неё исключены все door/window leaves и их текущее состояние. Props, tokens,
+интерактивные двери/окна, spatial/selection и gameplay feedback находятся в
+отдельном current container с точной маской MAP-08B. Они не становятся силуэтами
+даже при краях/анимации. GM не получает эти ограничения.
+
+Fog и current mask — две antialiased RenderTextures до 4096 px по длинной стороне.
+Память растеризуется отдельно до 512 cells и билинейно масштабируется: мягкий
+переход шириной около одной cell, без blur filters, ticker/per-frame LOS и камеры
+в вычислении. Отзыв current visibility применяется сразу, без fade старых entities.
+
+### Manual Fog, privacy и границы перед Lighting
+
+Существующий manual Fog сохраняется как независимый верхний слой: reveal не
+расширяет LOS, cover закрывает visible/explored/unexplored. Старые actions/base
+не мигрируются и не стираются; при выключенном Vision сохраняется legacy workflow.
+Manual Fog по-прежнему визуальный инструмент GM, не server-side authorization.
+Он не останавливает запоминание территории, которую физически видят observers.
+
+Серверная фильтрация MAP-08B остаётся границей безопасности на snapshots/events,
+receipts, interactions, targeting, combat, preload и media. Память её не расширяет:
+игрок получает только свой/общий bitset и current polygons. Hidden props/colliders
+не используются в фоне; GM-hidden сущности не доставляются. Статические assets
+и публичная структура остаются прежним публичным контрактом: Fog не шифрует их
+и не скрывает секреты, заранее нарисованные в самом фоновом изображении.
+
+Память — карта разведанной территории, не исторический screenshot мира: изменения
+публичного статического фона могут отражаться и в dimmed областях. Память entities,
+последнее известное состояние дверей, secret structural topology, Dynamic Lighting,
+Darkvision, ambient darkness и Cover не добавлены. LOS и vision range не переписаны;
+будущему Lighting нужен отдельный контракт current visibility, без стирания
+сохранённой географической памяти.
+
+### Проверки
+
+- `FogExplorationTest`: личная/общая память, отсутствие расширения текущего обзора,
+  движение, закрытие дверей, reload, GM reset, permissions, изоляция Scene,
+  disabled Vision и coexistence с manual Fog. Регрессии `PlayerVisionTest` и
+  `TokenMovementTest` проходят (финальный профильный прогон: 17 tests).
+- Полный backend прогон перед финальными дополнениями: 391 tests / 12395 assertions;
+  финальные профильные проверки: 17 tests / 6945 assertions. Frontend: 326 tests /
+  64 files; build, TypeScript, ESLint проходят.
+- `node scripts/qa/map09.cjs`: существующие GM + 2 Players Scene 7, три состояния,
+  двери/окна, личная/party memory, API/Reverb/media privacy, настоящий Drag/WASD/
+  double-click Click-to-Move, reconnect и Scene 5 → 7. Positions, ownership, ranges,
+  structure, activation, grid, Vision settings и исходная fog memory восстанавливаются.
+  `fog-memory-fixture.php` временно сохраняет только memory rows Scene 7 в private
+  storage; при прерванном запуске `php scripts/qa/fog-memory-fixture.php restore`
+  восстанавливает этот снимок. Новых fixture entities нет.
+- Screenshots и отчёт: `artifacts/map09/`. GPU readback проверяет alpha fog:
+  visible 0, explored 158, unexplored 239 из 255; current entity mask вне обзора 0.
+  Время `gpuMaskSubmissionMs` — CPU submission отдельных render passes, не GPU timer.
+
+
+## MAP-09.1 — Movement × Vision Performance & Synchronization
+
+### Причины и границы изменений
+
+Browser baseline на постоянной Scene 7 воспроизвёл остановку WASD после одного
+шага (~36 world units) и длинного Click-to-Move после первого участка (72).
+Пустые object deltas заменяли `props`, а смена recipient projection при движении
+убирала/добавляла colliders. Input controllers принимали эти изменения за правку
+геометрии. Счётчик ~120 FPS при уже остановившемся движении скрывал проблему.
+У второго Player отфильтрованные observers сохраняли индексы PHP Collection:
+`polygons` мог сериализоваться как object и останавливать Pixi с TypeError.
+
+В HTTP pipeline значительную стоимость давали повторные Character `checkStats`
+и нормализация rules в DTO, а не пересчёт LOS на каждом кадре. Маска переключалась
+на accepted endpoint отдельно от token playback; Fog memory перестраивала Graphics
+и выделяла новый RenderTexture при обновлениях территории.
+
+### Контракт движения и проекций
+
+`SceneVisibility::movementGeometryKey` сравнивает compiled movement blockers,
+размеры/наличие MapWorld и grid до/после мутации под существующими writer locks.
+Сам fingerprint не передаётся клиенту. Incremental event/receipt содержит только
+`movementGeometryChanged`: projection churn без реальной правки препятствий
+не отменяет маршрут. Без hint сохраняется прежняя консервативная клиентская
+проверка. Реальная правка немедленно завершает control/route, в том числе при
+pending HTTP receipt и нескольких событиях между Pixi ticks. WASD обновляет
+локальный набор уже доставленных препятствий при изменении projection; сервер
+по-прежнему валидирует каждый следующий шаг, включая приватную геометрию.
+Пустые дельты сохраняют identity коллекций. Polygons каждого получателя — JSON list.
+
+Visibility имеет отдельный revision watermark: более ранний buffered event или
+HTTP receipt не возвращает отозванную маску/сущности. При этом разрешённая и уже
+принятая собственная позиция может завершить receipt, не прерывая control из-за
+более нового visibility-only события. Scene hydration сбрасывает watermark.
+Обычные queued Move receipts используют тот же bounded merge, что WASD: чужие
+Reverb deltas упорядочиваются до/после receipt, вместо forced snapshot во время
+SaveQueue. Поиск и остаток Click-to-Move переживают безопасную чужую revision,
+если собственный Token и боевой бюджет неизменны; worker сохраняет свой context.
+Реальный gap/переполнение buffer по-прежнему приводит к snapshot recovery.
+Новая маска, полученная до своего receipt, сразу отзывает visibility, но её новые
+области ждут accepted playback. Поздний path присоединяется без нового raster pass.
+
+
+`SpellEffects::project/read` переиспользует нормализованные rules и `checkStats`
+только внутри одной неизменяемой сборки DTO. Before и after имеют разные scopes;
+между командами cache отсутствует. Permissions и viewer-specific token fields
+остаются в существующих DTO/authorization builders. Combat Player DTO не загружает
+скрытый preparing combat со всем roster без необходимости.
+
+### Pixi и приватность перехода
+
+`PlayerVisionLayer` переиспользует две antialiased current surfaces. Polygons
+растеризуются только при изменении содержимого или размеров. Explored bitset
+обновляет один `BufferImageSource`, без row-run Graphics и RT allocation на шаг.
+Фиксированный composite quad читает current/previous/memory; ticker меняет только
+uniform прогресса. Ни LOS, ни explored memory не вычисляются на render frames.
+
+Новые области проявляются в пределах последней серверной current mask; прогресс
+привязан к визуальному прохождению accepted polyline и ограничен коротким easing.
+Polygons не перемещаются и не интерполируются. Живые entities всегда обрезаны
+точной новой current mask, а удаления применяются сразу. Плавно темнеть может
+только публичная подложка, уже разрешённая новой explored memory и прошлой маской;
+это не сохраняет изображения entities/состояния дверей. Reset memory немедленно
+отзывает и это разрешение. Без explored memory старый обзор не удерживается.
+Manual Fog остаётся независимым верхним слоем.
+
+### Воспроизведение и evidence
+
+- `node scripts/qa/map09.cjs`: GM + два существующих Players, оба WASD workflows,
+  Click-to-Move/drag, двери/окна, union, current/explored/unexplored, manual Fog,
+  party/personal memory, privacy, reconnect/activation, GPU readback и teardown.
+- `node scripts/qa/vision-motion.cjs final-verified`: три режима (без Vision/Fog,
+  Vision без exploration, Vision + Fog), WASD и маршрут 800 units, zoom 29/50/100%.
+  Только локальный opt-in `X-YTT-Perf` разрешает diagnostics header отключения
+  exploration для A/B; production/current visibility этим не расширяются.
+- `node scripts/qa/vision-motion-report.cjs final-verified`: сопоставляет исходный
+  `before-clean` с финальным прогоном, сохраняет aggregate/per-role comparison и
+  безопасные server spans/counts. Исходный broken baseline имеет мало команд,
+  поскольку input останавливался; его idle FPS нельзя выдавать за качество движения.
+- Capture выполняется отдельным прогоном с `YTT_MOTION_CAPTURE=1`, чтобы GPU
+  readback screencast не искажал основной benchmark. JPG + timestamps сохраняются
+  для всех трёх ролей. Это реальный Chromium, а не синтетический renderer test.
+- Артефакты: `artifacts/vision-motion/comparison.md`, `comparison.json`,
+  `final-verified/`, `captures-final/`, `artifacts/map09/report.json` и screenshots.
+  `maskPassCpuMs` — CPU submission, не GPU timer query. Frame-time включает
+  реальные browser stalls. Измерения относятся к этому native стенду и Scene 7.
+
+HTTP transport остаётся bounded: 200 мс cadence, один запрос в полёте, privacy
+collision padding и backpressure не сняты. На большом RTT/перегруженном единственном
+Windows HTTP worker скорость может снижаться; очередь неподтверждённых шагов не
+накапливается. Это не переход к новому движку, prediction authority или MAP-10.
+
+
+Финальный native Chromium 156, GM + 2 Players, агрегат по zoom 29/50/100%:
+
+| Режим / ввод | FPS Player 1 | frame p95 / p99, ms | HTTP p50 / p95, ms |
+| --- | ---: | ---: | ---: |
+| Без Vision/Fog · WASD | 118.5 | 9.5 / 11.0 | 143.8 / 208.5 |
+| Vision без Fog · WASD | 118.8 | 9.6 / 10.8 | 213.5 / 258.6 |
+| Vision + Fog · WASD | 115.9 | 10.2 / 11.2 | 215.0 / 277.0 |
+| Без Vision/Fog · Click-to-Move | 77.0 | 15.6 / 17.0 | 140.2 / 167.9 |
+| Vision без Fog · Click-to-Move | 76.2 | 15.8 / 16.6 | 203.6 / 381.2 |
+| Vision + Fog · Click-to-Move | 74.8 | 15.9 / 16.8 | 210.0 / 250.9 |
+
+С исходным Vision + Fog baseline: WASD 33.9 → 401.5 units за одинаковое окно
+удержания, max frame position jump 70.9 → 3.0, обратные скачки 3 → 0.
+Click-to-Move 72 → ~799 units, все три длинных маршрута завершены. HTTP p50
+283.4 → 215.0 ms (WASD), 306.5 → 210.0 ms (Click-to-Move). Исходный baseline
+обрывался: всего 3 команды на три масштаба; его ~120/107 FPS — преимущественно
+idle, а не плавное движение. GM и второй Player измерены отдельно в comparison.
+
+LOS остаётся domain-driven: 1 build на принятый moving command, 0 на idle/camera
+frames; p95 на этой Scene 7.7/7.6 ms (WASD/Click-to-Move). Fog record p95
+9.8/9.4 ms включает вложенный LOS; spans нельзя суммировать.
+Персональная projection p50 снизилась с 64–68 до 27–29 ms. Маска вместо 2–3 CPU
+render submissions на обновление делает один, p95 0.3–0.4 ms; memory RT allocations
+на шаг отсутствуют. Frame-time включает GPU/браузерную работу, submission отдельно
+не измеряет GPU execution. JS errors: 2 в исходном baseline, 0 в финальном.
+
+WebGL QA: 40 переключений используют 2 mask textures и 1 memory texture;
+после destroy живых источников 26 → 26. Неавторизованных прозрачных пикселей 0;
+playback pending/completed alpha 158/0, live revoke 0, memory reset background 240.
+Listeners после трёх reconnect/reload + GC стабильны: Player 1 — 279, Player 2 — 293.
+Длинный маршрут на фоне четырёх чужих Reverb revisions завершён без snapshot reset (0).
+
+Backend 395 tests / 12428 assertions, frontend 338 tests, build/lint проходят.
+Исходные tokens/grid/activation, exploration и manual Fog восстановлены.
+
+Отдельный повтор под конкурирующей CPU/GPU нагрузкой поймал запрос 1002 ms
+(SQL, LOS и Reverb одновременно замедлились). Штатный 900 ms WASD timeout безопасно
+остановил control и запросил серверную позицию. Trace сохранён в
+`artifacts/vision-motion/timeout-spike/`; переходный прогон — `load-transition/`.
+После снятия конкурирующей нагрузки повторены все 18 сценариев, все assertions
+прошли. Нагрузочный timeout не скрыт и не смешан с основным сравнением. Увеличение
+prediction/timeout budgets ради маскировки такой перегрузки не выполнялось.
+
+### Уточнение взаимодействия Click-to-Move (2026-11-05)
+
+Первый клик по свободной точке при выбранном токене показывает маршрут; повторный
+клик туда же (допуск 5 экранных пикселей) подтверждает движение, в исследовании
+и в бою. Быстрый double-click сохраняется: подтверждение ждёт завершения поиска.
+Другая точка заменяет preview, Esc отменяет его. Drag сохраняет прежнее поведение.
+Локальные направляющие движения рисуются поверх LOS и ручного Fog; содержимое
+сцены по-прежнему ограничено серверной проекцией и маской текущего обзора.
+
+## MAP-10A — визуальное динамическое освещение
+
+`Scene.lighting` — необязательные настройки: enabled, day/night preset,
+ambient brightness/color и до 16 источников. У источника есть radius в world units,
+color, intensity, falloff и необязательная привязка к Token. Удалённая привязка
+инертна; GM-hidden emitter игрокам не передаётся. Старые Scene по умолчанию
+сохраняют прежний вид: свет выключен.
+
+**Map Editor → Свет**: предпросмотр ambient, День/Ночь, список источников,
+размещение кликом на карте, привязка к выбранному токену, радиус/цвет/интенсивность/
+затухание. Сохранение проверяет ожидаемые настройки и сообщает о конфликте
+между окнами. Черновик и направляющие GM не являются shared state.
+
+### Геометрия, приватность и transport
+
+- `StructuralGeometry` остаётся общим компилятором стен, проёмов и transformed
+  prop colliders. Для света выбирается только `blocksLight`; существующий
+  `VisibilityPolygon` используется с отдельным набором blockers. `blocksVision`,
+  серверная видимость, Combat и targeting не изменены. Закрытая дверь блокирует
+  свет, открытая освобождает проём; у окна действует собственный `blocksLight`.
+- Игрок получает только raster-маски разрешённых источников, пересечённые
+  **на сервере** с его current visibility. Ни topology, ни collider IDs, ни
+  неразведанные shadow polygons не отправляются. Для публичного источника вне текущего обзора передаётся только обезличенное
+  RGB-освещение внутри current visibility: без ID, центра или параметров источника.
+  GM-hidden emitter не вносит даже такого вклада.
+- Initial/reconnect read: `GET /api/scenes/{scene}/lighting`; GM settings:
+  idempotent `PUT` с expected-value conflict check. Membership/active Scene и
+  право GM проверяются существующими policies. Полные definitions есть только у GM.
+- Принятая команда только ставит coalesced `RefreshSceneLighting` в очередь
+  `lighting` на существующем MySQL connection `tabletop`. Тени/растер/DTO не
+  вычисляются в Movement transaction. Pending jobs объединяются по Scene,
+  worker читает последнюю committed revision, без FOR UPDATE и записи Fog.
+- `lighting.frame` идёт по существующим private recipient channels как отдельное
+  visual событие. Оно не меняет Scene revision, SaveQueue, route context или
+  React snapshot. Старые/чужие frames отбрасываются; snapshot hydration сбрасывает
+  stream и получает свежую проекцию. Cue остаются первыми в `--queue=cues,lighting`.
+- Сервер переиспользует silhouettes неизменённых источников, bounded cache record
+  на Scene и byte-RLE масок. Исключительно большой frame использует read fallback.
+
+### Pixi и композиция
+
+Lightmap — одна переиспользуемая RenderTexture, не более 1024 pixels по длинной
+стороне. Source masks ограничены 384 pixels по длинной стороне; bilinear sampling
+смягчает края теней. GPU считает цветной radial falloff и additive union в
+прямоугольнике радиуса каждого источника, без полноразмерного прохода на факел.
+Для невидимых публичных emitters фоновой job дополнительно собирается одно
+обезличенное RGB-поле; native async inflate и переиспользуемая BufferTexture
+смешивают его с обычными GPU источниками. Один multiply composite применяется
+к карте, props и токенам **до** Fog v2 и
+Manual Fog. Это мягкие raster edges, не физическая penumbra/area lights.
+
+У игрока composite дополнительно обрезан точной current mask MAP-09.1. Explored
+подложка не хранит исторические изображения источников/сущностей. Радиальный
+центр привязан к тому же визуальному Token playback; shadow masks обновляются
+по accepted state. Render frames не запускают LOS или HTTP. Offscreen pass идёт
+только при изменении света, маски или положения emitter; idle/pan/zoom его не
+вызывают. Textures переиспользуются, pool ограничен 16 emitter resources и
+освобождается при destroy. При выключенном свете shaders/RT не создаются.
+
+### Проверка
+
+`node scripts/qa/map10a.cjs` — обратимый native Chrome GM + два Players,
+дверь/окно, Fog, WASD/Click-to-Move, GPU pixels/idle, GM editor и реальные
+Flinns Townhouse day/night screenshots. Все правки fixture восстанавливаются;
+browser закрывается также при ошибке restore. `--restore` читает приватный backup
+этого QA, если процесс был прерван.
+
+Performance: `vision-motion.cjs map10a-final` с `YTT_MOTION_MODES=fog` и
+`YTT_MOTION_LIGHTING=1`, zoom 29/50/100%, пять источников включая движущийся.
+Контроль без света — `map10a-control-clean`; исходный MAP-09.1 — `final-verified`.
+`lighting-motion-report.cjs` собирает per-role frame/HTTP/movement/GPU-submission
+сравнение в `artifacts/map10a/performance.md` и JSON, без readback в измеряемом окне.
+Подробные результаты: [MAP10A_VALIDATION.md](MAP10A_VALIDATION.md).
+
+## MAP-10B — освещение и зрение персонажа
+
+Правила действуют при одновременном включении **Света** и **Обзора игроков**.
+Старые сцены без освещения, сцены с одним только визуальным светом и ручной
+Fog сохраняют прежнее поведение. GM продолжает получать полную сцену. При
+низком ambient слабая подсветка на карте GM сохраняет читаемость пола и стен.
+Уровни света для правил и изображение игроков рассчитываются отдельно от неё.
+В полной темноте видимый игроку край факела сохраняет читаемость рядом с
+памятью Fog. Подсветка действует внутри текущей маски.
+
+- Ambient от 50% даёт яркий свет, от ненулевого значения до 50% — тусклый,
+  при 0% за пределами локальных источников темно. День/Ночь задаёт ambient
+  через прежние пресеты.
+- Активный источник с положительной интенсивностью даёт тусклый свет до
+  внешнего радиуса. При интенсивности от 0.5 его внутренняя половина яркая.
+  В точке действует наибольший доступный уровень. Цвет, мягкое затухание и
+  смешивание цветов остаются визуальными настройками MAP-10A.
+- Обычное зрение различает цели в ярком и тусклом свете при открытом LOS.
+  **Характеристики → Тёмное зрение, футы** задаёт дальность Darkvision
+  персонажа. Она переводится через масштаб линейки сцены, где 1 клетка
+  соответствует 5 футам в режиме «клетки», и ограничивается дальностью
+  Player Vision токена. Обзор круговой. В радиусе Darkvision тусклый свет
+  считается ярким, темнота — тусклым монохромным обзором. Явно зависящие
+  от зрения проверки Восприятия по цели получают помеху в воспринимаемом
+  тусклом свете и автоматически проваливаются, если актёр не видит цель.
+- Луч наблюдателя проверяет `blocksVision`, луч источника — `blocksLight`.
+  Открытие двери обновляет обе проверки. Окно может пропускать одну и
+  блокировать другую. Свет GM-hidden токена учитывается только у GM.
+
+Выдача токенов, props, разрешения на ассеты, targeting и Reverb используют
+точные проверки серверного LOS и света по принятой ревизии. Скрытие отзывается
+в той же ревизии и действует при reconnect. Для заклинаний с явным требованием
+зрения проверяется также обзор самого актёра при выборе токена, объекта или точки.
+Fog сохраняет только территорию. Старые открытые клетки не раскрывают токены
+после выключения света. Публичная геометрия движения сохраняет прежний формат.
+
+При ненулевом ambient путь масок остаётся полигональным. При темноте
+сервер пересекает существующие LOS-полигоны с общим полем локального света и
+добавляет ограниченный LOS Darkvision. Клиент получает только разрешённый
+битовый растр, который использует те же две поверхности Fog и тот же playback.
+Силуэты статических источников переиспользуются. Свет вне дальности наблюдателя
+не инвалидирует его маску. В темноте движение источника синхронно обновляет
+только его силуэт, необходимый для авторизации Fog; цветное поле и DTO остаются
+в очереди MAP-10A. Монохромная композиция включается только для игрока с
+разрешёнными клетками Darkvision.
+
+Вне текущего прохода остаются Cover, автоматические источники от заклинаний,
+магическая тьма и MAP-07E.2.
+
+Браузерный QA на Scene 7 прошёл с GM и двумя игроками. В финальном сравнении
+на 29/50/100% p95 кадра у движущегося игрока в темноте составил 10.7 мс
+на WASD и 17.1 мс на Click-to-Move. На MAP-10A было 10.5 и 16.3 мс.
+Все длинные маршруты завершились, обратных скачков и сбросов не было.
+Детализация, данные по ролям и контроль без света находятся в
+`artifacts/map10b/performance.md`. Команды запуска описаны в
+[TEST_PLAYGROUND.md](TEST_PLAYGROUND.md).

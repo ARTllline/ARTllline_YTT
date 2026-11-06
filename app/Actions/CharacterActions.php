@@ -73,6 +73,7 @@ class CharacterActions
                     $character->update(['lifecycle' => app(LifeCycle::class)->state($character)]);
                 }
                 abort_if(isset($data['hp']) && $data['hp'] > 0 && app(LifeCycle::class)->state($character)['status'] === 'dead', 422, 'Используйте GM-коррекцию возвращения к жизни.');
+                $this->updateDarkvision($campaign, $character, $data);
                 $character->update($data);
                 if (array_key_exists('hp', $data)) {
                     app(LifeCycle::class)->hpChanged($user, $character, $beforeHp);
@@ -107,6 +108,25 @@ class CharacterActions
 
             return ['character' => $this->projection($character)];
         }, 3);
+    }
+
+    private function updateDarkvision(?Campaign $campaign, Character $character, array &$data): void
+    {
+        if (! array_key_exists('rules', $data)
+            || (int) ($data['rules']['senses']['darkvision_ft'] ?? 0) === app(CharacterRules::class)->darkvisionFeet($character)) {
+            return;
+        }
+        $scene = $campaign?->active_scene_id ? $campaign->scenes()->find($campaign->active_scene_id) : null;
+        if (! $scene?->vision_enabled || ! $character->tokens()->where('scene_id', $scene->id)->exists()) {
+            return;
+        }
+        // Capture the old recipient projection before changing the observer's senses.
+        app(SceneTransaction::class)->run($scene, function () use ($character, $data) {
+            $character->update(['rules' => $data['rules']]);
+
+            return ['charactersChanged' => true];
+        }, 'character.updated');
+        unset($data['rules']);
     }
 
     public function delete(User $user, Campaign $campaign, Character $character): array

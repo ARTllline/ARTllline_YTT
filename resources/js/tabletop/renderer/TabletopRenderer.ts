@@ -1,9 +1,13 @@
+import { sameMovementGeometry } from '../navigation/movementContext';
 import { performanceMark, observingPerformance } from '../../realtime/performance';
 import { WasdControl } from '../navigation/WasdControl';
 import { displayScene } from '../mapWorld';
 import { StructureLayer } from '../structure/StructureLayer';
 import type { PresetSettings } from '../objects/collider';
 import { StructureCollisionOverlay } from '../structure/StructureCollisionOverlay';
+import { LightingLayer } from '../lighting/LightingLayer';
+import { PlayerVisionLayer } from '../vision/PlayerVisionLayer';
+import { LosOverlay } from '../vision/LosOverlay';
 import { TerrainLayer } from '../terrain/TerrainLayer';
 import { t } from '../../i18n';
 import { GameplayLayer } from '../layers/GameplayLayer';
@@ -47,6 +51,10 @@ export class TabletopRenderer {
     );
     private structure = new StructureLayer();
     private collision = new StructureCollisionOverlay();
+    private los = new LosOverlay();
+    private vision = new PlayerVisionLayer();
+    private lighting: LightingLayer;
+    private currentContent = new Container();
     private buildGuide = new Graphics();
     private textures = new Map<string, Texture>();
     private tokens = new TokenLayer();
@@ -97,7 +105,9 @@ export class TabletopRenderer {
         private store: SceneStore,
         private onZoom: (zoom: number) => void,
         private onError: (error: unknown) => void,
-    ) {}
+    ) {
+        this.lighting = new LightingLayer(store.role === 'player');
+    }
     async init() {
         await this.app.init({
             backgroundAlpha: 0,
@@ -123,23 +133,32 @@ export class TabletopRenderer {
         canvas.addEventListener('webglcontextlost', this.contextLost);
         this.host.appendChild(canvas);
         this.world.eventMode = 'none';
+        this.currentContent.addChild(
+            this.structure.walls,
+            this.props,
+            this.tokens,
+            this.spatial,
+            this.response,
+            this.gameplay,
+        );
         this.world.addChild(
             this.map,
             this.terrain,
             this.structure.floors,
             this.grid,
-            this.structure.walls,
-            this.props,
-            this.tokens,
+            this.structure.baseWalls,
+            this.currentContent,
+            this.lighting,
+            this.vision,
             this.fog,
-            this.spatial,
+            this.lighting.guides,
+            // Local interaction guides remain visible beyond LOS and manual fog.
             this.overlay,
-            this.response,
-            this.gameplay,
             this.placementGhost,
             this.mapGuide,
             this.buildGuide,
             this.collision,
+            this.los,
         );
         if (this.store.role === 'gm') {
             this.regions = new RegionLayer();
@@ -161,6 +180,10 @@ export class TabletopRenderer {
         }
         this.app.stage.addChild(this.world);
         this.app.stage.addChild(this.weather);
+        this.store.onLightingFrame = (frame) => this.lighting.frame(frame);
+        this.store.onLightingReset = () => this.lighting.reset();
+        const lightingFrame = this.store.getLightingFrame();
+        if (lightingFrame) this.lighting.frame(lightingFrame);
         this.store.onGameplayFeedback = (event) => this.gameplay.feedback(event);
         this.input = new PointerController(
             canvas,
@@ -200,6 +223,30 @@ export class TabletopRenderer {
             if (this.regions) this.regions.visible = !state.mapEditor;
             const scene = displayScene(state.scene, state.mapDraft);
             this.terrain.sync(scene);
+            this.vision.sync(
+                this.app.renderer,
+                this.store.role === 'player' ? scene.vision : undefined,
+                scene.width,
+                scene.height,
+                movementUpdate !== state.movementUpdate
+                    ? state.movementUpdate?.movements
+                    : undefined,
+                this.store.directCommandPending || this.store.queuedMovementPending,
+            );
+            this.lighting.sync(scene, this.vision.currentMask.texture, state.lightingDraft);
+            if ('backBuffer' in this.app.renderer) {
+                // Only the Darkvision saturation pass samples the already rendered map.
+                this.app.renderer.backBuffer.useBackBuffer =
+                    this.store.role === 'player' && !!scene.vision?.raster?.darkvision;
+            }
+            const lightFrame = this.store.getLightingFrame();
+            if (lightFrame) this.lighting.frame(lightFrame);
+            this.structure.baseWalls.visible =
+                this.store.role === 'player' && !!scene.vision?.enabled;
+            this.currentContent.mask =
+                this.store.role === 'player' && scene.vision?.enabled
+                    ? this.vision.currentMask
+                    : null;
             this.regions?.sync(
                 scene.regions ?? [],
                 state.selectedRegionId,
@@ -218,6 +265,14 @@ export class TabletopRenderer {
                 this.grid.update(scene.grid, scene.width, scene.height);
             const debug = this.store.role === 'gm' && !!state.mapEditor?.collisionDebug;
             this.collision.sync(debug ? scene.structure : null);
+            this.los.sync(
+                this.store.role === 'gm' &&
+                    state.mapEditor &&
+                    state.losDebug?.sceneId === scene.id &&
+                    state.losDebug?.revision === (scene.revision ?? 0)
+                    ? state.losDebug
+                    : undefined,
+            );
             this.props.sync(scene.props ?? [], this.textures);
             this.props.collisionDebug(debug);
             const previousCombat = previousScene.combat;
@@ -232,18 +287,13 @@ export class TabletopRenderer {
                 combat?.round !== previousCombat?.round ||
                 currentTokenId(combat) !== currentTokenId(previousCombat) ||
                 !!combat?.currentTurn !== !!previousCombat?.currentTurn;
-            const geometryChanged =
-                scene.width !== previousScene.width ||
-                scene.height !== previousScene.height ||
-                scene.grid !== previousScene.grid ||
-                scene.mapWorld !== previousScene.mapWorld ||
-                (scene.props !== previousScene.props &&
-                    (scene.props?.some(
-                        (prop) => prop.collider?.blocksMovement || prop.movementObstacle,
-                    ) ||
-                        previousScene.props?.some(
-                            (prop) => prop.collider?.blocksMovement || prop.movementObstacle,
-                        )));
+            const geometryChanged = !sameMovementGeometry(
+                scene,
+                previousScene,
+                movementUpdate !== state.movementUpdate
+                    ? state.movementUpdate?.geometryChanged
+                    : undefined,
+            );
             if (movementReset || contextChanged || geometryChanged) this.tokens.finishMovements();
             this.tokens.sync(
                 scene.tokens,
@@ -335,6 +385,13 @@ export class TabletopRenderer {
                 if (view.x !== view.model.x || view.y !== view.model.y)
                     view.position.set(view.model.x, view.model.y);
             }
+            this.vision.tick(
+                ticker.elapsedMS,
+                this.reducedMotion.matches,
+                this.tokens.views,
+                this.store.directCommandPending || this.store.queuedMovementPending,
+            );
+            this.lighting.tick(this.app.renderer, this.tokens.views);
             this.tokens.drawMovements(this.camera.state.zoom, this.store.getSnapshot().selectedIds);
             this.camera.tick(ticker.deltaMS);
             if (controlled?.follow && !this.camera.directed) {
@@ -593,10 +650,15 @@ export class TabletopRenderer {
         }
     }
     destroy() {
+        this.store.onLightingFrame = undefined;
+        this.store.onLightingReset = undefined;
         this.destroyed = true;
         this.observer?.disconnect();
         this.directControl?.destroy();
         this.input?.destroy();
+        this.store.onLightingFrame = (frame) => this.lighting.frame(frame);
+        const lightingFrame = this.store.getLightingFrame();
+        if (lightingFrame) this.lighting.frame(lightingFrame);
         this.store.onGameplayFeedback = undefined;
         this.unsubscribe?.();
         if (this.ready) this.release();

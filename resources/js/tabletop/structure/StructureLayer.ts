@@ -6,6 +6,8 @@ import { distance, vertexIndex, wallRuns } from './model';
 export class StructureLayer {
     readonly floors = new Graphics();
     readonly walls = new Graphics();
+    /** Public static masonry, excluding every door/window and its current state. */
+    readonly baseWalls = new Graphics();
     private current?: Structure | null;
     private images: (Texture | undefined)[] = [];
 
@@ -17,6 +19,7 @@ export class StructureLayer {
         this.images = images;
         this.floors.clear();
         this.walls.clear();
+        this.baseWalls.clear();
         if (!structure) return;
         const { graph, materials } = structure;
         const vertices = vertexIndex(graph);
@@ -52,6 +55,9 @@ export class StructureLayer {
                     band(this.walls, a, b, radius, material);
                     if (roundA) this.walls.circle(a.x, a.y, radius).fill(material);
                     if (roundB) this.walls.circle(b.x, b.y, radius).fill(material);
+                    band(this.baseWalls, a, b, radius, material);
+                    if (roundA) this.baseWalls.circle(a.x, a.y, radius).fill(material);
+                    if (roundB) this.baseWalls.circle(b.x, b.y, radius).fill(material);
                 }
             }
         }

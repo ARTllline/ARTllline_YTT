@@ -13,7 +13,7 @@ class Scene extends Model
 
     protected function casts(): array
     {
-        return ['grid_visible' => 'boolean', 'grid_snap' => 'boolean', 'revision' => 'integer'];
+        return ['lighting' => 'array', 'vision_enabled' => 'boolean', 'grid_visible' => 'boolean', 'grid_snap' => 'boolean', 'revision' => 'integer'];
     }
 
     public function campaign(): BelongsTo

@@ -22,6 +22,7 @@ export interface CheckStat {
     modifier: number;
 }
 export interface Token extends Point {
+    visionRange?: number;
     lifecycle?: import('../../gameplay/adventuring').LifeState;
     exhaustion?: number;
     loot?: import('../../rpg/loot').LootSummary;
@@ -65,6 +66,26 @@ export interface SceneMap extends Point {
     height: number;
 }
 export interface Scene {
+    lighting?: import('../lighting/model').LightingSettings;
+    vision?: {
+        enabled: boolean;
+        polygons: Point[][];
+        raster?: {
+            width: number;
+            height: number;
+            cellSize: number;
+            bits: string;
+            darkvision?: string;
+        };
+        memoryPolicy?: 'player' | 'party';
+        explored?: {
+            policy: 'player' | 'party';
+            width: number;
+            height: number;
+            cellSize: number;
+            bits: string;
+        };
+    };
     structure?: import('../structure/model').Structure | null;
     terrain?: import('../terrain/model').Terrain;
     mapWorld?: import('../mapWorld').MapWorld | null;

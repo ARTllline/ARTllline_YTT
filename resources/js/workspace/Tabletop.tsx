@@ -148,12 +148,16 @@ export function Tabletop({
                     )}
                 </div>
             )}
-            {status === 'ready' && (media.loading || media.error) && (
+            {status === 'ready' && media.loading && (
+                <div className="scene-loading-indicator" role="status">
+                    <span className="scene-loading-spinner" aria-hidden="true" />
+                    <span>{t('Loading scene images…')}</span>
+                </div>
+            )}
+            {status === 'ready' && media.error && (
                 <div className="media-state" role="status">
-                    {media.error ?? t('Loading scene images…')}
-                    {media.error && (
-                        <button onClick={() => location.reload()}> {t('Reload scene')} </button>
-                    )}
+                    {media.error}
+                    <button onClick={() => location.reload()}> {t('Reload scene')} </button>
                 </div>
             )}
         </>

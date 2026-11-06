@@ -48,7 +48,7 @@ class TokenController extends Controller
             'rotation' => 'sometimes|numeric|between:0,359.999', 'scale' => 'sometimes|numeric|between:0.4,3', 'size' => 'sometimes|numeric|between:20,300',
             'hp' => 'sometimes|integer|between:0,9999', 'max_hp' => 'sometimes|integer|between:1,9999',
             'ac' => 'sometimes|nullable|integer|between:0,99', 'speed' => 'sometimes|nullable|integer|between:0,999',
-            'is_hidden' => 'sometimes|boolean', 'is_locked' => 'sometimes|boolean',
+            'vision_range' => 'sometimes|numeric|between:0,40000', 'is_hidden' => 'sometimes|boolean', 'is_locked' => 'sometimes|boolean',
             'owner_user_id' => 'sometimes|nullable|integer|min:1', 'token_image_asset_id' => 'sometimes|nullable|integer|min:1',
         ] + TokenCheckStats::rules() + CharacterGameplay::rules() + CombatMetadata::profileRules());
         app(CharacterGameplay::class)->validate($token->scene->campaign, $data, $token->character_id ? $token->character : null);

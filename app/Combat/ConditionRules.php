@@ -3,7 +3,10 @@
 namespace App\Combat;
 
 use App\Items\ItemRules;
+use App\Models\SceneProp;
 use App\Models\Token;
+use App\Services\SceneIllumination;
+use App\Services\SceneVisibility;
 use App\Spells\SpellEffects;
 
 class ConditionRules
@@ -48,7 +51,7 @@ class ConditionRules
         return app(LifeCycle::class)->blocked($t) || $this->has($t, ['restrained', 'unconscious']) ? 0 : app(CombatStats::class)->speed($t);
     }
 
-    public function context(?Token $actor, string $kind, string $requested = 'normal', ?Token $target = null, float $distance = 0, ?string $saveAbility = null, bool $sight = false, ?string $statKey = null): array
+    public function context(?Token $actor, string $kind, string $requested = 'normal', ?Token $target = null, float $distance = 0, ?string $saveAbility = null, bool $sight = false, ?string $statKey = null, Token|SceneProp|null $sightTarget = null): array
     {
         $adv = $requested === 'advantage' ? [['label' => 'Выбранное преимущество', 'visibility' => 'public']] : [];
         $dis = $requested === 'disadvantage' ? [['label' => 'Выбранная помеха', 'visibility' => 'public']] : [];
@@ -75,6 +78,15 @@ class ConditionRules
                 $dis = [...$dis, ...app(ItemRules::class)->checkReasons($actor, $statKey)];
             }
             $automatic = $this->reasons($actor, ['blinded']);
+            $subject = $sightTarget ?? $target;
+            if ($actor && $subject && $statKey === 'perception') {
+                $light = app(SceneVisibility::class)->perceivedLight($actor->scene, $actor, ['x' => $subject->x, 'y' => $subject->y], $subject instanceof SceneProp ? 'prop:'.$subject->id : null);
+                if ($light === SceneIllumination::DIM) {
+                    $dis[] = ['label' => 'Тусклый свет', 'visibility' => 'public'];
+                } elseif ($light === SceneIllumination::DARKNESS) {
+                    $automatic[] = ['label' => 'Цель вне обзора', 'visibility' => 'public'];
+                }
+            }
         }
 
         return ['mode' => ($adv && $dis) ? 'normal' : ($adv ? 'advantage' : ($dis ? 'disadvantage' : 'normal')),

@@ -99,7 +99,7 @@ $httpArgs += @('-S', "127.0.0.1:$($url.Port)", ('"' + (Join-Path $projectRoot 'v
 $definitions = @(
     @{ name = 'app'; args = $httpArgs; directory = (Join-Path $projectRoot 'public') },
     @{ name = 'reverb'; args = @('artisan', 'reverb:start', "--host=$reverbHost", "--port=$reverbPort") },
-    @{ name = 'queue'; args = @('artisan', 'queue:work', 'tabletop', '--queue=cues', '--sleep=0.1', '--tries=3', '--timeout=60') },
+    @{ name = 'queue'; args = @('artisan', 'queue:work', 'tabletop', '--queue=cues,lighting', '--sleep=0.1', '--tries=3', '--timeout=60') },
     @{ name = 'scheduler'; args = @('artisan', 'schedule:work', '--no-interaction') }
 )
 $live = @($entries | Where-Object { Get-OwnedProcess $_ })

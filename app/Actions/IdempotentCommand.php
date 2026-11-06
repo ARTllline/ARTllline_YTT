@@ -9,6 +9,7 @@ use App\Models\Campaign;
 use App\Models\Scene;
 use App\Models\Token;
 use App\Models\User;
+use App\Services\DirectControl;
 use App\Services\SceneSnapshotBuilder;
 use App\Support\RequestPerformance;
 use Closure;
@@ -70,7 +71,7 @@ class IdempotentCommand
                         }
                     } elseif ($operation === 'token.control.start') {
                         $token = Token::findOrFail($resource);
-                        app(\App\Services\DirectControl::class)->authorize($user, $token);
+                        app(DirectControl::class)->authorize($user, $token);
                         abort_unless(($token->direct_control['id'] ?? null) === $result['streamId'], 409, 'Управление устарело.');
                     } elseif (in_array($operation, ['token.move', 'token.control.step']) && $campaign->roleFor($user) !== 'gm') {
                         abort_if(array_key_exists('isHidden', $result['token']), 403, 'Your role changed. Reload the scene before moving again.');
@@ -118,6 +119,12 @@ class IdempotentCommand
                         Gate::forUser($user)->authorize('update', $campaign);
                     }
 
+                    if ($campaign && $campaign->roleFor($user) === 'player' && isset($result['revision'])) {
+                        $receiptScene = str_starts_with($operation, 'token.') ? Token::findOrFail($resource)->scene : Scene::find($resource);
+                        if ($receiptScene && ($receiptScene->vision_enabled || isset($result['vision']))) {
+                            abort_unless($receiptScene->revision === $result['revision'], 409, 'Обзор изменился. Обновите сцену.');
+                        }
+                    }
                     if (in_array($operation, ['scene.ability', 'scene.inventory.use']) && $campaign->roleFor($user) !== 'gm') {
                         $result = AbilityController::present($result);
                     }

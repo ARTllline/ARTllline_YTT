@@ -18,11 +18,13 @@ class CombatView
 
     private function buildMeasured(Scene $scene, bool $gm, ?User $viewer = null): ?array
     {
-        $combat = app(SpellEffects::class)->read('combat-view:'.$scene->id, fn () => Combat::where('scene_id', $scene->id)->whereIn('status', ['preparing', 'active'])->with('combatants.token.character.inventory.definition')->first());
+        $combat = app(SpellEffects::class)->read('combat-view:'.$scene->id.':'.($gm ? 'gm' : 'player'), fn () => Combat::where('scene_id', $scene->id)->whereIn('status', $gm ? ['preparing', 'active'] : ['active'])->with('combatants.token.character.inventory.definition')->first());
         if (! $combat || (! $gm && ($combat->status !== 'active' || $scene->campaign->active_scene_id !== $scene->id))) {
             return null;
         }
-        $visible = $combat->combatants->filter(fn ($entry) => $entry->token && ($gm || ! $entry->token->is_hidden));
+        $ids = ! $gm && $viewer ? app(SceneVisibility::class)->view($scene, $viewer)['tokens']->pluck('id')->all() : [];
+        $visible = $combat->combatants->filter(fn ($entry) => $entry->token && ($gm || (! $entry->token->is_hidden
+            && (! $scene->vision_enabled || in_array($entry->token_id, $ids, true)))));
         $current = $combat->current_combatant_id;
 
         return ['id' => (string) $combat->id, 'status' => $combat->status, 'round' => $combat->round,

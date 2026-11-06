@@ -31,6 +31,37 @@ afterEach(() => {
 });
 
 it.each([false, true])(
+    'previews a single click and confirms the same destination (combat=%s)',
+    (combat) => {
+        const { click, token, command, store, overlay } = fixture(combat);
+        const target = { x: 110, y: 90 };
+        click.chooseDestination(token.id, target);
+        FakeWorker.instances[0].deliver();
+        click.sync(1);
+        expect(store.getSnapshot().routePreview?.status).toBe('ready');
+        expect(command).not.toHaveBeenCalled();
+        expect(overlay.showMovement).toHaveBeenCalled();
+        click.chooseDestination(token.id, { x: target.x + 1, y: target.y }, 5);
+        expect(command).toHaveBeenCalledTimes(1);
+        click.destroy();
+    },
+);
+
+it('retains confirmation during search and ignores a replaced destination', () => {
+    const { click, token, command } = fixture();
+    click.chooseDestination(token.id, { x: 150, y: 90 });
+    const stale = FakeWorker.instances[0];
+    click.chooseDestination(token.id, { x: 110, y: 90 });
+    click.chooseDestination(token.id, { x: 110, y: 90 });
+    expect(FakeWorker.instances).toHaveLength(2);
+    stale.deliver();
+    expect(command).not.toHaveBeenCalled();
+    FakeWorker.instances[1].deliver();
+    expect(command).toHaveBeenCalledTimes(1);
+    click.destroy();
+});
+
+it.each([false, true])(
     'stops unsent route portions even when the receipt arrives after cancellation (combat=%s)',
     (combat) => {
         const now = vi.spyOn(performance, 'now').mockReturnValue(0);
@@ -369,5 +400,138 @@ it('can defer returning to the old origin while the previous move is awaiting ac
     expect(FakeWorker.instances[1].postMessage).toHaveBeenCalledWith(
         expect.objectContaining({ start: { x: 110, y: 90 }, target: { x: 50, y: 50 } }),
     );
+    click.destroy();
+});
+
+it('continues a long route through empty personal Vision/Fog projections', () => {
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0);
+    const { click, token, store, command } = fixture();
+    click.request(token.id, { x: 350, y: 50 });
+    FakeWorker.instances[0].deliver([
+        { x: 50, y: 50 },
+        { x: 350, y: 50 },
+    ]);
+    for (let i = 1; i <= 4; i++) {
+        const from = { x: 50 + (i - 1) * 72, y: 50 },
+            to = { x: 50 + i * 72, y: 50 };
+        store.accept(
+            {
+                revision: i,
+                token: { ...token, ...to },
+                props: [],
+                deletedPropIds: [],
+                vision: { enabled: true, polygons: [] },
+                tokenMovements: [
+                    { tokenId: token.id, path: [from, to], continuous: true, duration: 200 },
+                ],
+            },
+            true,
+        );
+        now.mockReturnValue(i * 250);
+        click.sync(1);
+    }
+    expect(command).toHaveBeenCalledTimes(5);
+    expect(command.mock.calls[4][0].position).toEqual({ x: 350, y: 50 });
+    click.destroy();
+});
+
+it('continues through collider visibility filtering but cancels on a real geometry revision', () => {
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0);
+    const { click, token, store, command } = fixture();
+    click.request(token.id, { x: 350, y: 50 });
+    FakeWorker.instances[0].deliver([
+        { x: 50, y: 50 },
+        { x: 350, y: 50 },
+    ]);
+    const receipt = (revision: number, x: number, geometryChanged: boolean) => ({
+        revision,
+        token: { ...token, x },
+        props: [],
+        deletedPropIds: ['formerly-visible-collider'],
+        movementGeometryChanged: geometryChanged,
+        tokenMovements: [
+            {
+                tokenId: token.id,
+                path: [
+                    { x: x - 72, y: 50 },
+                    { x, y: 50 },
+                ],
+                continuous: true,
+                duration: 200,
+            },
+        ],
+    });
+    store.accept(receipt(1, 122, false), true);
+    now.mockReturnValue(250);
+    click.sync(1);
+    expect(command).toHaveBeenCalledTimes(2);
+    store.accept(receipt(2, 194, true), true);
+    store.accept({ revision: 3, movementGeometryChanged: false }, true);
+    now.mockReturnValue(1000);
+    click.sync(1);
+    expect(command).toHaveBeenCalledTimes(2);
+    expect(store.getSnapshot().routePreview).toBeUndefined();
+    click.destroy();
+});
+
+it('keeps a search and unsent route through unrelated participant revisions', () => {
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0);
+    const { click, token, store, command } = fixture();
+    click.request(token.id, { x: 350, y: 50 });
+    store.accept({ revision: 1, movementGeometryChanged: false }, true);
+    FakeWorker.instances[0].deliver([
+        { x: 50, y: 50 },
+        { x: 350, y: 50 },
+    ]);
+    expect(command).toHaveBeenCalledTimes(1);
+    store.accept(
+        {
+            revision: 2,
+            token: { ...token, x: 122 },
+            movementGeometryChanged: false,
+            tokenMovements: [
+                {
+                    tokenId: token.id,
+                    path: [
+                        { x: 50, y: 50 },
+                        { x: 122, y: 50 },
+                    ],
+                },
+            ],
+        },
+        true,
+    );
+    now.mockReturnValue(50);
+    click.sync(1);
+    store.accept({ revision: 3, movementGeometryChanged: false }, true);
+    now.mockReturnValue(250);
+    click.sync(1);
+    expect(command).toHaveBeenCalledTimes(2);
+    click.destroy();
+});
+
+it('rejects a worker result when the acting combat budget changed during search', () => {
+    const { click, token, store, command } = fixture(true, 100);
+    click.request(token.id, { x: 350, y: 50 });
+    const combat = store.getSnapshot().scene.combat!;
+    store.accept(
+        {
+            revision: 1,
+            movementGeometryChanged: false,
+            combat: {
+                ...combat,
+                combatants: combat.combatants.map((c) => ({
+                    ...c,
+                    budget: { ...c.budget!, movementRemaining: 0 },
+                })),
+            },
+        },
+        true,
+    );
+    FakeWorker.instances[0].deliver([
+        { x: 50, y: 50 },
+        { x: 350, y: 50 },
+    ]);
+    expect(command).not.toHaveBeenCalled();
     click.destroy();
 });

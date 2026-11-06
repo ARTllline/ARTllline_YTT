@@ -30,6 +30,8 @@ import { clamp } from '../utils/coordinates';
 import type { CombatCommand, TokenCombatCommand } from '../types/combat';
 
 export interface WorkspaceSnapshot {
+    lightingDraft?: import('../lighting/model').LightingSettings;
+    losDebug?: import('../vision/model').LosDebug;
     directNotice?: string;
     directControl?: { tokenId: string; follow: boolean };
     routePreview?: {
@@ -56,7 +58,11 @@ export interface WorkspaceSnapshot {
     showNotes?: boolean;
     combatNotice?: string;
     scene: Scene;
-    movementUpdate?: { movements?: Mutation['tokenMovements']; reset?: boolean };
+    movementUpdate?: {
+        movements?: Mutation['tokenMovements'];
+        reset?: boolean;
+        geometryChanged?: boolean;
+    };
     selectedIds: readonly string[];
     preview: { id: string; position: Point } | null;
 }
@@ -87,11 +93,48 @@ export type SceneCommand =
     | { type: 'map'; map: SceneMap | null };
 /** Observable domain projection. Network requests are delegated to the persistence adapter. */
 export class SceneStore {
+    private lightingFrame?: import('../lighting/model').LightingFrame;
+    onLightingFrame?: (frame: import('../lighting/model').LightingFrame) => void;
+    onLightingReset?: () => void;
+    getLightingFrame() {
+        return this.lightingFrame;
+    }
+    acceptLighting(frame: import('../lighting/model').LightingFrame) {
+        if (
+            frame.sceneId !== this.snapshot.scene.id ||
+            frame.revision < Math.max(this.visibilityRevision, this.snapshot.scene.revision ?? 0) ||
+            (this.lightingFrame?.sceneId === frame.sceneId &&
+                frame.revision < this.lightingFrame.revision)
+        )
+            return;
+        this.lightingFrame = frame;
+        this.onLightingFrame?.(frame);
+    }
+    private visibilityRevision = 0;
+    revokeVisibility(scene: Scene, revision: number, geometryChanged?: boolean) {
+        if (revision <= this.visibilityRevision) return;
+        this.reconcile(scene, { geometryChanged }, revision);
+    }
+    onLightPlacement?: (point: Point) => void;
+    bindLightPlacement(handler?: (point: Point) => void) {
+        if (this.role === 'gm') this.onLightPlacement = handler;
+    }
+    setLightingDraft(lightingDraft?: import('../lighting/model').LightingSettings) {
+        if (this.role === 'gm') this.emit({ ...this.snapshot, lightingDraft });
+    }
+    onLosProbe?: (point: Point) => void;
+    bindLosProbe(handler?: (point: Point) => void) {
+        if (this.role === 'gm') this.onLosProbe = handler;
+    }
+    setLosDebug(losDebug?: import('../vision/model').LosDebug) {
+        if (this.role === 'gm') this.emit({ ...this.snapshot, losDebug });
+    }
     toggleDirectControl?: () => void;
     stopDirectControl?: () => void;
     directCommandPending = false;
-    onDirectCommandSettled?: () => void;
-    onDirectCommandReceipt?: (revision: number) => void;
+    queuedMovementPending = false;
+    onMovementSettled?: () => void;
+    onMovementReceipt?: (revision: number) => void;
     setDirectControl(directControl: WorkspaceSnapshot['directControl']) {
         this.emit({ ...this.snapshot, directControl });
     }
@@ -174,6 +217,7 @@ export class SceneStore {
         this.emit({
             ...this.snapshot,
             mapEditor,
+            losDebug: mapEditor ? this.snapshot.losDebug : undefined,
             build: mapEditor ? this.snapshot.build : undefined,
             structureSelection: mapEditor ? this.snapshot.structureSelection : undefined,
             selectedIds: [],
@@ -234,7 +278,30 @@ export class SceneStore {
             (this.role === 'gm' || token.canMove === true)
         );
     }
-    reconcile(scene: Scene, movementUpdate: WorkspaceSnapshot['movementUpdate'] = { reset: true }) {
+    reconcile(
+        scene: Scene,
+        movementUpdate: WorkspaceSnapshot['movementUpdate'] = { reset: true },
+        visibilityRevision = scene.revision ?? 0,
+    ) {
+        if (scene.id !== this.snapshot.scene.id) this.visibilityRevision = 0;
+        if (visibilityRevision < this.visibilityRevision) {
+            // Earlier buffered revisions still advance canonical movement, but cannot
+            // undo a later revocation already applied while awaiting our receipt.
+            const current = this.snapshot.scene;
+            scene = {
+                ...scene,
+                vision: current.vision,
+                lighting: current.lighting,
+                tokens: scene.tokens
+                    .filter((t) => current.tokens.some((c) => c.id === t.id))
+                    .map((t) => {
+                        const latest = current.tokens.find((c) => c.id === t.id)!;
+                        return latest.canMove === false ? latest : t;
+                    }),
+                props: scene.props?.filter((p) => current.props?.some((c) => c.id === p.id)),
+            };
+        }
+        this.visibilityRevision = Math.max(this.visibilityRevision, visibilityRevision);
         this.emit({
             ...this.snapshot,
             scene,
@@ -261,7 +328,10 @@ export class SceneStore {
         this.command = handler;
     }
     hydrate(scene: Scene) {
+        this.lightingFrame = undefined;
+        this.onLightingReset?.();
         this.history?.clear();
+        this.visibilityRevision = scene.revision ?? 0;
         this.emit({ scene, selectedIds: [], preview: null });
     }
     constructor(
@@ -313,7 +383,15 @@ export class SceneStore {
         };
     };
     private emit(next: WorkspaceSnapshot) {
+        const geometryChanged =
+            next.movementUpdate !== this.snapshot.movementUpdate &&
+            next.movementUpdate?.geometryChanged;
         this.snapshot = next;
+        // A later movement receipt cannot erase a real edit between two Pixi ticks.
+        if (geometryChanged) {
+            this.stopDirectControl?.();
+            this.cancelRoute?.();
+        }
         this.listeners.forEach((listener) => listener());
         performanceMark('state', {
             sceneId: this.snapshot.scene.id,
@@ -662,13 +740,28 @@ export class SceneStore {
     accept(result: Mutation, apply: boolean) {
         this.acknowledge(result.revision);
         const stale = result.revision < (this.snapshot.scene.revision ?? 0);
+        const visibilityStale = result.revision < this.visibilityRevision;
         if (stale) this.onRevisionGap?.();
         let scene = {
             ...this.snapshot.scene,
             revision: Math.max(this.snapshot.scene.revision ?? 0, result.revision),
         };
-        if (apply && !stale) {
+        if (apply && !stale && visibilityStale) {
+            // Retain an accepted own position without restoring old masks/entities.
+            // Removals and ownership revocations take precedence over the receipt.
+            scene = {
+                ...scene,
+                tokens: scene.tokens.map((token) =>
+                    token.id === result.token?.id && token.canMove === true
+                        ? { ...token, x: result.token.x, y: result.token.y }
+                        : token,
+                ),
+            };
+        }
+        if (apply && !stale && !visibilityStale) {
             scene = { ...terrainPatch(scene, result.terrain), revision: scene.revision };
+            if (result.vision) scene = { ...scene, vision: result.vision };
+            if (result.lighting) scene = { ...scene, lighting: result.lighting };
             if (result.scene) scene = { ...scene, ...result.scene, revision: scene.revision };
             if ('mapWorld' in result)
                 scene = {
@@ -722,6 +815,7 @@ export class SceneStore {
             ...this.snapshot,
             scene,
             movementUpdate: {
+                geometryChanged: result.movementGeometryChanged,
                 movements:
                     apply && result.revision === (this.snapshot.scene.revision ?? 0) + 1
                         ? result.tokenMovements

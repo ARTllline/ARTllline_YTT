@@ -75,6 +75,18 @@ export function RulesEditor({
                             </label>
                         ))}
                     </div>
+                    <label className="rules-proficiency">
+                        Тёмное зрение, футы
+                        <input
+                            type="number"
+                            min={0}
+                            max={1000}
+                            value={r.senses?.darkvision_ft ?? 0}
+                            onChange={(e) =>
+                                onChange({ ...r, senses: { darkvision_ft: Number(e.target.value) } })
+                            }
+                        />
+                    </label>
                 </>
             )}
             {view !== 'spells' && (

@@ -16,6 +16,7 @@ export interface SkillRule {
 }
 export interface CharacterRules {
     schema_version?: 2;
+    senses?: { darkvision_ft?: number };
     modifiers?: Partial<Record<'ac' | 'speed' | 'spell_attack' | 'spell_save_dc', number>>;
     scores: Record<AbilityKey, number>;
     proficiency_bonus: number;

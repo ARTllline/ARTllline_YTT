@@ -12,6 +12,9 @@ export interface SceneEvent {
     dragSessionId?: string;
     payload: Pick<
         Mutation,
+        | 'movementGeometryChanged'
+        | 'vision'
+        | 'lighting'
         | 'tokenMovements'
         | 'tokens'
         | 'props'
@@ -74,6 +77,8 @@ export function reduceEvent(scene: Scene, event: SceneEvent): Scene | 'gap' {
     return {
         ...patched,
         ...payload.scene,
+        ...(payload.vision ? { vision: payload.vision } : {}),
+        ...(payload.lighting ? { lighting: payload.lighting } : {}),
         tokens,
         ...(payload.note
             ? {

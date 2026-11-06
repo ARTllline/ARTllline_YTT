@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Scene;
 use App\Models\SceneProp;
 use App\Models\Token;
+use App\Models\User;
 
 /** World-space geometry, measured with the scene ruler's Euclidean distance convention. */
 class AbilityGeometry
@@ -17,7 +18,7 @@ class AbilityGeometry
         return hypot($x - $a->x, $y - $a->y) * (float) $scene->distance_per_cell / (float) $scene->grid_size;
     }
 
-    public function validate(Scene $scene, array $ability, ?Token $actor, mixed $target, ?array $input): array
+    public function validate(Scene $scene, array $ability, ?Token $actor, mixed $target, ?array $input, ?User $viewer = null): array
     {
         $area = $ability['area'] ?? null;
         $range = $ability['range'] ?? null;
@@ -47,7 +48,7 @@ class AbilityGeometry
         abort_if(in_array($area['shape'], ['cone', 'line']) && $distance < 0.00001, 422, 'Выберите направление области.');
 
         return $scene->tokens()->with('character')->where('is_hidden', false)->orderBy('id')->get()
-            ->filter(fn ($token) => ! (in_array($area['shape'], ['cone', 'line']) && $token->id === $actor->id)
+            ->filter(fn ($token) => (! $viewer || app(SceneVisibility::class)->allows($token, $viewer)) && ! (in_array($area['shape'], ['cone', 'line']) && $token->id === $actor->id)
                 && $this->contains($area, ['x' => $actor->x, 'y' => $actor->y], $point, ['x' => $token->x, 'y' => $token->y], $units))
             ->all();
     }

@@ -29,8 +29,8 @@ class PreloadService
     private function assets(Scene $scene, bool $audio): array
     {
         $ids = array_filter([$scene->map_asset_id,
-            ...Token::with('character')->where('scene_id', $scene->id)->where('is_hidden', false)->get()->map(fn ($t) => $t->character?->portrait_asset_id ?? $t->token_image_asset_id)->all(),
-            ...SceneProp::where('scene_id', $scene->id)->where('is_hidden', false)->pluck('asset_id')->all()]);
+            ...Token::with('character')->where('scene_id', $scene->id)->where('is_hidden', false)->when($scene->vision_enabled, fn ($q) => $q->whereRaw('1 = 0'))->get()->map(fn ($t) => $t->character?->portrait_asset_id ?? $t->token_image_asset_id)->all(),
+            ...SceneProp::where('scene_id', $scene->id)->where('is_hidden', false)->when($scene->vision_enabled, fn ($q) => $q->whereRaw('1 = 0'))->pluck('asset_id')->all()]);
         if ($audio) {
             foreach (CueStep::whereIn('cue_id', DB::table('cues')->where('scene_id', $scene->id)->select('id'))
                 ->whereIn('type', ['music.start', 'ambient.start', 'sfx.play'])->get() as $step) {

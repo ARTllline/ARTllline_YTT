@@ -8,8 +8,12 @@ use App\Models\Campaign;
 use App\Models\Scene;
 use App\Models\SceneProp;
 use App\Models\Token;
+use App\Models\User;
 use App\Services\CombatView;
 use App\Services\SceneSnapshotBuilder;
+use App\Services\SceneVisibility;
+use App\Services\StructureData;
+use App\Services\TerrainData;
 use App\Spells\SpellEffects;
 use App\Support\RequestPerformance;
 use Illuminate\Support\Facades\DB;
@@ -19,12 +23,12 @@ class ScenePublisher
     public function __construct(private SceneSnapshotBuilder $snapshots, private SafeBroadcast $broadcast, private CommandContext $context) {}
 
     /** Materialize recipient-safe payloads while campaign + scene locks are held. */
-    public function changed(Scene $scene, string $type, array $result, bool $wasVisible, array $previousVisibility = ['tokens' => [], 'props' => []]): void
+    public function changed(Scene $scene, string $type, array $result, bool $wasVisible, array $previousVisibility = ['tokens' => [], 'props' => []], array $visionBefore = []): void
     {
-        app(RequestPerformance::class)->measure('broadcast_prepare', fn () => app(SpellEffects::class)->project(fn () => $this->changedMeasured($scene, $type, $result, $wasVisible, $previousVisibility)));
+        app(RequestPerformance::class)->measure('broadcast_prepare', fn () => app(SpellEffects::class)->project(fn () => $this->changedMeasured($scene, $type, $result, $wasVisible, $previousVisibility, $visionBefore)));
     }
 
-    private function changedMeasured(Scene $scene, string $type, array $result, bool $wasVisible, array $previousVisibility): void
+    private function changedMeasured(Scene $scene, string $type, array $result, bool $wasVisible, array $previousVisibility, array $visionBefore): void
     {
         $members = $scene->campaign->members()->get();
         $token = isset($result['token']) ? $scene->tokens()->with(['character.portraitAsset', 'imageAsset', 'conditions'])->find($result['token']['id']) : null;
@@ -36,9 +40,9 @@ class ScenePublisher
         if ($gm) {
             $payload = $result;
             unset($payload['revision'], $payload['mutationId'], $payload['propEdits'], $payload['terrainEdit'],
-                $payload['structure'], $payload['structureEdit'], $payload['_structureBefore']);
+                $payload['structure'], $payload['structureEdit'], $payload['_structureBefore'], $payload['_lightingInvalidated']);
             if (isset($result['_structureBefore'])) {
-                $payload += \App\Services\StructureData::patch($scene, $result['_structureBefore'], true);
+                $payload += StructureData::patch($scene, $result['_structureBefore'], true);
             }
             if ($result['charactersChanged'] ?? false) {
                 $payload['scene'] = app(CharacterActions::class)->roster($scene->campaign, $gm);
@@ -58,7 +62,19 @@ class ScenePublisher
             if ($member->pivot->role !== 'player') {
                 continue;
             }
+            if (isset($visionBefore[$member->id])) {
+                $payload = $this->visionPayload($scene, $member, $result, $visionBefore[$member->id]);
+                $this->schedule(ChannelAccess::player($scene->campaign_id, $scene->id, $scene->campaign->live_revision, $member->id),
+                    array_replace($base, ['type' => 'vision.updated', 'payload' => $payload]));
+
+                continue;
+            }
             $event = $base;
+            if (isset($result['lighting'])) {
+                $payloadLighting = \App\Services\SceneLighting::settings($scene, false);
+            } else {
+                $payloadLighting = null;
+            }
             if (str_starts_with($type, 'note.') || str_starts_with($type, 'region.') || str_starts_with($type, 'trigger.')) {
                 $event['type'] = 'scene.revision';
             }
@@ -89,7 +105,7 @@ class ScenePublisher
                     $payload['mapWorld'] = $this->snapshots->mapWorld($scene, false);
                 }
                 if (isset($result['_structureBefore'])) {
-                    $structure = \App\Services\StructureData::patch($scene, $result['_structureBefore'], false);
+                    $structure = StructureData::patch($scene, $result['_structureBefore'], false);
                     if ($structure) {
                         $payload += $structure;
                     } else {
@@ -97,7 +113,7 @@ class ScenePublisher
                     }
                 }
                 if (isset($result['terrain'])) {
-                    $payload['terrain'] = app(\App\Services\TerrainData::class)->manifest($scene, false, array_column($result['terrain']['chunks'], 'key'));
+                    $payload['terrain'] = app(TerrainData::class)->manifest($scene, false, array_column($result['terrain']['chunks'], 'key'));
                 }
             }
             if (array_key_exists('combat', $result)) {
@@ -138,8 +154,51 @@ class ScenePublisher
             if ($result['charactersChanged'] ?? false) {
                 $payload['scene'] = app(CharacterActions::class)->roster($scene->campaign, $member);
             }
+            if ($payloadLighting !== null) {
+                $payload['lighting'] = $payloadLighting;
+            }
             $this->schedule(ChannelAccess::player($scene->campaign_id, $scene->id, $scene->campaign->live_revision, $member->id), $event + ['payload' => $payload ?: (object) []]);
         }
+    }
+
+    public function visionPayload(Scene $scene, User $user, array $result, array $before): array
+    {
+        $vision = app(SceneVisibility::class);
+        $payload = array_intersect_key($result, array_flip(['grid', 'map', 'fog', 'fogAction']));
+        $payload += $vision->delta($scene, $user, $before);
+        if (isset($result['lighting'])) {
+            $payload['lighting'] = \App\Services\SceneLighting::settings($scene, false);
+        }
+        if (array_key_exists('movementGeometryChanged', $result)) {
+            $payload['movementGeometryChanged'] = $result['movementGeometryChanged'];
+        }
+        if (isset($result['scene'])) {
+            $safeScene = array_intersect_key($result['scene'], array_flip(['id', 'name', 'width', 'height']));
+            if ($safeScene) {
+                $payload['scene'] = $safeScene;
+            }
+        }
+        $payload['combat'] = app(CombatView::class)->build($scene, false, $user);
+        if (isset($result['_structureBefore'])) {
+            $payload += StructureData::patch($scene, $result['_structureBefore'], false);
+        }
+        if (array_key_exists('mapWorld', $result)) {
+            $payload['mapWorld'] = $this->snapshots->mapWorld($scene, false);
+        }
+        if (isset($result['terrain'])) {
+            $payload['terrain'] = app(TerrainData::class)->manifest($scene, false, array_column($result['terrain']['chunks'], 'key'));
+        }
+        if ($result['charactersChanged'] ?? false) {
+            $payload['scene'] = app(CharacterActions::class)->roster($scene->campaign, $user);
+        }
+        // Never disclose another token's route through unseen space. Final positions arrive in delta.
+        $owned = $vision->view($scene, $user)['observers']->pluck('id')->map(strval(...))->all();
+        $payload['tokenMovements'] = array_values(array_filter($result['tokenMovements'] ?? [], fn ($m) => in_array($m['tokenId'], $owned, true)));
+        $ids = $vision->view($scene, $user)['tokens']->pluck('id')->map(strval(...))->all();
+        $feedbacks = $result['gameplayFeedbacks'] ?? (isset($result['gameplayFeedback']) ? [$result['gameplayFeedback']] : []);
+        $payload['gameplayFeedbacks'] = array_values(array_filter($feedbacks, fn ($f) => in_array($f['tokenId'], $ids, true)));
+
+        return $payload;
     }
 
     public function campaign(Campaign $campaign, string $type = 'campaign.changed'): void
@@ -156,7 +215,9 @@ class ScenePublisher
         $channels = [];
         if ($scene->campaign->active_scene_id === $scene->id && ! $token->is_hidden) {
             foreach ($scene->campaign->members()->wherePivot('role', 'player')->get() as $member) {
-                $channels[] = ChannelAccess::player($scene->campaign_id, $scene->id, $scene->campaign->live_revision, $member->id);
+                if (! $scene->vision_enabled) {
+                    $channels[] = ChannelAccess::player($scene->campaign_id, $scene->id, $scene->campaign->live_revision, $member->id);
+                }
             }
         }
         $this->schedule(ChannelAccess::gm($scene->campaign_id, $scene->id), $event, true, $channels);

@@ -16,6 +16,7 @@ use App\Models\Token;
 use App\Models\User;
 use App\Realtime\CommandContext;
 use App\Services\SceneSnapshotBuilder;
+use App\Services\SceneVisibility;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -38,7 +39,7 @@ class LootActions
         $object = $loot->object();
         abort_unless($object, 404);
         if (! $gm) {
-            abort_unless($campaign->active_scene_id === $scene->id && ! $object->is_hidden, 403);
+            abort_unless($campaign->active_scene_id === $scene->id && app(SceneVisibility::class)->allows($object, $u), 403);
             abort_if($loot->kind === 'corpse' && $object instanceof Token && ! app(LifeCycle::class)->blocked($object), 403);
         }
         if (in_array($data['action'] ?? '', ['take', 'take-all'])) {

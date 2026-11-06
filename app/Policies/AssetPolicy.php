@@ -11,6 +11,8 @@ use App\Models\SceneProp;
 use App\Models\Token;
 use App\Models\User;
 use App\Services\LiveMedia;
+use App\Services\SceneVisibility;
+use Illuminate\Support\Facades\DB;
 
 class AssetPolicy
 {
@@ -31,7 +33,7 @@ class AssetPolicy
     private function inCampaign(User $user, Asset $asset, Campaign $campaign): bool
     {
         $role = $campaign->roleFor($user);
-        if (in_array($role, ['gm', 'player'], true) && \Illuminate\Support\Facades\DB::table('terrain_masks')
+        if (in_array($role, ['gm', 'player'], true) && DB::table('terrain_masks')
             ->join('terrain_chunks', 'terrain_chunks.id', '=', 'terrain_masks.terrain_chunk_id')
             ->join('map_worlds', 'map_worlds.id', '=', 'terrain_chunks.map_world_id')
             ->join('scenes', 'scenes.id', '=', 'map_worlds.scene_id')
@@ -40,7 +42,7 @@ class AssetPolicy
             ->when($role === 'player', fn ($q) => $q->where('scenes.id', $campaign->active_scene_id ?? 0))->exists()) {
             return true;
         }
-        if (in_array($role, ['gm', 'player'], true) && \Illuminate\Support\Facades\DB::table('map_structure_materials')
+        if (in_array($role, ['gm', 'player'], true) && DB::table('map_structure_materials')
             ->join('map_worlds', 'map_worlds.id', '=', 'map_structure_materials.map_world_id')
             ->join('scenes', 'scenes.id', '=', 'map_worlds.scene_id')
             ->join('map_material_versions', 'map_material_versions.id', '=', 'map_structure_materials.map_material_version_id')
@@ -74,11 +76,11 @@ class AssetPolicy
         }
 
         return Scene::whereKey($campaign->active_scene_id)->where('campaign_id', $campaign->id)->where('map_asset_id', $asset->id)->exists()
-            || SceneProp::where('scene_id', $campaign->active_scene_id)->where('is_hidden', false)->where('asset_id', $asset->id)->exists()
+            || SceneProp::where('scene_id', $campaign->active_scene_id)->where('is_hidden', false)->where('asset_id', $asset->id)->get()->contains(fn ($p) => app(SceneVisibility::class)->allows($p, $user))
             || Token::where('scene_id', $campaign->active_scene_id)->where('is_hidden', false)->where(function ($q) use ($asset) {
                 $q->where(fn ($q) => $q->whereNull('character_id')->where('token_image_asset_id', $asset->id))
                     ->orWhereHas('character', fn ($q) => $q->where('portrait_asset_id', $asset->id));
-            })->exists();
+            })->get()->contains(fn ($t) => app(SceneVisibility::class)->allows($t, $user));
     }
 
     private function characterUse(Asset $asset, Campaign $campaign, User $user, bool $gm): bool

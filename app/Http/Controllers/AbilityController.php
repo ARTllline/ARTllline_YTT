@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\AbilityActions;
 use App\Models\Campaign;
 use App\Models\Scene;
+use App\Services\SceneVisibility;
 use Illuminate\Http\Request;
 
 class AbilityController extends Controller
@@ -34,6 +35,16 @@ class AbilityController extends Controller
             unset($response['execution']['dcVisible']);
 
             return $response;
+        }
+        if ($scene instanceof Scene && $scene->vision_enabled) {
+            $view = app(SceneVisibility::class)->view($scene->fresh(), request()->user());
+            $ids = $view['tokens']->pluck('id')->map(strval(...))->all();
+            $target = $response['execution']['target'] ?? null;
+            if (in_array($target['kind'] ?? null, ['token', 'prop'])) {
+                $objects = $view[$target['kind'] === 'token' ? 'tokens' : 'props'];
+                abort_unless($objects->contains('id', (int) ($target['id'] ?? 0)), 404);
+            }
+            $response['execution']['outcomes'] = array_values(array_filter($response['execution']['outcomes'] ?? [], fn ($o) => ! isset($o['tokenId']) || in_array($o['tokenId'], $ids, true)));
         }
         unset($response['execution']['gmContext'], $response['execution']['resolution']);
         foreach ($response['execution']['outcomes'] ?? [] as $i => $outcome) {

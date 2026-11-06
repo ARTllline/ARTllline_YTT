@@ -17,6 +17,7 @@ class PerformanceRequest
         if (! $trace->enabled) {
             return $next($request);
         }
+        $trace->exploration = $request->header('X-YTT-Perf-Exploration') !== '0';
         $start = microtime(true);
         $id = $request->input('clientMutationId');
         $id = is_string($id) && Str::isUuid($id) ? $id : (string) Str::uuid();
@@ -31,7 +32,7 @@ class PerformanceRequest
         $response->headers->set('X-YTT-Request-ID', $id);
         $row = ['id' => $id, 'route' => $request->route()?->getName() ?? $request->path(), 'status' => $response->getStatusCode(), 'metrics' => $metrics,
             'queryCount' => array_sum(array_column($trace->queries, 'count')), 'queries' => array_values($trace->queries), 'transactions' => $trace->transactions,
-            'broadcasts' => $trace->broadcasts, 'transfers' => $trace->transfers, 'bytes' => strlen($response->getContent())];
+            'counts' => $trace->counts, 'broadcasts' => $trace->broadcasts, 'transfers' => $trace->transfers, 'bytes' => strlen($response->getContent())];
         file_put_contents(storage_path('logs/performance.jsonl'), json_encode($row, JSON_THROW_ON_ERROR).PHP_EOL, FILE_APPEND | LOCK_EX);
 
         return $response;

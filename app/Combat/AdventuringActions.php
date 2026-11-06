@@ -13,6 +13,7 @@ use App\Services\AbilityGeometry;
 use App\Services\CharacterRules;
 use App\Services\DamageRoller;
 use App\Services\SceneSnapshotBuilder;
+use App\Services\SceneVisibility;
 use App\Services\TokenCheckStats;
 use App\Spells\SpellEffects;
 use Illuminate\Support\Facades\DB;
@@ -147,7 +148,7 @@ class AdventuringActions
             $result = $life->deathSave($author, $token, $scene->campaign->roleFor($user) === 'gm' && ($d['confirmWorldTime'] ?? false));
         } elseif ($action === 'stabilize') {
             $target = $scene->tokens()->findOrFail($d['targetId']);
-            abort_if($target->is_hidden && $scene->campaign->roleFor($user) !== 'gm', 404);
+            abort_unless(app(SceneVisibility::class)->allows($target, $user), 404);
             abort_unless(app(AbilityGeometry::class)->distance($scene, $token, $target) <= 5, 422, 'Подойдите к союзнику в пределах 5 ft.');
             $knocked = $life->state($target)['status'] === 'unconscious' && $life->state($target)['cause'] === 'knocked_out';
             abort_unless(($target->hp === 0 && $life->state($target)['status'] !== 'dead') || $knocked, 422, 'Цель нельзя стабилизировать.');

@@ -37,6 +37,9 @@ export interface TokenMovement {
 }
 
 export interface Mutation extends importObjectPatch {
+    lighting?: Scene['lighting'];
+    movementGeometryChanged?: boolean;
+    vision?: Scene['vision'];
     tokenMovements?: TokenMovement[];
     structure?: import('../tabletop/structure/model').Structure;
     structureEdit?: {

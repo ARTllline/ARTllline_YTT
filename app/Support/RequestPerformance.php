@@ -10,7 +10,12 @@ class RequestPerformance
 {
     public bool $enabled = false;
 
+    /** Local opt-in A/B profiling only; does not change current visibility. */
+    public bool $exploration = true;
+
     public array $spans = [];
+
+    public array $counts = [];
 
     public array $queries = [];
 
@@ -30,6 +35,7 @@ class RequestPerformance
             return $operation();
         }
         $start = microtime(true);
+        $this->counts[$name] = ($this->counts[$name] ?? 0) + 1;
         try {
             return $operation();
         } finally {

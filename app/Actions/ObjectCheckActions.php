@@ -58,7 +58,10 @@ class ObjectCheckActions
         }
         $provenance = app(TokenCheckStats::class)->resolve($token, $config);
         $stat = app(CharacterRules::class)->canonical($config['stat_key'] ?? '');
-        $ctx = app(ConditionRules::class)->context($token, str_starts_with($stat, 'save_') ? 'save' : 'check', $context['rollMode'], null, 0, str_starts_with($stat, 'save_') ? substr($stat, 5) : null, $config['requires_sight'] ?? false, $stat);
+        $sight = $config['requires_sight'] ?? false;
+        $subject = $sight && $stat === 'perception' && $scene->vision_enabled && ($scene->lighting['enabled'] ?? false)
+            ? app(ObjectInteractionActions::class)->object($scene, $data['kind'], $data['id']) : null;
+        $ctx = app(ConditionRules::class)->context($token, str_starts_with($stat, 'save_') ? 'save' : 'check', $context['rollMode'], null, 0, str_starts_with($stat, 'save_') ? substr($stat, 5) : null, $sight, $stat, $subject);
         $roll = app(CombatExecution::class)->roll($provenance, $config['dc'], $ctx);
         $provenance['rollContext'] = $ctx;
         $dice = $roll['rawDice'];

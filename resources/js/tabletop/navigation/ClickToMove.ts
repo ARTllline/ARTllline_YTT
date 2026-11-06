@@ -1,3 +1,4 @@
+import { sameMovementGeometry } from './movementContext';
 import type { SceneStore } from '../state/SceneStore';
 import type { InteractionLayer } from '../layers/InteractionLayer';
 import type { Point, Scene, Token } from '../types/scene';
@@ -60,13 +61,15 @@ export class ClickToMove {
         tokenId: string;
         update: ReturnType<SceneStore['getSnapshot']>['movementUpdate'];
     };
-    private deferred?: { id: string; destination: Point; instant: boolean };
+    private deferred?: { id: string; destination: Point; instant: boolean; previewOnly: boolean };
     private running?: { path: Point[]; nextAt: number };
     private context?: {
         scene: Scene;
         token: Token;
         target: Point;
         instant: boolean;
+        previewOnly: boolean;
+        confirmed?: boolean;
         path?: Point[];
         length?: number;
     };
@@ -89,15 +92,35 @@ export class ClickToMove {
             !this.store.onMapCalibration
         );
     }
-    request(id: string, destination: Point, instant = false) {
+    chooseDestination(id: string, destination: Point, tolerance = 0.001) {
+        const target = snapPoint(destination, this.store.getSnapshot().scene.grid);
+        const context = this.context;
+        if (
+            context?.previewOnly &&
+            context.token.id === id &&
+            Math.hypot(target.x - context.target.x, target.y - context.target.y) <= tolerance &&
+            this.valid()
+        ) {
+            this.confirm();
+            return;
+        }
+        this.request(id, destination, false, true);
+    }
+    request(id: string, destination: Point, instant = false, previewOnly = false) {
         this.cancel();
         if (!this.eligible(id)) return;
         const scene = this.store.getSnapshot().scene;
         const token = scene.tokens.find((t) => t.id === id)!;
         const target = snapPoint(destination, scene.grid);
-        const context = (this.context = { scene, token, target, instant });
+        const context: NonNullable<ClickToMove['context']> = (this.context = {
+            scene,
+            token,
+            target,
+            instant,
+            previewOnly,
+        });
         if (this.awaiting) {
-            this.deferred = { id, destination, instant };
+            this.deferred = { id, destination, instant, previewOnly };
             this.store.setRoutePreview({
                 status: 'searching',
                 tokenId: id,
@@ -151,10 +174,11 @@ export class ClickToMove {
                     cost,
                     remaining: range === undefined ? undefined : remaining,
                     message: allowed
-                        ? 'Маршрут готов · Esc — отмена'
+                        ? 'Повторный клик в ту же точку — идти · Esc — отмена'
                         : 'Недостаточно перемещения или сейчас не ваш ход. Выберите более близкую точку.',
                 });
-                if (range === undefined || instant) this.confirm();
+                if (context.confirmed || (!previewOnly && (range === undefined || instant)))
+                    this.confirm();
             };
             this.timeout = setTimeout(() => fail(messages.budget), 2000);
             worker.postMessage({
@@ -174,6 +198,28 @@ export class ClickToMove {
     private valid() {
         const state = this.store.getSnapshot(),
             context = this.context;
+        if (context && context.scene !== state.scene && !state.movementUpdate?.reset) {
+            const turn = (scene: Scene) => [
+                scene.combat?.id,
+                scene.combat?.status,
+                scene.combat?.round,
+                scene.combat?.currentTurn,
+                scene.combat?.combatants.find((c) => c.tokenId === context.token.id)?.budget,
+            ];
+            if (
+                state.scene.tokens.find((t) => t.id === context.token.id) === context.token &&
+                sameMovementGeometry(
+                    context.scene,
+                    state.scene,
+                    state.movementUpdate?.geometryChanged,
+                ) &&
+                JSON.stringify(turn(context.scene)) === JSON.stringify(turn(state.scene))
+            ) {
+                // Keep the worker's context identity while accepting an unrelated revision.
+                // Its geometry, actor and budget are still exactly the search inputs.
+                context.scene = state.scene;
+            }
+        }
         return (
             !!context &&
             context.scene === state.scene &&
@@ -189,6 +235,10 @@ export class ClickToMove {
             return;
         }
         const context = this.context!;
+        if (preview?.status === 'searching') {
+            context.confirmed = true;
+            return;
+        }
         if (preview?.status !== 'ready' || !preview.allowed || !context.path) return;
         this.awaiting = {
             scene: context.scene,
@@ -227,10 +277,7 @@ export class ClickToMove {
                     next = state.scene;
                 if (
                     state.movementUpdate?.reset ||
-                    before.structure !== next.structure ||
-                    before.props !== next.props ||
-                    before.grid !== next.grid ||
-                    before.mapWorld !== next.mapWorld ||
+                    !sameMovementGeometry(before, next, state.movementUpdate?.geometryChanged) ||
                     before.id !== next.id ||
                     before.width !== next.width ||
                     before.height !== next.height ||
@@ -264,13 +311,11 @@ export class ClickToMove {
             if (deferred) {
                 const before = awaiting.scene,
                     next = state.scene;
-                const sameGeometry =
-                    before.structure === next.structure &&
-                    before.props === next.props &&
-                    before.grid === next.grid &&
-                    before.mapWorld === next.mapWorld &&
-                    before.width === next.width &&
-                    before.height === next.height;
+                const sameGeometry = sameMovementGeometry(
+                    before,
+                    next,
+                    state.movementUpdate?.geometryChanged,
+                );
                 const sameTurn =
                     before.combat?.status === next.combat?.status &&
                     before.combat?.id === next.combat?.id &&
@@ -284,9 +329,16 @@ export class ClickToMove {
                     state.selectedIds[0] === deferred.id &&
                     state.selectedIds.length === 1 &&
                     this.eligible(deferred.id)
-                )
-                    this.request(deferred.id, deferred.destination, deferred.instant);
-                else this.cancel();
+                ) {
+                    const confirmed = this.context?.confirmed;
+                    this.request(
+                        deferred.id,
+                        deferred.destination,
+                        deferred.instant,
+                        deferred.previewOnly,
+                    );
+                    if (confirmed) this.confirm();
+                } else this.cancel();
                 return;
             }
         }

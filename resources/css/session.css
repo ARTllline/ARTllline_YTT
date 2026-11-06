@@ -414,6 +414,7 @@
 .scene-arrival.ready {
     opacity: 0;
 }
+.player-tabletop > .scene-loading-indicator,
 .player-tabletop > .media-state,
 .player-tabletop > .canvas-message {
     z-index: 7;

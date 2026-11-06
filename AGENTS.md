@@ -155,9 +155,10 @@ PHP migration-based tests use the isolated SQLite in-memory configuration from
 
 Use targeted tests first.
 
-Before live browser/realtime QA, read `docs/TEST_PLAYGROUND.md` and reuse its
-permanent fixture: existing accounts, campaign, scene, session, and isolated browser
-contexts.
+Before live browser/realtime QA, read `docs/TEST_PLAYGROUND.md`. Use **Полигон ·
+движение и коллизии** (Scene 7) with the existing accounts, campaign, session, and
+isolated browser contexts. Do not use the Townhouse background map (Scene 5) for
+testing. Add persistent fixtures to Scene 7 when the user requests them.
 
 Do not create replacement accounts/campaigns/scenes/sessions for routine QA when the
 fixture is sufficient. Restore live mutations after checks where practical.

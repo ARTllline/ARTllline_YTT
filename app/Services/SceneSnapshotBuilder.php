@@ -29,27 +29,31 @@ class SceneSnapshotBuilder
 
     private function buildMeasured(Scene $scene, User $user): array
     {
-        // Shared lock keeps the revision and its entities from different commits from being mixed.
+        // Fog hydration can initialize territory: use the same lock order as writers.
         return DB::transaction(function () use ($scene, $user) {
-            $campaign = Campaign::whereKey($scene->campaign_id)->sharedLock()->firstOrFail();
-            $scene = Scene::whereKey($scene->id)->sharedLock()->firstOrFail();
+            $campaign = Campaign::whereKey($scene->campaign_id)->lockForUpdate()->firstOrFail();
+            $scene = Scene::whereKey($scene->id)->lockForUpdate()->firstOrFail();
             $scene->setRelation('campaign', $campaign);
             Gate::forUser($user)->authorize('view', $scene);
             $gm = $scene->campaign->roleFor($user) === 'gm';
-            $tokens = $scene->tokens()->with(['character.portraitAsset', 'imageAsset', 'conditions'])->when(! $gm, fn ($query) => $query->where('is_hidden', false))->orderBy('z_index')->orderBy('id')->get();
+            app(FogExploration::class)->record($scene);
+            $tokens = $gm ? $scene->tokens()->with(['character.portraitAsset', 'imageAsset', 'conditions'])->orderBy('z_index')->orderBy('id')->get()
+                : app(SceneVisibility::class)->view($scene, $user)['tokens'];
 
             return [
                 'id' => (string) $scene->id, 'campaignId' => (string) $scene->campaign_id,
                 'name' => $scene->name, 'revision' => $scene->revision,
                 'liveRevision' => $campaign->live_revision,
                 'width' => $scene->width, 'height' => $scene->height,
+                'vision' => $gm ? ['enabled' => (bool) $scene->vision_enabled, 'polygons' => [], 'memoryPolicy' => $scene->fog_memory_policy] : app(SceneVisibility::class)->mask($scene, $user),
+                'lighting' => SceneLighting::settings($scene, $gm),
                 'fog' => ['base' => $scene->fog_base, 'actions' => $scene->fogActions()->get()->map(fn ($action) => $action->projection())->all()],
                 'grid' => $this->grid($scene), 'map' => $this->map($scene), 'mapWorld' => $this->mapWorld($scene, $gm),
                 'structure' => $scene->mapWorld ? StructureData::projection($scene, $gm) : null,
                 'terrain' => app(TerrainData::class)->manifest($scene, $gm),
                 'tokens' => $tokens->map(fn ($token) => $this->token($token, $gm, $user))->all(),
                 ...app(CharacterActions::class)->roster($campaign, $user),
-                'props' => SceneProp::with('asset')->where('scene_id', $scene->id)->when(! $gm, fn ($q) => $q->where('is_hidden', false))->orderBy('z_index')->orderBy('id')->get()->map(fn ($p) => $p->projection($gm))->all(),
+                'props' => ($gm ? SceneProp::with('asset')->where('scene_id', $scene->id)->orderBy('z_index')->orderBy('id')->get() : app(SceneVisibility::class)->view($scene, $user)['props'])->map(fn ($p) => $p->projection($gm))->all(),
                 'combat' => app(CombatView::class)->build($scene, $gm, $user),
                 ...($gm ? ['regions' => SceneRegion::where('scene_id', $scene->id)->orderBy('id')->get()->map(fn ($r) => $r->projection())->all()] : []),
                 ...($gm ? ['notes' => SceneNote::where('scene_id', $scene->id)->orderBy('id')->get()->map(fn ($n) => $n->projection())->all()] : []),
@@ -87,7 +91,7 @@ class SceneSnapshotBuilder
 
     public function token(Token $token, bool $gm, User $user): array
     {
-        return app(SpellEffects::class)->project(fn () => $this->tokenProjection($token, $gm, $user));
+        return app(RequestPerformance::class)->measure('token_dto', fn () => app(SpellEffects::class)->project(fn () => $this->tokenProjection($token, $gm, $user)));
     }
 
     private function tokenProjection(Token $token, bool $gm, User $user): array
@@ -112,6 +116,7 @@ class SceneSnapshotBuilder
             $data['isOwner'] = $token->owner_user_id === $user->id;
         }
         if ($gm) {
+            $data['visionRange'] = (float) $token->vision_range;
             $data['abilities'] = $token->character_id ? [] : ($token->abilities ?? []);
             $data['combatProfile'] = app(CombatStats::class)->profile($token);
             if ($token->character_id) {

@@ -19,6 +19,8 @@ use App\Realtime\CommandContext;
 use App\Services\AbilityGeometry;
 use App\Services\DamageRoller;
 use App\Services\SceneSnapshotBuilder;
+use App\Services\SceneVisibility;
+use App\Services\SceneIllumination;
 use App\Spells\SpellCasting;
 use App\Spells\SpellEffects;
 use App\Spells\SpellScrolls;
@@ -133,8 +135,15 @@ class AbilityActions
             $actor = $character instanceof Token ? $character : $scene->tokens()->where('character_id', $character->id)->where('is_hidden', false)->first();
             abort_if(isset($ability['spell']) && ! empty($ability['spell']['effects']) && ! $actor, 422, 'Для эффектов заклинания разместите доступный токен персонажа.');
             abort_if(isset($ability['spell']) && ($ability['requires_sight'] ?? false) && $actor && app(ConditionRules::class)->has($actor, ['blinded']), 422, 'Для этого заклинания нужно видеть цель; персонаж ослеплён.');
-            $target = $this->target($scene, $ability['target'], $data['target'] ?? null, $character, $actor);
-            $areaTargets = app(AbilityGeometry::class)->validate($scene, $ability, $actor, $target, $data['target'] ?? null);
+            $target = $this->target($scene, $ability['target'], $data['target'] ?? null, $character, $actor, $user);
+            if (isset($ability['spell']) && ($ability['requires_sight'] ?? false) && $actor && $campaign->roleFor($user) !== 'gm'
+                && $scene->vision_enabled && ($scene->lighting['enabled'] ?? false)) {
+                $prop = $ability['target'] === 'prop' ? app(ObjectInteractionActions::class)->object($scene, 'prop', $data['target']['id']) : null;
+                $subject = $prop ?? ($ability['target'] === 'token' ? $target : null);
+                $point = $subject ? ['x' => $subject->x, 'y' => $subject->y] : ($ability['target'] === 'point' ? $target : null);
+                abort_if($point && app(SceneVisibility::class)->perceivedLight($scene, $actor, $point, $prop ? 'prop:'.$prop->id : null) === SceneIllumination::DARKNESS, 404);
+            }
+            $areaTargets = app(AbilityGeometry::class)->validate($scene, $ability, $actor, $target, $data['target'] ?? null, $user);
             $isArea = ! empty($ability['area']) && $ability['area']['shape'] !== 'none';
             $resources = $character->resources ?? [];
             foreach ($ability['costs'] as $cost) {
@@ -225,7 +234,7 @@ class AbilityActions
         }, 3);
     }
 
-    private function target(Scene $scene, string $type, ?array $input, Character|Token $character, ?Token $actor): Token|Character|array|null
+    private function target(Scene $scene, string $type, ?array $input, Character|Token $character, ?Token $actor, User $user): Token|Character|array|null
     {
         if ($type === 'self' || $type === 'none') {
             abort_if($input !== null, 422, 'Эта способность не выбирает внешнюю цель.');
@@ -241,6 +250,7 @@ class AbilityActions
         }
         $object = app(ObjectInteractionActions::class)->object($scene, $type, $input['id'] ?? 0);
         abort_if($object->is_hidden, 403);
+        abort_unless(app(SceneVisibility::class)->allows($object, $user), 404);
 
         return $object instanceof Token ? $object : null;
     }

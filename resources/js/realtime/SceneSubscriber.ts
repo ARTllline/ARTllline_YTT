@@ -1,4 +1,5 @@
 import { t } from '../i18n';
+import type { LightingFrame } from '../tabletop/lighting/model';
 import type { SpatialEvent } from '../tabletop/types/spatial';
 import { api } from '../api/workspace';
 import { request } from '../api/client';
@@ -22,6 +23,10 @@ export class SceneSubscriber {
     private previews = new PreviewOrder();
     private sequence = 0;
     private inFlight = false;
+    private applyingReceipt = false;
+    private get movementPending() {
+        return this.store.directCommandPending || this.store.queuedMovementPending;
+    }
     private lastSession = '';
     constructor(
         private echo: LiveEcho,
@@ -61,8 +66,9 @@ export class SceneSubscriber {
         let previous = queue.getSnapshot().status;
         this.unsubscribe = queue.subscribe(() => {
             const next = queue.getSnapshot().status;
-            if (next === 'saved' && previous !== 'saved' && this.deferred) void this.resync();
+            const saved = next === 'saved' && previous !== 'saved';
             previous = next;
+            if (saved) store.onMovementSettled?.();
         });
         store.onRevisionGap = () => {
             this.deferred = true;
@@ -70,20 +76,30 @@ export class SceneSubscriber {
                 if (this.alive && this.queue.getSnapshot().status === 'saved') void this.resync();
             });
         };
-        store.onDirectCommandSettled = () => {
-            if (!this.alive || this.loading) return;
-            const events = this.buffer.splice(0);
+        store.onMovementSettled = () => {
+            if (
+                !this.alive ||
+                this.loading ||
+                this.movementPending ||
+                this.queue.getSnapshot().status !== 'saved'
+            )
+                return;
+            const events = this.buffer.splice(0).sort((a, b) => a.revision - b.revision);
             for (const event of events) this.receive(event);
             if (this.deferred) void this.resync();
         };
-        store.onDirectCommandReceipt = (revision) => {
+        store.onMovementReceipt = (revision) => {
             if (!this.alive || this.loading) return;
+            if (this.queue.getSnapshot().status !== 'saved' && !store.queuedMovementPending) return;
             const earlier = this.buffer.filter((event) => event.revision < revision);
             this.buffer = this.buffer.filter((event) => event.revision >= revision);
-            store.directCommandPending = false;
-            for (const event of earlier.sort((a, b) => a.revision - b.revision))
-                this.receive(event);
-            store.directCommandPending = true;
+            this.applyingReceipt = true;
+            try {
+                for (const event of earlier.sort((a, b) => a.revision - b.revision))
+                    this.receive(event);
+            } finally {
+                this.applyingReceipt = false;
+            }
         };
         store.onPreview = (id, position, cancelled) => {
             const dragSessionId = store.dragSessionId;
@@ -108,14 +124,14 @@ export class SceneSubscriber {
                 });
         };
         this.timer = setInterval(() => {
-            if (this.loading || !this.alive || store.directCommandPending) return;
+            if (this.loading || !this.alive || this.movementPending) return;
             const scene = store.getSnapshot().scene;
             void request<{ revision: number }>(`/scenes/${scene.id}/revision`)
                 .then((value) => {
                     // A delayed own HTTP receipt can explain this newer revision.
                     // Its bounded event/receipt merge is authoritative; don't force
                     // an unnecessary snapshot that would end held-key control.
-                    if (store.directCommandPending) return;
+                    if (this.movementPending) return;
                     if (
                         this.alive &&
                         (value.revision !== store.getSnapshot().scene.revision || this.deferred)
@@ -130,10 +146,14 @@ export class SceneSubscriber {
                 });
         }, 15000);
     }
-    private receive = (event: SceneEvent | MovePreview | SpatialEvent) => {
+    private receive = (event: SceneEvent | MovePreview | SpatialEvent | LightingFrame) => {
         if (!this.alive) return;
         const scene = this.store.getSnapshot().scene;
         if (event.sceneId !== scene.id) return;
+        if (event.type === 'lighting.frame') {
+            this.store.acceptLighting(event as LightingFrame);
+            return;
+        }
         if (event.type === 'spatial') {
             const spatial = event as SpatialEvent;
             if (
@@ -178,14 +198,55 @@ export class SceneSubscriber {
             this.buffer.push(change);
             return;
         }
-        if (this.store.directCommandPending) {
+        if (
+            this.store.role === 'player' &&
+            (this.movementPending || this.queue.getSnapshot().status !== 'saved') &&
+            change.revision > (scene.revision ?? 0)
+        ) {
+            // Revoke already delivered entities immediately, even while our movement receipt is pending.
+            const removed = new Set(change.payload.deletedIds ?? []);
+            const props = new Set(change.payload.deletedPropIds ?? []);
+            const denied = new Map(
+                (change.payload.tokens ?? [])
+                    .filter(
+                        (t) =>
+                            t.canMove === false &&
+                            scene.tokens.some(
+                                (prior) => prior.id === t.id && prior.canMove !== false,
+                            ),
+                    )
+                    .map((t) => [t.id, t]),
+            );
+            if (
+                removed.size ||
+                props.size ||
+                denied.size ||
+                change.payload.vision ||
+                change.payload.movementGeometryChanged === true
+            )
+                this.store.revokeVisibility(
+                    {
+                        ...scene,
+                        vision: change.payload.vision ?? scene.vision,
+                        tokens: scene.tokens
+                            .filter((t) => !removed.has(t.id))
+                            .map((t) => denied.get(t.id) ?? t),
+                        props: props.size
+                            ? scene.props?.filter((p) => !props.has(p.id))
+                            : scene.props,
+                    },
+                    change.revision,
+                    change.payload.movementGeometryChanged,
+                );
+        }
+        if (this.movementPending && !this.applyingReceipt) {
             // Hold only a bounded set of incremental events until the HTTP receipt
             // fills our own revision. No snapshot storm during simultaneous WASD.
             if (this.buffer.length < 64) this.buffer.push(change);
             else this.deferred = true;
             return;
         }
-        if (this.queue.getSnapshot().status !== 'saved') {
+        if (this.queue.getSnapshot().status !== 'saved' && !this.applyingReceipt) {
             this.deferred = true;
             // Permission revocation and hiding must cancel an active player gesture immediately,
             // even while a previous command is awaiting its HTTP response.
@@ -208,12 +269,13 @@ export class SceneSubscriber {
         else if (next !== scene)
             this.store.reconcile(next, {
                 movements: change.payload.tokenMovements,
+                geometryChanged: change.payload.movementGeometryChanged,
                 reset: change.type === 'combat.updated',
             });
     };
     async resync() {
         if (!this.alive || this.loading) return;
-        if (this.store.directCommandPending) {
+        if (this.movementPending) {
             this.deferred = true;
             return;
         }
@@ -270,8 +332,8 @@ export class SceneSubscriber {
         this.store.spatial.clear();
         this.store.onPreview = undefined;
         this.store.onRevisionGap = undefined;
-        this.store.onDirectCommandSettled = undefined;
-        this.store.onDirectCommandReceipt = undefined;
+        this.store.onMovementSettled = undefined;
+        this.store.onMovementReceipt = undefined;
         this.store.remotePreviews.clear();
         this.echo.leave(this.channel);
     }

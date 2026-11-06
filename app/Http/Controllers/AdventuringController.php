@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Combat\AdventuringActions;
 use App\Models\Scene;
 use App\Services\SceneSnapshotBuilder;
+use App\Services\SceneVisibility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -31,7 +32,7 @@ class AdventuringController extends Controller
         if ($scene->campaign->roleFor($request->user()) !== 'gm') {
             // SceneTransaction publishes filtered events; HTTP needs the same boundary.
             $result['tokens'] = $scene->tokens()->whereIn('id', array_column($result['tokens'] ?? [], 'id'))->where('is_hidden', false)->get()
-                ->map(fn ($t) => app(SceneSnapshotBuilder::class)->token($t, false, $request->user()))->all();
+                ->filter(fn ($t) => app(SceneVisibility::class)->allows($t, $request->user()))->values()->map(fn ($t) => app(SceneSnapshotBuilder::class)->token($t, false, $request->user()))->all();
         }
 
         return $result;

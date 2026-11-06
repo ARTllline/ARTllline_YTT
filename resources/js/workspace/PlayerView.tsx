@@ -228,7 +228,7 @@ function PlayerTabletop({
                 actors={actors}
                 userId={user.id}
                 disabled={
-                    actorBusy || connection !== 'connected' || save.status !== 'saved' || !!status
+                    actorBusy || connection !== 'connected' || save.status === 'failed' || !!status
                 }
                 actorError={actorError}
             />

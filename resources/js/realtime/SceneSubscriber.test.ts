@@ -14,7 +14,7 @@ afterEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();
 });
-function setup() {
+function setup(role: 'gm' | 'player' = 'gm') {
     vi.useFakeTimers();
     let receive!: (event: SceneEvent | SpatialEvent) => void;
     let subscribed!: () => void;
@@ -31,7 +31,7 @@ function setup() {
     };
     const echo = { private: () => channel, leave: vi.fn() };
     const scene = { ...createDemoScene(), id: '1', revision: 10 };
-    const store = new SceneStore(scene);
+    const store = new SceneStore(scene, role);
     const queue = new SaveQueue();
     const subscriber = new SceneSubscriber(
         echo as unknown as LiveEcho,
@@ -59,6 +59,32 @@ function setup() {
     };
 }
 describe('scene subscription recovery', () => {
+    it('revokes unseen entities and closes vision immediately while a WASD receipt is pending', () => {
+        const s = setup('player');
+        const id = s.scene.tokens[0].id;
+        s.store.select(id);
+        s.store.directCommandPending = true;
+        s.receive({
+            ...s.event(12),
+            type: 'vision.updated',
+            payload: {
+                deletedIds: [id],
+                vision: { enabled: true, polygons: [] },
+            },
+        });
+        expect(s.store.getSnapshot().scene.tokens.some((t) => t.id === id)).toBe(false);
+        expect(s.store.getSnapshot().selectedIds).toEqual([]);
+        expect(s.store.getSnapshot().scene.vision).toEqual({ enabled: true, polygons: [] });
+        expect(s.store.getSnapshot().scene.revision).toBe(10);
+        s.store.accept(
+            { revision: 11, tokens: [...s.scene.tokens], vision: { enabled: false, polygons: [] } },
+            true,
+        );
+        expect(s.store.getSnapshot().scene.tokens.some((t) => t.id === id)).toBe(false);
+        expect(s.store.getSnapshot().scene.vision?.enabled).toBe(true);
+        s.subscriber.destroy();
+    });
+
     it('restores MapWorld, cropped reference and grid through the existing reconnect snapshot', async () => {
         const s = setup();
         const world = { bounds: { x: 0, y: 0, width: 2200, height: 1400 } };
@@ -223,15 +249,15 @@ it('orders concurrent direct-control events before an HTTP receipt without a sna
     const grid = { ...s.scene.grid, size: 123 };
     s.receive({ ...s.event(11), payload: { grid } });
     expect(s.store.getSnapshot().scene.revision).toBe(10);
-    s.store.onDirectCommandReceipt?.(12);
+    s.store.onMovementReceipt?.(12);
     s.store.accept({ revision: 12 }, true);
     s.store.directCommandPending = false;
-    s.store.onDirectCommandSettled?.();
+    s.store.onMovementSettled?.();
     expect(s.store.getSnapshot().scene.revision).toBe(12);
     expect(s.store.getSnapshot().scene.grid.size).toBe(123);
     expect(snapshot).not.toHaveBeenCalled();
     s.subscriber.destroy();
-    expect(s.store.onDirectCommandReceipt).toBeUndefined();
+    expect(s.store.onMovementReceipt).toBeUndefined();
 });
 
 it('does not turn periodic revision probes into snapshot resets during a delayed direct-control receipt', async () => {
@@ -244,9 +270,87 @@ it('does not turn periodic revision probes into snapshot resets during a delayed
     expect(snapshot).not.toHaveBeenCalled();
     s.store.accept({ revision: 11 }, true);
     s.store.directCommandPending = false;
-    s.store.onDirectCommandSettled?.();
+    s.store.onMovementSettled?.();
     await vi.advanceTimersByTimeAsync(15000);
     expect(read).toHaveBeenCalledOnce();
+    expect(snapshot).not.toHaveBeenCalled();
+    s.subscriber.destroy();
+});
+
+it('orders visibility independently of receipts without cancelling valid own canonical movement', () => {
+    const s = setup('player');
+    const token = { ...s.scene.tokens[0], canMove: true };
+    s.store.reconcile({ ...s.scene, tokens: [token] });
+    s.store.directCommandPending = true;
+    const closed = { enabled: true, polygons: [] };
+    s.receive({ ...s.event(13), type: 'vision.updated', payload: { vision: closed } });
+    s.receive({
+        ...s.event(11),
+        type: 'vision.updated',
+        payload: {
+            vision: { enabled: false, polygons: [] },
+        },
+    });
+    expect(s.store.getSnapshot().scene.vision).toBe(closed);
+    s.store.onMovementReceipt?.(12);
+    s.store.accept(
+        {
+            revision: 12,
+            token: { ...token, x: token.x + 10 },
+            vision: { enabled: false, polygons: [] },
+        },
+        true,
+    );
+    expect(s.store.getSnapshot().scene.tokens[0].x).toBe(token.x + 10);
+    expect(s.store.getSnapshot().scene.vision).toBe(closed);
+    s.store.directCommandPending = false;
+    s.store.onMovementSettled?.();
+    expect(s.store.getSnapshot().scene.revision).toBe(13);
+    expect(s.store.getSnapshot().scene.vision).toBe(closed);
+    s.store.hydrate({ ...s.scene, id: 'other', revision: 1 });
+    s.store.accept({ revision: 2, vision: { enabled: false, polygons: [] } }, true);
+    expect(s.store.getSnapshot().scene.vision?.enabled).toBe(false);
+    s.subscriber.destroy();
+});
+
+it('stops control on a real obstacle edit even while an own receipt is pending and the mask is unchanged', () => {
+    const s = setup('player');
+    s.store.stopDirectControl = vi.fn();
+    s.store.directCommandPending = true;
+    s.receive({ ...s.event(11), payload: { movementGeometryChanged: true } });
+    expect(s.store.stopDirectControl).toHaveBeenCalledOnce();
+    s.subscriber.destroy();
+});
+
+it('merges ordinary queued movement with earlier/later Reverb deltas without a snapshot', async () => {
+    const s = setup('player');
+    const token = { ...s.scene.tokens[0], canMove: true };
+    s.store.reconcile({ ...s.scene, tokens: [token, ...s.scene.tokens.slice(1)] });
+    const snapshot = vi.spyOn(api, 'snapshot');
+    let finish!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+        finish = resolve;
+    });
+    s.queue.enqueue('move', async () => {
+        s.store.queuedMovementPending = true;
+        await waiting;
+        s.store.onMovementReceipt?.(12);
+        s.store.accept(
+            { revision: 12, token: { ...token, x: token.x + 10 }, movementGeometryChanged: false },
+            true,
+        );
+        s.store.queuedMovementPending = false;
+    });
+    const other = { ...s.scene.tokens[1], rotation: 37 };
+    s.receive({ ...s.event(11), payload: { token: other, movementGeometryChanged: false } });
+    const closed = { enabled: true, polygons: [] };
+    s.receive({ ...s.event(13), payload: { vision: closed, movementGeometryChanged: false } });
+    finish();
+    await s.queue.flush();
+    expect(s.store.getSnapshot().scene.revision).toBe(13);
+    expect(s.store.getSnapshot().scene.tokens.find((t) => t.id === other.id)?.rotation).toBe(37);
+    expect(s.store.getSnapshot().scene.tokens.find((t) => t.id === token.id)?.x).toBe(token.x + 10);
+    expect(s.store.getSnapshot().scene.vision).toBe(closed);
     expect(snapshot).not.toHaveBeenCalled();
     s.subscriber.destroy();
 });

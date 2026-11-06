@@ -198,6 +198,10 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/scenes/{scene}/fog/actions', [FogController::class, 'store'])->name('scene.fog.action')->middleware(IdempotentMutation::class);
         Route::post('/scenes/{scene}/fog/reset', [FogController::class, 'reset'])->name('scene.fog.reset')->middleware(IdempotentMutation::class);
         Route::post('/scenes/{scene}/spatial', SpatialController::class)->middleware('throttle:spatial');
+        Route::get('/scenes/{scene}/lighting', [\App\Http\Controllers\LightingController::class, 'show'])->middleware('throttle:600,1');
+        Route::put('/scenes/{scene}/lighting', [\App\Http\Controllers\LightingController::class, 'update'])->name('scene.lighting')->middleware(IdempotentMutation::class);
+        Route::post('/scenes/{scene}/vision', \App\Http\Controllers\PlayerVisionController::class)->name('scene.vision')->middleware(IdempotentMutation::class);
+        Route::post('/scenes/{scene}/los', \App\Http\Controllers\LineOfSightController::class)->middleware('throttle:120,1');
         Route::get('/scenes/{scene}/snapshot', [SceneController::class, 'snapshot']);
         Route::get('/scenes/{scene}/revision', function (Scene $scene) {
             Gate::authorize('view', $scene);

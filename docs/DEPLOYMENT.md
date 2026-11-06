@@ -97,6 +97,10 @@ Keep `queue.connections.tabletop` on the **same MySQL connection** and database,
 driver database, `after_commit=false`, queue cues. Do not change it to Redis: run
 steps and next jobs commit atomically. Redis serves cache/session, not this queue.
 
+MAP-10A adds the `lighting` queue on this same connection. The supplied worker
+uses `--queue=cues,lighting`: Cue work takes priority, while coalesced visual
+lighting jobs run outside movement HTTP requests. Restart workers after updating.
+
 ## HTTPS, Nginx and upload limits
 
 Point DNS to the host. Before installing the TLS block, use an HTTP-only bootstrap

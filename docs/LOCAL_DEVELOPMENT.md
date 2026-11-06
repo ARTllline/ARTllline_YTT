@@ -79,7 +79,7 @@ Push-Location public
 php -S 127.0.0.1:8090 ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php
 Pop-Location
 php artisan reverb:start
-php artisan queue:work tabletop --queue=cues --sleep=0.1 --tries=3 --timeout=60
+php artisan queue:work tabletop --queue=cues,lighting --sleep=0.1 --tries=3 --timeout=60
 php artisan schedule:work
 npm run dev -- --host 127.0.0.1
 ```

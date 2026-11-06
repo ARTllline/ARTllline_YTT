@@ -1,5 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import {
+    Flame,
     Box,
     BrickWall,
     Paintbrush,
@@ -24,6 +25,8 @@ import { initialEditorView, readTerrainBrush, terrainBrushStorage } from '../../
 import { PropInspector } from '../objects/PropInspector';
 import { HistoryControls } from '../HistoryControls';
 import { MapPreparation } from './MapPreparation';
+import { LightingPanel } from './LightingPanel';
+import { LosDebugPanel } from './LosDebugPanel';
 import { MaterialLibrary } from './MaterialLibrary';
 import { BuildPanel } from './BuildPanel';
 import { TerrainPanel } from './TerrainPanel';
@@ -60,9 +63,10 @@ export function MapEditor({
     const save = useSyncExternalStore(queue.subscribe, queue.getSnapshot);
     const tool = useSyncExternalStore(store.spatial.subscribe, store.spatial.getTool);
     const [panel, setPanel] = useState<
-        'objects' | 'settings' | 'materials' | 'layers' | 'terrain' | 'build'
+        'objects' | 'settings' | 'materials' | 'layers' | 'terrain' | 'build' | 'lighting'
     >('objects');
     const [notice, setNotice] = useState('');
+    const [los, setLos] = useState(false);
     const view = state.mapEditor ?? initialEditorView;
     useEffect(() => {
         store.setMapEditor({ ...initialEditorView, terrain: readTerrainBrush() });
@@ -133,6 +137,7 @@ export function MapEditor({
         onTool(next === 'terrain' || next === 'build' ? next : 'select');
         setNotice('');
         setPanel(next);
+        if (next === 'lighting') setLos(false);
     };
     const prop = state.scene.props?.find((p) => p.id === state.selectedPropIds?.[0]);
     return (
@@ -169,6 +174,23 @@ export function MapEditor({
                     <Hand size={17} />
                 </button>
                 <i />
+                <button
+                    aria-label="LOS debug"
+                    aria-pressed={los}
+                    onClick={() => {
+                        if (!los) {
+                            if (guard.current) {
+                                setNotice(guard.current);
+                                return;
+                            }
+                            choose('objects');
+                            store.select(null);
+                        }
+                        setLos(!los);
+                    }}
+                >
+                    <Eye size={16} /> LOS
+                </button>
                 <button aria-pressed={panel === 'objects'} onClick={() => choose('objects')}>
                     <Box size={16} /> Objects
                 </button>
@@ -177,6 +199,9 @@ export function MapEditor({
                 </button>
                 <button aria-pressed={panel === 'build'} onClick={() => choose('build')}>
                     <BrickWall size={16} /> Build
+                </button>
+                <button aria-pressed={panel === 'lighting'} onClick={() => choose('lighting')}>
+                    <Flame size={16} /> Свет
                 </button>
                 <button aria-pressed={panel === 'materials'} onClick={() => choose('materials')}>
                     <Palette size={16} /> Материалы
@@ -264,6 +289,12 @@ export function MapEditor({
                 />
             )}
             {panel === 'materials' && <MaterialLibrary onClose={() => choose('objects')} />}
+            {los && (
+                <LosDebugPanel
+                    store={store}
+                    probing={panel !== 'settings' && tool === 'select' && !placing}
+                />
+            )}
             {panel === 'build' && (
                 <BuildPanel
                     store={store}
@@ -271,6 +302,7 @@ export function MapEditor({
                     onSettings={() => choose('settings')}
                 />
             )}
+            {panel === 'lighting' && <LightingPanel store={store} queue={queue} guard={guard} />}
             {panel === 'terrain' && (
                 <TerrainPanel
                     store={store}
@@ -279,7 +311,7 @@ export function MapEditor({
                     onSettings={() => choose('settings')}
                 />
             )}
-            {panel === 'objects' && (
+            {panel === 'objects' && !los && (
                 <>
                     <div className="map-editor-object-add surface">
                         <ObjectPresetLibrary

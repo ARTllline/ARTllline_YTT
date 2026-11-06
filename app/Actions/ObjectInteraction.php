@@ -9,6 +9,7 @@ use App\Models\Scene;
 use App\Models\SceneProp;
 use App\Models\User;
 use App\Realtime\CommandContext;
+use App\Services\SceneVisibility;
 use App\Services\TriggerEvents;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -21,6 +22,7 @@ class ObjectInteraction
         abort_unless($scene->campaign->active_scene_id === $scene->id && $scene->campaign->live_revision === (int) $data['epoch'], 409, 'Сцена изменилась. Повторите действие на текущей сцене.');
         $object = $data['kind'] === 'token' ? $scene->tokens()->findOrFail($data['id']) : SceneProp::where('scene_id', $scene->id)->findOrFail($data['id']);
         abort_if($object->is_hidden, 403);
+        abort_unless(app(SceneVisibility::class)->allows($object, $user), 404);
         if (isset($data['actorTokenId'])) {
             $actor = $scene->tokens()->findOrFail($data['actorTokenId']);
             abort_if(app(LifeCycle::class)->blocked($actor), 422, 'Персонаж без сознания или мёртв и не может взаимодействовать.');

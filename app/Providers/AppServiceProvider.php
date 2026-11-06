@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Realtime\CommandContext;
 use App\Services\CharacterCatalog;
+use App\Services\SceneVisibility;
 use App\Spells\SpellEffects;
 use App\Support\RequestPerformance;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -23,6 +24,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(CommandContext::class);
         $this->app->scoped(CharacterCatalog::class);
         $this->app->scoped(SpellEffects::class);
+        $this->app->scoped(SceneVisibility::class);
+        $this->app->scoped(\App\Services\SceneLighting::class);
     }
 
     /**

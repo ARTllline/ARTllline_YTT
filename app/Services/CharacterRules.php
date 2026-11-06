@@ -6,6 +6,7 @@ use App\Combat\ExhaustionRules;
 use App\Items\ItemRules;
 use App\Models\Character;
 use App\Spells\SpellEffects;
+use App\Support\RequestPerformance;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -15,6 +16,11 @@ class CharacterRules
     public const ABILITIES = ['str' => 'Сила', 'dex' => 'Ловкость', 'con' => 'Телосложение', 'int' => 'Интеллект', 'wis' => 'Мудрость', 'cha' => 'Харизма'];
 
     public const CORE_MODIFIERS = ['ac', 'speed', 'spell_attack', 'spell_save_dc'];
+
+    public function darkvisionFeet(?Character $character): int
+    {
+        return (int) ($character?->rules['senses']['darkvision_ft'] ?? 0);
+    }
 
     public function catalog(): CharacterCatalog
     {
@@ -45,6 +51,11 @@ class CharacterRules
 
     /** Read compatibility projection; persisted only on an explicit GM save. */
     public function state(Character $character): ?array
+    {
+        return app(RequestPerformance::class)->measure('rules_state', fn () => app(SpellEffects::class)->read('character-rules-state:'.($character->id ?? spl_object_id($character)), fn () => $this->stateMeasured($character)));
+    }
+
+    private function stateMeasured(Character $character): ?array
     {
         $stored = $character->rules;
         if (! $stored) {
@@ -206,6 +217,11 @@ class CharacterRules
 
     public function checks(Character $character): array
     {
+        return app(RequestPerformance::class)->measure('character_checks', fn () => app(SpellEffects::class)->read('character-checks:'.($character->id ?? spl_object_id($character)), fn () => $this->checksMeasured($character)));
+    }
+
+    private function checksMeasured(Character $character): array
+    {
         $keys = array_column($this->rawChecks($character), 'key');
         if ($character->rules) {
             $keys = [...array_keys(self::ABILITIES), ...array_keys($this->catalog()->skills()), ...array_map(fn ($k) => 'save_'.$k, array_keys(self::ABILITIES)), ...$keys];
@@ -296,8 +312,10 @@ class CharacterRules
     {
         $abilities = implode(',', array_keys(self::ABILITIES));
         $skills = app(CharacterCatalog::class)->skills();
-        $rules = ['rules' => 'sometimes|nullable|array:schema_version,scores,proficiency_bonus,skills,saves,spellcasting_ability,modifiers',
+        $rules = ['rules' => 'sometimes|nullable|array:schema_version,scores,proficiency_bonus,skills,saves,spellcasting_ability,modifiers,senses',
             'rules.schema_version' => 'sometimes|integer|in:2',
+            'rules.senses' => 'sometimes|array:darkvision_ft',
+            'rules.senses.darkvision_ft' => 'sometimes|integer|between:0,1000',
             'rules.scores' => 'required_with:rules|array:'.$abilities, 'rules.proficiency_bonus' => 'required_with:rules|integer|between:0,20',
             'rules.skills' => 'required_with:rules|array'.($skills ? ':'.implode(',', array_keys($skills)) : ''),
             'rules.saves' => 'required_with:rules|array:'.$abilities,

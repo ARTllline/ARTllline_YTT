@@ -23,6 +23,7 @@ import { ClickToMove } from '../../navigation/ClickToMove';
 import { DragRoutePreview } from '../../navigation/DragRoutePreview';
 
 type Gesture = {
+    route?: string;
     build?: boolean;
     terrain?: boolean;
     marquee?: { previous?: ObjectSelection };
@@ -46,7 +47,6 @@ const isEditing = (target: EventTarget | null) =>
 export class PointerController {
     private clickMove: ClickToMove;
     private dragRoute: DragRoutePreview;
-    private emptyClick?: { id: string; time: number; point: Point };
     private spatial: SpatialGesture;
     private objects?: ObjectGesture;
     private regionGesture?: RegionGesture;
@@ -97,37 +97,8 @@ export class PointerController {
         canvas.addEventListener('pointerdown', this.down, { signal });
         canvas.addEventListener(
             'dblclick',
-            (e) => {
-                if (this.tool === 'build') {
-                    this.buildGesture?.commit();
-                    return;
-                }
-                const click = this.emptyClick;
-                this.emptyClick = undefined;
-                if (
-                    !click ||
-                    this.camera.directed ||
-                    this.space ||
-                    e.button !== 0 ||
-                    e.shiftKey ||
-                    e.altKey ||
-                    e.ctrlKey ||
-                    e.metaKey ||
-                    performance.now() - click.time > 800 ||
-                    !this.clickMove.eligible(click.id)
-                )
-                    return;
-                const point = this.local(e),
-                    world = screenToWorld(point, this.camera.state);
-                if (
-                    Math.hypot(point.x - click.point.x, point.y - click.point.y) > 5 ||
-                    this.tokens.hit(world) ||
-                    this.props?.hit(world) ||
-                    this.notes?.hit(world, this.camera.state.zoom)
-                )
-                    return;
-                this.store.select(click.id);
-                this.clickMove.request(click.id, world);
+            () => {
+                if (this.tool === 'build') this.buildGesture?.commit();
             },
             { signal },
         );
@@ -203,15 +174,34 @@ export class PointerController {
         this.terrainCursorState = undefined;
         if (this.camera.directed) return;
         if (this.gesture || !e.isPrimary || (e.button !== 0 && e.button !== 1)) return;
-        const previousClick = this.emptyClick;
-        this.emptyClick = undefined;
-        this.clickMove.cancel();
         e.preventDefault();
         this.canvas.focus({ preventScroll: true });
         this.camera.stop();
         const point = this.local(e),
             world = screenToWorld(point, this.camera.state);
         const panning = e.button === 1 || this.space || this.tool === 'pan';
+        const selected = this.store.getSnapshot().selectedIds;
+        const routeClick =
+            !panning &&
+            e.button === 0 &&
+            !e.shiftKey &&
+            !e.ctrlKey &&
+            !e.metaKey &&
+            !e.altKey &&
+            selected.length === 1 &&
+            this.clickMove.eligible(selected[0]) &&
+            !this.tokens.hit(world) &&
+            !this.props?.hit(world) &&
+            !this.notes?.hit(world, this.camera.state.zoom);
+        if (!panning && !routeClick) this.clickMove.cancel();
+        if (e.button === 0 && !panning && this.store.onLightPlacement) {
+            this.store.onLightPlacement(world);
+            return;
+        }
+        if (e.button === 0 && !panning && this.store.onLosProbe) {
+            this.store.onLosProbe(world);
+            return;
+        }
         if (e.button === 0 && !panning && this.store.onMapCalibration) {
             this.store.onMapCalibration(world);
             return;
@@ -336,24 +326,17 @@ export class PointerController {
             const id =
                 state.selectedIds.length === 1 && !state.selectedPropIds?.length
                     ? state.selectedIds[0]
-                    : previousClick &&
-                        performance.now() - previousClick.time < 800 &&
-                        Math.hypot(
-                            point.x - previousClick.point.x,
-                            point.y - previousClick.point.y,
-                        ) <= 5
-                      ? previousClick.id
-                      : undefined;
-            if (
+                    : undefined;
+            const route =
                 id &&
                 this.clickMove.eligible(id) &&
                 !e.shiftKey &&
                 !e.ctrlKey &&
                 !e.metaKey &&
                 !e.altKey
-            )
-                this.emptyClick = { id, time: performance.now(), point };
-            if (this.store.role === 'gm') {
+                    ? id
+                    : undefined;
+            if (this.store.role === 'gm' || route) {
                 this.gesture = {
                     pointer: e.pointerId,
                     start: point,
@@ -361,7 +344,10 @@ export class PointerController {
                     token: null,
                     origin: world,
                     moved: false,
-                    marquee: { previous: e.shiftKey ? this.store.selection() : undefined },
+                    route,
+                    ...(this.store.role === 'gm'
+                        ? { marquee: { previous: e.shiftKey ? this.store.selection() : undefined } }
+                        : {}),
                 };
                 this.canvas.setPointerCapture(e.pointerId);
             } else this.store.select(null);
@@ -443,7 +429,7 @@ export class PointerController {
         }
         if (gesture.marquee) {
             gesture.moved ||= Math.hypot(point.x - gesture.start.x, point.y - gesture.start.y) > 3;
-            if (gesture.moved) this.emptyClick = undefined;
+            if (gesture.moved) this.clickMove.cancel();
             if (gesture.moved)
                 this.overlay.showMarquee(
                     gesture.origin,
@@ -468,6 +454,7 @@ export class PointerController {
         }
         gesture.moved ||= Math.hypot(point.x - gesture.start.x, point.y - gesture.start.y) > 3;
         if (!gesture.moved) return;
+        if (gesture.route) this.clickMove.cancel();
         if (gesture.note) {
             gesture.last = point;
             this.notes?.preview(gesture.note, this.dragPosition(point, gesture));
@@ -542,6 +529,15 @@ export class PointerController {
         this.terrainCursorState = undefined;
         const gesture = this.gesture;
         if (!gesture || gesture.pointer !== e.pointerId) return;
+        if (gesture.route && !gesture.moved) {
+            this.finish();
+            this.clickMove.chooseDestination(
+                gesture.route,
+                screenToWorld(this.local(e), this.camera.state),
+                5 / this.camera.state.zoom,
+            );
+            return;
+        }
         if (gesture.build) {
             this.buildGesture?.up(
                 screenToWorld(this.local(e), this.camera.state),
@@ -629,7 +625,6 @@ export class PointerController {
     }
     cancel = () => {
         this.dragRoute.cancel();
-        this.emptyClick = undefined;
         this.clickMove.cancel();
         this.buildGesture?.cancel();
         this.terrainGesture?.cancel();

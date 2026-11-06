@@ -481,6 +481,44 @@ select:focus-visible {
     z-index: 10;
     pointer-events: none;
 }
+.scene-loading-indicator {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: calc(100% - 32px);
+    padding: 8px 11px;
+    border: 1px solid #ffffff14;
+    border-radius: 8px;
+    background: #191c23ed;
+    box-shadow: 0 4px 16px #0003;
+    color: #c5cad3;
+    font-size: 11px;
+    line-height: 16px;
+    pointer-events: none;
+}
+.scene-loading-spinner {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    border: 2px solid #ffffff24;
+    border-top-color: #c5cad3;
+    border-radius: 50%;
+    animation: scene-loading-spin 900ms linear infinite;
+}
+@keyframes scene-loading-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .scene-loading-spinner {
+        animation: none;
+    }
+}
 .media-state {
     position: absolute;
     left: 75px;

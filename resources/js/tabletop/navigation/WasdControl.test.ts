@@ -222,3 +222,30 @@ it('does not consume typing keys and disposes listeners on renderer teardown', (
     expect(f.store.toggleDirectControl).toBeUndefined();
     expect(f.key('keydown', 'KeyW')).toBe(true);
 });
+
+it('continues held-key movement through empty Vision/Fog recipient deltas', async () => {
+    const f = fixture();
+    let revision = 0;
+    vi.mocked(request).mockImplementation(async (url, _method, body) => {
+        if (url.endsWith('/start')) return { streamId: 'stream', position: f.token } as never;
+        const data = body as { x: number; y: number };
+        return {
+            revision: ++revision,
+            token: { ...f.token, ...data },
+            props: [],
+            deletedPropIds: [],
+            deletedIds: [],
+            vision: { enabled: true, polygons: [] },
+        } as never;
+    });
+    f.control.toggle();
+    f.key('keydown', 'KeyD');
+    for (let i = 0; i < 100; i++) {
+        f.tick();
+        await Promise.resolve();
+    }
+    expect(revision).toBeGreaterThan(4);
+    expect(f.store.getSnapshot().directControl?.tokenId).toBe(f.token.id);
+    expect(f.store.getSnapshot().scene.tokens[0].x).toBeGreaterThan(200);
+    f.control.destroy();
+});

@@ -10,6 +10,7 @@ function merge<T extends { id: string }>(
     changed: T[] = [],
     removed: string[] = [],
 ) {
+    if (!changed.length && !removed.length) return current;
     const changes = new Map(changed.map((item) => [item.id, item]));
     const deleted = new Set(removed);
     return [

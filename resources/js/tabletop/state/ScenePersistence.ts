@@ -42,6 +42,7 @@ export class ScenePersistence {
         this.queue.enqueue(
             key,
             async () => {
+                if (command.type === 'move') this.store.queuedMovementPending = true;
                 try {
                     let result: Mutation;
                     if (command.type === 'structure') {
@@ -147,6 +148,7 @@ export class ScenePersistence {
                         result = await api.grid(this.sceneId, command.grid, mutationId);
                     else result = await api.map(this.sceneId, command.map, mutationId);
                     this.store.history?.record(command, before, result);
+                    if (command.type === 'move') this.store.onMovementReceipt?.(result.revision);
                     this.store.accept(
                         result,
                         command.type === 'move' || this.versions.get(key) === version,
@@ -230,6 +232,8 @@ export class ScenePersistence {
                         }
                     }
                     throw error;
+                } finally {
+                    if (command.type === 'move') this.store.queuedMovementPending = false;
                 }
             },
             command.type === 'grid' ? 250 : command.type === 'note' && command.debounce ? 450 : 0,

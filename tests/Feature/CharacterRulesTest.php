@@ -13,7 +13,10 @@ use App\Models\User;
 use App\Services\CharacterCatalog;
 use App\Services\CharacterRules;
 use App\Services\D20Roller;
+use App\Services\SceneIllumination;
+use App\Services\SceneVisibility;
 use App\Services\TokenCheckStats;
+use App\Spells\SpellEffects;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -72,12 +75,61 @@ class CharacterRulesTest extends TestCase
         return $r;
     }
 
+    public function test_darkvision_range_and_perception_follow_the_character_and_revoke_on_edit(): void
+    {
+        $this->scene->update(['vision_enabled' => true, 'lighting' => ['enabled' => true, 'mode' => 'night',
+            'brightness' => 0, 'color' => '#ffffff', 'sources' => []]]);
+        $this->actor->update(['owner_user_id' => $this->player->id, 'kind' => 'player_character']);
+        $near = $this->scene->tokens()->create(['name' => 'Near', 'x' => 220, 'y' => 100]);
+        $this->scene->tokens()->create(['name' => 'Far', 'x' => 221, 'y' => 100]);
+        $url = "/api/scenes/{$this->scene->id}/snapshot";
+        $this->actingAs($this->player)->getJson($url)->assertOk()->assertJsonCount(1, 'tokens');
+        $rules = $this->rules();
+        $rules['senses'] = ['darkvision_ft' => 10]; // 60 world units per 5 ft
+        $save = function (array $rules) {
+            return $this->actingAs($this->gm)->postJson("/api/campaigns/{$this->campaign->id}/characters",
+                ['id' => $this->hero->id, 'name' => $this->hero->name, 'rules' => $rules, 'clientMutationId' => (string) Str::uuid()]);
+        };
+        $save($rules)->assertOk()->assertJsonPath('character.rules.senses.darkvision_ft', 10);
+        $this->actingAs($this->player)->getJson($url)->assertOk()->assertJsonCount(2, 'tokens')
+            ->assertJsonPath('tokens.1.name', 'Near')->assertJsonStructure(['vision' => ['raster' => ['darkvision']]]);
+        $vision = app(SceneVisibility::class);
+        $scene = $this->scene->fresh();
+        $this->assertSame(SceneIllumination::DIM, $vision->perceivedLight($scene, $this->actor->fresh(), ['x' => 220, 'y' => 100]));
+        $ctx = app(\App\Combat\ConditionRules::class)->context($this->actor->fresh(), 'check', target: $near, sight: true, statKey: 'perception');
+        $this->assertSame('disadvantage', $ctx['mode']);
+        $scene->update(['lighting' => array_replace($scene->lighting, ['brightness' => .2])]);
+        $vision->invalidate($scene);
+        $this->assertSame(SceneIllumination::BRIGHT, $vision->perceivedLight($scene, $this->actor->fresh(), ['x' => 220, 'y' => 100]));
+        $scene->update(['lighting' => array_replace($scene->lighting, ['brightness' => 0])]);
+
+        Event::fake([TabletopEvent::class]);
+        $save($this->rules())->assertOk();
+        $events = Event::dispatched(TabletopEvent::class)->pluck(0)->filter(fn ($e) => str_ends_with($e->channel, '.user.'.$this->player->id));
+        $this->assertTrue($events->contains(fn ($e) => in_array((string) $near->id, $e->envelope['payload']['deletedIds'] ?? [], true)));
+        $this->actingAs($this->player)->getJson($url)->assertOk()->assertJsonCount(1, 'tokens');
+    }
+
     private function equip(string $name, string $slot, array $modifiers)
     {
         $d = ItemDefinition::forceCreate(['campaign_id' => $this->campaign->id, 'name' => $name, 'icon' => 'item_ring', 'description' => '',
             'category' => 'gear', 'rarity' => 'common', 'width' => 1, 'height' => 1, 'max_stack' => 1, 'equipment_slots' => [$slot], 'modifiers' => $modifiers]);
 
         return $this->hero->inventory()->create(['item_definition_id' => $d->id, 'quantity' => 1, 'equipped_slot' => $slot]);
+    }
+
+    public function test_dto_rules_cache_ends_before_the_next_mutation_or_projection(): void
+    {
+        $rules = app(CharacterRules::class);
+        $effects = app(SpellEffects::class);
+        $before = $effects->project(fn () => $rules->checks($this->hero));
+        $updated = $this->hero->rules;
+        $updated['scores']['str'] = 20;
+        $this->hero->update(['rules' => $updated]);
+        $after = $effects->project(fn () => $rules->checks($this->hero->fresh()));
+        $this->assertSame(3, collect($before)->firstWhere('key', 'str')['modifier']);
+        $this->assertSame(5, collect($after)->firstWhere('key', 'str')['modifier']);
+        $this->assertSame($after, $rules->checks($this->hero->fresh()));
     }
 
     public function test_qa_character_scores_skills_saves_spellcasting_and_negative_floor(): void
