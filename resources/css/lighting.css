@@ -1,0 +1,136 @@
+.lighting-panel {
+    position: absolute;
+    top: 116px;
+    left: 16px;
+    width: 310px;
+    max-height: calc(100% - 145px);
+    overflow: auto;
+    padding: 16px;
+    pointer-events: auto;
+    display: grid;
+    gap: 12px;
+}
+.lighting-panel header,
+.lighting-heading,
+.lighting-panel footer,
+.lighting-presets {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.lighting-panel header {
+    color: #edc28e;
+}
+.lighting-panel p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+}
+.lighting-panel fieldset {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+.lighting-panel label {
+    display: grid;
+    gap: 6px;
+    font-size: 12px;
+    color: #bec8d3;
+}
+.lighting-panel label.check-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.lighting-panel input:not([type='checkbox']):not([type='color']),
+.lighting-panel select {
+    width: 100%;
+    min-width: 0;
+}
+.lighting-panel input[type='range'] {
+    accent-color: #deb77e;
+}
+.lighting-panel output {
+    float: right;
+    color: #e9c595;
+    font-variant-numeric: tabular-nums;
+}
+.lighting-panel .lighting-color {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.lighting-panel input[type='color'] {
+    width: 44px;
+    height: 29px;
+    border: 1px solid #ffffff20;
+    border-radius: 6px;
+    padding: 2px;
+    background: transparent;
+}
+.lighting-presets button {
+    flex: 1;
+    justify-content: center;
+}
+.lighting-panel button[aria-pressed='true'] {
+    border-color: #d7ad6b90;
+    color: #f0d1a1;
+    background: #ad7e2422;
+}
+.lighting-heading {
+    border-top: 1px solid #ffffff12;
+    padding-top: 12px;
+    font-size: 12px;
+}
+.lighting-sources {
+    display: grid;
+    gap: 5px;
+    max-height: 150px;
+    overflow: auto;
+}
+.lighting-sources button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+}
+.lighting-sources i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    box-shadow: 0 0 8px currentColor;
+}
+.lighting-sources small {
+    margin-left: auto;
+    color: #8794a5;
+    font-size: 10px;
+}
+.lighting-source-editor {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid #ffffff14;
+    border-radius: 9px;
+    background: #080d142a;
+}
+.lighting-coordinates {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.lighting-panel footer {
+    position: sticky;
+    bottom: -16px;
+    padding: 10px 0;
+    background: var(--panel, #141c29);
+}
+.lighting-panel footer button:first-child {
+    background: #725b35;
+    border-color: #b6905366;
+    color: #fff3df;
+}

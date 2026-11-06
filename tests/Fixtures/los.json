@@ -1,0 +1,303 @@
+{
+  "graph": {
+    "vertices": [
+      {
+        "id": "a",
+        "x": 60,
+        "y": 200
+      },
+      {
+        "id": "b",
+        "x": 550,
+        "y": 200
+      },
+      {
+        "id": "c",
+        "x": 1060,
+        "y": 200
+      },
+      {
+        "id": "d",
+        "x": 1060,
+        "y": 500
+      },
+      {
+        "id": "e",
+        "x": 1060,
+        "y": 1200
+      },
+      {
+        "id": "f",
+        "x": 550,
+        "y": 1200
+      },
+      {
+        "id": "g",
+        "x": 60,
+        "y": 1200
+      },
+      {
+        "id": "h",
+        "x": 550,
+        "y": 500
+      },
+      {
+        "id": "j",
+        "x": 100,
+        "y": 250
+      },
+      {
+        "id": "k",
+        "x": 400,
+        "y": 420
+      }
+    ],
+    "edges": [
+      {
+        "id": "north-left",
+        "a": "a",
+        "b": "b",
+        "thickness": 12,
+        "materialVersionId": null,
+        "blocksMovement": true,
+        "blocksVision": true,
+        "blocksLight": true
+      },
+      {
+        "id": "north-right",
+        "a": "b",
+        "b": "c",
+        "thickness": 12,
+        "materialVersionId": null,
+        "blocksMovement": true,
+        "blocksVision": true,
+        "blocksLight": true
+      },
+      {
+        "id": "east-top",
+        "a": "c",
+        "b": "d",
+        "thickness": 12,
+        "materialVersionId": null,
+        "blocksMovement": true,
+        "blocksVision": true,
+        "blocksLight": true
+      },
+      {
+        "id": "east-bottom",
+        "a": "d",
+        "b": "e",
+        "thickness": 12,
+        "materialVersionId": null,
+        "blocksMovement": true,
+        "blocksVision": true,
+        "blocksLight": true
+      },
+      {
+        "id": "south-right",
+        "a": "e",
+        "b": "f",
+        "thickness": 12,
+        "materialVersionId": null,
+        "blocksMovement": true,
+        "blocksVision": true,
+        "blocksLight": true
+      },
+      {
+        "id": "south-left",
+        "a": "f",
+        "b": "g",
+        "thickness": 12,
+        "materialVersionId": null,
+        "blocksMovement": true,
+        "blocksVision": true,
+        "blocksLight": true
+      },
+      {
+        "id": "west",
+        "a": "g",
+        "b": "a",
+        "thickness": 12,
+        "materialVersionId": null,
+        "blocksMovement": true,
+        "blocksVision": true,
+        "blocksLight": true
+      },
+      {
+        "id": "partition-top",
+        "a": "b",
+        "b": "h",
+        "thickness": 12,
+        "materialVersionId": null,
+        "blocksMovement": true,
+        "blocksVision": true,
+        "blocksLight": true
+      },
+      {
+        "id": "partition",
+        "a": "h",
+        "b": "f",
+        "thickness": 12,
+        "materialVersionId": null,
+        "blocksMovement": true,
+        "blocksVision": true,
+        "blocksLight": true
+      },
+      {
+        "id": "room-divider",
+        "a": "h",
+        "b": "d",
+        "thickness": 12,
+        "materialVersionId": null,
+        "blocksMovement": true,
+        "blocksVision": true,
+        "blocksLight": true
+      },
+      {
+        "id": "diagonal",
+        "a": "j",
+        "b": "k",
+        "thickness": 12,
+        "materialVersionId": null,
+        "blocksMovement": true,
+        "blocksVision": true,
+        "blocksLight": true
+      }
+    ],
+    "rooms": [],
+    "openings": [
+      {
+        "id": "corridor-door",
+        "type": "door",
+        "edgeId": "partition",
+        "center": 0.2857142857142857,
+        "width": 100,
+        "open": false,
+        "locked": false,
+        "hinge": "a",
+        "direction": "left",
+        "angle": 90
+      },
+      {
+        "id": "room-door",
+        "type": "door",
+        "edgeId": "room-divider",
+        "center": 0.49019607843137253,
+        "width": 100,
+        "open": true,
+        "locked": false,
+        "hinge": "a",
+        "direction": "left",
+        "angle": 90
+      },
+      {
+        "id": "clear-window",
+        "type": "window",
+        "edgeId": "west",
+        "center": 0.8,
+        "width": 90,
+        "frame": "iron",
+        "blocksMovement": true,
+        "blocksVision": false,
+        "blocksLight": false
+      },
+      {
+        "id": "opaque-window",
+        "type": "window",
+        "edgeId": "west",
+        "center": 0.25,
+        "width": 90,
+        "frame": "iron",
+        "blocksMovement": true,
+        "blocksVision": true,
+        "blocksLight": false
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "corridor closed door",
+      "a": {
+        "x": 450,
+        "y": 700
+      },
+      "b": {
+        "x": 650,
+        "y": 700
+      },
+      "visible": false
+    },
+    {
+      "name": "transparent window",
+      "a": {
+        "x": 20,
+        "y": 400
+      },
+      "b": {
+        "x": 90,
+        "y": 400
+      },
+      "visible": true
+    },
+    {
+      "name": "opaque window",
+      "a": {
+        "x": 20,
+        "y": 950
+      },
+      "b": {
+        "x": 90,
+        "y": 950
+      },
+      "visible": false
+    },
+    {
+      "name": "diagonal wall",
+      "a": {
+        "x": 200,
+        "y": 260
+      },
+      "b": {
+        "x": 200,
+        "y": 400
+      },
+      "visible": false
+    },
+    {
+      "name": "joined rooms open doorway",
+      "a": {
+        "x": 800,
+        "y": 400
+      },
+      "b": {
+        "x": 800,
+        "y": 600
+      },
+      "visible": true
+    },
+    {
+      "name": "joined rooms solid divider",
+      "a": {
+        "x": 650,
+        "y": 400
+      },
+      "b": {
+        "x": 650,
+        "y": 600
+      },
+      "visible": false
+    },
+    {
+      "name": "shared corner",
+      "a": {
+        "x": 500,
+        "y": 450
+      },
+      "b": {
+        "x": 600,
+        "y": 550
+      },
+      "visible": false
+    }
+  ]
+}
