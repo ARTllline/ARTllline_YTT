@@ -56,7 +56,7 @@ class TerrainActions
                 unset($p);
                 if ($stroke['operation'] === 'paint') {
                     $version = MapMaterialVersion::with('material')->lockForUpdate()->findOrFail($stroke['materialVersionId']);
-                    abort_unless($version->material->user_id === $user->id, 403);
+                    abort_unless($version->material->builtin_key || $version->material->user_id === $user->id, 403);
                     abort_if($version->type === 'wall', 422, 'Выберите материал поверхности.');
                 }
                 $expected = $stroke['expected'];

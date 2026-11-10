@@ -51,7 +51,8 @@ export class PointerController {
     private objects?: ObjectGesture;
     private regionGesture?: RegionGesture;
     private buildGesture?: BuildGesture;
-    private buildZoom = 0;
+    private buildCamera?: Camera['state'];
+    private buildModifiers = { lock: false, bypass: false };
     private terrainGesture?: TerrainGesture;
     get tool(): Tool {
         return this.store.spatial.tool;
@@ -85,10 +86,16 @@ export class PointerController {
         this.clickMove = new ClickToMove(store, overlay);
         this.dragRoute = new DragRoutePreview(overlay);
         this.spatial = new SpatialGesture(store);
-        if (buildGuide) {
-            this.buildGesture = new BuildGesture(store, buildGuide);
-            if (store.role === 'gm')
-                store.onStructureAction = (action) => this.buildGesture?.action(action);
+        if (buildGuide && store.role === 'gm') {
+            this.buildGesture = new BuildGesture(store, buildGuide, () => ({
+                topLeft: screenToWorld({ x: 0, y: 0 }, this.camera.state),
+                bottomRight: screenToWorld(
+                    { x: canvas.clientWidth, y: canvas.clientHeight },
+                    this.camera.state,
+                ),
+            }));
+            store.onStructureAction = (action) => this.buildGesture?.action(action);
+            store.onStructureMove = (delta) => this.buildGesture?.translate(delta);
         }
         if (terrain) this.terrainGesture = new TerrainGesture(store, terrain);
         if (props) this.objects = new ObjectGesture(store, tokens, props, overlay);
@@ -97,8 +104,12 @@ export class PointerController {
         canvas.addEventListener('pointerdown', this.down, { signal });
         canvas.addEventListener(
             'dblclick',
-            () => {
-                if (this.tool === 'build') this.buildGesture?.commit();
+            (event) => {
+                if (this.tool === 'build' && !this.space && !event.shiftKey)
+                    this.buildGesture?.doubleClick(
+                        screenToWorld(this.local(event), this.camera.state),
+                        this.camera.state.zoom,
+                    );
             },
             { signal },
         );
@@ -124,8 +135,7 @@ export class PointerController {
             () => {
                 this.inside = false;
                 this.terrainCursor = undefined;
-                if (this.tool === 'build' && !this.gesture)
-                    this.buildGesture?.draw(undefined, this.camera.state.zoom);
+                if (this.tool === 'build' && !this.gesture) this.refreshBuild();
                 if (!this.gesture) {
                     this.hover = null;
                     this.propHover = null;
@@ -194,11 +204,11 @@ export class PointerController {
             !this.props?.hit(world) &&
             !this.notes?.hit(world, this.camera.state.zoom);
         if (!panning && !routeClick) this.clickMove.cancel();
-        if (e.button === 0 && !panning && this.store.onLightPlacement) {
+        if (e.button === 0 && !panning && this.tool !== 'fog' && this.store.onLightPlacement) {
             this.store.onLightPlacement(world);
             return;
         }
-        if (e.button === 0 && !panning && this.store.onLosProbe) {
+        if (e.button === 0 && !panning && this.tool !== 'fog' && this.store.onLosProbe) {
             this.store.onLosProbe(world);
             return;
         }
@@ -208,7 +218,9 @@ export class PointerController {
         }
         if (this.store.getSnapshot().mapDraft && !panning) return;
         if (!panning && this.tool === 'build') {
-            if (!this.buildGesture?.down(world, this.camera.state.zoom)) return;
+            this.buildModifiers = { lock: e.shiftKey, bypass: e.altKey };
+            if (!this.buildGesture?.down(world, this.camera.state.zoom, this.buildModifiers))
+                return;
             this.gesture = {
                 build: true,
                 pointer: e.pointerId,
@@ -279,6 +291,12 @@ export class PointerController {
             return;
         }
         if (!panning && !['select', 'pan'].includes(this.tool)) {
+            if (this.tool === 'fog') {
+                const { width, height } = this.store.getSnapshot().scene;
+                if (this.store.role !== 'gm' || !this.store.objectEditingEnabled ||
+                    world.x < 0 || world.y < 0 || world.x > width || world.y > height)
+                    return;
+            }
             this.tokens.finishMovements();
             if (this.store.role === 'player' && !this.store.movementEnabled) return;
             this.gesture = {
@@ -386,13 +404,12 @@ export class PointerController {
             point.y < this.canvas.clientHeight;
         if (
             this.tool === 'build' &&
-            !this.space &&
+            (!this.space || gesture?.build) &&
             (!gesture || (gesture.build && e.pointerId === gesture.pointer))
         ) {
             const world = screenToWorld(point, this.camera.state);
-            if (gesture?.build) {
-                this.buildGesture?.move(world, this.camera.state.zoom, gesture.origin);
-            } else this.buildGesture?.draw(world, this.camera.state.zoom);
+            this.buildModifiers = { lock: e.shiftKey, bypass: e.altKey };
+            this.buildGesture?.draw(world, this.camera.state.zoom, this.buildModifiers);
             return;
         }
         if (!gesture) {
@@ -448,7 +465,15 @@ export class PointerController {
             return;
         }
         if (gesture.spatial) {
-            this.spatial.move(screenToWorld(point, this.camera.state));
+            const world = screenToWorld(point, this.camera.state);
+            this.spatial.move(world);
+            const draft = this.store.spatial.draft;
+            if (draft?.shape === 'rectangle' && draft.geometry.points.length === 2) {
+                const [a, b] = draft.geometry.points;
+                this.overlay.showMarquee(a, b, this.camera.state.zoom);
+            } else if (draft?.shape === 'brush') {
+                this.overlay.showBrush(world, draft.geometry.radius!, this.camera.state.zoom, draft.operation === 'cover');
+            }
             gesture.last = point;
             return;
         }
@@ -539,10 +564,12 @@ export class PointerController {
             return;
         }
         if (gesture.build) {
+            this.buildModifiers = { lock: e.shiftKey, bypass: e.altKey };
             this.buildGesture?.up(
                 screenToWorld(this.local(e), this.camera.state),
                 gesture.origin,
                 this.camera.state.zoom,
+                this.buildModifiers,
             );
             this.finish();
             return;
@@ -671,12 +698,19 @@ export class PointerController {
         if (gesture?.token && gesture.moved) this.previewDrag(gesture, gesture.last);
     }
     refreshBuild() {
-        if (this.tool === 'build') this.buildGesture?.refresh(this.camera.state.zoom);
+        if (this.tool !== 'build') return;
+        const camera = this.camera.state;
+        const point = this.terrainCursor;
+        const showCursor = this.inside && (this.gesture ? this.gesture.build : !this.space);
+        this.buildGesture?.refresh(
+            showCursor && point ? screenToWorld(point, camera) : undefined,
+            camera.zoom,
+            this.buildModifiers,
+        );
     }
-    updateBuildZoom() {
-        const zoom = this.camera.state.zoom;
-        if (zoom === this.buildZoom) return;
-        this.buildZoom = zoom;
+    updateBuildCamera() {
+        if (this.camera.state === this.buildCamera) return;
+        this.buildCamera = this.camera.state;
         this.refreshBuild();
     }
     updateTerrainCursor() {
@@ -719,6 +753,7 @@ export class PointerController {
     }
     private blur = () => {
         this.space = false;
+        this.buildModifiers = { lock: false, bypass: false };
         this.terrainCursor = undefined;
         this.cancel();
         this.refresh();
@@ -736,7 +771,37 @@ export class PointerController {
     };
     private keyDown = (e: KeyboardEvent) => {
         if (isEditing(e.target) || document.querySelector('dialog[open]')) return;
+        if (
+            this.tool === 'build' &&
+            (e.key === 'Enter' || (e.code === 'Space' && !this.inside)) &&
+            e.target instanceof HTMLElement &&
+            e.target.closest('button')
+        )
+            return;
         if (this.store.getSnapshot().mapDraft && e.code !== 'Space') return;
+        if (this.tool === 'fog' && e.key === 'Escape') {
+            e.preventDefault();
+            if (this.store.spatial.draft) this.cancel();
+            else {
+                this.cancel();
+                this.tool = 'select';
+                this.refresh();
+            }
+            return;
+        }
+        if (e.key === 'Escape') this.store.cancelOpeningPlacements();
+        if (
+            this.tool === 'build' &&
+            (e.key === 'Shift' || e.key === 'Alt') &&
+            (this.inside || e.target === this.canvas) &&
+            !e.ctrlKey &&
+            !e.metaKey
+        ) {
+            if (e.key === 'Alt') e.preventDefault();
+            this.buildModifiers = { lock: e.shiftKey, bypass: e.altKey };
+            this.refreshBuild();
+            return;
+        }
         if (
             this.store.role === 'gm' &&
             (e.ctrlKey || e.metaKey) &&
@@ -752,14 +817,32 @@ export class PointerController {
             if (e.repeat) return;
             if (e.key === 'Escape') {
                 this.cancel();
-                this.store.selectStructure(undefined);
+                const mode = this.store.getSnapshot().build?.mode;
+                if (mode === 'door' || mode === 'window' || mode === 'floor')
+                    this.store.configureBuild({ mode: 'edit' });
+                else this.store.selectStructure(undefined);
             } else if (!this.gesture && e.key === 'Enter') this.buildGesture?.commit();
             else if (!this.gesture && e.key === 'Delete') this.buildGesture?.action('delete');
             return;
         }
         if (
+            this.tool === 'build' &&
+            !this.gesture &&
+            e.shiftKey &&
+            !e.altKey &&
+            !e.ctrlKey &&
+            !e.metaKey &&
+            this.store.getSnapshot().structureSelection?.kind === 'edge' &&
+            (e.code === 'KeyS' || e.code === 'KeyR')
+        ) {
+            e.preventDefault();
+            if (!e.repeat) this.buildGesture?.action(e.code === 'KeyS' ? 'split' : 'reverse');
+            return;
+        }
+        if (
             this.store.role === 'gm' &&
             !e.repeat &&
+            this.tool !== 'fog' &&
             (e.key === 'Delete' || ((e.ctrlKey || e.metaKey) && e.code === 'KeyD'))
         ) {
             e.preventDefault();
@@ -770,6 +853,7 @@ export class PointerController {
             e.preventDefault();
             this.space = true;
             this.refresh();
+            this.refreshBuild();
         }
         const shortcut = (
             { KeyV: 'select', KeyH: 'pan', KeyF: 'fog', KeyR: 'ruler', KeyP: 'ping' } as Record<
@@ -784,7 +868,7 @@ export class PointerController {
             !e.ctrlKey &&
             !e.metaKey &&
             !e.altKey &&
-            (shortcut !== 'fog' || this.store.role === 'gm')
+            (shortcut !== 'fog' || (this.store.role === 'gm' && !this.store.abilityTargeting))
         ) {
             this.cancel();
             this.tool = shortcut;
@@ -798,9 +882,14 @@ export class PointerController {
         }
     };
     private keyUp = (e: KeyboardEvent) => {
+        if (this.tool === 'build' && (e.key === 'Shift' || e.key === 'Alt')) {
+            this.buildModifiers = { lock: e.shiftKey, bypass: e.altKey };
+            this.refreshBuild();
+        }
         if (e.code === 'Space') {
             this.space = false;
             this.refresh();
+            this.refreshBuild();
         }
     };
     destroy() {
@@ -808,6 +897,9 @@ export class PointerController {
         this.clickMove.destroy();
         this.dragRoute.cancel();
         this.abort.abort();
-        if (this.buildGesture) this.store.onStructureAction = undefined;
+        if (this.buildGesture) {
+            this.store.onStructureAction = undefined;
+            this.store.onStructureMove = undefined;
+        }
     }
 }

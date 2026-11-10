@@ -1,6 +1,6 @@
 import { Graphics } from 'pixi.js';
 import { blockingColor } from '../objects/collider';
-import { distance, vertexIndex, wallRuns, type Structure } from './model';
+import { distance, openingIsOpen, vertexIndex, wallRuns, type Structure } from './model';
 
 export class StructureCollisionOverlay extends Graphics {
     private structure?: Structure | null;
@@ -38,13 +38,13 @@ export class StructureCollisionOverlay extends Graphics {
                     }
                 }
                 const color = blockingColor(
-                    opening?.type === 'door'
+                    opening
                         ? {
                               blocksMovement: true,
-                              blocksVision: true,
-                              blocksLight: true,
+                              blocksVision: !openingIsOpen(opening),
+                              blocksLight: !openingIsOpen(opening),
                           }
-                        : (opening ?? edge),
+                        : edge,
                 );
                 this.poly(outline).fill({ color, alpha: 0.2 }).stroke({ color, width: 1.5 });
             }

@@ -1,217 +1,592 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
-import { BrickWall } from 'lucide-react';
+import { CurveInspector } from './CurveInspector';
+import { RoomSourceInspector } from './RoomSourceInspector';
+import { isOpenCurve } from '../../tabletop/structure/curves';
+import { useState, useSyncExternalStore } from 'react';
+import {
+    BrickWall,
+    Circle,
+    CircleDashed,
+    Orbit,
+    DoorOpen,
+    Grid2X2,
+    Minus,
+    MousePointer2,
+    Pentagon,
+    PaintBucket,
+    Square,
+    X,
+} from 'lucide-react';
+import { selectedWalls } from '../../tabletop/structure/buildSelection';
+import { selectionAnchors, type BuildAnchor } from '../../tabletop/structure/buildAnchors';
 import type { SceneStore } from '../../tabletop/state/SceneStore';
 import {
     defaultBuild,
     putOpening,
     structureOf,
+    type BuildSettings,
     type Opening,
+    type Room,
+    type Surface,
+    type Wall,
 } from '../../tabletop/structure/model';
+import { BuildMaterialPicker, type BuildMaterialHistory } from './BuildMaterialPicker';
 import { DoorControls } from './DoorControls';
-import { materials, type Material } from './materials';
+import { NumberField } from '../NumberField';
+import { EditorOptions } from './EditorOptions';
+
+const modes = [
+    ['wall', 'Стены', BrickWall],
+    ['segment', 'Сегмент', Minus],
+    ['rectangle', 'Комната', Square],
+    ['contour', 'Контур', Pentagon],
+    ['circle', 'Круг', Circle],
+    ['ellipse', 'Овал', Orbit],
+    ['arc', 'Дуга', CircleDashed],
+    ['edit', 'Правка', MousePointer2],
+    ['floor', 'Пол', PaintBucket],
+    ['door', 'Дверь', DoorOpen],
+    ['window', 'Окно', Grid2X2],
+] as const;
+
+const hints: Record<BuildSettings['mode'], string> = {
+    wall: 'Клик — вершина · Enter / двойной клик — закончить',
+    segment: 'Протяните стену или отметьте две точки',
+    rectangle: 'Протяните комнату или отметьте два угла',
+    contour: 'Отметьте углы · Enter / первая точка — замкнуть',
+    circle: 'От центра протяните радиус или отметьте две точки',
+    ellipse: 'От центра протяните два радиуса овала',
+    arc: 'Центр → начало (радиус) → конец дуги по часовой стрелке · Enter — полукруг',
+    edit: 'Клик — выбор · перетащите выделение или протяните рамку',
+    floor: 'Выберите материал · наведите на помещение · клик — залить / сменить пол',
+    door: 'Клик по стене — дверь · Esc — закончить',
+    window: 'Клик по стене — окно · Esc — закончить',
+};
+
+const limit = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 export function BuildPanel({
     store,
+    history,
+    showInspector,
     onTool,
     onSettings,
 }: {
     store: SceneStore;
+    history: BuildMaterialHistory;
+    showInspector: boolean;
     onTool: () => void;
     onSettings: () => void;
 }) {
     const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
     const tool = useSyncExternalStore(store.spatial.subscribe, store.spatial.getTool);
     const settings = state.build ?? defaultBuild;
-    const selection = state.structureSelection;
+    const { mode } = settings;
+    const active = tool === 'build';
+    const selection = active && mode === 'edit' ? state.structureSelection : undefined;
     const graph = structureOf(state.scene);
-    const selectedEdge =
-        selection?.kind === 'edge' && graph.edges.find((e) => e.id === selection.id);
-    const selectedRoom =
-        selection?.kind === 'room' && graph.rooms.find((r) => r.id === selection.id);
+    const surfaces = state.scene.structure?.materials;
+    const walls = selectedWalls(graph, selection);
+    const sourceAssembly = graph.assemblies?.find((a) => walls[0]?.id.startsWith(a.id + '-e'));
+    const sourceIndex = sourceAssembly
+        ? Number(walls[0].id.slice(sourceAssembly.id.length + 2).split('x')[0])
+        : undefined;
+    const selectedCurve =
+        walls[0]?.curve && walls.every((e) => e.curve?.group === walls[0].curve!.group)
+            ? walls[0].curve
+            : undefined;
+    const openCurve = selectedCurve && isOpenCurve(graph, selectedCurve.group);
+    const room = selection?.kind === 'room' && graph.rooms.find((r) => r.id === selection.id);
     const selectedVertex =
         selection?.kind === 'vertex' && graph.vertices.some((v) => v.id === selection.id);
     const opening =
         selection?.kind === 'opening' && graph.openings?.find((o) => o.id === selection.id);
-    const placing = settings.mode === 'door' || settings.mode === 'window';
+    const surfaceKey = (objects: (Wall | Room)[]) =>
+        objects
+            .map((object) =>
+                [
+                    object.id,
+                    object.materialVersionId,
+                    'thickness' in object ? object.thickness : '',
+                ].join('/'),
+            )
+            .join(':');
+    const placing = mode === 'door' || mode === 'window';
+    const drawing = !placing && mode !== 'edit' && mode !== 'floor';
     const canJoin =
         selectedVertex &&
         graph.edges.filter((e) => e.a === selection.id || e.b === selection.id).length === 2;
-    const choose = (mode: typeof settings.mode) => {
-        onTool();
-        store.configureBuild({ mode });
-    };
-    return (
-        <aside className="map-editor-panel panel build-panel" aria-label="Build">
-            <div className="panel-heading">
-                <span>Build · архитектура</span>
-                <BrickWall size={16} />
+    const action = store.onStructureAction;
+
+    if (!state.scene.mapWorld)
+        return (
+            <div className="build-dock surface">
+                <button className="primary-button" onClick={onSettings}>
+                    Создать MapWorld
+                </button>
             </div>
-            <div className="map-editor-panel-body">
-                {!state.scene.mapWorld ? (
-                    <button className="primary-button" onClick={onSettings}>
-                        Создать MapWorld
+        );
+    return (
+        <>
+            {state.roomProposal && (
+                <div
+                    className="build-room-choice surface"
+                    role="group"
+                    aria-label="Пересечение помещений"
+                >
+                    <strong>Пересечение помещений</strong>
+                    <small>
+                        Выберите границу пристройки. Предпросмотр на карте · Esc — отмена.
+                    </small>
+                    {(
+                        [
+                            ['union', 'Объединить помещения'],
+                            ['partition', 'Оставить перегородку'],
+                            ['trim', 'Обрезать пересекающуюся часть'],
+                        ] as const
+                    ).map(([value, label]) => (
+                        <button
+                            key={value}
+                            aria-pressed={state.roomProposal!.mode === value}
+                            onClick={() => store.previewRoom(value)}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                    {state.roomProposal.error && (
+                        <small role="alert">{state.roomProposal.error}</small>
+                    )}
+                    <button
+                        className="primary-button"
+                        disabled={!state.roomProposal.preview || !!state.roomProposal.error}
+                        onClick={() => store.resolveRoom(true)}
+                    >
+                        Применить соединение
                     </button>
-                ) : (
-                    <>
-                        <div className="build-tools" role="group" aria-label="Инструменты Build">
-                            {(
-                                [
-                                    ['wall', 'Стены'],
-                                    ['segment', 'Сегмент'],
-                                    ['rectangle', 'Комната'],
-                                    ['contour', 'Контур'],
-                                    ['edit', 'Правка'],
-                                    ['door', 'Дверь'],
-                                    ['window', 'Окно'],
-                                ] as const
-                            ).map(([mode, label]) => (
-                                <button
-                                    key={mode}
-                                    aria-pressed={tool === 'build' && settings.mode === mode}
-                                    onClick={() => choose(mode)}
-                                >
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
-                        <p className="build-hint">
-                            {
-                                {
-                                    wall: 'Ставьте вершины кликами. Enter или двойной клик завершает стену.',
-                                    segment: 'Протяните стену или отметьте две точки.',
-                                    rectangle:
-                                        'Протяните комнату или отметьте два противоположных угла.',
-                                    contour:
-                                        'Поставьте углы. Замкните на первой точке или нажмите Enter.',
-                                    edit: 'Потяните вершину, стену или проём. Клик внутри контура выбирает комнату.',
-                                    door: 'Наведите курсор на стену и кликните, чтобы встроить дверь.',
-                                    window: 'Наведите курсор на стену и кликните, чтобы встроить окно.',
-                                }[settings.mode]
-                            }{' '}
-                            Esc отменяет жест.
-                        </p>
-                        {placing && (
-                            <label className="build-field">
-                                Ширина проёма · {settings.openingWidth} wu
-                                <input
-                                    type="range"
-                                    aria-label="Ширина нового проёма"
-                                    min={8}
-                                    max={512}
-                                    value={settings.openingWidth}
-                                    onChange={(e) =>
-                                        store.configureBuild({
-                                            openingWidth: Number(e.target.value),
-                                        })
-                                    }
-                                />
-                            </label>
+                    <button onClick={() => store.resolveRoom(false)}>Отменить соединение</button>
+                </div>
+            )}
+            <div className="build-dock surface" aria-label="Build">
+                <div className="build-tools" role="group" aria-label="Инструменты Build">
+                    {modes.map(([value, label, Icon]) => (
+                        <button
+                            key={value}
+                            title={hints[value]}
+                            aria-pressed={active && mode === value}
+                            onClick={() => {
+                                onTool();
+                                if (mode !== value) store.configureBuild({ mode: value });
+                            }}
+                        >
+                            <Icon size={16} aria-hidden="true" />
+                            {label}
+                        </button>
+                    ))}
+                </div>
+                {active && (
+                    <div className="build-options" key={mode}>
+                        {mode === 'floor' && (
+                            <BuildMaterialPicker
+                                {...history}
+                                type="floor"
+                                value={settings.floor}
+                                surfaces={surfaces}
+                                onChange={(floor) => store.configureBuild({ floor })}
+                            />
                         )}
-                        {!placing && !opening && (
+                        {placing && (
                             <>
-                                <label className="build-field">
-                                    Толщина · {settings.thickness} wu
-                                    <input
-                                        aria-label="Толщина стены"
-                                        type="range"
-                                        min={2}
-                                        max={80}
-                                        step={1}
-                                        value={settings.thickness}
-                                        onChange={(e) =>
-                                            store.configureBuild({
-                                                thickness: Number(e.target.value),
-                                            })
-                                        }
-                                    />
-                                </label>
-                                <SurfacePicker
+                                <BuildMaterialPicker
+                                    {...history}
+                                    type={mode}
+                                    value={settings[mode] ?? null}
+                                    surfaces={surfaces}
+                                    onChange={(value) => store.configureBuild({ [mode]: value })}
+                                />
+                            </>
+                        )}
+                        {drawing && (
+                            <>
+                                <BuildMaterialPicker
+                                    {...history}
                                     type="wall"
                                     value={settings.wall}
+                                    surfaces={surfaces}
                                     onChange={(wall) => store.configureBuild({ wall })}
                                 />
-                                {(settings.mode === 'rectangle' ||
-                                    settings.mode === 'contour' ||
-                                    settings.mode === 'edit') && (
-                                    <SurfacePicker
+                                {['rectangle', 'contour', 'circle', 'ellipse'].includes(mode) && (
+                                    <BuildMaterialPicker
+                                        {...history}
                                         type="floor"
                                         value={settings.floor}
+                                        surfaces={surfaces}
                                         onChange={(floor) => store.configureBuild({ floor })}
                                     />
                                 )}
-                                <label className="build-check">
-                                    <input
-                                        type="checkbox"
-                                        checked={settings.gridSnap}
-                                        onChange={(e) =>
-                                            store.configureBuild({ gridSnap: e.target.checked })
-                                        }
-                                    />{' '}
-                                    Привязка к узлам сетки
-                                </label>
-                                <p className="build-hint">○ Вершина · ◇ Стена · □ Сетка</p>
                             </>
                         )}
-                        {tool === 'build' && settings.mode === 'edit' && opening && (
-                            <OpeningInspector
-                                key={opening.id}
-                                opening={opening}
-                                store={store}
-                                save={(value) => store.saveStructure(putOpening(graph, value))}
-                            />
+                        {!placing && mode !== 'floor' && (
+                            <button
+                                className="build-grid-toggle"
+                                aria-pressed={settings.gridSnap}
+                                title="Привязка к узлам сетки"
+                                onClick={() =>
+                                    store.configureBuild({ gridSnap: !settings.gridSnap })
+                                }
+                            >
+                                <Grid2X2 size={14} /> Сетка
+                            </button>
                         )}
-                        {tool === 'build' &&
-                            settings.mode === 'edit' &&
-                            (selectedEdge || selectedRoom || selectedVertex) && (
-                                <div className="build-selection">
-                                    <strong>
-                                        {selectedEdge
-                                            ? 'Стена'
-                                            : selectedRoom
-                                              ? 'Комната'
-                                              : 'Вершина'}
-                                    </strong>
-                                    <div className="build-tools">
-                                        {selectedEdge && (
-                                            <button
-                                                onClick={() => store.onStructureAction?.('split')}
-                                            >
-                                                Разделить пополам
-                                            </button>
-                                        )}
-                                        {selectedEdge && (
-                                            <button
-                                                onClick={() => store.onStructureAction?.('reverse')}
-                                            >
-                                                Развернуть ребро
-                                            </button>
-                                        )}
-                                        {canJoin && (
-                                            <button
-                                                onClick={() => store.onStructureAction?.('join')}
-                                            >
-                                                Соединить стены
-                                            </button>
-                                        )}
-                                        {(selectedEdge || selectedRoom) && (
-                                            <button
-                                                onClick={() => store.onStructureAction?.('apply')}
-                                            >
-                                                {selectedEdge ? 'Применить стену' : 'Применить пол'}
-                                            </button>
-                                        )}
-                                        <button onClick={() => store.onStructureAction?.('delete')}>
-                                            {selectedRoom
-                                                ? 'Удалить комнату, оставить стены'
-                                                : 'Удалить'}
+                        {(drawing || placing) && (
+                            <EditorOptions
+                                label={placing ? 'Ширина проёма' : 'Толщина стены'}
+                                summary={`${placing ? settings.openingWidth : settings.thickness} wu`}
+                            >
+                                {placing ? (
+                                    <NumberField
+                                        label="Ширина проёма, wu"
+                                        min={8}
+                                        max={512}
+                                        value={settings.openingWidth}
+                                        onChange={(value) =>
+                                            store.configureBuild({
+                                                openingWidth: limit(value, 8, 512),
+                                            })
+                                        }
+                                    />
+                                ) : (
+                                    <NumberField
+                                        label="Толщина, wu"
+                                        min={2}
+                                        max={80}
+                                        value={settings.thickness}
+                                        onChange={(value) =>
+                                            store.configureBuild({ thickness: limit(value, 2, 80) })
+                                        }
+                                    />
+                                )}
+                            </EditorOptions>
+                        )}
+                    </div>
+                )}
+                <p className="build-hint">
+                    {!!state.openingPlacements?.length && (
+                        <span role="status" aria-live="polite">
+                            Последние проёмы: в очереди{' '}
+                            {state.openingPlacements.filter((p) => p.status === 'pending').length}
+                            {' · '}сохранено{' '}
+                            {state.openingPlacements.filter((p) => p.status === 'confirmed').length}
+                            {' · '}отклонено{' '}
+                            {state.openingPlacements.filter((p) => p.status === 'rejected').length}
+                        </span>
+                    )}
+                    {active ? hints[mode] : 'Выберите инструмент, чтобы продолжить'}
+                    {active && mode === 'edit' && (
+                        <span>
+                            Маркеры — перенос · <kbd>Shift</kbd> при переносе — 45° · Shift + клик —
+                            выбор · <kbd>Alt</kbd> без привязки
+                        </span>
+                    )}
+                    {active && drawing && (
+                        <span>
+                            {!['rectangle', 'circle', 'ellipse'].includes(mode) && (
+                                <>
+                                    <kbd>Shift</kbd> шаг {mode === 'arc' ? '15°' : '45°'} ·{' '}
+                                </>
+                            )}
+                            <kbd>Alt</kbd> без привязки · <kbd>Esc</kbd> отмена
+                        </span>
+                    )}
+                </p>
+            </div>
+            {showInspector &&
+                !state.roomProposal &&
+                (walls.length > 0 || room || selectedVertex || opening) && (
+                    <aside className="build-inspector panel" aria-label="Inspector Build">
+                        <div className="panel-heading">
+                            <strong>
+                                {room
+                                    ? 'Комната'
+                                    : walls.length === 1
+                                      ? 'Стена'
+                                      : walls.length > 1
+                                        ? `Стены · ${walls.length}`
+                                        : selectedVertex
+                                          ? 'Вершина'
+                                          : opening && (opening.type === 'door' ? 'Дверь' : 'Окно')}
+                            </strong>
+                            <button
+                                className="icon-button"
+                                aria-label="Снять выбор"
+                                onClick={() => store.selectStructure(undefined)}
+                            >
+                                <X size={15} />
+                            </button>
+                        </div>
+                        <div className="build-inspector-body">
+                            {selectedCurve && (
+                                <CurveInspector
+                                    key={JSON.stringify(selectedCurve)}
+                                    store={store}
+                                    curve={selectedCurve}
+                                    open={!!openCurve}
+                                />
+                            )}
+                            {sourceAssembly && sourceIndex !== undefined && (
+                                <RoomSourceInspector
+                                    key={
+                                        sourceAssembly.id +
+                                        ':' +
+                                        sourceIndex +
+                                        ':' +
+                                        graph.vertices.map((v) => `${v.x},${v.y}`).join(';')
+                                    }
+                                    store={store}
+                                    assemblyId={sourceAssembly.id}
+                                    sourceIndex={sourceIndex}
+                                    history={history}
+                                />
+                            )}
+                            {opening && (
+                                <>
+                                    <BuildMaterialPicker
+                                        {...history}
+                                        type={opening.type}
+                                        value={opening.materialVersionId ?? null}
+                                        surfaces={surfaces}
+                                        onChange={(materialVersionId) =>
+                                            store.saveStructure(
+                                                putOpening(graph, {
+                                                    ...opening,
+                                                    materialVersionId,
+                                                }),
+                                            )
+                                        }
+                                    />
+                                    <OpeningInspector
+                                        key={opening.id}
+                                        opening={opening}
+                                        store={store}
+                                        save={(value) =>
+                                            store.saveStructure(putOpening(graph, value))
+                                        }
+                                    />
+                                </>
+                            )}
+                            {(walls.length > 0 || selectedVertex) && (
+                                <MoveSelection
+                                    key={
+                                        (selection?.kind === 'edges'
+                                            ? selection.ids.join(':')
+                                            : selection?.id) +
+                                        ':' +
+                                        graph.vertices.map((v) => `${v.x},${v.y}`).join(';')
+                                    }
+                                    anchors={selectionAnchors(graph, selection)}
+                                    onMove={(delta) => store.onStructureMove?.(delta)}
+                                />
+                            )}
+                            {walls.length > 0 && (
+                                <SurfaceInspector
+                                    {...history}
+                                    key={surfaceKey(walls)}
+                                    type="wall"
+                                    objects={walls}
+                                    surfaces={surfaces}
+                                    save={(patch) => {
+                                        const ids = new Set(walls.map((wall) => wall.id));
+                                        store.saveStructure({
+                                            ...graph,
+                                            edges: graph.edges.map((edge) =>
+                                                ids.has(edge.id) ? { ...edge, ...patch } : edge,
+                                            ),
+                                        });
+                                    }}
+                                />
+                            )}
+                            {room && !sourceAssembly && (
+                                <SurfaceInspector
+                                    {...history}
+                                    key={surfaceKey([room])}
+                                    type="floor"
+                                    objects={[room]}
+                                    surfaces={surfaces}
+                                    save={(patch) =>
+                                        store.saveStructure({
+                                            ...graph,
+                                            rooms: graph.rooms.map((row) =>
+                                                row.id === room.id ? { ...row, ...patch } : row,
+                                            ),
+                                        })
+                                    }
+                                />
+                            )}
+                            {!opening && (
+                                <div className="build-selection-actions">
+                                    {canJoin && (
+                                        <button onClick={() => action?.('join')}>
+                                            Соединить стены
                                         </button>
-                                    </div>
+                                    )}
+                                    <button onClick={() => action?.('delete')}>
+                                        {room ? 'Удалить комнату, оставить стены' : 'Удалить'}
+                                    </button>
                                 </div>
                             )}
-                    </>
+                        </div>
+                    </aside>
                 )}
-            </div>
-        </aside>
+        </>
+    );
+}
+
+function MoveSelection({
+    onMove,
+    anchors,
+}: {
+    onMove: (delta: { x: number; y: number }) => void;
+    anchors: BuildAnchor[];
+}) {
+    const [absolute, setAbsolute] = useState(false);
+    const [anchorIndex, setAnchorIndex] = useState(0);
+    const anchor = anchors[anchorIndex]?.point ?? { x: 0, y: 0 };
+    return (
+        <details className="build-move">
+            <summary>Переместить</summary>
+            <form
+                onSubmit={(event) => {
+                    event.preventDefault();
+                    const data = new FormData(event.currentTarget);
+                    onMove({
+                        x: Number(data.get('x')) - (absolute ? anchor.x : 0),
+                        y: Number(data.get('y')) - (absolute ? anchor.y : 0),
+                    });
+                }}
+            >
+                <label className="field build-move-mode">
+                    <span>Позиционирование</span>
+                    <select
+                        value={absolute ? 'absolute' : 'delta'}
+                        onChange={(e) => setAbsolute(e.target.value === 'absolute')}
+                    >
+                        <option value="delta">Смещение</option>
+                        <option value="absolute">Координаты точки захвата</option>
+                    </select>
+                </label>
+                {absolute && (
+                    <label className="field build-move-mode">
+                        <span>Точка захвата</span>
+                        <select
+                            value={anchorIndex}
+                            onChange={(e) => setAnchorIndex(Number(e.target.value))}
+                        >
+                            {anchors.map((h, i) => (
+                                <option key={i} value={i}>
+                                    {h.label.replace('Перенести за ', '')} · {h.point.x.toFixed(1)},{' '}
+                                    {h.point.y.toFixed(1)}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                )}
+                <label className="field">
+                    <span>{absolute ? 'X, wu' : 'Δ X, wu'}</span>
+                    <input
+                        key={`x:${absolute}:${anchorIndex}`}
+                        type="number"
+                        name="x"
+                        required
+                        defaultValue={absolute ? anchor.x : 0}
+                        step="0.001"
+                    />
+                </label>
+                <label className="field">
+                    <span>{absolute ? 'Y, wu' : 'Δ Y, wu'}</span>
+                    <input
+                        key={`y:${absolute}:${anchorIndex}`}
+                        type="number"
+                        name="y"
+                        required
+                        defaultValue={absolute ? anchor.y : 0}
+                        step="0.001"
+                    />
+                </label>
+                <button className="primary-button" type="submit">
+                    {absolute ? 'Поставить точно' : 'Сместить'}
+                </button>
+            </form>
+        </details>
+    );
+}
+
+function SurfaceInspector({
+    type,
+    objects,
+    surfaces,
+    save,
+    ...history
+}: {
+    type: 'wall' | 'floor';
+    objects: (Wall | Room)[];
+    surfaces?: Surface[];
+    save: (patch: Partial<Pick<Wall, 'thickness' | 'materialVersionId'>>) => void;
+} & BuildMaterialHistory) {
+    const sharedMaterial = objects.every(
+        (object) => object.materialVersionId === objects[0].materialVersionId,
+    )
+        ? objects[0].materialVersionId
+        : undefined;
+    const walls = objects.filter((object): object is Wall => 'thickness' in object);
+    const sharedThickness = walls.every((wall) => wall.thickness === walls[0]?.thickness)
+        ? walls[0]?.thickness
+        : undefined;
+    const [material, setMaterial] = useState(sharedMaterial);
+    const [thickness, setThickness] = useState(sharedThickness?.toString() ?? '');
+    const thicknessChanged = thickness !== '' && Number(thickness) !== sharedThickness;
+    const materialChanged = material !== undefined && material !== sharedMaterial;
+    return (
+        <form
+            className="build-selection"
+            onSubmit={(event) => {
+                event.preventDefault();
+                save({
+                    ...(materialChanged && { materialVersionId: material }),
+                    ...(thicknessChanged && { thickness: Number(thickness) }),
+                });
+            }}
+        >
+            {type === 'wall' && (
+                <label className="field">
+                    <span>Толщина, wu</span>
+                    <input
+                        type="number"
+                        min={2}
+                        max={80}
+                        step={0.001}
+                        value={thickness}
+                        placeholder="Разная"
+                        onChange={(event) => setThickness(event.target.value)}
+                    />
+                </label>
+            )}
+            <BuildMaterialPicker
+                {...history}
+                type={type}
+                value={material}
+                surfaces={surfaces}
+                onChange={setMaterial}
+            />
+            <button
+                className="primary-button"
+                type="submit"
+                disabled={!materialChanged && !thicknessChanged}
+            >
+                {type === 'floor'
+                    ? 'Применить пол'
+                    : objects.length === 1
+                      ? 'Применить стену'
+                      : 'Применить к стенам'}
+            </button>
+        </form>
     );
 }
 
@@ -226,7 +601,6 @@ function OpeningInspector({
 }) {
     return (
         <div className="build-selection">
-            <strong>{opening.type === 'door' ? 'Дверь' : 'Окно'}</strong>
             <label className="build-field">
                 Ширина (wu)
                 <input
@@ -250,9 +624,10 @@ function OpeningInspector({
                         Петля
                         <select
                             value={opening.hinge}
-                            onChange={(e) =>
-                                save({ ...opening, hinge: e.target.value === 'a' ? 'a' : 'b' })
-                            }
+                            onChange={(e) => {
+                                const hinge = e.target.value === 'a' ? 'a' : 'b';
+                                save({ ...opening, hinge } as const);
+                            }}
                         >
                             <option value="a">Начало ребра</option>
                             <option value="b">Конец ребра</option>
@@ -262,12 +637,10 @@ function OpeningInspector({
                         Сторона открывания
                         <select
                             value={opening.direction}
-                            onChange={(e) =>
-                                save({
-                                    ...opening,
-                                    direction: e.target.value === 'left' ? 'left' : 'right',
-                                })
-                            }
+                            onChange={(e) => {
+                                const direction = e.target.value === 'left' ? 'left' : 'right';
+                                save({ ...opening, direction } as const);
+                            }}
                         >
                             <option value="left">По нормали</option>
                             <option value="right">Против нормали</option>
@@ -307,119 +680,10 @@ function OpeningInspector({
                             <option value="iron">Металл</option>
                         </select>
                     </label>
-                    {(
-                        [
-                            ['blocksMovement', 'Блокирует движение'],
-                            ['blocksVision', 'Блокирует обзор'],
-                            ['blocksLight', 'Блокирует свет'],
-                        ] as const
-                    ).map(([field, label]) => (
-                        <label className="build-check" key={field}>
-                            <input
-                                type="checkbox"
-                                checked={opening[field] ?? false}
-                                onChange={(e) => save({ ...opening, [field]: e.target.checked })}
-                            />{' '}
-                            {label}
-                        </label>
-                    ))}
+                    <small>Окно всегда блокирует движение. Закрытая створка перекрывает обзор и свет.</small>
                 </>
             )}
             <button onClick={() => store.onStructureAction?.('delete')}>Удалить проём</button>
-        </div>
-    );
-}
-
-function SurfacePicker({
-    type,
-    value,
-    onChange,
-}: {
-    type: 'wall' | 'floor';
-    value: string | null;
-    onChange: (id: string | null) => void;
-}) {
-    const [search, setSearch] = useState('');
-    const [page, setPage] = useState(1);
-    const [data, setData] = useState<{ materials: Material[]; pages: number }>();
-    const [selected, setSelected] = useState<Material>();
-    const [error, setError] = useState('');
-    const label = type === 'wall' ? 'Материал стены' : 'Материал пола';
-    useEffect(() => {
-        const controller = new AbortController();
-        const timer = setTimeout(() => {
-            void materials
-                .list(search, type, page, controller.signal)
-                .then((result) => {
-                    if (!controller.signal.aborted) {
-                        setData(result);
-                        setError('');
-                    }
-                })
-                .catch((e: Error) => {
-                    if (!controller.signal.aborted) setError(e.message);
-                });
-        }, 150);
-        return () => {
-            clearTimeout(timer);
-            controller.abort();
-        };
-    }, [search, type, page]);
-    const list = data?.materials ?? [];
-    return (
-        <div className="build-field">
-            <label>
-                {label}
-                <select
-                    aria-label={label}
-                    value={value ?? ''}
-                    onChange={(e) => {
-                        setSelected(list.find((m) => m.versionId === e.target.value));
-                        onChange(e.target.value || null);
-                    }}
-                >
-                    <option value="">{type === 'wall' ? 'Нейтральная кладка' : 'Без пола'}</option>
-                    {value && !list.some((m) => m.versionId === value) && (
-                        <option value={value}>{selected?.name ?? `Версия #${value}`}</option>
-                    )}
-                    {list.map((m) => (
-                        <option key={m.versionId} value={m.versionId}>
-                            {m.name}
-                        </option>
-                    ))}
-                </select>
-            </label>
-            <div className="build-material-search">
-                <input
-                    type="search"
-                    aria-label={`Поиск · ${label}`}
-                    placeholder="Поиск в библиотеке"
-                    value={search}
-                    onChange={(e) => {
-                        setSearch(e.target.value);
-                        setPage(1);
-                    }}
-                />
-                {(data?.pages ?? 0) > 1 && (
-                    <>
-                        <button
-                            aria-label="Предыдущая страница"
-                            disabled={page <= 1}
-                            onClick={() => setPage(page - 1)}
-                        >
-                            ‹
-                        </button>
-                        <button
-                            aria-label="Следующая страница"
-                            disabled={page >= data!.pages}
-                            onClick={() => setPage(page + 1)}
-                        >
-                            ›
-                        </button>
-                    </>
-                )}
-            </div>
-            {error && <small role="alert">{error}</small>}
         </div>
     );
 }

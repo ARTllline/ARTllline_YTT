@@ -9,6 +9,7 @@ use App\Realtime\ScenePublisher;
 use App\Services\CombatView;
 use App\Services\FogExploration;
 use App\Services\SceneVisibility;
+use App\Services\StructureData;
 use App\Spells\SpellEffects;
 use Closure;
 use Illuminate\Support\Facades\DB;
@@ -76,7 +77,6 @@ class SceneTransaction
                 app(\App\Services\SceneLighting::class)->schedule($locked, $result, $type);
                 unset($result['_lightingInvalidated']);
 
-                unset($result['_structureBefore']);
                 $viewer = auth()->user();
                 if ($viewer && $campaign->roleFor($viewer) === 'player' && array_key_exists('combat', $result)) {
                     $result['combat'] = app(CombatView::class)->build($locked, false, $viewer);
@@ -88,8 +88,11 @@ class SceneTransaction
                         $payload['token'] = collect($vision->projection($locked, $viewer)['tokens'])->firstWhere('id', (string) $result['token']['id']);
                     }
                     $result = array_intersect_key($result, array_flip(['revision', 'mutationId'])) + $payload;
+                } elseif ($viewer && $campaign->roleFor($viewer) === 'player' && isset($result['_structureBefore'])) {
+                    $result += StructureData::patch($locked, $result['_structureBefore'], false);
                 }
 
+                unset($result['_structureBefore']);
 
                 return $result;
             });

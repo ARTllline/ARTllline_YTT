@@ -97,6 +97,60 @@ class FogExplorationTest extends TestCase
         $this->assertLessThanOrEqual(43692, strlen(DB::table('fog_memories')->first()->bits));
     }
 
+    public function test_manual_reveal_history_never_extends_current_vision_or_writes_memory(): void
+    {
+        extract($this->fixture());
+        $this->actingAs($p1)->getJson($url.'/fog/preview')->assertForbidden();
+        $before = [];
+        foreach ([$p1, $p2] as $player) {
+            $before[$player->id] = $this->actingAs($player)->getJson($url.'/snapshot')->assertOk()->json();
+        }
+        $memory = DB::table('fog_memories')->orderBy('scope')->get()->all();
+        $this->actingAs($gm)->getJson($url.'/fog/preview?player='.$p2->id)
+            ->assertOk()->assertJsonPath('player', (string) $p2->id)
+            ->assertJsonPath('vision', $before[$p2->id]['vision'])
+            ->assertJsonMissingPath('tokens');
+        $stroke = ['operation' => 'explore', 'shape' => 'rectangle', 'geometry' => [
+            'points' => [['x' => 0, 'y' => 0], ['x' => 1000, 'y' => 500]],
+        ]];
+        $this->actingAs($p2)->postJson($url.'/fog/actions', $stroke)->assertForbidden();
+        $response = $this->actingAs($gm)->postJson($url.'/fog/actions', $stroke)
+            ->assertOk()->assertJsonPath('fogPrevious.sequence', 0)->json();
+        $head = ['base' => 'clear', 'sequence' => $response['fogAction']['sequence'], 'append' => $stroke];
+        $empty = ['base' => 'clear', 'sequence' => 0];
+        $history = fn ($expected, $value) => ['changes' => [[
+            'kind' => 'fog', 'id' => $scene->id, 'expected' => $expected, 'value' => $value,
+        ]]];
+
+        $events = Event::dispatched(TabletopEvent::class)->pluck(0)->filter(fn ($event) => str_contains($event->channel, '.user.'));
+        $this->assertCount(2, $events);
+        foreach ($events as $event) {
+            $payload = $event->envelope['payload'];
+            $this->assertSame('explore', $payload['fogAction']['operation']);
+            $this->assertArrayNotHasKey('fogPrevious', $payload);
+            $this->assertStringNotContainsString('Secret', json_encode($payload));
+        }
+        foreach ([$p1, $p2] as $player) {
+            $this->actingAs($player)->getJson($url.'/snapshot')->assertOk()
+                ->assertJsonPath('fog.actions.0.operation', 'explore')
+                ->assertJsonPath('vision', $before[$player->id]['vision'])
+                ->assertJsonPath('tokens', $before[$player->id]['tokens']);
+        }
+        $this->postJson($url.'/edit-history', $history($head, $empty))->assertForbidden();
+        $this->actingAs($gm)->postJson($url.'/edit-history', $history($head, $empty))
+            ->assertOk()->assertJsonPath('fogRemovedSequence', $head['sequence']);
+        $this->postJson($url.'/edit-history', $history($head, $empty))->assertConflict();
+        $this->postJson($url.'/edit-history', $history($empty, $head))
+            ->assertOk()->assertJsonPath('fogAction.operation', 'explore');
+        $reset = $this->postJson($url.'/fog/reset', ['base' => 'clear'])
+            ->assertOk()->assertJsonPath('fog.actions', [])->json('fogPrevious');
+        $this->postJson($url.'/edit-history', $history($empty + ['actions' => []], $reset))
+            ->assertOk()->assertJsonPath('fog.actions.0.operation', 'explore');
+        $this->postJson($url.'/edit-history', $history($reset, $empty + ['actions' => []]))
+            ->assertOk()->assertJsonPath('fog.actions', []);
+        $this->assertEquals($memory, DB::table('fog_memories')->orderBy('scope')->get()->all());
+    }
+
     public function test_gm_reset_reseeds_only_current_territory_and_scenes_are_isolated(): void
     {
         extract($this->fixture());

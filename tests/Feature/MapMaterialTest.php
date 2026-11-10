@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Asset;
 use App\Models\MapMaterialVersion;
 use App\Models\User;
+use App\Services\FantasyClassicPack;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -61,6 +62,39 @@ class MapMaterialTest extends TestCase
         $this->deleteJson('/api/library/materials/'.$m['id'])->assertForbidden();
         $this->get('/api/assets/'.$this->definition['assetId'])->assertForbidden();
         $this->get('/api/assets/'.$this->definition['assetId'].'/thumbnail')->assertForbidden();
+    }
+
+    public function test_fantasy_classic_install_is_global_idempotent_and_immutable(): void
+    {
+        $personal = $this->create();
+        $pack = app(FantasyClassicPack::class);
+        $this->assertSame(19, $pack->install());
+        $doors = $this->getJson('/api/library/materials?type=door&search=Fantasy%20Classic')
+            ->assertOk()->assertJsonCount(4, 'materials')->json('materials');
+        $door = $doors[0];
+        $this->assertSame(19, $pack->install());
+        $this->assertSame(20, MapMaterialVersion::count());
+        $this->assertSame('Stone', MapMaterialVersion::findOrFail($personal['versionId'])->name);
+
+        $this->actingAs(User::factory()->create());
+        $this->getJson('/api/library/materials?type=door')->assertOk()
+            ->assertJsonPath('materials.0.versionId', $door['versionId'])->assertJsonPath('materials.0.builtin', true);
+        $this->getJson('/api/library/assets?category=architecture&personal=1')->assertOk()->assertJsonPath('total', 19);
+        $this->get($door['asset']['url'])->assertOk();
+        $this->deleteJson('/api/assets/'.$door['asset']['id'])->assertForbidden();
+        $this->deleteJson('/api/library/materials/'.$door['id'])->assertForbidden();
+        $this->patchJson('/api/library/materials/'.$door['id'], [])->assertForbidden();
+
+        $copy = $this->postJson('/api/library/materials/'.$door['id'].'/duplicate')->assertOk()->json();
+        $this->assertArrayNotHasKey('builtin', $copy);
+        $this->assertSame($door['layout'], $copy['layout']);
+        $this->patchJson('/api/library/materials/'.$copy['id'], array_replace($this->definition, [
+            'name' => 'Customized door', 'assetId' => $copy['asset']['id'], 'type' => 'door',
+            'layout' => $copy['layout'], 'version' => 1,
+        ]))->assertOk()->assertJsonPath('version', 2)->assertJsonPath('name', 'Customized door');
+        $this->assertSame($door['name'], MapMaterialVersion::findOrFail($door['versionId'])->name);
+        $this->postJson('/api/library/assets/'.$door['asset']['id'].'/duplicate')->assertOk()
+            ->assertJsonMissingPath('builtin');
     }
 
     public function test_validation_idempotency_and_delete_restrict_future_version_consumers(): void

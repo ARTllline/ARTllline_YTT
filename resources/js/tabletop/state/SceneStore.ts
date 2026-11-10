@@ -1,7 +1,21 @@
 import { performanceMark } from '../../realtime/performance';
+import {
+    attachRoom,
+    movedRoom,
+    placementMode,
+    roomOverlap,
+    syncAssemblySurfaces,
+    type RoomMode,
+} from '../structure/roomAssembly';
+import { translationError } from '../structure/buildSelection';
+import { openingAnchor, type Placement } from '../structure/placement';
 import { mapState, type MapSettings, type MapState } from '../mapWorld';
 import {
+    applyStructurePatch,
     emptyHash,
+    structureOf,
+    type Opening,
+    type OpeningCommand,
     openingsError,
     type DoorCommand,
     defaultBuild,
@@ -26,10 +40,20 @@ import type {
 import type { Mutation } from '../../api/workspace';
 import { SpatialState } from './SpatialState';
 import type { FogStroke, FogBase } from '../types/spatial';
+import { applyFogPatch } from '../types/spatial';
 import { clamp } from '../utils/coordinates';
 import type { CombatCommand, TokenCombatCommand } from '../types/combat';
 
 export interface WorkspaceSnapshot {
+    roomProposal?: {
+        incoming: Graph;
+        before?: Graph;
+        expected: string;
+        mode: RoomMode;
+        preview?: Graph;
+        error?: string;
+    };
+    openingPlacements?: readonly Placement[];
     lightingDraft?: import('../lighting/model').LightingSettings;
     losDebug?: import('../vision/model').LosDebug;
     directNotice?: string;
@@ -67,8 +91,10 @@ export interface WorkspaceSnapshot {
     preview: { id: string; position: Point } | null;
 }
 export type SceneCommand =
-    | ({ type: 'structure'; expected: string } & (
-          { value: Graph; door?: never } | { door: DoorCommand; value?: never }
+    | ({ type: 'structure'; expected: string; placement?: Placement } & (
+          | { value: Graph; door?: never; opening?: never }
+          | { door: DoorCommand; value?: never; opening?: never }
+          | { opening: OpeningCommand; value?: never; door?: never; onRejected: (error: Error) => void }
       ))
     | { type: 'terrain'; stroke: TerrainStroke; complete?: (error?: Error) => void }
     | { type: 'mapWorld'; value: MapState; expected: MapState; complete: (error?: Error) => void }
@@ -87,7 +113,7 @@ export type SceneCommand =
           instant?: boolean;
       }
     | { type: 'token'; id: string; patch: TokenPatch }
-    | { type: 'fog'; stroke: FogStroke; localId: string }
+    | { type: 'fog'; stroke: FogStroke }
     | { type: 'fogReset'; base: FogBase }
     | { type: 'grid'; grid: GridSettings }
     | { type: 'map'; map: SceneMap | null };
@@ -155,19 +181,72 @@ export class SceneStore {
     }
     movementEnabled = true;
     objectEditingEnabled = true;
-    onStructureAction?: (action: 'split' | 'delete' | 'apply' | 'reverse' | 'join') => void;
-    canBuild() {
+    onStructureAction?: (action: 'split' | 'delete' | 'reverse' | 'join') => void;
+    onStructureMove?: (delta: Point) => void;
+    placementEnabled = true;
+    cancelOpeningJob?: (id: string) => void;
+    canBuild(placement = false) {
         return (
             this.role === 'gm' &&
             !!this.snapshot.mapEditor &&
             !this.snapshot.mapDraft &&
             !!this.snapshot.scene.mapWorld &&
             this.spatial.tool === 'build' &&
-            this.objectEditingEnabled
+            (this.objectEditingEnabled || (placement && this.placementEnabled))
         );
+    }
+    placeOpening(opening: Opening) {
+        if (!this.canBuild(true) || !this.command) return;
+        const placements = this.snapshot.openingPlacements ?? [];
+        if (placements.filter((p) => p.status === 'pending').length >= 16) {
+            this.editorNotice(
+                'Очередь заполнена (16). Дождитесь сохранения перед следующим кликом.',
+            );
+            return;
+        }
+        const graph = structureOf(this.snapshot.scene);
+        const placement: Placement = {
+            opening,
+            anchor: openingAnchor(graph, opening.edgeId),
+            status: 'pending',
+        };
+        this.emit({
+            ...this.snapshot,
+            openingPlacements: [
+                ...placements.filter((p) => p.status === 'pending'),
+                ...placements.filter((p) => p.status !== 'pending').slice(-15),
+                placement,
+            ],
+        });
+        this.command(
+            { type: 'structure', value: graph, expected: '', placement },
+            this.snapshot.scene,
+        );
+    }
+    updateOpening(placement: Placement, patch: Partial<Placement>) {
+        Object.assign(placement, patch);
+        this.emit({
+            ...this.snapshot,
+            openingPlacements: [...(this.snapshot.openingPlacements ?? [])],
+        });
+    }
+    cancelOpeningPlacements() {
+        const placements = this.snapshot.openingPlacements ?? [];
+        for (const p of placements)
+            if (p.status === 'pending' && !p.sent) this.cancelOpeningJob?.(p.opening.id);
+        this.emit({
+            ...this.snapshot,
+            openingPlacements: placements.filter((p) => p.status !== 'pending' || p.sent),
+        });
     }
     saveStructure(value: Graph) {
         if (!this.canBuild()) return;
+        try {
+            value = syncAssemblySurfaces(value);
+        } catch (error) {
+            this.editorNotice((error as Error).message);
+            return;
+        }
         const error = openingsError(value);
         if (error) {
             this.editorNotice(error);
@@ -179,10 +258,122 @@ export class SceneStore {
             this.snapshot.scene,
         );
     }
+    addRoom(incoming: Graph) {
+        const before = structureOf(this.snapshot.scene);
+        if (!roomOverlap(before, incoming)) {
+            this.saveStructure({
+                ...before,
+                vertices: [...before.vertices, ...incoming.vertices],
+                edges: [...before.edges, ...incoming.edges],
+                rooms: [...before.rooms, ...incoming.rooms],
+            });
+            return;
+        }
+        const mode = placementMode(before, incoming);
+        if (mode) {
+            this.placeRoomDirect(before, incoming, mode);
+            return;
+        }
+        this.emit({
+            ...this.snapshot,
+            roomProposal: {
+                incoming,
+                expected: this.snapshot.scene.structure?.hash ?? emptyHash,
+                mode: 'union',
+            },
+        });
+        this.previewRoom('union');
+    }
+    proposeRoomMove(moved: Graph) {
+        const prepared = movedRoom(
+            structureOf(this.snapshot.scene),
+            moved,
+            this.snapshot.structureSelection,
+        );
+        if (!prepared) return false;
+        const mode = placementMode(prepared.before, prepared.incoming);
+        if (mode) {
+            this.placeRoomDirect(prepared.before, prepared.incoming, mode);
+            return true;
+        }
+        this.emit({
+            ...this.snapshot,
+            roomProposal: {
+                ...prepared,
+                expected: this.snapshot.scene.structure?.hash ?? emptyHash,
+                mode: 'union',
+            },
+        });
+        this.previewRoom('union');
+        return true;
+    }
+    private placeRoomDirect(before: Graph, incoming: Graph, mode: RoomMode) {
+        try {
+            const next = attachRoom(before, incoming, mode);
+            const error = translationError(
+                this.snapshot.scene,
+                structureOf(this.snapshot.scene),
+                next,
+                new Set(next.vertices.map((v) => v.id)),
+            );
+            if (error) this.editorNotice(error);
+            else this.saveStructure(next);
+        } catch (error) {
+            this.editorNotice((error as Error).message);
+        }
+    }
+    previewRoom(mode: RoomMode) {
+        const proposal = this.snapshot.roomProposal;
+        if (!proposal) return;
+        try {
+            const preview = attachRoom(
+                proposal.before ?? structureOf(this.snapshot.scene),
+                proposal.incoming,
+                mode,
+            );
+            const error = translationError(
+                this.snapshot.scene,
+                structureOf(this.snapshot.scene),
+                preview,
+                new Set(preview.vertices.map((v) => v.id)),
+            );
+            this.emit({ ...this.snapshot, roomProposal: { ...proposal, mode, preview, error } });
+        } catch (error) {
+            this.emit({
+                ...this.snapshot,
+                roomProposal: {
+                    ...proposal,
+                    mode,
+                    preview: undefined,
+                    error: (error as Error).message,
+                },
+            });
+        }
+    }
+    resolveRoom(commit: boolean) {
+        const proposal = this.snapshot.roomProposal;
+        if (!proposal) return;
+        if (commit && proposal.expected !== (this.snapshot.scene.structure?.hash ?? emptyHash)) {
+            this.emit({
+                ...this.snapshot,
+                roomProposal: undefined,
+                editorNotice: 'Структура изменилась. Повторите размещение комнаты.',
+            });
+            return;
+        }
+        if (commit && (!proposal.preview || proposal.error)) return;
+        this.emit({ ...this.snapshot, roomProposal: undefined });
+        if (commit) this.saveStructure(proposal.preview!);
+    }
     changeDoor(door: DoorCommand) {
         const scene = this.snapshot.scene;
         if (this.role !== 'gm' || !this.objectEditingEnabled || !scene.structure) return;
         this.command?.({ type: 'structure', door, expected: scene.structure.hash }, scene);
+    }
+    changeOpening(opening: OpeningCommand, onRejected: (error: Error) => void) {
+        const scene = this.snapshot.scene;
+        if (!this.objectEditingEnabled || !scene.structure) return;
+        this.command?.({ type: 'structure', opening, expected: scene.structure.hash, onRejected }, scene);
     }
     configureBuild(patch: Partial<BuildSettings>) {
         if (this.role !== 'gm' || !this.snapshot.mapEditor) return;
@@ -190,7 +381,6 @@ export class SceneStore {
         this.emit({
             ...this.snapshot,
             build,
-            structureSelection: patch.mode ? undefined : this.snapshot.structureSelection,
         });
     }
     selectStructure(structureSelection: Selection | undefined) {
@@ -219,9 +409,13 @@ export class SceneStore {
             mapEditor,
             losDebug: mapEditor ? this.snapshot.losDebug : undefined,
             build: mapEditor ? this.snapshot.build : undefined,
+            roomProposal: mapEditor ? this.snapshot.roomProposal : undefined,
             structureSelection: mapEditor ? this.snapshot.structureSelection : undefined,
             selectedIds: [],
-            selectedPropIds: [],
+            selectedPropIds:
+                this.snapshot.mapEditor && mapEditor?.objectsVisible && !mapEditor.objectsLocked
+                    ? this.snapshot.selectedPropIds
+                    : [],
             selectedNoteId: undefined,
             selectedRegionId: undefined,
         });
@@ -659,52 +853,13 @@ export class SceneStore {
         this.dragSessionId = undefined;
     }
     applyFog(stroke: FogStroke) {
-        if (this.role !== 'gm') return;
-        const localId = crypto.randomUUID();
-        const fog = this.snapshot.scene.fog ?? { base: 'clear' as const, actions: [] };
-        this.emit({
-            ...this.snapshot,
-            scene: {
-                ...this.snapshot.scene,
-                fog: {
-                    ...fog,
-                    actions: [...fog.actions, { ...stroke, id: localId, sequence: -1 }],
-                },
-            },
-        });
-        this.command?.({ type: 'fog', stroke, localId });
+        if (this.role !== 'gm' || !this.command) return;
+        this.spatial.pendingFog = stroke;
+        this.command({ type: 'fog', stroke }, this.snapshot.scene);
     }
     resetFog(base: FogBase) {
         if (this.role !== 'gm') return;
-        this.emit({
-            ...this.snapshot,
-            scene: { ...this.snapshot.scene, fog: { base, actions: [] } },
-        });
-        this.command?.({ type: 'fogReset', base });
-    }
-    acceptFog(result: Mutation, localId?: string) {
-        // Replace only this optimistic stroke. Later strokes/resets remain visible.
-        const fog = this.snapshot.scene.fog;
-        if (fog && localId && result.fogAction)
-            this.emit({
-                ...this.snapshot,
-                scene: {
-                    ...this.snapshot.scene,
-                    fog: {
-                        ...fog,
-                        actions: fog.actions.map((a) =>
-                            a.id === localId
-                                ? {
-                                      ...a,
-                                      id: result.fogAction!.id,
-                                      sequence: result.fogAction!.sequence,
-                                  }
-                                : a,
-                        ),
-                    },
-                },
-            });
-        this.accept(result, false);
+        this.command?.({ type: 'fogReset', base }, this.snapshot.scene);
     }
     setMap(map: SceneMap | null) {
         this.emit({ ...this.snapshot, scene: { ...this.snapshot.scene, map } });
@@ -760,6 +915,8 @@ export class SceneStore {
         }
         if (apply && !stale && !visibilityStale) {
             scene = { ...terrainPatch(scene, result.terrain), revision: scene.revision };
+            if (result.fog || result.fogAction || result.fogRemovedSequence)
+                scene.fog = applyFogPatch(scene.fog, result);
             if (result.vision) scene = { ...scene, vision: result.vision };
             if (result.lighting) scene = { ...scene, lighting: result.lighting };
             if (result.scene) scene = { ...scene, ...result.scene, revision: scene.revision };
@@ -770,6 +927,14 @@ export class SceneStore {
                     structure: result.mapWorld ? scene.structure : null,
                 };
             if (result.structure) scene = { ...scene, structure: result.structure };
+            if (
+                result.structureRefresh ||
+                (result.structurePatch && result.structurePatch.base !== (scene.structure?.hash ?? emptyHash))
+            ) {
+                this.onRevisionGap?.();
+            } else if (result.structurePatch) {
+                scene.structure = applyStructurePatch(scene.structure, result.structurePatch);
+            }
             if (result.character)
                 scene = {
                     ...scene,

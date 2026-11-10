@@ -17,21 +17,21 @@ use Illuminate\Support\Str;
 
 class GlobalAssetController extends Controller
 {
-    public const CATEGORIES = 'portraits,tokens,maps,props,handouts,art,audio';
+    public const CATEGORIES = 'portraits,tokens,maps,props,handouts,art,audio,architecture,terrain';
 
     public function index(Request $r, AssetLibrary $library): array
     {
         $data = $r->validate(['search' => 'nullable|string|max:120', 'category' => 'nullable|in:'.self::CATEGORIES, 'images' => 'nullable|boolean', 'personal' => 'nullable|boolean', 'page' => 'nullable|integer|min:1']);
-        $query = Asset::available()->with(['tags', 'collections']);
+        $query = Asset::query()->where(fn ($q) => $q->available()->orWhereNotNull('builtin_key'))->with(['tags', 'collections']);
         if ($data['personal'] ?? false) {
-            $query->where('library_user_id', $r->user()->id);
+            $query->where(fn ($q) => $q->where('library_user_id', $r->user()->id)->orWhereNotNull('builtin_key'));
         }
         if ($data['images'] ?? false) {
             $query->whereNull('duration_ms');
         }
         if ($category = $data['category'] ?? null) {
             $kinds = ['portraits' => 'token', 'tokens' => 'token', 'maps' => 'map', 'props' => 'prop', 'handouts' => 'handout', 'art' => 'prop'];
-            $query->where(fn ($q) => $q->where('category', $category)->when(! in_array($category, ['portraits', 'art']), fn ($q) => $q->orWhere(fn ($q) => $q->whereNull('category')->whereIn('kind', $category === 'audio' ? ['music', 'ambient', 'sfx'] : [$kinds[$category]]))));
+            $query->where(fn ($q) => $q->where('category', $category)->when(! in_array($category, ['portraits', 'art', 'architecture', 'terrain']), fn ($q) => $q->orWhere(fn ($q) => $q->whereNull('category')->whereIn('kind', $category === 'audio' ? ['music', 'ambient', 'sfx'] : [$kinds[$category]]))));
         }
         if ($search = $data['search'] ?? '') {
             $search = '%'.addcslashes($search, '%_\\').'%';
@@ -56,13 +56,16 @@ class GlobalAssetController extends Controller
 
     public function duplicate(Asset $asset, AssetLibrary $library): array
     {
-        $library->authorizeEdit($asset);
+        if (! $asset->builtin_key) {
+            $library->authorizeEdit($asset);
+        }
         $path = 'library/'.auth()->id().'/'.$asset->kind.'/'.Str::uuid().'.'.pathinfo($asset->storage_path, PATHINFO_EXTENSION);
         abort_unless(Storage::disk('campaigns')->copy($asset->storage_path, $path), 500);
         try {
             return DB::transaction(function () use ($asset, $path, $library) {
                 $copy = $asset->replicate();
-                $copy->fill(['campaign_id' => null, 'library_user_id' => auth()->id(), 'uploaded_by' => auth()->id(), 'storage_path' => $path, 'delivery_key' => null, 'name' => mb_substr($asset->name, 0, 240).' · копия'])->save();
+                $name = $asset->builtin_key ? Str::after($asset->name, ' · ') : $asset->name;
+                $copy->fill(['campaign_id' => null, 'library_user_id' => auth()->id(), 'uploaded_by' => auth()->id(), 'storage_path' => $path, 'delivery_key' => null, 'builtin_key' => null, 'name' => mb_substr($name, 0, 240).' · копия'])->save();
                 $copy->tags()->sync($asset->tags()->pluck('asset_tags.id'));
 
                 return $library->projection($copy);

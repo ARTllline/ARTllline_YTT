@@ -204,6 +204,7 @@
       {
         "id": "opaque-window",
         "type": "window",
+        "open": false,
         "edgeId": "west",
         "center": 0.25,
         "width": 90,

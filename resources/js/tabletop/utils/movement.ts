@@ -1,3 +1,4 @@
+import { openingEnds } from '../structure/model';
 import { colliderPoints } from '../objects/collider';
 import { vertexIndex, wallRuns } from '../structure/model';
 import type { Point, Scene, Token } from '../types/scene';
@@ -24,8 +25,9 @@ export function movementObstacles(scene: Scene): MovementObstacle[] {
                 vertices,
                 graph.openings ?? [],
             )) {
-                const blocks =
-                    opening?.type === 'door' ? !opening.open : (opening ?? edge).blocksMovement;
+                const blocks = opening
+                    ? opening.type === 'window' || !opening.open
+                    : edge.blocksMovement;
                 if (!blocks) continue;
                 const padding = opening ? Math.min(4, edge.thickness / 2) : edge.thickness / 2;
                 const angle = Math.atan2(b.y - a.y, b.x - a.x) + Math.PI / 2;
@@ -82,17 +84,13 @@ export function movementPortals(scene: Scene, radius: number): Point[][] {
     const vertices = vertexIndex(graph),
         edges = new Map(graph.edges.map((edge) => [edge.id, edge]));
     return (graph.openings ?? []).flatMap((opening) => {
-        if (opening.type === 'door' ? !opening.open : opening.blocksMovement) return [];
+        if (opening.type !== 'door' || !opening.open) return [];
         const edge = edges.get(opening.edgeId);
         if (!edge || opening.width <= radius * 2 + 0.02) return [];
-        const a = vertices.get(edge.a),
-            b = vertices.get(edge.b);
+        const [a, b] = openingEnds(edge, vertices, opening);
         if (!a || !b) return [];
         const length = Math.hypot(b.x - a.x, b.y - a.y);
-        const center = {
-            x: a.x + (b.x - a.x) * opening.center,
-            y: a.y + (b.y - a.y) * opening.center,
-        };
+        const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
         const reach = edge.thickness / 2 + radius + 0.02;
         const dx = (-(b.y - a.y) / length) * reach,
             dy = ((b.x - a.x) / length) * reach;

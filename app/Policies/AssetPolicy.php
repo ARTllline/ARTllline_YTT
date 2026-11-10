@@ -18,7 +18,7 @@ class AssetPolicy
 {
     public function view(User $user, Asset $asset): bool
     {
-        if ($asset->library_user_id === $user->id) {
+        if ($asset->builtin_key || $asset->library_user_id === $user->id) {
             return true;
         }
         foreach (Campaign::whereHas('members', fn ($q) => $q->where('users.id', $user->id))->get() as $campaign) {

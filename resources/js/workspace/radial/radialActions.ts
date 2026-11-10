@@ -1,5 +1,7 @@
 import {
     Copy,
+    DoorClosed,
+    DoorOpen,
     Eye,
     EyeOff,
     Layers,
@@ -13,8 +15,9 @@ import {
 } from 'lucide-react';
 import type { SceneStore } from '../../tabletop/state/SceneStore';
 import type { SaveQueue } from '../../tabletop/state/SaveQueue';
+import { openingIsOpen } from '../../tabletop/structure/model';
 import type { RightPanel } from '../workspaceState';
-export type RadialTarget = { kind: 'token' | 'prop' | 'region'; id: string; x: number; y: number };
+export type RadialTarget = { kind: 'token' | 'prop' | 'region' | 'opening'; id: string; x: number; y: number };
 export function buildRadialActions(
     target: RadialTarget | null,
     store: SceneStore,
@@ -22,6 +25,40 @@ export function buildRadialActions(
     onPanel: (panel: RightPanel) => Promise<void>,
 ) {
     const state = store.getSnapshot();
+    const actions: {
+        label: string;
+        Icon: LucideIcon;
+        run: () => void | Promise<void>;
+        tone?: string;
+        disabled?: boolean;
+    }[] = [];
+    if (target?.kind === 'opening') {
+        const opening = state.scene.structure?.graph.openings?.find((o) => o.id === target.id);
+        if (!opening) return { entity: undefined, actions };
+        const door = opening.type === 'door';
+        const locked = store.role === 'gm' && door && opening.locked;
+        const open = openingIsOpen(opening);
+        actions.push({
+            label: `${open ? 'Закрыть' : 'Открыть'} ${door ? 'дверь' : 'окно'}`,
+            Icon: open ? DoorClosed : DoorOpen,
+            disabled: locked,
+            run: async () => {
+                let rejection: Error | undefined;
+                store.changeOpening({ id: opening.id, open: !open }, (error) => {
+                    rejection = error;
+                });
+                await queue.flush();
+                if (rejection) throw rejection;
+            },
+        });
+        if (locked)
+            actions.push({
+                label: 'Отпереть замок',
+                Icon: Unlock,
+                run: () => store.changeDoor({ id: opening.id, locked: false }),
+            });
+        return { entity: { name: door ? 'Дверь' : 'Окно' }, actions };
+    }
     const entity =
         target?.kind === 'token'
             ? state.scene.tokens.find((t) => t.id === target.id)
@@ -31,18 +68,13 @@ export function buildRadialActions(
     const select = () => {
         if (!target) return;
         if (target.kind === 'region') store.selectRegion(target.id);
-        else store.selectObject(target.kind, target.id);
+        else if (target.kind === 'token' || target.kind === 'prop')
+            store.selectObject(target.kind, target.id);
     };
     const panel = async (name: RightPanel) => {
         select();
         await onPanel(name);
     };
-    const actions: {
-        label: string;
-        Icon: LucideIcon;
-        run: () => void | Promise<void>;
-        tone?: string;
-    }[] = [];
     if (target && entity && store.role === 'gm') {
         actions.push({ label: 'Свойства', Icon: SlidersHorizontal, run: () => panel('context') });
         if (target.kind === 'region' && 'enabled' in entity) {

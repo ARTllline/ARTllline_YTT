@@ -6,6 +6,8 @@ import { createDemoScene } from './demoScene';
 import { api } from '../../api/workspace';
 import { reduceEvent } from '../../realtime/protocol';
 import type { SpatialEvent, FogStroke } from '../types/spatial';
+import { SpatialGesture } from '../renderer/interaction/SpatialGesture';
+import { historyEntry } from './SceneHistory';
 const event: SpatialEvent = {
     type: 'spatial',
     sceneId: '1',
@@ -76,7 +78,7 @@ it('applies fog deltas/reset through revision ordering and repairs gaps', () => 
         }),
     ).toMatchObject({ fog: { base: 'covered', actions: [] } });
 });
-it('retries one stroke with the same UUID and never replaces later optimistic strokes/reset', async () => {
+it('retries one stroke with the same UUID and applies queued strokes/reset in order', async () => {
     const store = new SceneStore({ ...createDemoScene(), id: '1', revision: 0 });
     const persistence = new ScenePersistence(store, '1');
     const send = vi
@@ -99,4 +101,39 @@ it('retries one stroke with the same UUID and never replaces later optimistic st
         revision: 3,
         fog: { base: 'covered', actions: [] },
     });
+});
+
+it('keeps a continuous fog gesture local until release and cancels with no command', () => {
+    const store = new SceneStore({ ...createDemoScene(), id: '1', revision: 0 });
+    const submit = vi.fn();
+    store.bindCommands(submit);
+    const gesture = new SpatialGesture(store);
+    gesture.down('fog', { x: 20, y: 40 });
+    gesture.move({ x: 200, y: 40 });
+    expect(store.spatial.draft?.geometry.points).toHaveLength(2);
+    expect(submit).not.toHaveBeenCalled();
+    gesture.cancel();
+    gesture.up({ x: 300, y: 60 });
+    expect(store.spatial.draft).toBeNull();
+    expect(submit).not.toHaveBeenCalled();
+    gesture.down('fog', { x: 20, y: 40 });
+    gesture.move({ x: 200, y: 40 });
+    gesture.up({ x: 201, y: 41 });
+    expect(submit).toHaveBeenCalledOnce();
+    expect(store.spatial.pendingFog?.geometry.points.at(-1)).toEqual({ x: 201, y: 41 });
+    expect(store.getSnapshot().scene.fog?.actions ?? []).toHaveLength(0);
+});
+
+it('records a reversible fog tail and rejects stale fog receipts', () => {
+    const scene = { ...createDemoScene(), id: '1', revision: 0 };
+    const store = new SceneStore(scene);
+    const fogAction = { ...stroke, operation: 'explore' as const, id: 'f', sequence: 1 };
+    const result = { revision: 1, fogAction, fogPrevious: { base: 'clear' as const, sequence: 0 } };
+    expect(historyEntry({ type: 'fog', stroke }, scene, result)?.changes).toMatchObject([
+        { kind: 'fog', expected: { sequence: 1, append: stroke }, value: { sequence: 0 } },
+    ]);
+    store.accept(result, true);
+    store.accept({ revision: 2, fogRemovedSequence: 1 }, true);
+    store.accept(result, true);
+    expect(store.getSnapshot().scene).toMatchObject({ revision: 2, fog: { actions: [] } });
 });

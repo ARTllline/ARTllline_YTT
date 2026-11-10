@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Copy, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { Copy, Palette, Pencil, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react';
 import { AssetPicker } from '../../control/AssetLibrary';
 import { Dialog } from '../Dialog';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -12,7 +12,8 @@ export function MaterialPreview({
     material,
     large = false,
 }: {
-    material: Pick<Material, 'asset' | 'repeatSize' | 'rotation'>;
+    material: Pick<Material, 'asset' | 'repeatSize' | 'rotation'> &
+        Partial<Pick<Material, 'type' | 'layout'>>;
     large?: boolean;
 }) {
     const size = repeatPixels(material, large ? 0.45 : 0.2);
@@ -32,19 +33,35 @@ export function MaterialPreview({
         };
     }, [material.asset.url]);
     const status = texture?.url === material.asset.url ? texture.status : 'loading';
+    const object = material.type === 'door' || material.type === 'window';
+    const rotation = material.layout === 'wall-strip' ? 0 : material.rotation;
     return (
         <div
             className={`material-preview ${large ? 'large' : ''}`}
-            aria-label="Превью повторяемой текстуры"
+            aria-label={object ? 'Превью стиля проёма' : 'Превью повторяемой текстуры'}
         >
             <div
                 style={{
                     backgroundImage: `url(${JSON.stringify(material.asset.url)})`,
-                    backgroundSize: `${size.width}px ${size.height}px`,
-                    transform: `rotate(${material.rotation}deg)`,
+                    ...(object
+                        ? {
+                              inset: 6,
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: 'center',
+                              backgroundSize: 'contain',
+                          }
+                        : {
+                              backgroundSize: `${size.width}px ${size.height}px`,
+                              transform: `rotate(${rotation}deg)`,
+                          }),
                 }}
             />
-            {large && <span>1 world unit = 0.45 px · поворот {material.rotation}°</span>}
+            {large && !object && (
+                <span>
+                    1 world unit = 0.45 px ·{' '}
+                    {material.layout === 'wall-strip' ? 'вдоль стены' : `поворот ${rotation}°`}
+                </span>
+            )}
             {status !== 'ready' && (
                 <span className="material-preview-status" role="status">
                     {status === 'error' ? 'Текстура недоступна' : 'Загружаем текстуру…'}
@@ -83,8 +100,9 @@ export function MaterialLibrary({ onClose }: { onClose: () => void }) {
         setBusy(true);
         setError('');
         try {
-            await materials.duplicate(m.id);
+            const copy = await materials.duplicate(m.id);
             setRevision((v) => v + 1);
+            if (m.builtin) setEditing(copy);
         } catch (e) {
             setError((e as Error).message);
         } finally {
@@ -94,44 +112,48 @@ export function MaterialLibrary({ onClose }: { onClose: () => void }) {
     return (
         <aside className="map-editor-panel material-library panel" aria-label="Материалы">
             <div className="panel-heading">
-                <span>Материалы · моя библиотека</span>
+                <Palette size={16} />
+                <strong>Материалы</strong>
                 <button className="icon-button" aria-label="Закрыть материалы" onClick={onClose}>
                     <X size={16} />
                 </button>
             </div>
             <div className="map-editor-panel-body">
-                <p className="hint">
-                    Повторяемые текстуры для Terrain. Правки создают новые версии материалов.
-                </p>
                 <button className="secondary-button" onClick={() => setEditing('new')}>
                     <Plus size={15} /> Создать материал
                 </button>
-                <input
-                    aria-label="Поиск материалов"
-                    placeholder="Поиск материалов…"
-                    value={search}
-                    onChange={(e) => {
-                        setSearch(e.target.value);
-                        setPage(1);
-                        setItems(null);
-                    }}
-                />
-                <select
-                    aria-label="Тип материала"
-                    value={type}
-                    onChange={(e) => {
-                        setType(e.target.value);
-                        setPage(1);
-                        setItems(null);
-                    }}
-                >
-                    <option value="">Все типы</option>
-                    {Object.entries(materialTypes).map(([k, label]) => (
-                        <option key={k} value={k}>
-                            {label}
-                        </option>
-                    ))}
-                </select>
+                <div className="map-editor-filters">
+                    <div className="map-editor-search">
+                        <Search size={15} />
+                        <input
+                            type="search"
+                            aria-label="Поиск материалов"
+                            placeholder="Поиск материалов…"
+                            value={search}
+                            onChange={(e) => {
+                                setSearch(e.target.value);
+                                setPage(1);
+                                setItems(null);
+                            }}
+                        />
+                    </div>
+                    <select
+                        aria-label="Тип материала"
+                        value={type}
+                        onChange={(e) => {
+                            setType(e.target.value);
+                            setPage(1);
+                            setItems(null);
+                        }}
+                    >
+                        <option value="">Все типы</option>
+                        {Object.entries(materialTypes).map(([k, label]) => (
+                            <option key={k} value={k}>
+                                {label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
                 {error && (
                     <p role="alert">
                         {error}{' '}
@@ -147,46 +169,55 @@ export function MaterialLibrary({ onClose }: { onClose: () => void }) {
                         ваших кампаниях.
                     </p>
                 )}
-                <div className="material-cards">
-                    {items?.map((m) => (
-                        <article key={m.id} className="material-card">
-                            <button
-                                className="material-card-open"
-                                onClick={() => setEditing(m)}
-                                aria-label={`Редактировать материал ${m.name}`}
-                            >
-                                <MaterialPreview material={m} />
-                                <strong>{m.name}</strong>
-                                <small>
-                                    {materialTypes[m.type]} · v{m.version}
-                                </small>
-                                <small>{m.repeatSize} wu / повтор</small>
-                            </button>
-                            <div className="material-card-actions">
-                                <button
-                                    title="Редактировать материал"
-                                    disabled={busy}
-                                    onClick={() => setEditing(m)}
+                <div className="material-cards map-editor-results" aria-busy={!items && !error}>
+                    {items?.map((m) => {
+                        const Card = m.builtin ? 'div' : 'button';
+                        return (
+                            <article key={m.id} className="material-card">
+                                <Card
+                                    className="material-card-open"
+                                    {...(!m.builtin && {
+                                        onClick: () => setEditing(m),
+                                        disabled: busy,
+                                        'aria-label': `Редактировать материал ${m.name}`,
+                                    })}
                                 >
-                                    <Pencil size={14} />
-                                </button>
-                                <button
-                                    title="Дублировать материал"
-                                    disabled={busy}
-                                    onClick={() => void duplicate(m)}
-                                >
-                                    <Copy size={14} />
-                                </button>
-                                <button
-                                    title="Удалить материал"
-                                    disabled={busy}
-                                    onClick={() => setDeleting(m)}
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                            </div>
-                        </article>
-                    ))}
+                                    <MaterialPreview material={m} />
+                                    <strong title={m.name}>{m.displayName ?? m.name}</strong>
+                                    <small>
+                                        {materialTypes[m.type]} · v{m.version}
+                                        {m.builtin && ' · Встроенный'}
+                                    </small>
+                                    {m.type !== 'door' && m.type !== 'window' && (
+                                        <small>{m.repeatSize} wu / повтор</small>
+                                    )}
+                                </Card>
+                                <div className="material-card-actions">
+                                    <button
+                                        title="Редактировать материал"
+                                        disabled={busy || m.builtin}
+                                        onClick={() => setEditing(m)}
+                                    >
+                                        <Pencil size={14} />
+                                    </button>
+                                    <button
+                                        title="Дублировать материал"
+                                        disabled={busy}
+                                        onClick={() => void duplicate(m)}
+                                    >
+                                        <Copy size={14} />
+                                    </button>
+                                    <button
+                                        title="Удалить материал"
+                                        disabled={busy || m.builtin}
+                                        onClick={() => setDeleting(m)}
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            </article>
+                        );
+                    })}
                 </div>
                 {pages > 1 && (
                     <div className="map-editor-pagination">
@@ -242,6 +273,9 @@ function MaterialForm({
     const [asset, setAsset] = useState<ImageAsset | null>(material?.asset ?? null);
     const [repeatSize, setRepeatSize] = useState(material?.repeatSize ?? 120);
     const [rotation, setRotation] = useState(material?.rotation ?? 0);
+    const [layout, setLayout] = useState<Material['layout']>(material?.layout);
+    const surface = type !== 'door' && type !== 'window';
+    const wallStrip = type === 'wall' && layout === 'wall-strip';
     const [variation, setVariation] = useState(
         material?.variation ?? { offset: false, quarterTurns: false },
     );
@@ -249,7 +283,15 @@ function MaterialForm({
         [error, setError] = useState('');
     const [discard, setDiscard] = useState(false);
     const dirty =
-        JSON.stringify({ name, type, assetId: asset?.id, repeatSize, rotation, variation }) !==
+        JSON.stringify({
+            name,
+            type,
+            assetId: asset?.id,
+            repeatSize,
+            rotation,
+            variation,
+            layout,
+        }) !==
         JSON.stringify({
             name: material?.name ?? '',
             type: material?.type ?? 'terrain',
@@ -257,6 +299,7 @@ function MaterialForm({
             repeatSize: material?.repeatSize ?? 120,
             rotation: material?.rotation ?? 0,
             variation: material?.variation ?? { offset: false, quarterTurns: false },
+            layout: material?.layout,
         });
     usePanelGuard(
         busy
@@ -288,6 +331,7 @@ function MaterialForm({
                                 asset,
                                 repeatSize,
                                 rotation,
+                                layout,
                                 variation,
                                 version: material?.version ?? 1,
                             },
@@ -299,7 +343,12 @@ function MaterialForm({
                 }}
             >
                 <fieldset disabled={busy}>
-                    {asset && <MaterialPreview material={{ asset, repeatSize, rotation }} large />}
+                    {asset && (
+                        <MaterialPreview
+                            material={{ asset, repeatSize, rotation, type, layout }}
+                            large
+                        />
+                    )}
                     <label className="field">
                         Название
                         <input
@@ -328,52 +377,85 @@ function MaterialForm({
                         onChange={setAsset}
                         personalOnly
                     />
-                    <p className="hint">
-                        Личная текстура. Ресурс кампании можно скопировать в свою библиотеку через
-                        Assets.
-                    </p>
-                    <div className="field-grid">
-                        <NumberField
-                            label="Ширина повтора, world units"
-                            value={repeatSize}
-                            min={1}
-                            max={20000}
-                            onChange={setRepeatSize}
-                        />
-                        <NumberField
-                            label="Базовый поворот, °"
-                            value={rotation}
-                            min={0}
-                            max={360}
-                            onChange={setRotation}
-                        />
-                    </div>
-                    <details>
-                        <summary>Вариации для будущих размещений</summary>
-                        <p className="hint">
-                            Сохраняются в определении. Превью выше показывает базовый повтор.
-                        </p>
+                    {type === 'wall' && (
                         <label className="check-field">
                             <input
                                 type="checkbox"
-                                checked={variation.offset}
-                                onChange={(e) =>
-                                    setVariation({ ...variation, offset: e.target.checked })
-                                }
-                            />{' '}
-                            Варьировать начало текстуры
+                                checked={layout === 'wall-strip'}
+                                onChange={(e) => setLayout(e.target.checked ? 'wall-strip' : null)}
+                            />
+                            Укладывать вдоль стены
                         </label>
-                        <label className="check-field">
-                            <input
-                                type="checkbox"
-                                checked={variation.quarterTurns}
-                                onChange={(e) =>
-                                    setVariation({ ...variation, quarterTurns: e.target.checked })
-                                }
-                            />{' '}
-                            Повороты с шагом 90°
-                        </label>
-                    </details>
+                    )}
+                    {type === 'door' && (
+                        <>
+                            <label className="check-field">
+                                <input
+                                    type="checkbox"
+                                    checked={layout === 'gate-atlas'}
+                                    onChange={(e) =>
+                                        setLayout(e.target.checked ? 'gate-atlas' : 'door-atlas')
+                                    }
+                                />
+                                Подъёмная решётка
+                            </label>
+                            <p className="hint">
+                                Атлас с двумя равными строками. Сверху закрытая дверь, снизу
+                                открытый проём.
+                            </p>
+                        </>
+                    )}
+                    {surface && (
+                        <div className="field-grid">
+                            <NumberField
+                                label="Ширина повтора, world units"
+                                value={repeatSize}
+                                min={1}
+                                max={20000}
+                                onChange={setRepeatSize}
+                            />
+                            {!wallStrip && (
+                                <NumberField
+                                    label="Базовый поворот, °"
+                                    value={rotation}
+                                    min={0}
+                                    max={360}
+                                    onChange={setRotation}
+                                />
+                            )}
+                        </div>
+                    )}
+                    {surface && !wallStrip && (
+                        <details>
+                            <summary>Вариации для будущих размещений</summary>
+                            <p className="hint">
+                                Сохраняются в определении. Превью выше показывает базовый повтор.
+                            </p>
+                            <label className="check-field">
+                                <input
+                                    type="checkbox"
+                                    checked={variation.offset}
+                                    onChange={(e) =>
+                                        setVariation({ ...variation, offset: e.target.checked })
+                                    }
+                                />{' '}
+                                Варьировать начало текстуры
+                            </label>
+                            <label className="check-field">
+                                <input
+                                    type="checkbox"
+                                    checked={variation.quarterTurns}
+                                    onChange={(e) =>
+                                        setVariation({
+                                            ...variation,
+                                            quarterTurns: e.target.checked,
+                                        })
+                                    }
+                                />{' '}
+                                Повороты с шагом 90°
+                            </label>
+                        </details>
+                    )}
                     <p className="hint">
                         Правки создают новую версию. Будущие размещения сохраняют свою версию и
                         текстуру.

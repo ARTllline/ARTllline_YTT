@@ -18,6 +18,7 @@ import {
 } from './model';
 import type { GridSettings, Scene } from '../types/scene';
 import { reduceEvent, type SceneEvent } from '../../realtime/protocol';
+import { buildSnap } from './buildSnap';
 
 const grid = { size: 60, offset: { x: 5, y: 10 }, snap: false } as GridSettings;
 const room = () =>
@@ -34,6 +35,86 @@ const room = () =>
     );
 
 describe('structure authoring', () => {
+    it('snaps to a vertex, midpoint or wall axis before the grid at both editor zooms', () => {
+        for (const zoom of [0.5, 1]) {
+            const graph = room();
+            const target = (x: number, y: number) =>
+                buildSnap({ x, y }, graph, grid, zoom, true, [], { lock: false, bypass: false });
+            expect(target(66, 74).kind).toBe('vertex');
+            expect(target(127, 70 + 6 / zoom)).toEqual({
+                kind: 'midpoint',
+                point: { x: 125, y: 70 },
+            });
+            expect(target(155, 70 + 6 / zoom)).toMatchObject({
+                kind: 'edge',
+                point: { x: 155, y: 70 },
+            });
+            expect(target(245, 70).kind).toBe('grid');
+        }
+    });
+
+    it('projects onto relative guides and lets Shift and Alt compose independently', () => {
+        const target = (x: number, y: number, lock = false, bypass = false) =>
+            buildSnap(
+                { x, y },
+                emptyGraph,
+                grid,
+                1,
+                true,
+                [
+                    { x: 200, y: 100 },
+                    { x: 300, y: 150 },
+                ],
+                { lock, bypass },
+            );
+        expect(target(402, 200)).toMatchObject({ guide: { kind: 'parallel' } });
+        expect(target(251, 250)).toMatchObject({ guide: { kind: 'perpendicular' } });
+        expect(target(425, 152)).toMatchObject({ guide: { kind: 'horizontal' } });
+        expect(target(425, 152, false, true)).toEqual({ point: { x: 425, y: 152 }, kind: 'free' });
+        const locked = target(396, 216, true, true);
+        expect(locked.guide).toMatchObject({ kind: 'diagonal', locked: true });
+        expect(locked.point.x - 300).toBeCloseTo(locked.point.y - 150);
+    });
+
+    it('extends a second room along a split wall while preserving openings and their world positions', () => {
+        const original = room();
+        const edge = original.edges[0];
+        const door = openingOn(edge, 'door', 0.25, 14);
+        const window = openingOn(edge, 'window', 0.75, 14);
+        const graph = { ...original, openings: [door, window] };
+        const branch = build(
+            graph,
+            [
+                { x: 125, y: 70 },
+                { x: 125, y: 30 },
+            ],
+            defaultBuild,
+            false,
+        );
+        const annex = build(
+            branch,
+            [
+                { x: 65, y: 30 },
+                { x: 185, y: 30 },
+                { x: 185, y: 70 },
+                { x: 65, y: 70 },
+            ],
+            defaultBuild,
+            true,
+        );
+        expect(annex.rooms.map((r) => r.loop.length)).toEqual([5, 6]);
+        expect(annex.edges).toHaveLength(10);
+        expect(annex.openings?.map((opening) => opening.id)).toEqual([door.id, window.id]);
+        for (const opening of annex.openings ?? []) {
+            const parent = annex.edges.find((wall) => wall.id === opening.edgeId)!;
+            const vertices = vertexIndex(annex);
+            const [a, b] = [vertices.get(parent.a)!, vertices.get(parent.b)!];
+            expect(a.x + (b.x - a.x) * opening.center).toBe(opening.type === 'door' ? 95 : 155);
+        }
+        expect(openingsError(annex)).toBeUndefined();
+        expect(graph.openings).toEqual([door, window]);
+    });
+
     it('prioritizes existing vertices and edges with a screen-pixel radius and snaps to grid intersections independently', () => {
         const graph = room();
         expect(snap({ x: 68, y: 73 }, graph, grid, 2, false).kind).toBe('vertex');

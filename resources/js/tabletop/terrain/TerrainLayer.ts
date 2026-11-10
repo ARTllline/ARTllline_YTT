@@ -1,16 +1,9 @@
 import { GUTTER, MASK_PIXELS, TILE_PIXELS, renderMask } from './renderMask';
+import { alternateSurface, BLEND_SAMPLE, fillSurface, surfaceBlend } from './surfaceVariation';
 import { CanvasSource, Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
 import { ApiError, request } from '../../api/client';
 import type { CameraState, Scene } from '../types/scene';
-import {
-    CHUNK,
-    decodeMask,
-    MASK,
-    patternTransform,
-    type Layers,
-    type Terrain,
-    type TerrainMaterial,
-} from './model';
+import { CHUNK, decodeMask, MASK, type Layers, type Terrain, type TerrainMaterial } from './model';
 
 const canvas = (size: number) => {
     const c = document.createElement('canvas');
@@ -38,6 +31,9 @@ export class TerrainLayer extends Container {
     private maskPixels?: ImageData;
     private maskSamples = new Uint8Array(MASK_PIXELS * MASK_PIXELS);
     private scratch?: HTMLCanvasElement;
+    private detailCanvas?: HTMLCanvasElement;
+    private blendCanvas?: HTMLCanvasElement;
+    private blendPixels?: ImageData;
     private failed = false;
     private stale = false;
     constructor(
@@ -267,6 +263,9 @@ export class TerrainLayer extends Container {
         this.scratch ??= canvas(TILE_PIXELS);
         const maskCtx = this.maskCanvas.getContext('2d')!,
             scratch = this.scratch.getContext('2d')!;
+        const worldX = cx * CHUNK - GUTTER;
+        const worldY = cy * CHUNK - GUTTER;
+        let blend: HTMLCanvasElement | undefined;
         for (const id of ids) {
             const image = this.images.get(id)!,
                 material = definitions.get(id)!;
@@ -289,7 +288,7 @@ export class TerrainLayer extends Container {
                 }
             }
             if (!this.maskSamples.some((alpha) => alpha !== 0)) continue;
-            renderMask(this.maskSamples, pixels.data, cx * CHUNK - GUTTER, cy * CHUNK - GUTTER);
+            renderMask(this.maskSamples, pixels.data, worldX, worldY);
             maskCtx.putImageData(pixels, 0, 0);
             scratch.globalCompositeOperation = 'source-over';
             scratch.clearRect(0, 0, TILE_PIXELS, TILE_PIXELS);
@@ -298,31 +297,19 @@ export class TerrainLayer extends Container {
                 ...material,
                 asset: { ...material.asset, width: image.width, height: image.height },
             };
-            const matrix = patternTransform(resized, cx * CHUNK - GUTTER, cy * CHUNK - GUTTER);
-            pattern.setTransform(
-                new DOMMatrix([matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f]),
-            );
-            scratch.fillStyle = pattern;
-            scratch.fillRect(0, 0, TILE_PIXELS, TILE_PIXELS);
-            if (material.variation.offset) {
-                // Two world-anchored repeats break up the cadence of a single tile.
-                const detail = patternTransform(
-                    {
-                        ...resized,
-                        repeatSize: material.repeatSize * 1.63,
-                        rotation: material.rotation + 17,
-                    },
-                    cx * CHUNK - GUTTER,
-                    cy * CHUNK - GUTTER,
-                );
-                pattern.setTransform(
-                    new DOMMatrix([detail.a, detail.b, detail.c, detail.d, detail.e, detail.f]),
-                );
+            fillSurface(scratch, pattern, resized, worldX, worldY, TILE_PIXELS);
+            const alternate = alternateSurface(resized);
+            if (alternate) {
+                blend ??= this.prepareBlend(worldX, worldY);
+                this.detailCanvas ??= canvas(TILE_PIXELS);
+                const detail = this.detailCanvas.getContext('2d')!;
+                detail.globalCompositeOperation = 'source-over';
+                detail.clearRect(0, 0, TILE_PIXELS, TILE_PIXELS);
+                fillSurface(detail, pattern, alternate, worldX, worldY, TILE_PIXELS);
+                detail.globalCompositeOperation = 'destination-in';
+                detail.drawImage(blend, 0, 0, TILE_PIXELS, TILE_PIXELS);
                 scratch.globalCompositeOperation = 'source-atop';
-                scratch.globalAlpha = 0.22;
-                scratch.fillStyle = pattern;
-                scratch.fillRect(0, 0, TILE_PIXELS, TILE_PIXELS);
-                scratch.globalAlpha = 1;
+                scratch.drawImage(this.detailCanvas, 0, 0);
             }
             scratch.globalCompositeOperation = 'destination-in';
             scratch.drawImage(this.maskCanvas, 0, 0, TILE_PIXELS, TILE_PIXELS);
@@ -330,6 +317,24 @@ export class TerrainLayer extends Container {
         }
         tile.texture.source.update();
         return true;
+    }
+    private prepareBlend(worldX: number, worldY: number) {
+        const size = TILE_PIXELS / BLEND_SAMPLE;
+        const surface = (this.blendCanvas ??= canvas(size));
+        const ctx = surface.getContext('2d')!;
+        const pixels = (this.blendPixels ??= ctx.createImageData(size, size));
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                pixels.data[(y * size + x) * 4 + 3] =
+                    255 *
+                    surfaceBlend(
+                        worldX + (x + 0.5) * BLEND_SAMPLE,
+                        worldY + (y + 0.5) * BLEND_SAMPLE,
+                    );
+            }
+        }
+        ctx.putImageData(pixels, 0, 0);
+        return surface;
     }
     override destroy() {
         this.abort.abort();

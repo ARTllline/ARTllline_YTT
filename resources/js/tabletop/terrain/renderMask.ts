@@ -5,11 +5,11 @@ export const TILE_PIXELS = CHUNK + GUTTER * 2;
 export const MASK_PIXELS = MASK + GUTTER;
 
 /** Interpolate all material weights at the same world position to preserve coverage.
- * A small periodic field shifts only the rendered edge, never the editable samples.
+ * Crossed world-space waves shift only the rendered edge, never the editable samples.
  */
-const offsets = Float32Array.from({ length: 512 }, (_, i) => {
-    const phase = (i * Math.PI) / 256;
-    return 1.35 * Math.sin(phase * 11) + 0.9 * Math.sin(phase * 19) + 0.55 * Math.sin(phase * 31);
+const offsets = Float32Array.from({ length: 1024 }, (_, i) => {
+    const phase = (i * Math.PI) / 512;
+    return 1.45 * Math.sin(phase * 13) + 0.7 * Math.sin(phase * 27) + 0.35 * Math.sin(phase * 43);
 });
 
 export function renderMask(
@@ -20,11 +20,14 @@ export function renderMask(
 ) {
     for (let y = 0; y < TILE_PIXELS; y++) {
         const sy = (y - 0.5) / 2;
-        const shiftX = offsets[(worldY + y) & 511];
+        const wy = worldY + y;
         for (let x = 0; x < TILE_PIXELS; x++) {
             const sx = (x - 0.5) / 2;
+            const wx = worldX + x;
+            const shiftX = offsets[(wy + 2 * wx) & 1023] + 0.3 * offsets[(2 * wy - wx) & 1023];
+            const shiftY = offsets[(wx - wy + 83) & 1023] + 0.3 * offsets[(2 * wx + wy) & 1023];
             const u = Math.max(0, Math.min(MASK_PIXELS - 1, sx + shiftX));
-            const v = Math.max(0, Math.min(MASK_PIXELS - 1, sy + offsets[(worldX + x + 83) & 511]));
+            const v = Math.max(0, Math.min(MASK_PIXELS - 1, sy + shiftY));
             const ix = Math.min(MASK_PIXELS - 2, Math.floor(u));
             const iy = Math.min(MASK_PIXELS - 2, Math.floor(v));
             const i = iy * MASK_PIXELS + ix;

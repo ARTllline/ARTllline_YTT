@@ -184,23 +184,10 @@ class VisibilityPolygon
                 }
             }
             $distance = max(0, $distance - .0001);
-            $point = ['x' => $origin['x'] + $dx * $distance, 'y' => $origin['y'] + $dy * $distance];
             // Honor MAP-08A's epsilon at grazes and curve tangencies too.
-            if (! $this->los->point($origin, $point)['visible']) {
-                $low = 0;
-                $high = $distance;
-                for ($i = 0; $i < 32; $i++) {
-                    $mid = ($low + $high) / 2;
-                    if ($this->los->point($origin, ['x' => $origin['x'] + $dx * $mid, 'y' => $origin['y'] + $dy * $mid])['visible']) {
-                        $low = $mid;
-                    } else {
-                        $high = $mid;
-                    }
-                }
-                $point = ['x' => $origin['x'] + $dx * $low, 'y' => $origin['y'] + $dy * $low];
-            }
+            $distance = $this->los->clearDistance($origin, $dx, $dy, $distance);
 
-            return $point;
+            return ['x' => $origin['x'] + $dx * $distance, 'y' => $origin['y'] + $dy * $distance];
         };
         $points = array_map($cast, $angles);
         $result = [];

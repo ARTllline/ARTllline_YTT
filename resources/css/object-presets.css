@@ -1,5 +1,5 @@
 .editor-dialog:has(.object-preset-dialog) {
-    width: min(692px, calc(100vw - 24px));
+    width: min(820px, calc(100vw - 24px));
     max-height: calc(100dvh - 32px);
     padding: 10px 16px 16px;
     overflow-x: hidden;
@@ -31,9 +31,17 @@
 .object-preset-actions > button:disabled {
     opacity: 0.5;
 }
+.object-preset-filters > button[aria-pressed='true'] {
+    background: #26463d;
+    border-color: #679783;
+    color: #dcf5e9;
+}
+.object-preset-details {
+    color: #a8c6bb;
+}
 .object-preset-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 176px), 1fr));
     gap: 10px;
 }
 .object-preset-grid article {

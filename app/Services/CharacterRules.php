@@ -137,17 +137,21 @@ class CharacterRules
         if (! $character->exists) {
             return [];
         }
-        $character->loadMissing('inventory.definition');
         $parts = [];
-        foreach ($character->inventory as $item) {
-            if (! $item->equipped_slot || $item->quantity < 1) {
-                continue;
-            }
-            $mods = $item->definition->modifiers ?? [];
+        $equipped = app(SpellEffects::class)->read('character-equipped:'.$character->id, function () use ($character) {
+            $character->loadMissing('inventory.definition');
+
+            return $character->inventory
+                ->filter(fn ($item) => $item->equipped_slot && $item->quantity >= 1)
+                ->map(fn ($item) => ['label' => $item->definition?->name,
+                    'itemId' => (string) $item->id, 'modifiers' => $item->definition->modifiers ?? []]);
+        });
+        foreach ($equipped as $item) {
+            $mods = $item['modifiers'];
             // checks.str is a raw STR check bonus, not an ability score increase.
             $amount = in_array($key, ['ac', 'speed', 'weapon_attack', 'weapon_damage']) ? ($mods[$key] ?? 0) : array_sum(array_filter($mods['checks'] ?? [], fn ($k) => $this->canonical($k) === $key, ARRAY_FILTER_USE_KEY));
             if ($amount) {
-                $parts[] = ['source' => 'equipment', 'label' => $item->definition->name, 'value' => $amount, 'itemId' => (string) $item->id];
+                $parts[] = ['source' => 'equipment', 'label' => $item['label'], 'value' => $amount, 'itemId' => $item['itemId']];
             }
         }
 

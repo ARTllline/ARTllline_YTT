@@ -42,17 +42,22 @@ class SceneVisibility
         $key = $scene->id.':'.$scene->revision;
 
         return $this->contexts[$key] ??= (function () use ($scene) {
-            $compiled = $scene->vision_enabled ? StructuralGeometry::forScene($scene) : ['shapes' => []];
+            $props = $scene->props()->with('asset')->orderBy('z_index')->orderBy('id')->get();
+            $compiled = $scene->vision_enabled ? StructuralGeometry::compile(StructureData::graph($scene), $props->sortBy('id')) : ['shapes' => []];
 
             $tokens = $scene->tokens()->with(['character.portraitAsset', 'character.inventory.definition', 'imageAsset', 'conditions'])->orderBy('z_index')->orderBy('id')->get();
             foreach ($tokens as $token) {
                 $token->setRelation('scene', $scene);
             }
 
+            foreach ($props as $prop) {
+                $prop->setRelation('scene', $scene);
+            }
+
             return ['los' => new LineOfSight($compiled), 'compiled' => $compiled,
                 'illumination' => new SceneIllumination($scene, $compiled, $tokens->keyBy('id')),
                 'tokens' => $tokens,
-                'props' => $scene->props()->with('asset')->orderBy('z_index')->orderBy('id')->get()];
+                'props' => $props];
         })();
     }
 
@@ -174,6 +179,9 @@ class SceneVisibility
 
     private function propFront(LineOfSight $los, array $origin, array $point, float $range, string $self): ?array
     {
+        if (! $los->hitsProp($self, $origin, $point)) {
+            return null;
+        }
         $blocker = $los->point($origin, $point, $range, true)['blocker'];
         if ($blocker['id'] !== $self) {
             return null;
@@ -282,11 +290,13 @@ class SceneVisibility
             return $this->projections[$key];
         }
         $view = $this->view($scene, $user);
+        $view['props']->loadMissing('lootContainer');
 
         return $this->projections[$key] = app(SpellEffects::class)->project(fn () => ['tokens' => $view['tokens']->map(fn ($t) => app(SceneSnapshotBuilder::class)->token($t, false, $user))->all(),
             'props' => $view['props']->map(fn ($p) => $p->projection(false))->all(),
             'viewSignature' => $view['signature'],
-            'signature' => hash('sha256', $view['signature'].json_encode(app(FogExploration::class)->projection($scene, $user)))]);
+            'explored' => $explored = app(FogExploration::class)->projection($scene, $user),
+            'signature' => hash('sha256', $view['signature'].json_encode($explored))]);
     }
 
     /** Only changed/revealed entities and previously delivered IDs are sent. */
@@ -301,7 +311,10 @@ class SceneVisibility
             $delta[$deleted] = array_values(array_map(strval(...), array_diff(array_keys($old), array_keys($new))));
         }
         if (($before['signature'] ?? null) !== $after['signature']) {
-            $delta['vision'] = $this->mask($scene, $user);
+            $delta['vision'] = $this->currentMask($scene, $user);
+            if ($scene->vision_enabled && app(RequestPerformance::class)->exploration) {
+                $delta['vision']['explored'] = $after['explored'];
+            }
         }
 
         return $delta;

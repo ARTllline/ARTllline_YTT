@@ -42,6 +42,8 @@ export interface Mutation extends importObjectPatch {
     vision?: Scene['vision'];
     tokenMovements?: TokenMovement[];
     structure?: import('../tabletop/structure/model').Structure;
+    structurePatch?: import('../tabletop/structure/model').StructurePatch;
+    structureRefresh?: boolean;
     structureEdit?: {
         before: { hash: string; snapshot: string };
         after: { hash: string; snapshot: string };
@@ -62,6 +64,8 @@ export interface Mutation extends importObjectPatch {
     combat?: Combat | null;
     fog?: FogState;
     fogAction?: FogAction;
+    fogRemovedSequence?: number;
+    fogPrevious?: { base: FogBase; sequence: number; actions?: FogAction[] };
     mutationId?: string;
     revision: number;
     token?: Token;
@@ -82,7 +86,8 @@ export const api = {
         scene: string,
         change:
             | { value: import('../tabletop/structure/model').Graph }
-            | { door: import('../tabletop/structure/model').DoorCommand },
+            | { door: import('../tabletop/structure/model').DoorCommand }
+            | { opening: import('../tabletop/structure/model').OpeningCommand },
         expected: string,
         clientMutationId: string,
     ) =>

@@ -74,7 +74,7 @@ it('continues accepted corners without jumping on re-command and discards paths 
     layer.destroy({ children: true });
 });
 
-it('appends continuous steps from the rendered position without restarting easing or losing corners', () => {
+it('bridges a late continuous step with accepted movement and preserves corners', () => {
     const layer = new TokenLayer();
     const origin = { ...createDemoScene().tokens[0], x: 100, y: 100 };
     const first = { ...origin, x: 136 };
@@ -83,20 +83,23 @@ it('appends continuous steps from the rendered position without restarting easin
     layer.sync([first], false, undefined, [
         { tokenId: origin.id, path: [origin, first], continuous: true, duration: 200 },
     ]);
-    layer.tickMovement(origin.id, 100, false);
+    layer.tickMovement(origin.id, 225, false);
     const view = layer.views.get(origin.id)!;
-    expect(view.x).toBe(118);
+    expect(view.x).toBeCloseTo(132.4);
+    const renderedX = view.x;
     layer.sync([second], false, undefined, [
         { tokenId: origin.id, path: [first, second], continuous: true, duration: 200 },
     ]);
-    expect(view.x).toBe(118);
+    expect(view.x).toBe(renderedX);
+    expect(view.y).toBe(100);
+    layer.tickMovement(origin.id, 10, false);
+    expect(view.x).toBeGreaterThan(renderedX);
+    expect(view.x).toBeLessThan(136);
     expect(view.y).toBe(100);
     layer.tickMovement(origin.id, 100, false);
     expect(view.x).toBe(136);
-    expect(view.y).toBe(100);
-    layer.tickMovement(origin.id, 100, false);
-    expect(view.y).toBe(118);
-    layer.tickMovement(origin.id, 100, false);
+    expect(view.y).toBeGreaterThan(100);
+    layer.tickMovement(origin.id, 115, false);
     expect(view.y).toBe(136);
     expect(layer.isMoving(origin.id)).toBe(false);
     layer.destroy({ children: true });

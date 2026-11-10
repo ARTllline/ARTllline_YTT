@@ -16,7 +16,7 @@ export class SpatialGesture {
                 operation: spatial.settings.operation,
                 shape: spatial.settings.shape,
                 geometry: {
-                    points: [point],
+                    points: [this.fogPoint(point)],
                     ...(spatial.settings.shape === 'brush'
                         ? { radius: spatial.settings.radius }
                         : {}),
@@ -42,6 +42,13 @@ export class SpatialGesture {
             if (tool === 'ping') this.event = null;
         }
     }
+    private fogPoint(point: Point): Point {
+        const { width, height } = this.store.getSnapshot().scene;
+        return {
+            x: Math.round(Math.max(0, Math.min(width, point.x)) * 10) / 10,
+            y: Math.round(Math.max(0, Math.min(height, point.y)) * 10) / 10,
+        };
+    }
     private snap(point: Point) {
         return spatialSnap(
             point,
@@ -49,13 +56,14 @@ export class SpatialGesture {
             this.store.spatial.settings.snap,
         );
     }
-    move(point: Point) {
+    move(point: Point, end = false) {
         if (this.stroke) {
+            point = this.fogPoint(point);
             const points = [...this.stroke.geometry.points];
             if (this.stroke.shape === 'rectangle') points[1] = point;
             else if (
                 distance(points[points.length - 1], point) >=
-                Math.max(3, (this.stroke.geometry.radius ?? 90) / 8)
+                (end ? 0.1 : Math.max(3, (this.stroke.geometry.radius ?? 90) / 8))
             ) {
                 // Bound each logical stroke without ever splitting it into database writes.
                 if (points.length >= 511)
@@ -65,7 +73,7 @@ export class SpatialGesture {
                         ...points.slice(1, -1).filter((_, i) => i % 2 === 0),
                     );
                 points.push(point);
-            }
+            } else return;
             this.stroke = { ...this.stroke, geometry: { ...this.stroke.geometry, points } };
             this.store.spatial.draft = this.stroke;
         }
@@ -81,11 +89,11 @@ export class SpatialGesture {
         }
     }
     up(point: Point) {
-        this.move(point);
+        this.move(point, true);
         if (this.stroke) {
-            if (this.stroke.shape === 'rectangle' && this.stroke.geometry.points.length === 1)
-                this.stroke.geometry.points.push(point);
-            this.store.applyFog(this.stroke);
+            const [a, b] = this.stroke.geometry.points;
+            if (this.stroke.shape === 'brush' || (b && a.x !== b.x && a.y !== b.y))
+                this.store.applyFog(this.stroke);
         }
         if (this.event) this.publish('end');
         this.stroke = null;

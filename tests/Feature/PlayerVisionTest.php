@@ -6,6 +6,7 @@ use App\Events\TabletopEvent;
 use App\Models\Asset;
 use App\Models\Campaign;
 use App\Models\Combat;
+use App\Models\LootContainer;
 use App\Models\User;
 use App\Policies\AssetPolicy;
 use App\Services\AbilityGeometry;
@@ -17,6 +18,7 @@ use App\Services\StructuralGeometry;
 use App\Services\StructureData;
 use App\Services\VisibilityPolygon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -94,6 +96,39 @@ class PlayerVisionTest extends TestCase
         }
     }
 
+    public function test_player_opens_and_closes_visible_door_and_receives_its_own_visibility_delta(): void
+    {
+        extract($this->fixture());
+        $this->actingAs($p1);
+        $url = "/api/scenes/{$scene->id}/structure";
+        $toggle = fn (bool $open, string $hash) => $this->postJson($url, [
+            'opening' => ['id' => 'door', 'open' => $open], 'expected' => $hash, 'clientMutationId' => (string) Str::uuid(),
+        ]);
+        $hash = StructureData::hash($graph, false);
+        $opened = $toggle(true, $hash)->assertOk()
+            ->assertJsonPath('structurePatch.openings.upsert.0.open', true)
+            ->assertJsonMissingPath('structurePatch.openings.upsert.0.locked')
+            ->assertJsonMissingPath('structureEdit')
+            ->assertJsonPath('vision.enabled', true)->json();
+        $this->assertContains((string) $npc->id, array_column($opened['tokens'], 'id'));
+        $closed = $toggle(false, $opened['structurePatch']['hash'])->assertOk()->json();
+        $this->assertContains((string) $npc->id, $closed['deletedIds']);
+        $visionUrl = "/api/scenes/{$scene->id}/vision";
+        $range = fn (int $range) => $this->actingAs($gm)->postJson($visionUrl, [
+            'enabled' => true, 'observerId' => $a->id, 'range' => $range, 'clientMutationId' => (string) Str::uuid(),
+        ])->assertOk();
+        $range(50);
+        $this->actingAs($p1);
+        $toggle(true, $closed['structurePatch']['hash'])->assertForbidden();
+        $range(500);
+        $this->actingAs($gm)->postJson($url, [
+            'door' => ['id' => 'door', 'locked' => true], 'expected' => StructureData::hash($graph),
+            'clientMutationId' => (string) Str::uuid(),
+        ])->assertOk();
+        $this->actingAs($p1);
+        $toggle(true, $closed['structurePatch']['hash'])->assertUnprocessable();
+    }
+
     public function test_settings_permissions_and_movement_response_update_vision(): void
     {
         extract($this->fixture());
@@ -117,6 +152,36 @@ class PlayerVisionTest extends TestCase
             'clientMutationId' => (string) Str::uuid()])->assertOk()->assertJsonPath('movementGeometryChanged', true);
         $this->actingAs($gm)->patchJson("/api/tokens/{$a->id}", ['rotation' => 90,
             'clientMutationId' => (string) Str::uuid()])->assertOk()->assertJsonPath('movementGeometryChanged', false);
+    }
+
+    public function test_movement_batches_loot_reads_for_a_dense_scene_and_keeps_occluded_props_private(): void
+    {
+        extract($this->fixture());
+        for ($i = 0; $i < 75; $i++) {
+            $prop = $scene->props()->create(['name' => "Prop $i", 'x' => $i < 50 ? 280 : 520, 'y' => 240 + $i]);
+            if ($i === 0 || $i === 50) {
+                LootContainer::create(['scene_id' => $scene->id, 'prop_id' => $prop->id,
+                    'name' => "Chest $i", 'created_by' => $gm->id]);
+            }
+        }
+
+        $this->actingAs($p1)->getJson("/api/scenes/{$scene->id}/snapshot")->assertOk()
+            ->assertJsonCount(50, 'props')->assertJsonPath('props.0.loot.name', 'Chest 0')
+            ->assertJsonMissing(['name' => 'Chest 50']);
+        DB::enableQueryLog();
+        try {
+            $this->postJson("/api/tokens/{$a->id}/move", ['x' => 220, 'y' => 300,
+                'clientMutationId' => (string) Str::uuid()])->assertOk()
+                ->assertJsonPath('token.x', 220)
+                ->assertJsonCount(0, 'props')->assertJsonCount(0, 'deletedPropIds')
+                ->assertJsonMissing(['name' => 'Chest 50']);
+            $lootReads = array_filter(DB::getQueryLog(), fn ($query) =>
+                str_contains($query['query'], 'loot_containers') && str_contains($query['query'], 'prop_id'));
+            $this->assertLessThanOrEqual(4, count($lootReads), 'At most one prop loot read per viewer and revision');
+        } finally {
+            DB::disableQueryLog();
+            DB::flushQueryLog();
+        }
     }
 
     public function test_unseen_interaction_and_preview_are_denied(): void

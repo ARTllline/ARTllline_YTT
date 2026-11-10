@@ -8,6 +8,7 @@ const { chromium } = require(
         '/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright',
 );
 const { api, login, tabletop, base } = require('./map07a.cjs');
+const { align } = require('./builder06.cjs');
 const scene = '/scenes/7';
 const campaign = '/campaigns/5';
 const out = 'artifacts/map10b';
@@ -141,9 +142,34 @@ async function restore(gm, saved) {
         const torch = source('qa-character-torch', 2550, 700, first.id);
         await light(0, [torch, source('qa-other-light', 3050, 1250, null, 160)]);
         assert.ok(!has(await state(p1), doorTarget));
-        await door(true);
+        const doorIndex = (await state(gm)).structure.graph.openings
+            .filter((opening) => opening.type === 'door')
+            .findIndex((opening) => opening.id === 'los-corridor-door');
+        assert.ok(doorIndex >= 0);
+        const doors = gm.locator('.session-doors');
+        await doors.locator('summary').click();
+        const controls = doors.locator('.build-selection').nth(doorIndex);
+        const toggle = (open) => controls
+            .getByRole('button', { name: open ? 'Открыть дверь' : 'Закрыть дверь', exact: true })
+            .click();
+        await toggle(true);
         await Promise.all([waitForToken(p1, doorTarget, true), waitForToken(p2, doorTarget, true)]);
         assert.deepEqual(await maskPixel(p1, doorTarget), [255, 255, 255, 255]);
+        const seen = (await state(p1)).vision.explored.bits;
+        await align(p1, 1, [2630, 700]);
+        await tabletop(p1).screenshot({ path: out + '/player-door-open.png' });
+        await toggle(false);
+        await waitForToken(p1, doorTarget, false);
+        assert.equal((await maskPixel(p1, doorTarget))[3], 0);
+        assert.equal((await state(p1)).vision.explored.bits, seen);
+        await tabletop(p1).screenshot({ path: out + '/player-door-remembered.png' });
+        await p1.reload();
+        await ready(p1);
+        assert.equal((await state(p1)).vision.explored.bits, seen);
+        await waitForToken(p1, doorTarget, false);
+        report.checks.push('GM Session door controls, Player Fog memory and authorization survive reload');
+        await toggle(true);
+        await waitForToken(p2, doorTarget, true);
         await move(gm, first, { x: 2350, y: 1250 });
         await waitForToken(p2, doorTarget, false);
         report.checks.push('Darkvision recipient/range, wall/door occlusion and multiple lights with a moving torch');

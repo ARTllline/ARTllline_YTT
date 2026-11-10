@@ -1,6 +1,10 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import {
+    Check,
+    CloudFog,
     Flame,
+    LoaderCircle,
+    TriangleAlert,
     Box,
     BrickWall,
     Paintbrush,
@@ -24,21 +28,35 @@ import type { SaveQueue } from '../../tabletop/state/SaveQueue';
 import { initialEditorView, readTerrainBrush, terrainBrushStorage } from '../../tabletop/mapEditor';
 import { PropInspector } from '../objects/PropInspector';
 import { HistoryControls } from '../HistoryControls';
+import { FogControls, FogPanel } from '../FogControls';
 import { MapPreparation } from './MapPreparation';
 import { LightingPanel } from './LightingPanel';
 import { LosDebugPanel } from './LosDebugPanel';
 import { MaterialLibrary } from './MaterialLibrary';
 import { BuildPanel } from './BuildPanel';
+import { useBuildMaterialHistory } from './BuildMaterialPicker';
 import { TerrainPanel } from './TerrainPanel';
 import { ObjectPresetLibrary } from './ObjectPresetLibrary';
 import type { ObjectPreset } from '../../tabletop/objects/collider';
 import '../../../css/map-editor.css';
 
+const workModes = [
+    ['terrain', 'Terrain', Paintbrush],
+    ['build', 'Build', BrickWall],
+    ['objects', 'Objects', Box],
+    ['lighting', 'Свет', Flame],
+    ['fog', 'Туман', CloudFog],
+] as const;
+
+type WorkMode = (typeof workModes)[number][0];
+type MapPanel = WorkMode | 'materials' | 'layers' | 'settings' | 'los';
+const isWorkMode = (panel: MapPanel): panel is WorkMode =>
+    workModes.some(([mode]) => mode === panel);
+
 export function MapEditor({
     store,
     queue,
     active,
-    onClose,
     onFit,
     onTool,
     onPlace,
@@ -50,9 +68,8 @@ export function MapEditor({
     store: SceneStore;
     queue: SaveQueue;
     active: boolean;
-    onClose: () => void;
     onFit: () => void;
-    onTool: (tool: 'select' | 'pan' | 'terrain' | 'build') => void;
+    onTool: (tool: 'select' | 'pan' | 'terrain' | 'build' | 'fog') => void;
     onPlace: (asset: LibraryAsset) => void;
     onPlacePreset: (preset: ObjectPreset) => void;
     onCancelPlacement: () => void;
@@ -62,9 +79,9 @@ export function MapEditor({
     const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
     const save = useSyncExternalStore(queue.subscribe, queue.getSnapshot);
     const tool = useSyncExternalStore(store.spatial.subscribe, store.spatial.getTool);
-    const [panel, setPanel] = useState<
-        'objects' | 'settings' | 'materials' | 'layers' | 'terrain' | 'build' | 'lighting'
-    >('objects');
+    const [panel, setPanel] = useState<MapPanel>('objects');
+    const [workMode, setWorkMode] = useState<WorkMode>('objects');
+    const history = useBuildMaterialHistory();
     const [notice, setNotice] = useState('');
     const [los, setLos] = useState(false);
     const view = state.mapEditor ?? initialEditorView;
@@ -127,138 +144,234 @@ export function MapEditor({
         window.addEventListener('keydown', key);
         return () => window.removeEventListener('keydown', key);
     }, [queue, guard, store]);
-    const choose = (next: typeof panel) => {
-        if (guard.current) {
-            setNotice(guard.current);
-            return;
-        }
+    const activate = (next: MapPanel) => {
         onCancelPlacement();
-        if (next !== 'objects') store.select(null);
-        onTool(next === 'terrain' || next === 'build' ? next : 'select');
+        const nextTool = next === 'terrain' || next === 'build' || next === 'fog' ? next : 'select';
+        if (tool !== nextTool) onTool(nextTool);
         setNotice('');
         setPanel(next);
-        if (next === 'lighting') setLos(false);
+        if (isWorkMode(next)) setWorkMode(next);
+        if (next === 'build' && panel === 'los') setLos(true);
+        if (next !== 'build' && next !== 'los') setLos(false);
     };
+    const choose = (next: MapPanel) => {
+        if (guard.current) {
+            if (next !== panel) setNotice(guard.current);
+            return;
+        }
+        activate(next);
+    };
+    const toggleLos = () => {
+        if (panel === 'build') {
+            setLos(!los);
+        } else {
+            choose(panel === 'los' ? workMode : 'los');
+        }
+    };
+    const showLos = panel === 'los' || (panel === 'build' && los);
     const prop = state.scene.props?.find((p) => p.id === state.selectedPropIds?.[0]);
+    const rejected = state.openingPlacements?.some((p) => p.status === 'rejected');
+    const StatusIcon =
+        save.status === 'failed' || rejected
+            ? TriangleAlert
+            : save.status === 'saving'
+              ? LoaderCircle
+              : Check;
     return (
-        <div className="map-editor" aria-label="Редактор карты">
-            <div
-                className="map-editor-toolbar surface"
-                role="toolbar"
-                aria-label="Инструменты редактора карты"
-            >
-                <span className="map-editor-title">
-                    <Box size={17} /> Map Editor
-                </span>
-                <button
-                    title="Выбор · V"
-                    aria-label="Выбор объектов"
-                    aria-pressed={tool === 'select' && !placing}
-                    disabled={panel === 'settings'}
-                    onClick={() => {
-                        onCancelPlacement();
-                        onTool('select');
-                    }}
+        <div className={'map-editor map-mode-' + panel} aria-label="Редактор карты">
+            <div className="map-editor-command">
+                <div
+                    className="map-editor-toolbar surface"
+                    aria-label="Инструменты редактора карты"
                 >
-                    <MousePointer2 size={17} />
-                </button>
-                <button
-                    title="Панорама · H / Space + drag"
-                    aria-label="Панорама"
-                    aria-pressed={tool === 'pan'}
-                    onClick={() => {
-                        onCancelPlacement();
-                        onTool('pan');
-                    }}
-                >
-                    <Hand size={17} />
-                </button>
-                <i />
-                <button
-                    aria-label="LOS debug"
-                    aria-pressed={los}
-                    onClick={() => {
-                        if (!los) {
-                            if (guard.current) {
-                                setNotice(guard.current);
-                                return;
+                    <div
+                        className="map-editor-mode-group"
+                        role="group"
+                        aria-label="Режимы редактора"
+                    >
+                        {workModes.map(([value, label, Icon]) => (
+                            <button
+                                key={value}
+                                aria-pressed={panel === value}
+                                onClick={() => choose(value)}
+                            >
+                                <Icon size={16} /> {label}
+                            </button>
+                        ))}
+                    </div>
+                    <div
+                        className="map-editor-mode-group"
+                        role="group"
+                        aria-label="Карта и библиотеки"
+                    >
+                        <button
+                            aria-pressed={panel === 'materials'}
+                            onClick={() => choose(panel === 'materials' ? workMode : 'materials')}
+                        >
+                            <Palette size={16} /> Материалы
+                        </button>
+                        <button
+                            aria-label="LOS debug"
+                            title="Обзор игроков и проверка LOS"
+                            aria-pressed={showLos}
+                            onClick={toggleLos}
+                        >
+                            <Eye size={16} /> LOS
+                        </button>
+                        <button
+                            title="Слои редактора"
+                            aria-label="Слои редактора"
+                            aria-pressed={panel === 'layers'}
+                            onClick={() => choose(panel === 'layers' ? workMode : 'layers')}
+                        >
+                            <Layers size={16} /> Слои
+                        </button>
+                        <button
+                            title="Настройки карты и сетки"
+                            aria-label="Настройки карты и сетки"
+                            aria-pressed={panel === 'settings'}
+                            onClick={() => choose(panel === 'settings' ? workMode : 'settings')}
+                        >
+                            <Settings2 size={16} />
+                        </button>
+                    </div>
+                    <div
+                        className="map-editor-mode-group"
+                        role="group"
+                        aria-label="Камера и история"
+                    >
+                        <button
+                            title="Выбор · V"
+                            aria-label="Выбор объектов"
+                            aria-pressed={tool === 'select' && !placing}
+                            disabled={panel === 'settings'}
+                            onClick={() => {
+                                if (panel === 'los' || panel === 'lighting') {
+                                    onCancelPlacement();
+                                    onTool('select');
+                                } else choose('objects');
+                            }}
+                        >
+                            <MousePointer2 size={16} />
+                        </button>
+                        <button
+                            title="Панорама · H / Space + drag"
+                            aria-label="Панорама"
+                            aria-pressed={tool === 'pan'}
+                            onClick={() => {
+                                onCancelPlacement();
+                                if (tool !== 'pan') onTool('pan');
+                            }}
+                        >
+                            <Hand size={16} />
+                        </button>
+                        <button
+                            title="Показать карту целиком"
+                            aria-label="Показать карту целиком"
+                            onClick={onFit}
+                        >
+                            <Maximize size={16} />
+                        </button>
+                        <fieldset className="map-editor-history" disabled={panel === 'settings'}>
+                            <HistoryControls store={store} />
+                        </fieldset>
+                    </div>
+                </div>
+                {panel === 'build' && (
+                    <BuildPanel
+                        store={store}
+                        history={history}
+                        showInspector={!showLos}
+                        onTool={() => onTool('build')}
+                        onSettings={() => choose('settings')}
+                    />
+                )}
+                {panel === 'terrain' && (
+                    <TerrainPanel
+                        store={store}
+                        onTool={() => {
+                            if (tool !== 'terrain') onTool('terrain');
+                        }}
+                        onMaterials={() => choose('materials')}
+                        onSettings={() => choose('settings')}
+                    />
+                )}
+                {panel === 'fog' && (
+                    <div className="map-editor-context surface" role="group" aria-label="Рисование тумана">
+                        <FogControls store={store} active={tool === 'fog'} onActivate={() => onTool('fog')} />
+                    </div>
+                )}
+                {panel === 'objects' && (
+                    <div
+                        className="map-editor-context surface"
+                        role="group"
+                        aria-label="Добавить объект"
+                    >
+                        <ObjectPresetLibrary
+                            onPlace={(preset) => {
+                                if (!view.objectsVisible || view.objectsLocked)
+                                    setNotice('Включите и разблокируйте Objects в слоях.');
+                                else onPlacePreset(preset);
+                            }}
+                        />
+                        <AssetPicker
+                            category="props"
+                            label="Из Assets"
+                            onChange={(asset) => {
+                                if (!view.objectsVisible || view.objectsLocked)
+                                    setNotice('Включите и разблокируйте Objects в слоях.');
+                                else onPlace(asset);
+                            }}
+                        />
+                        <button
+                            title="Показать коллайдеры объектов"
+                            aria-pressed={!!view.collisionDebug}
+                            onClick={() =>
+                                store.setMapEditor({
+                                    ...view,
+                                    collisionDebug: !view.collisionDebug,
+                                })
                             }
-                            choose('objects');
-                            store.select(null);
-                        }
-                        setLos(!los);
-                    }}
-                >
-                    <Eye size={16} /> LOS
-                </button>
-                <button aria-pressed={panel === 'objects'} onClick={() => choose('objects')}>
-                    <Box size={16} /> Objects
-                </button>
-                <button aria-pressed={panel === 'terrain'} onClick={() => choose('terrain')}>
-                    <Paintbrush size={16} /> Terrain
-                </button>
-                <button aria-pressed={panel === 'build'} onClick={() => choose('build')}>
-                    <BrickWall size={16} /> Build
-                </button>
-                <button aria-pressed={panel === 'lighting'} onClick={() => choose('lighting')}>
-                    <Flame size={16} /> Свет
-                </button>
-                <button aria-pressed={panel === 'materials'} onClick={() => choose('materials')}>
-                    <Palette size={16} /> Материалы
-                </button>
-                <button
-                    title="Слои редактора"
-                    aria-label="Слои редактора"
-                    aria-pressed={panel === 'layers'}
-                    onClick={() => choose('layers')}
-                >
-                    <Layers size={16} />
-                </button>
-                <button
-                    title="MapWorld и Grid Calibration"
-                    aria-label="Настройки карты и сетки"
-                    aria-pressed={panel === 'settings'}
-                    onClick={() => choose('settings')}
-                >
-                    <Settings2 size={16} />
-                </button>
-                <button
-                    title="Показать карту целиком"
-                    aria-label="Показать карту целиком"
-                    onClick={onFit}
-                >
-                    <Maximize size={16} />
-                </button>
-                <fieldset className="map-editor-history" disabled={panel === 'settings'}>
-                    <HistoryControls store={store} />
-                </fieldset>
-                <button
-                    title="Закрыть редактор"
-                    aria-label="Закрыть редактор карты"
-                    onClick={() => {
-                        if (guard.current) {
-                            setNotice(guard.current);
-                            return;
-                        }
-                        onCancelPlacement();
-                        onClose();
-                    }}
-                >
-                    <X size={17} />
-                </button>
+                        >
+                            <Box size={15} /> Коллайдеры
+                        </button>
+                        {!state.scene.mapWorld && (
+                            <button onClick={() => choose('settings')}>
+                                <Image size={15} /> Создать основу
+                            </button>
+                        )}
+                        {view.collisionDebug && (
+                            <small className="collision-legend">
+                                Мятный — движение · лиловый — обзор · янтарный — свет
+                            </small>
+                        )}
+                        {(!view.objectsVisible || view.objectsLocked) && (
+                            <small>Объекты скрыты или заблокированы в слоях</small>
+                        )}
+                        {view.objectsVisible &&
+                            !view.objectsLocked &&
+                            !view.collisionDebug &&
+                            !placing && (
+                                <small>
+                                    Shift + клик — несколько · Ctrl+D — копия · Del — удалить
+                                </small>
+                            )}
+                    </div>
+                )}
             </div>
-            <div className="map-editor-status" role="status">
-                <span className={`save-${save.status}`}>
-                    {save.status === 'saved'
-                        ? 'Все изменения сохранены'
-                        : save.status === 'failed'
-                          ? `Ошибка: ${save.error}`
-                          : 'Сохраняем…'}
+            <div className="map-editor-status surface">
+                <span className={active ? 'map-editor-live' : ''}>
+                    <i /> {active ? 'В эфире' : 'Подготовка'}
                 </span>
-                <span>
-                    {active
-                        ? 'В ЭФИРЕ · сохранённые правки видны игрокам'
-                        : 'Подготовка сцены · правки сохраняются сразу'}
+                <span className={'save-' + save.status} role="status">
+                    <StatusIcon size={14} />
+                    {save.status === 'saved'
+                        ? rejected
+                            ? 'Есть отклонённые проёмы'
+                            : 'Все изменения сохранены'
+                        : save.status === 'failed'
+                          ? `Ошибка сохранения · ${save.error}`
+                          : 'Сохраняем…'}
                 </span>
                 {save.status === 'failed' && <button onClick={queue.retry}>Повторить</button>}
             </div>
@@ -281,139 +394,56 @@ export function MapEditor({
                     store={store}
                     queue={queue}
                     active={active}
-                    onClose={() => {
-                        setNotice('');
-                        setPanel('objects');
-                    }}
+                    onClose={() => activate(workMode)}
                     onFit={onFit}
                 />
             )}
-            {panel === 'materials' && <MaterialLibrary onClose={() => choose('objects')} />}
-            {los && (
+            {panel === 'materials' && <MaterialLibrary onClose={() => choose(workMode)} />}
+            {showLos && (
                 <LosDebugPanel
                     store={store}
-                    probing={panel !== 'settings' && tool === 'select' && !placing}
+                    probing={tool === 'select' && !placing}
+                    onClose={toggleLos}
                 />
             )}
-            {panel === 'build' && (
-                <BuildPanel
+            {panel === 'lighting' && (
+                <LightingPanel
                     store={store}
-                    onTool={() => onTool('build')}
-                    onSettings={() => choose('settings')}
+                    queue={queue}
+                    guard={guard}
+                    onClose={() => choose('objects')}
                 />
             )}
-            {panel === 'lighting' && <LightingPanel store={store} queue={queue} guard={guard} />}
-            {panel === 'terrain' && (
-                <TerrainPanel
-                    store={store}
-                    onTool={() => onTool('terrain')}
-                    onMaterials={() => choose('materials')}
-                    onSettings={() => choose('settings')}
-                />
+            {panel === 'fog' && (
+                <FogPanel store={store} queue={queue} editor active={tool === 'fog'} onClose={() => choose('objects')} />
             )}
-            {panel === 'objects' && !los && (
-                <>
-                    <div className="map-editor-object-add surface">
-                        <ObjectPresetLibrary
-                            onPlace={(preset) => {
-                                if (!view.objectsVisible || view.objectsLocked)
-                                    setNotice('Включите и разблокируйте Objects в слоях.');
-                                else onPlacePreset(preset);
-                            }}
-                        />
-                        <AssetPicker
-                            category="props"
-                            label="Добавить объект из Assets"
-                            onChange={(asset) => {
-                                if (!view.objectsVisible || view.objectsLocked)
-                                    setNotice('Включите и разблокируйте Objects в слоях.');
-                                else onPlace(asset);
-                            }}
-                        />
-                        <small>V выбор · Shift несколько · Ctrl+D копия · Del удалить</small>
-                        <label className="check-field">
-                            <input
-                                type="checkbox"
-                                checked={!!view.collisionDebug}
-                                onChange={(e) =>
-                                    store.setMapEditor({
-                                        ...view,
-                                        collisionDebug: e.target.checked,
-                                    })
-                                }
-                            />
-                            Коллайдеры
-                        </label>
-                        {view.collisionDebug && (
-                            <small className="collision-legend">
-                                Мятный — движение · лиловый — обзор · янтарный — свет. Сочетания
-                                имеют отдельные цвета.
-                            </small>
-                        )}
-                        {(!view.objectsVisible || view.objectsLocked) && (
-                            <p className="hint">
-                                Включите и разблокируйте Objects в слоях, чтобы редактировать.
-                            </p>
-                        )}
-                    </div>
-                    {prop && !placing ? (
-                        <div className="map-editor-prop">
-                            <PropInspector
-                                key={prop.id}
-                                prop={prop}
-                                store={store}
-                                busy={
-                                    save.status !== 'saved' ||
-                                    view.objectsLocked ||
-                                    !view.objectsVisible
-                                }
-                                mapEditor
-                                onClose={() => store.select(null)}
-                            />
-                        </div>
-                    ) : (
-                        !placing && (
-                            <aside className="map-editor-panel map-editor-welcome panel">
-                                <div className="map-editor-panel-body">
-                                    <span className="eyebrow">TERRAIN → BUILD → OBJECTS</span>
-                                    <h2>Соберите место действия</h2>
-                                    <p>
-                                        Выберите объект на карте или добавьте изображение из Assets.
-                                        Перетащите объект, измените размер за угол; точный поворот и
-                                        масштаб доступны в Inspector.
-                                    </p>
-                                    <p className="hint">
-                                        Рисуйте покрытия в Terrain, добавляйте стены в Build и
-                                        размещайте объекты.
-                                    </p>
-                                    <button
-                                        className="text-button"
-                                        onClick={() => choose('materials')}
-                                    >
-                                        <Palette size={14} /> Открыть материалы
-                                    </button>
-                                    {!state.scene.mapWorld && (
-                                        <button
-                                            className="text-button"
-                                            onClick={() => choose('settings')}
-                                        >
-                                            <Image size={14} /> Создать MapWorld / настроить основу
-                                        </button>
-                                    )}
-                                </div>
-                            </aside>
-                        )
-                    )}
-                </>
+            {panel === 'objects' && prop && !placing && (
+                <div className="map-editor-prop">
+                    <PropInspector
+                        key={prop.id}
+                        prop={prop}
+                        store={store}
+                        busy={save.status !== 'saved' || view.objectsLocked || !view.objectsVisible}
+                        mapEditor
+                        onClose={() => store.select(null)}
+                    />
+                </div>
             )}
             {panel === 'layers' && (
                 <aside className="map-editor-panel panel" aria-label="Слои редактора">
-                    <div className="panel-heading">Слои рабочего пространства</div>
+                    <div className="panel-heading">
+                        <Layers size={16} />
+                        <strong>Слои редактора</strong>
+                        <button
+                            className="icon-button"
+                            aria-label="Закрыть слои"
+                            onClick={() => choose(workMode)}
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
                     <div className="map-editor-panel-body">
-                        <p className="hint">
-                            Видимость и замок действуют только в этом редакторе. Видимость игроков и
-                            будущая collision не меняются.
-                        </p>
+                        <p className="hint">Эти переключатели действуют в вашем редакторе.</p>
                         <div className="map-editor-layer">
                             <Image size={16} />
                             <span>
@@ -440,6 +470,7 @@ export function MapEditor({
                             </button>
                         </div>
                         <div className="map-editor-layer">
+                            <Paintbrush size={16} />
                             <span>
                                 Terrain
                                 <small>

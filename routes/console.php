@@ -84,3 +84,8 @@ Artisan::command('spells:expire', function () {
     $this->info(app(SpellEffects::class)->expire().' spell effects expired.');
 })->purpose('Expire timestamped spell effects with campaign writer locks');
 Schedule::command('spells:expire')->everyMinute()->withoutOverlapping();
+Artisan::command('ytt:install-fantasy-classic', function () {
+    $pack = app(\App\Services\FantasyClassicPack::class);
+    $this->info($pack->install().' Fantasy Classic architecture materials installed.');
+    $this->info($pack->installEnvironment().' Fantasy Classic object presets and their companion terrain installed.');
+})->purpose('Install the bundled Fantasy Classic materials and object presets');

@@ -395,6 +395,97 @@
     font-size: 11px;
     line-height: 1.6;
 }
+.spatial-settings.fog-panel {
+    width: min(335px, calc(100vw - 82px));
+}
+.fog-heading,
+.fog-options,
+.fog-radius {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.fog-heading {
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.fog-heading > svg {
+    color: var(--accent);
+}
+.fog-heading > button:last-child {
+    margin-inline-start: auto;
+}
+.fog-options {
+    flex-wrap: wrap;
+}
+.fog-panel-body > .fog-options {
+    margin-top: 5px;
+}
+.fog-options button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 31px;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    background: transparent;
+    font-size: 12px;
+}
+.fog-options button[aria-pressed='true'] {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+}
+.fog-radius {
+    padding-inline: 6px;
+    font-size: 11px;
+    color: var(--muted);
+}
+.fog-radius input {
+    width: 92px;
+    accent-color: var(--accent);
+}
+.fog-radius output {
+    min-width: 47px;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+}
+.fog-legend {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 5px;
+    color: var(--muted);
+    font-size: 11px;
+}
+.fog-legend > span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.fog-legend i {
+    width: 11px;
+    height: 11px;
+    border: 1px solid #ffffff35;
+    border-radius: 3px;
+}
+.fog-legend-cover {
+    background: #101820;
+}
+.fog-legend-reveal {
+    background: #347a79;
+}
+.fog-legend-unknown {
+    background: #313744;
+}
+.fog-legend-memory {
+    background: #606c7b;
+}
+.fog-legend-current {
+    background: #b7c7ce;
+}
 .player-tabletop .toolbar-wrap {
     left: 16px;
     top: 16px;

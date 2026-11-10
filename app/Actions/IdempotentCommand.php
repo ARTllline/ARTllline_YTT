@@ -115,6 +115,10 @@ class IdempotentCommand
                         app(ObjectInteraction::class)->authorize($user, $scene, $payload);
                         // A GM preview receipt must never be replayed after becoming a player.
                         abort_if(isset($result['handout']) && $campaign->roleFor($user) !== 'gm', 403);
+                    } elseif ($operation === 'scene.structure' && isset($payload['opening']) && ! isset($result['structureEdit'])) {
+                        $scene = Scene::findOrFail($resource);
+                        $scene->setRelation('campaign', $campaign);
+                        Gate::forUser($user)->authorize('view', $scene);
                     } else {
                         Gate::forUser($user)->authorize('update', $campaign);
                     }

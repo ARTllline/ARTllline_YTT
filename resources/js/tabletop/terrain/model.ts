@@ -1,10 +1,12 @@
 import type { ImageAsset, Point, Scene } from '../types/scene';
+import type { Material } from '../../workspace/maps/materials';
 
 export const CHUNK = 256;
 export const MASK = 128;
 export const MAX_TERRAIN_CHUNKS = 256;
 export interface TerrainMaterial {
     versionId: string;
+    type?: Material['type'];
     asset: ImageAsset;
     repeatSize: number;
     rotation: number;

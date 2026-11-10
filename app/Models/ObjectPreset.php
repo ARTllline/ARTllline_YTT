@@ -20,9 +20,15 @@ class ObjectPreset extends Model
         return $this->belongsTo(Asset::class);
     }
 
+    public function scopeAvailable($query, User $user)
+    {
+        return $query->where(fn ($q) => $q->where('library_user_id', $user->id)->orWhereNotNull('builtin_key'));
+    }
+
     public function projection(): array
     {
         return ['id' => (string) $this->id, 'name' => $this->name, 'category' => $this->category,
-            'asset' => app(SceneSnapshotBuilder::class)->asset($this->asset), 'settings' => $this->settings];
+            'asset' => app(SceneSnapshotBuilder::class)->asset($this->asset), 'settings' => $this->settings,
+            'builtin' => $this->builtin_key !== null, 'thumbnailUrl' => '/api/assets/'.$this->asset_id.'/thumbnail'];
     }
 }

@@ -1,0 +1,187 @@
+{
+  "name": "Fantasy Classic — Stone & Timber",
+  "version": 1,
+  "materials": [
+    {
+      "key": "wall-ashlar",
+      "name": "Гранитный тёс",
+      "type": "wall",
+      "repeatSize": 146,
+      "sha256": "88f3804255bfc9e30a31f7a3720f87635200582839063c05f7be193c7de72ddb",
+      "source": "exec-5e325816-12ee-42b8-a40d-f87196f5e8ff.png",
+      "sourceSha256": "686e4632c4786e85ac9b580c3ddd247bd70e75080467dce819d2f26ba8d6206c",
+      "layout": "wall-strip"
+    },
+    {
+      "key": "wall-fieldstone",
+      "name": "Грубая кладка",
+      "type": "wall",
+      "repeatSize": 144,
+      "sha256": "cf9b2a8fbf90444ef5ea189cc4763c9b3fea1416bb4a22f7ab073f96298834aa",
+      "source": "exec-8b8ba0f5-aca4-4f4e-a32b-d49b65f8c7b2.png",
+      "sourceSha256": "9b6dd7d3da4ae9f20b168c7ae9ac7aca2016ad0d92024314ae42e8f949b2c702",
+      "layout": "wall-strip"
+    },
+    {
+      "key": "wall-brick",
+      "name": "Красный кирпич",
+      "type": "wall",
+      "repeatSize": 178,
+      "sha256": "d323d275fa00ba8087ea8451d24990dd95b6dd233a6f43c60550f8700d18cdea",
+      "source": "exec-89b97791-0fe3-4b31-9825-bc01c7f817f9.png",
+      "sourceSha256": "088373defc39168be4396a23cd3ee11af0218d65cc37ed317768ba375515335a",
+      "layout": "wall-strip"
+    },
+    {
+      "key": "wall-timber",
+      "name": "Дубовый брус",
+      "type": "wall",
+      "repeatSize": 190,
+      "sha256": "48ae2175484b2cf396262f4f228e1bbb8f46cf7221afeb007a814c8e36441976",
+      "source": "exec-6ace03e9-4206-4dc4-aef2-2cb79223e43b.png",
+      "sourceSha256": "583d3536469f67e7f221f79fc64d8a945bf8dbbd0fd07f4d973f3393e8984476",
+      "layout": "wall-strip"
+    },
+    {
+      "key": "wall-lime-oak",
+      "name": "Известка и балки",
+      "type": "wall",
+      "repeatSize": 182,
+      "sha256": "99ce8753f6155e44664c46f2ccca6d26236f1a604b6c2beed8370f613db05b57",
+      "source": "exec-9003e7dd-87a5-4d1e-a958-8da14fce8b5f.png",
+      "sourceSha256": "760f035c7688acdb7bfe1fd3b1b55170b7893fc58fa841c8275f388e281bd48b",
+      "layout": "wall-strip"
+    },
+    {
+      "key": "wall-ruins",
+      "name": "Обветренные руины",
+      "type": "wall",
+      "repeatSize": 150,
+      "sha256": "4b88a1896730642126573e50488a9127bf12451fac16d9b2523895d46013f4d0",
+      "source": "exec-a15c0bba-27f2-4755-aec4-bd19ba64c40c.png",
+      "sourceSha256": "595b33966e7b2e17a3aa646fa323adc24fb9542562437604f86d53c901fb955c",
+      "layout": "wall-strip"
+    },
+    {
+      "key": "floor-oak",
+      "name": "Медовые доски",
+      "type": "floor",
+      "repeatSize": 260,
+      "sha256": "f0d0bae7d8878daef5b49182443b893a4c97c60a7608d7bd66c8aa48ab9bda24",
+      "source": "exec-6317db0a-57dc-437a-89cc-cb7c07f55bcb.png",
+      "sourceSha256": "054574d4407fc70b74d9b02ce74b9cf279bf008e632de369569ca450910a4705"
+    },
+    {
+      "key": "floor-herringbone",
+      "name": "Тёмный паркет",
+      "type": "floor",
+      "repeatSize": 228,
+      "sha256": "7d7782236100a2a4cc1377d2a78f87ad610d9d82428cbfa1500eff49665b82f4",
+      "source": "exec-bca3c571-7886-4b9a-b450-a47f86b8669a.png",
+      "sourceSha256": "1c5897c6aaf1f671cfa12ae130f5808db99febf54c90d0042431a8f6cc72669d"
+    },
+    {
+      "key": "floor-slate",
+      "name": "Сланцевые плиты",
+      "type": "floor",
+      "repeatSize": 285,
+      "sha256": "35a919595d7c397740be31ca1a185e8a99c895dea20ff333bf3bb1900a7db985",
+      "source": "exec-fa6c1143-3816-4f37-aab2-37096b8d61e4.png",
+      "sourceSha256": "63ad7715886dd2e2eea13ee95b5abf57d4d19f81766ac5b2b402287ace969ea5"
+    },
+    {
+      "key": "floor-moss",
+      "name": "Мшёный плитняк",
+      "type": "floor",
+      "repeatSize": 270,
+      "sha256": "55183a2c61793bf48d93afbef3d3acd0e6c1e937497c3fdbc897499a59caee19",
+      "source": "exec-5d44cd94-349d-4fe1-96dc-dfa7a865f2ad.png",
+      "sourceSha256": "40a3e5285a2d1ac6c77233bccd32bc4df4f905cef327052e61162833988334a1"
+    },
+    {
+      "key": "floor-terracotta",
+      "name": "Терракота",
+      "type": "floor",
+      "repeatSize": 230,
+      "sha256": "31283d344cdf4c68348632d93778c0898597459990303ef790f62685e3da3842",
+      "source": "exec-6edfed60-eb04-402a-8c31-4d78847f2dab.png",
+      "sourceSha256": "e8b39b3d1c17e9a5fa56199e302c64285f91a7505160989c06ffd6c73874e801"
+    },
+    {
+      "key": "floor-limestone",
+      "name": "Известняковая плитка",
+      "type": "floor",
+      "repeatSize": 285,
+      "sha256": "b6cd8a72be51dfc610c000e272430a2c3d41b0100e1cc9a78ca0eb11f01fbf6a",
+      "source": "exec-5b0bb05e-0e2d-4b22-8008-919cd922ea6c.png",
+      "sourceSha256": "235dcbfde40c0d4cf589135f254da7d81e6b49c03305a033919514065333732c"
+    },
+    {
+      "key": "door-iron-oak",
+      "name": "Дубовая дверь с ковкой",
+      "type": "door",
+      "repeatSize": 64,
+      "sha256": "b9b910d1e275765795a735095752d366ae4586bff323045118017e145b4c5b0e",
+      "source": "exec-d3dfd28f-a182-447a-9db8-cdc7e8ee0f86.png",
+      "sourceSha256": "906f23d41a4f6c54dc8500646e12ac02fa2159f3e5693435e487cde40a136309",
+      "layout": "door-atlas"
+    },
+    {
+      "key": "door-portcullis",
+      "name": "Подъёмная решётка",
+      "type": "door",
+      "repeatSize": 64,
+      "sha256": "0048442e10e6db5264eef0ca19d8d31635f96fdeaae4b2586bbed86d02c0d3ec",
+      "source": "exec-769f085c-48f7-46fa-915b-eb58b18278b7.png",
+      "sourceSha256": "be9a9a68a0b632aceccfaeb26c29fe3c938a02b12c8bf63c023d0b7b28ce0775",
+      "layout": "gate-atlas"
+    },
+    {
+      "key": "door-studded-walnut",
+      "name": "Ореховая дверь с заклёпками",
+      "type": "door",
+      "repeatSize": 64,
+      "sha256": "ae58a18cb95d5a82c63b99c7685dfe99add6d60503fdcccea4e07fb9166f079c",
+      "source": "exec-62811ee9-bdcd-4fe3-aab6-9f3b9d3f9df9.png",
+      "sourceSha256": "02ec739e5fca199c4093e3bbdeab205b8915d149eaa3e6ea8bccffdd0a891a70",
+      "layout": "door-atlas"
+    },
+    {
+      "key": "door-carved-oak",
+      "name": "Резная дверь с бронзой",
+      "type": "door",
+      "repeatSize": 64,
+      "sha256": "76badc568ac5eacaa62bd0fa910624dd4166b8a3b3985b5dc8d4dad476995e04",
+      "source": "exec-4a04a9f2-bd91-4701-8ab5-1275edeaa956.png",
+      "sourceSha256": "37d2d5fcfb1763246056abab2572283260bfd9d3a2d3e6a733a75c56e74812c1",
+      "layout": "door-atlas"
+    },
+    {
+      "key": "window-leaded-oak",
+      "name": "Свинцовый витраж в дубе",
+      "type": "window",
+      "repeatSize": 64,
+      "sha256": "bbd6028d78be2a8b9ff9db9a57b434fdcb2f598b36c596b67b7117f6e0954203",
+      "source": "exec-dea832a3-3f29-4eac-ab51-201c2a5a1201.png",
+      "sourceSha256": "a76bc2f27e0c1a9d871ec7449dd27c338cb226d62b91d5590b2deb5fc169b143"
+    },
+    {
+      "key": "window-iron-slit",
+      "name": "Каменное окно с решёткой",
+      "type": "window",
+      "repeatSize": 64,
+      "sha256": "daac03e67f761221dd7e3044a42253c0a156bbb8afdf903ca50c324d5a665428",
+      "source": "exec-5ebae9d9-f8c0-45b3-adb9-052665884d7a.png",
+      "sourceSha256": "a3d43efa458e91abe778659c87f0ae9456e46f60304923e0b73f2280f2fa88c4"
+    },
+    {
+      "key": "window-brass",
+      "name": "Ромбовый витраж с латунью",
+      "type": "window",
+      "repeatSize": 64,
+      "sha256": "1a6d0f025f2735baeb3b498abab1d884ac3d374ebeced92a6c15e0060cbd560a",
+      "source": "exec-0e5fbb75-7431-401a-a893-604434a1c6f4.png",
+      "sourceSha256": "9deec7aeb1277748dac18f43aeb65fc767873b3c1590c4ccfdc4af12c4549277"
+    }
+  ]
+}

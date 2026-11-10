@@ -13,22 +13,34 @@ class StructureData
         return $scene->mapWorld?->structure ?? ['vertices' => [], 'edges' => [], 'rooms' => []];
     }
 
-    public static function hash(array $graph): string
+    public static function hash(array $graph, bool $gm = true): string
     {
-        ksort($graph);
-        foreach ($graph as &$entities) {
-            foreach ($entities as &$entity) {
-                ksort($entity);
+        return hash('sha256', json_encode(self::canonical(self::visible($graph, $gm)), JSON_THROW_ON_ERROR));
+    }
+
+    private static function canonical(array $value): array
+    {
+        if (! array_is_list($value)) {
+            ksort($value);
+        }
+        foreach ($value as &$item) {
+            if (is_array($item)) {
+                $item = self::canonical($item);
             }
         }
 
-        return hash('sha256', json_encode($graph, JSON_THROW_ON_ERROR));
+        return $value;
     }
 
     public static function versions(array $graph): array
     {
+        $editable = RoomAssembly::editable($graph);
+
         return array_values(array_unique(array_filter([
             ...array_column($graph['edges'], 'materialVersionId'), ...array_column($graph['rooms'], 'materialVersionId'),
+            ...array_column($graph['openings'] ?? [], 'materialVersionId'), ...array_column($graph['floors'] ?? [], 'materialVersionId'),
+            ...array_column($editable['edges'], 'materialVersionId'), ...array_column($editable['rooms'], 'materialVersionId'),
+            ...array_column($editable['openings'] ?? [], 'materialVersionId'),
         ])));
     }
 
@@ -45,13 +57,13 @@ class StructureData
     public static function projection(Scene $scene, bool $gm): array
     {
         $graph = self::graph($scene);
-        $materials = MapMaterialVersion::with('asset')->whereIn('id', self::versions($graph))->get()
-            ->map(fn ($v) => $gm ? $v->projection() : [
+        $visible = self::visible($graph, $gm);
+        $materials = MapMaterialVersion::with('asset')->when($gm, fn ($q) => $q->with('material'))->whereIn('id', self::versions($visible))->get()
+            ->map(fn ($v) => $gm ? $v->projection(true) : [
                 'versionId' => (string) $v->id, 'asset' => app(SceneSnapshotBuilder::class)->asset($v->asset),
                 'repeatSize' => $v->repeat_size, 'rotation' => $v->rotation,
+                ...($v->layout ? ['layout' => $v->layout] : []),
             ])->all();
-
-        $visible = self::visible($graph, $gm);
 
         return ['hash' => self::hash($visible), 'graph' => $visible, 'materials' => $materials];
     }
@@ -83,12 +95,17 @@ class StructureData
     private static function visible(array $graph, bool $gm): array
     {
         if (! $gm) {
+            unset($graph['assemblies']);
             foreach ($graph['edges'] as &$edge) {
                 // Public walls expose movement only; vision/light remain GM data.
                 unset($edge['blocksVision'], $edge['blocksLight']);
             }
             foreach ($graph['openings'] ?? [] as $i => $opening) {
                 unset($opening['blocksVision'], $opening['blocksLight'], $opening['locked']);
+                if ($opening['type'] === 'window') {
+                    $opening['blocksMovement'] = true;
+                    $opening['open'] ??= true;
+                }
                 $graph['openings'][$i] = $opening;
             }
         }

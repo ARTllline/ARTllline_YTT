@@ -89,7 +89,8 @@ class TokenActions
             if ($move || array_key_exists('x', $data) || array_key_exists('y', $data)) {
                 $intent = $data['intent'] ?? ($move ? TokenMovement::NORMAL : TokenMovement::EDIT);
                 $movement = app(TokenMovement::class)->resolve($user, $token,
-                    ['x' => $data['x'] ?? $token->x, 'y' => $data['y'] ?? $token->y], $data['waypoints'] ?? [], $intent);
+                    ['x' => $data['x'] ?? $token->x, 'y' => $data['y'] ?? $token->y], $data['waypoints'] ?? [], $intent,
+                    $scene->vision_enabled && $scene->mapWorld ? app(\App\Services\SceneVisibility::class)->compiledGeometry($scene)['shapes'] : null);
                 unset($data['intent'], $data['waypoints']);
                 $data = $movement['position'] + $data;
                 $acceptedPath = $movement['path'];

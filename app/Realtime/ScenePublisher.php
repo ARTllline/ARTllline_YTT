@@ -30,6 +30,12 @@ class ScenePublisher
 
     private function changedMeasured(Scene $scene, string $type, array $result, bool $wasVisible, array $previousVisibility, array $visionBefore): void
     {
+        unset($result['fogPrevious']);
+        if ($type === 'fog.history' && isset($result['fog']) && strlen(json_encode($result['fog'])) > 8 * 1024) {
+            // Restoring a cleared scene can exceed the websocket frame limit.
+            unset($result['fog']);
+            $result['fogRefresh'] = true;
+        }
         $members = $scene->campaign->members()->get();
         $token = isset($result['token']) ? $scene->tokens()->with(['character.portraitAsset', 'imageAsset', 'conditions'])->find($result['token']['id']) : null;
         $base = ['type' => $type, 'sceneId' => (string) $scene->id, 'revision' => $scene->revision, 'mutationId' => $this->context->id()];
@@ -96,7 +102,7 @@ class ScenePublisher
                     $payload = ['deletedId' => $result['deletedId']];
                 }
             } else {
-                foreach (['grid', 'map', 'scene', 'fog', 'fogAction'] as $key) {
+                foreach (['grid', 'map', 'scene', 'fog', 'fogAction', 'fogRemovedSequence', 'fogRefresh'] as $key) {
                     if (array_key_exists($key, $result)) {
                         $payload[$key] = $result[$key];
                     }
@@ -164,7 +170,7 @@ class ScenePublisher
     public function visionPayload(Scene $scene, User $user, array $result, array $before): array
     {
         $vision = app(SceneVisibility::class);
-        $payload = array_intersect_key($result, array_flip(['grid', 'map', 'fog', 'fogAction']));
+        $payload = array_intersect_key($result, array_flip(['grid', 'map', 'fog', 'fogAction', 'fogRemovedSequence', 'fogRefresh']));
         $payload += $vision->delta($scene, $user, $before);
         if (isset($result['lighting'])) {
             $payload['lighting'] = \App\Services\SceneLighting::settings($scene, false);

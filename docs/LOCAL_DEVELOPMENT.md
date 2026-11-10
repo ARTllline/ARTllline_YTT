@@ -63,7 +63,7 @@ CREATE DATABASE ytt CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 `MAIL_MAILER=log`, приватные assets находятся в `storage/app/campaigns-private`.
 
 ```powershell
-php artisan migrate
+php artisan migrate --seed
 npm install
 npm run build
 ```

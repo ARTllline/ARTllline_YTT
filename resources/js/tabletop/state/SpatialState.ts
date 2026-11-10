@@ -2,16 +2,37 @@ import { t } from '../../i18n';
 import type { FogStroke, SpatialEvent } from '../types/spatial';
 import type { Tool } from '../types/scene';
 
+const fogBrushStorage = 'ytt.fog.brush';
+function fogBrush(): Pick<FogStroke, 'shape'> & { radius: number } {
+    try {
+        const value = JSON.parse(localStorage.getItem(fogBrushStorage) ?? 'null');
+        if (
+            value &&
+            ['brush', 'rectangle'].includes(value.shape) &&
+            typeof value.radius === 'number' &&
+            value.radius >= 5 &&
+            value.radius <= 600
+        ) {
+            return { shape: value.shape, radius: value.radius };
+        }
+    } catch {
+        // In private browsing the same settings remain available for this tab.
+    }
+    return { shape: 'brush', radius: 90 };
+}
+
 /** Ephemeral projections are deliberately outside the saved scene and React's frame loop. */
 export class SpatialState {
     tool: Tool = 'select';
     settings = {
-        operation: 'reveal' as 'reveal' | 'cover',
-        shape: 'brush' as 'brush' | 'rectangle',
-        radius: 90,
+        operation: 'cover' as FogStroke['operation'],
+        ...fogBrush(),
         snap: true,
     };
     draft: FogStroke | null = null;
+    pendingFog?: FogStroke;
+    fogNotice = '';
+    fogVision?: import('../types/scene').Scene['vision'];
     identity = { id: 'local', name: t('You') };
     shareActive = false;
     connected = false;
@@ -35,6 +56,13 @@ export class SpatialState {
         };
     };
     getTool = () => this.tool;
+    getSettings = () => this.settings;
+    getFogNotice = () => this.fogNotice;
+    finishFog(stroke?: FogStroke, notice = '') {
+        if (stroke === this.pendingFog) this.pendingFog = undefined;
+        this.fogNotice = notice;
+        this.listeners.forEach((fn) => fn());
+    }
     configure(identity: { id: string; name: string }, active: boolean, epoch: number) {
         this.identity = identity;
         this.shareActive = active;
@@ -47,6 +75,15 @@ export class SpatialState {
     }
     setSettings(patch: Partial<typeof this.settings>) {
         this.settings = { ...this.settings, ...patch };
+        if (patch.shape !== undefined || patch.radius !== undefined) {
+            const { shape, radius } = this.settings;
+            try {
+                localStorage.setItem(fogBrushStorage, JSON.stringify({ shape, radius }));
+            } catch {
+                // The live tool still holds the preference.
+            }
+        }
+        this.listeners.forEach((fn) => fn());
     }
     setTool(tool: Tool) {
         this.tool = tool;

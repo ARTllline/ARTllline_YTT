@@ -27,7 +27,13 @@ export type Placement =
       }
     | { type: 'token'; draft: TokenDraft; name: string }
     | { type: 'prop'; asset: LibraryAsset; name: string; purpose?: 'container' | 'interaction' }
-    | { type: 'objectPreset'; preset: ObjectPreset; name: string; rotation: number }
+    | {
+          type: 'objectPreset';
+          preset: ObjectPreset;
+          name: string;
+          rotation: number;
+          scaleFactor: number;
+      }
     | { type: 'template'; template: Pick<ContentTemplate, 'id' | 'kind' | 'name'>; name: string }
     | { type: 'note' | 'region'; name: string };
 export const CREATION_MIME = 'application/x-ytt-creation';

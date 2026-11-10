@@ -12,6 +12,8 @@ class LineOfSight
     public const EPSILON = 0.0000001;
 
     private array $blockers = [];
+    private array $bounds = [];
+    private array $props = [];
     private array $cells = [];
     private array $large = [];
     private const CELL = 256;
@@ -34,18 +36,21 @@ class LineOfSight
                 'ellipse' => max($shape['radiusX'], $shape['radiusY']),
                 default => 0,
             } + self::EPSILON;
-            $bounds = [];
-            foreach (['x', 'y'] as $axis) {
-                $bounds[$axis] = [(int) floor((min(array_column($points, $axis)) - $padding) / self::CELL),
-                    (int) floor((max(array_column($points, $axis)) + $padding) / self::CELL)];
+            $xs = array_column($points, 'x');
+            $ys = array_column($points, 'y');
+            $this->bounds[$id] = $bounds = [min($xs) - $padding, min($ys) - $padding,
+                max($xs) + $padding, max($ys) + $padding];
+            if (($shape['source'] ?? null) === 'prop') {
+                $this->props[$shape['id']] = $id;
             }
+            [$minX, $minY, $maxX, $maxY] = array_map(static fn ($v) => (int) floor($v / self::CELL), $bounds);
             // Bound index memory for very large/diagonal shapes.
-            if (($bounds['x'][1] - $bounds['x'][0] + 1) * ($bounds['y'][1] - $bounds['y'][0] + 1) > 256) {
+            if (($maxX - $minX + 1) * ($maxY - $minY + 1) > 256) {
                 $this->large[$id] = true;
                 continue;
             }
-            for ($x = $bounds['x'][0]; $x <= $bounds['x'][1]; $x++) {
-                for ($y = $bounds['y'][0]; $y <= $bounds['y'][1]; $y++) {
+            for ($x = $minX; $x <= $maxX; $x++) {
+                for ($y = $minY; $y <= $maxY; $y++) {
                     $this->cells["$x:$y"][$id] = true;
                 }
             }
@@ -57,6 +62,13 @@ class LineOfSight
         return new self(StructuralGeometry::forScene($scene));
     }
 
+    public function hitsProp(string $prop, array $observer, array $target): bool
+    {
+        $id = $this->props[$prop] ?? null;
+
+        return $id !== null && $this->intersection->intersects($observer, $target, self::EPSILON, [$this->blockers[$id]]);
+    }
+
     /** Inputs are world points; range is Euclidean world units, null = unlimited. */
     public function point(array $observer, array $target, ?float $range = null, bool $diagnostics = false): array
     {
@@ -65,13 +77,8 @@ class LineOfSight
         if ($range !== null && $distance > $range + self::EPSILON) {
             return $result;
         }
-        $candidates = $this->candidates($observer, $target);
         $hits = [];
-        foreach ($candidates as $id => $_) {
-            $shape = $this->blockers[$id];
-            if (! $this->intersection->intersects($observer, $target, self::EPSILON, [$shape])) {
-                continue;
-            }
+        foreach ($this->blockingShapes($observer, $target) as $shape) {
             if (! $diagnostics) {
                 return ['visible' => false, 'reason' => 'blocked', 'distance' => $distance];
             }
@@ -99,6 +106,48 @@ class LineOfSight
         return ['visible' => false, 'reason' => 'blocked', 'distance' => $distance, 'blocker' => $hits[0]];
     }
 
+    /** Clip a ray at the exact LOS boundary without querying the index for each prefix. */
+    public function clearDistance(array $origin, float $dx, float $dy, float $distance): float
+    {
+        $target = ['x' => $origin['x'] + $dx * $distance, 'y' => $origin['y'] + $dy * $distance];
+        $blockers = iterator_to_array($this->blockingShapes($origin, $target), false);
+        if (! $blockers) {
+            return $distance;
+        }
+        $low = 0;
+        $high = $distance;
+        for ($i = 0; $i < 32; $i++) {
+            $mid = ($low + $high) / 2;
+            $point = ['x' => $origin['x'] + $dx * $mid, 'y' => $origin['y'] + $dy * $mid];
+            if ($this->intersection->intersects($origin, $point, self::EPSILON, $blockers)) {
+                $high = $mid;
+            } else {
+                $low = $mid;
+            }
+        }
+
+        return $low;
+    }
+
+    private function blockingShapes(array $observer, array $target): iterable
+    {
+        $minX = min($observer['x'], $target['x']);
+        $minY = min($observer['y'], $target['y']);
+        $maxX = max($observer['x'], $target['x']);
+        $maxY = max($observer['y'], $target['y']);
+        $candidates = $this->candidates($minX, $minY, $maxX, $maxY);
+        foreach ($candidates as $id => $_) {
+            [$left, $top, $right, $bottom] = $this->bounds[$id];
+            if ($maxX < $left || $maxY < $top || $minX > $right || $minY > $bottom) {
+                continue;
+            }
+            $shape = $this->blockers[$id];
+            if ($this->intersection->intersects($observer, $target, self::EPSILON, [$shape])) {
+                yield $shape;
+            }
+        }
+    }
+
     /** Center observer; target center + 8 samples at 80% of the circular footprint radius. */
     public function token(Token $observer, Token $target, ?float $range = null, bool $diagnostics = false): array
     {
@@ -123,20 +172,19 @@ class LineOfSight
         return ['x' => $a['x'] + ($b['x'] - $a['x']) * $t, 'y' => $a['y'] + ($b['y'] - $a['y']) * $t];
     }
 
-    private function candidates(array $a, array $b): array
+    private function candidates(float $minX, float $minY, float $maxX, float $maxY): array
     {
-        $bounds = [];
-        foreach (['x', 'y'] as $axis) {
-            $bounds[$axis] = [(int) floor(min($a[$axis], $b[$axis]) / self::CELL),
-                (int) floor(max($a[$axis], $b[$axis]) / self::CELL)];
-        }
+        $left = (int) floor($minX / self::CELL);
+        $top = (int) floor($minY / self::CELL);
+        $right = (int) floor($maxX / self::CELL);
+        $bottom = (int) floor($maxY / self::CELL);
         // Long diagonal rays should never walk a huge empty rectangle.
-        if (($bounds['x'][1] - $bounds['x'][0] + 1) * ($bounds['y'][1] - $bounds['y'][0] + 1) > 4096) {
+        if (($right - $left + 1) * ($bottom - $top + 1) > 4096) {
             return array_fill_keys(array_keys($this->blockers), true);
         }
         $ids = $this->large;
-        for ($x = $bounds['x'][0]; $x <= $bounds['x'][1]; $x++) {
-            for ($y = $bounds['y'][0]; $y <= $bounds['y'][1]; $y++) {
+        for ($x = $left; $x <= $right; $x++) {
+            for ($y = $top; $y <= $bottom; $y++) {
                 $ids += $this->cells["$x:$y"] ?? [];
             }
         }

@@ -14,7 +14,8 @@ export interface EditChange {
         | 'mapWorld'
         | 'propPresence'
         | 'terrain'
-        | 'structure';
+        | 'structure'
+        | 'fog';
     id: string;
     expected: Record<string, unknown>;
     value: Record<string, unknown>;
@@ -26,6 +27,35 @@ export function historyEntry(
     before: Scene,
     result: Mutation,
 ): Entry | undefined {
+    if (result.fogPrevious && command.type === 'fog' && result.fogAction) {
+        const { sequence } = result.fogAction;
+        const { base } = result.fogPrevious;
+        return {
+            label: 'Мазок тумана',
+            changes: [
+                {
+                    kind: 'fog',
+                    id: before.id!,
+                    expected: { base, sequence, append: command.stroke },
+                    value: { ...result.fogPrevious },
+                },
+            ],
+        };
+    }
+    if (result.fogPrevious && command.type === 'fogReset') {
+        if (!result.fogPrevious.sequence && result.fogPrevious.base === command.base) return;
+        return {
+            label: 'Сброс ручного тумана',
+            changes: [
+                {
+                    kind: 'fog',
+                    id: before.id!,
+                    expected: { base: command.base, sequence: 0, actions: [] },
+                    value: { ...result.fogPrevious },
+                },
+            ],
+        };
+    }
     if (command.type === 'structure' && result.structureEdit) {
         const { before: old, after } = result.structureEdit;
         if (old.hash === after.hash) return;
@@ -209,7 +239,7 @@ export class SceneHistory {
         this.publish();
     }
     record(command: SceneCommand, before: Scene | undefined, result: Mutation) {
-        if (before && result.revision !== (before.revision ?? 0) + 1) {
+        if (before && !result.fogPrevious && result.revision !== (before.revision ?? 0) + 1) {
             this.clear();
             this.publish({ notice: 'Сцена менялась параллельно. История правок начата заново.' });
             return;

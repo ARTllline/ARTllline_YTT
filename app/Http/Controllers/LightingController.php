@@ -32,7 +32,7 @@ class LightingController extends Controller
             'value' => 'required|array:enabled,mode,brightness,color,sources',
             'value.enabled' => 'required|boolean', 'value.mode' => 'required|in:day,night',
             'value.brightness' => 'required|numeric|between:0,1', 'value.color' => 'required|regex:/^#[0-9a-fA-F]{6}$/',
-            'value.sources' => 'present|array|max:16', 'value.sources.*' => 'array:id,name,enabled,x,y,tokenId,radius,color,intensity,falloff',
+            'value.sources' => 'present|array|max:'.SceneLighting::SOURCE_LIMIT, 'value.sources.*' => 'array:id,name,enabled,x,y,tokenId,radius,color,intensity,falloff',
             'value.sources.*.id' => 'required|string|max:64|distinct|regex:/^[a-zA-Z0-9_-]+$/',
             'value.sources.*.name' => 'required|string|max:80', 'value.sources.*.enabled' => 'required|boolean',
             'value.sources.*.x' => 'required|numeric|between:0,'.$scene->width, 'value.sources.*.y' => 'required|numeric|between:0,'.$scene->height,

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Services\FantasyClassicPack;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -14,7 +15,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Accounts are created through registration. Never seed shared credentials
-        // or demonstration scenes into a persistent workspace.
+        $pack = app(FantasyClassicPack::class);
+        $pack->install();
+        $pack->installEnvironment();
     }
 }

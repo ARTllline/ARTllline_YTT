@@ -4,6 +4,7 @@ import { terrainPatch } from '../tabletop/terrain/model';
 import { applyRegionPatch } from '../automation/model';
 import type { Scene, Token, Point } from '../tabletop/types/scene';
 import type { Mutation } from '../api/workspace';
+import { applyFogPatch } from '../tabletop/types/spatial';
 export interface SceneEvent {
     type: string;
     sceneId: string;
@@ -28,6 +29,7 @@ export interface SceneEvent {
         | 'deletedId'
         | 'fog'
         | 'fogAction'
+        | 'fogRemovedSequence'
         | 'combat'
         | 'note'
         | 'deletedNoteId'
@@ -37,6 +39,7 @@ export interface SceneEvent {
         scene?: Partial<Scene>;
         structurePatch?: StructurePatch;
         structureRefresh?: boolean;
+        fogRefresh?: boolean;
         gameplayFeedbacks?: import('../gameplay/model').GameplayFeedback[];
         gameplayFeedback?: import('../gameplay/model').GameplayFeedback;
     };
@@ -58,6 +61,7 @@ export function reduceEvent(scene: Scene, event: SceneEvent): Scene | 'gap' {
     const payload = Array.isArray(event.payload) ? {} : event.payload;
     if (
         payload.structureRefresh ||
+        payload.fogRefresh ||
         (payload.structurePatch &&
             payload.structurePatch.base !== (scene.structure?.hash ?? emptyHash))
     )
@@ -92,16 +96,9 @@ export function reduceEvent(scene: Scene, event: SceneEvent): Scene | 'gap' {
             ? { notes: scene.notes?.filter((n) => n.id !== payload.deletedNoteId) }
             : {}),
         ...('combat' in payload ? { combat: payload.combat } : {}),
-        ...(payload.fog
-            ? { fog: payload.fog }
-            : payload.fogAction
-              ? {
-                    fog: {
-                        base: scene.fog?.base ?? 'clear',
-                        actions: [...(scene.fog?.actions ?? []), payload.fogAction],
-                    },
-                }
-              : {}),
+        ...(payload.fog || payload.fogAction || payload.fogRemovedSequence
+            ? { fog: applyFogPatch(scene.fog, payload) }
+            : {}),
         revision: event.revision,
         ...(payload.grid ? { grid: payload.grid } : {}),
         ...('map' in payload ? { map: payload.map } : {}),

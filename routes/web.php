@@ -197,6 +197,7 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/scenes/{scene}/characters', [SceneController::class, 'character'])->name('scene.characters.place')->middleware(IdempotentMutation::class);
         Route::post('/scenes/{scene}/fog/actions', [FogController::class, 'store'])->name('scene.fog.action')->middleware(IdempotentMutation::class);
         Route::post('/scenes/{scene}/fog/reset', [FogController::class, 'reset'])->name('scene.fog.reset')->middleware(IdempotentMutation::class);
+        Route::get('/scenes/{scene}/fog/preview', [FogController::class, 'preview'])->middleware('throttle:120,1');
         Route::post('/scenes/{scene}/spatial', SpatialController::class)->middleware('throttle:spatial');
         Route::get('/scenes/{scene}/lighting', [\App\Http\Controllers\LightingController::class, 'show'])->middleware('throttle:600,1');
         Route::put('/scenes/{scene}/lighting', [\App\Http\Controllers\LightingController::class, 'update'])->name('scene.lighting')->middleware(IdempotentMutation::class);

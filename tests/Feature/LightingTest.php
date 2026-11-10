@@ -121,8 +121,7 @@ class LightingTest extends TestCase
             'blocksMovement' => true, 'blocksVision' => true, 'blocksLight' => false];
         $scene->mapWorld->update(['structure' => $graph]);
         $this->assertTrue($this->lit($this->getJson($url)->json(), 500, 300));
-        $graph['openings'][0]['blocksLight'] = true;
-        $graph['openings'][0]['blocksVision'] = false;
+        $graph['openings'][0]['open'] = false;
         $scene->mapWorld->update(['structure' => $graph]);
         $this->assertFalse($this->lit($this->getJson($url)->json(), 500, 300));
         $scene->mapWorld->update(['structure' => ['vertices' => [], 'edges' => [], 'rooms' => []]]);

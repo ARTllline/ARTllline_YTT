@@ -43,7 +43,8 @@ export function AbilityTargeting({
                 ? s.tokens.find((t) => t.id === actorTokenId)
                 : s.tokens.find((t) => t.characterId === s.activeCharacterId && t.isOwner);
         };
-        instance.cancelGesture();
+        if (store.spatial.tool === 'fog') instance.setTool('select');
+        else instance.cancelGesture();
         store.setAbilityTargeting(true);
         instance.setGameplayTarget(
             ability.target as 'token' | 'prop' | 'point',

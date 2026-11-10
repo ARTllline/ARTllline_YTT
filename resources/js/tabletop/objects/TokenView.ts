@@ -34,6 +34,7 @@ export class TokenView extends Container {
     private stateAge = 1000;
     private dragging = false;
     private lastLabelScale = 0;
+    private bodyColor?: number;
     private turnDuration = Math.max(1, motionDuration('cinematic'));
     private stateDuration = Math.max(1, motionDuration('normal'));
     constructor(
@@ -63,12 +64,31 @@ export class TokenView extends Container {
         this.update(model);
     }
     update(token: Token) {
+        const previous = this.model;
         this.model = token;
         this.position.set(token.x, token.y);
+        const appearance = tokenAppearance(token);
+        const badges =
+            [appearance.marker, ...(token.conditions ?? []).slice(0, 2).map(conditionLabel)]
+                .filter(Boolean)
+                .join(' · ') + ((token.conditions?.length ?? 0) > 2 ? ' +' : '');
+        if (
+            this.bodyColor === appearance.color &&
+            previous.name === token.name &&
+            previous.isHidden === token.isHidden &&
+            previous.size === token.size &&
+            previous.scale === token.scale &&
+            previous.rotation === token.rotation &&
+            previous.hp === token.hp &&
+            previous.maxHp === token.maxHp &&
+            previous.canMove === token.canMove &&
+            this.badges.text === badges
+        )
+            return;
+        this.bodyColor = appearance.color;
         this.radius = (token.size * token.scale) / 2;
         this.alpha = token.isHidden ? 0.66 : 1;
         const r = this.radius,
-            appearance = tokenAppearance(token),
             c = appearance.color;
         this.body
             .clear()
@@ -107,10 +127,7 @@ export class TokenView extends Container {
                     .roundRect(-w / 2, r - 1, Math.max(2, w * ratio), 2, 1)
                     .fill(ratio <= 0.25 ? 0xe79a97 : c);
         }
-        this.badges.text =
-            [appearance.marker, ...(token.conditions ?? []).slice(0, 2).map(conditionLabel)]
-                .filter(Boolean)
-                .join(' · ') + ((token.conditions?.length ?? 0) > 2 ? ' +' : '');
+        this.badges.text = badges;
         this.badges.position.set(0, -r - 10);
         this.drawRing();
         this.drawTurn();

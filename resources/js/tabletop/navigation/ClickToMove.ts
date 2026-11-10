@@ -63,6 +63,14 @@ export class ClickToMove {
     };
     private deferred?: { id: string; destination: Point; instant: boolean; previewOnly: boolean };
     private running?: { path: Point[]; nextAt: number };
+    private drawn?: {
+        context: NonNullable<ClickToMove['context']>;
+        path?: readonly Point[];
+        status?: string;
+        allowed?: boolean;
+        zoom: number;
+        revision: number;
+    };
     private context?: {
         scene: Scene;
         token: Token;
@@ -359,14 +367,26 @@ export class ClickToMove {
             this.store.moveToken(context.token.id, step.at(-1)!, undefined, step.slice(1, -1));
             return;
         }
-        const { path, token, scene, target } = this.context;
+        const context = this.context;
+        const { path, token, scene, target } = context;
+        const { status, allowed } = state.routePreview ?? {};
+        const drawn = this.drawn;
+        if (
+            drawn?.context === context &&
+            drawn.path === path &&
+            drawn.status === status &&
+            drawn.allowed === allowed &&
+            drawn.zoom === zoom &&
+            drawn.revision === this.overlay.revision
+        )
+            return;
         if (path)
             this.overlay.showMovement(
                 path[0],
                 path.at(-1)!,
                 (token.size * token.scale) / 2,
                 zoom,
-                !this.store.getSnapshot().routePreview?.allowed,
+                !allowed,
                 scene.grid,
                 movementRange(scene, token),
                 false,
@@ -378,8 +398,9 @@ export class ClickToMove {
                 target,
                 (token.size * token.scale) / 2,
                 zoom,
-                state.routePreview?.status === 'error',
+                status === 'error',
             );
+        this.drawn = { context, path, status, allowed, zoom, revision: this.overlay.revision };
     }
     private stopWorker() {
         this.worker?.terminate();
@@ -389,6 +410,7 @@ export class ClickToMove {
     }
     cancel = () => {
         this.running = undefined;
+        this.drawn = undefined;
         this.stopWorker();
         this.deferred = undefined;
         this.context = undefined;

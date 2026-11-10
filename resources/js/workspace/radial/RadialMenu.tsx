@@ -82,7 +82,7 @@ export function RadialMenu({
             origin = undefined;
         };
         const open = (x: number, y: number) => {
-            if (store.abilityTargeting) return;
+            if (store.abilityTargeting || store.spatial.tool === 'fog') return;
             const hit = renderer.current?.contextTarget(x, y);
             renderer.current?.cancelGesture();
             if (!hit) {
@@ -103,7 +103,7 @@ export function RadialMenu({
             open(e.clientX, e.clientY);
         };
         const down = (e: PointerEvent) => {
-            if (store.abilityTargeting) return;
+            if (store.abilityTargeting || store.spatial.tool === 'fog') return;
             clear();
             if (
                 !e.isPrimary ||
@@ -190,7 +190,7 @@ export function RadialMenu({
         disabled?: boolean;
         run: () => void | Promise<void>;
     }[] =
-        interactionMode && target && target.kind !== 'region'
+        interactionMode && target && (target.kind === 'token' || target.kind === 'prop')
             ? configured.map((action) => ({
                   label: action.label,
                   Icon: (interactionIcons[action.icon] ?? interactionIcons.hand).Icon,
@@ -432,11 +432,13 @@ export function RadialMenu({
                                 <span>
                                     {busy
                                         ? 'ПРИМЕНЯЕМ…'
-                                        : target.kind === 'region'
-                                          ? 'ОБЛАСТЬ'
-                                          : target.kind === 'prop'
-                                            ? 'ОБЪЕКТ'
-                                            : 'ТОКЕН'}
+                                        : target.kind === 'opening'
+                                          ? 'ПРОЁМ'
+                                          : target.kind === 'region'
+                                            ? 'ОБЛАСТЬ'
+                                            : target.kind === 'prop'
+                                              ? 'ОБЪЕКТ'
+                                              : 'ТОКЕН'}
                                 </span>
                                 <strong>{entity.name || 'Объект'}</strong>
                                 {store.role === 'gm' && configured.length > 0 && (
@@ -451,7 +453,7 @@ export function RadialMenu({
                                             : `Действия · ${configured.length} →`}
                                     </button>
                                 )}
-                                {store.role === 'gm' && onCreate && (
+                                {store.role === 'gm' && onCreate && target.kind !== 'opening' && (
                                     <button
                                         className="radial-create"
                                         role="menuitem"
@@ -489,7 +491,7 @@ export function RadialMenu({
                                         onFocus={() => setHoverSector(index)}
                                         onBlur={() => setHoverSector(null)}
                                         disabled={
-                                            disabled ||
+                                            (disabled && (store.role === 'player' || target.kind !== 'opening')) ||
                                             actionDisabled ||
                                             busy ||
                                             save.status !== 'saved'

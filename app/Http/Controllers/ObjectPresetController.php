@@ -12,13 +12,31 @@ class ObjectPresetController extends Controller
 {
     public function index(Request $request): array
     {
-        $data = $request->validate(['search' => 'nullable|string|max:120', 'page' => 'nullable|integer|min:1']);
-        $query = ObjectPreset::where('library_user_id', $request->user()->id)->with('asset');
-        if ($search = $data['search'] ?? null) {
-            $like = '%'.addcslashes($search, '%_\\').'%';
-            $query->where(fn ($q) => $q->where('name', 'like', $like)->orWhere('category', 'like', $like));
+        $data = $request->validate(['search' => 'nullable|string|max:120', 'page' => 'nullable|integer|min:1',
+            'source' => 'nullable|in:builtin,personal', 'category' => 'nullable|string|max:80']);
+        $query = ObjectPreset::available($request->user())->with('asset');
+        if (($data['source'] ?? null) === 'builtin') {
+            $query->whereNotNull('builtin_key');
+        } elseif (($data['source'] ?? null) === 'personal') {
+            $query->whereNull('builtin_key');
         }
-        $page = $query->orderBy('name')->orderBy('id')->paginate(24);
+        if (isset($data['category'])) {
+            $query->where('category', $data['category']);
+        }
+        $search = trim($data['search'] ?? '');
+        if ($search !== '') {
+            // SQLite LIKE folds ASCII only. Cover lowercase queries and title-case names there too.
+            $terms = array_unique([$search, mb_strtolower($search), mb_convert_case($search, MB_CASE_TITLE)]);
+            $query->where(function ($q) use ($terms) {
+                foreach ($terms as $term) {
+                    $like = '%'.strtr($term, ['!' => '!!', '%' => '!%', '_' => '!_']).'%';
+                    $q->orWhereRaw("name LIKE ? ESCAPE '!'", [$like])->orWhereRaw("category LIKE ? ESCAPE '!'", [$like])
+                        ->orWhereHas('asset', fn ($assets) => $assets->whereRaw("name LIKE ? ESCAPE '!'", [$like])
+                            ->orWhereRaw("original_name LIKE ? ESCAPE '!'", [$like]));
+                }
+            });
+        }
+        $page = $query->orderByRaw('builtin_key IS NULL')->orderBy('name')->orderBy('id')->paginate(24);
 
         return ['presets' => $page->getCollection()->map->projection(), 'pages' => $page->lastPage()];
     }
@@ -37,8 +55,9 @@ class ObjectPresetController extends Controller
 
     public function duplicate(Request $request, ObjectPreset $preset): array
     {
-        $this->authorizeOwner($request, $preset);
-        $copy = $preset->replicate();
+        abort_unless($preset->builtin_key || $preset->library_user_id === $request->user()->id, 404);
+        $copy = $preset->replicate(['builtin_key']);
+        $copy->library_user_id = $request->user()->id;
         $copy->name = mb_substr($preset->name, 0, 152).' · копия';
         $copy->save();
 
@@ -55,7 +74,7 @@ class ObjectPresetController extends Controller
 
     private function authorizeOwner(Request $request, ObjectPreset $preset): void
     {
-        abort_unless($preset->library_user_id === $request->user()->id, 404);
+        abort_unless(! $preset->builtin_key && $preset->library_user_id === $request->user()->id, 404);
     }
 
     private function save(Request $request, ObjectPreset $preset): array
@@ -77,8 +96,12 @@ class ObjectPresetController extends Controller
         }
 
         return DB::transaction(function () use ($preset, $data, $settings) {
-            $asset = Asset::where('library_user_id', $preset->library_user_id)
+            $asset = Asset::where(fn ($q) => $q->where('library_user_id', $preset->library_user_id)
+                ->orWhere(fn ($q) => $q->whereNotNull('builtin_key')->where('category', 'props')))
                 ->where('kind', 'prop')->whereNull('duration_ms')->lockForUpdate()->findOrFail($data['assetId']);
+            if ($preset->asset_id === $asset->id && isset($preset->settings['light'])) {
+                $settings['light'] = $preset->settings['light'];
+            }
             $preset->fill(['asset_id' => $asset->id, 'name' => $data['name'], 'category' => $data['category'],
                 'settings' => $settings])->save();
 

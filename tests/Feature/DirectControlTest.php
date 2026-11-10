@@ -107,9 +107,9 @@ class DirectControlTest extends TestCase
         $graph = json_decode(file_get_contents(base_path('tests/Fixtures/movement.json')), true)['graph'];
         $world = $scene->mapWorld()->create(['structure' => $graph]);
         foreach ([[150, true, false, 20, false], [234, false, false, 20, true], [234, true, false, 20, false],
-            [410, false, false, 20, true], [410, false, true, 20, false], [234, false, false, 66, false]] as [$y, $close, $window, $size, $allowed]) {
+            [410, false, false, 20, false], [410, false, true, 20, false], [234, false, false, 66, false]] as [$y, $close, $closeWindow, $size, $allowed]) {
             $graph['openings'][0]['open'] = ! $close;
-            $graph['openings'][1]['blocksMovement'] = $window;
+            $graph['openings'][1]['open'] = ! $closeWindow;
             $world->update(['structure' => $graph]);
             $token->refresh()->update(['x' => 283, 'y' => $y, 'size' => $size]);
             $data = $this->open($token);

@@ -93,6 +93,16 @@ class TerrainTest extends TestCase
         ]], 'clientMutationId' => (string) Str::uuid()]);
     }
 
+    public function test_gm_can_paint_with_shared_terrain_on_a_blank_world(): void
+    {
+        $this->seed();
+        $version = MapMaterialVersion::whereHas('material', fn ($q) => $q
+            ->where('builtin_key', 'fantasy-classic/environment/woodland-grass'))->firstOrFail();
+        $this->stroke(['materialVersionId' => $version->id])->assertOk();
+        $this->actingAs($this->player)->getJson('/api/scenes/'.$this->scene->id.'/snapshot')
+            ->assertJsonPath('terrain.materials.0.versionId', (string) $version->id);
+    }
+
     public function test_sparse_masks_immutable_versions_receipts_reload_and_compact_events(): void
     {
         $uuid = (string) Str::uuid();

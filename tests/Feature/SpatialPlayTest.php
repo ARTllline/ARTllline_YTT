@@ -94,6 +94,25 @@ class SpatialPlayTest extends TestCase
         Event::assertDispatched(TabletopEvent::class, fn ($event) => str_ends_with($event->channel, '.gm'));
     }
 
+    public function test_fog_history_preserves_the_order_of_strokes_copied_from_another_scene(): void
+    {
+        $stroke = $this->stroke();
+        $this->scene->fogActions()->create([
+            'sequence' => 50, 'operation' => 'cover', 'shape' => $stroke['shape'], 'geometry' => $stroke['geometry'],
+        ]);
+        $url = '/api/scenes/'.$this->scene->id;
+        $this->actingAs($this->gm)->postJson($url.'/fog/actions', $stroke)->assertOk()
+            ->assertJsonPath('revision', 1)->assertJsonPath('fogAction.sequence', 51);
+        $before = ['base' => 'clear', 'sequence' => 50];
+        $after = ['base' => 'clear', 'sequence' => 51, 'append' => array_diff_key($stroke, ['clientMutationId' => true])];
+        $undo = fn ($expected, $value) => $this->postJson($url.'/edit-history', ['changes' => [[
+            'kind' => 'fog', 'id' => $this->scene->id, 'expected' => $expected, 'value' => $value,
+        ]]]);
+        $undo($after, $before)->assertOk()->assertJsonPath('fogRemovedSequence', 51);
+        $undo($before, $after)->assertOk()->assertJsonPath('fogAction.sequence', 51);
+        $this->assertSame([50, 51], $this->scene->fogActions()->pluck('sequence')->all());
+    }
+
     public function test_spatial_is_ephemeral_attributed_authorized_and_epoch_scoped(): void
     {
         $path = '/api/scenes/'.$this->scene->id.'/spatial';

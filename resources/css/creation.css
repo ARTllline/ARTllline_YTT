@@ -221,6 +221,16 @@
     color: var(--accent);
     flex-shrink: 0;
 }
+.placement-transform {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-variant-numeric: tabular-nums;
+}
+.placement-transform output {
+    min-width: 3ch;
+    text-align: center;
+}
 .creation-placement-bar strong {
     display: block;
     font-size: 13px;

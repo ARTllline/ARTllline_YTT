@@ -56,9 +56,9 @@ class ClickToMoveTest extends TestCase
         Event::assertNotDispatched(TabletopEvent::class, fn ($event) => str_contains($event->channel, '.user.')
             && preg_match('/Hidden barrier|GM-only preset|blocksVision|blocksLight|"preset"|"collider"/', json_encode($event->envelope)));
         $this->assertNotSame($prop->id, $hidden->id);
-        // Movement-flag edits invalidate the public graph hash, even without visual edits.
+        // A window state change invalidates the public graph hash even though movement stays blocked.
         $before = StructureData::projection($scene->fresh(), false)['hash'];
-        $graph['openings'][1]['blocksMovement'] = true;
+        $graph['openings'][1]['open'] = false;
         $scene->mapWorld->update(['structure' => $graph]);
         $this->assertNotSame($before, StructureData::projection($scene->fresh(), false)['hash']);
     }

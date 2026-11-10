@@ -45,6 +45,9 @@ export class TokenLayer extends Container {
                         (append
                             ? Math.max(0, previousAnimation.duration - previousAnimation.elapsed)
                             : 0);
+                    // Start immediately, with a small playback reserve for a late next receipt.
+                    // Overlapping steps reuse the reserve instead of accumulating delay.
+                    if (movement?.continuous && !append) duration += 50;
                     // A throttled/background spectator must not accumulate a playback queue.
                     if (movement?.continuous && (combined.length > 64 || duration > 600)) {
                         combined = path;
@@ -76,7 +79,8 @@ export class TokenLayer extends Container {
         return this.movements.has(id);
     }
     drawMovements(zoom: number, selected: readonly string[]) {
-        const ink = this.movementInk.clear();
+        const ink = this.movementInk;
+        if (ink.context.instructions.length) ink.clear();
         for (const [id, active] of this.movements) {
             if (active.continuous || !selected.includes(id)) continue;
             const path = remainingTokenPath(active);

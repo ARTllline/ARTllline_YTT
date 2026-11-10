@@ -55,10 +55,20 @@ it('uses the existing structural geometry for doors, windows and wall thickness'
     };
     expect(valid(request).path).toHaveLength(2);
     if (graph.openings?.[0].type === 'door') graph.openings[0].open = false;
-    if (graph.openings?.[1].type === 'window') graph.openings[1].blocksMovement = true;
+    if (graph.openings?.[1].type === 'window') graph.openings[1].open = false;
     const closed = valid({ ...request, obstacles: obstacles() });
     expect(closed.path.length).toBeGreaterThan(2);
     expect(closed.length).toBeGreaterThan(600);
+    const throughWindow = {
+        ...request,
+        start: { ...request.start, y: 410 },
+        target: { ...request.target, y: 410 },
+        radius: 20,
+    };
+    expect(valid({ ...throughWindow, obstacles: obstacles() }).path.length).toBeGreaterThan(2);
+    if (graph.openings?.[1].type === 'window') graph.openings[1].open = true;
+    expect(valid({ ...throughWindow, obstacles: obstacles() }).path.length).toBeGreaterThan(2);
+    expect(movementPortals({ mapWorld: {}, structure: { graph } } as Scene, 20)).toHaveLength(0);
 });
 it('routes between furniture and accepts only a footprint that fits a narrow passage', () => {
     const obstacles = [box(200, 0, 100, 137), box(200, 163, 100, 237)];
@@ -74,7 +84,6 @@ it('connects an angled narrow doorway independently of the navigation grid phase
         y: Math.round((234 + (x - 300) * Math.sin(0.5) + (y - 234) * Math.cos(0.5)) * 1000) / 1000,
     });
     graph.vertices = graph.vertices.map((v) => ({ ...v, ...rotate(v) }));
-    if (graph.openings?.[1].type === 'window') graph.openings[1].blocksMovement = true;
     const scene = { mapWorld: {}, structure: { graph } } as Scene;
     const portals = movementPortals(scene, 30);
     const route = valid({

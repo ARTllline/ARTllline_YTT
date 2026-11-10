@@ -3,6 +3,9 @@ import { performanceMark, observingPerformance } from '../../realtime/performanc
 import { WasdControl } from '../navigation/WasdControl';
 import { displayScene } from '../mapWorld';
 import { StructureLayer } from '../structure/StructureLayer';
+import { along, distance, openingEnds, project, vertexIndex } from '../structure/model';
+import { doorLeaf } from '../structure/openingArt';
+import { maskBytes, pointInPolygons } from '../lighting/model';
 import type { PresetSettings } from '../objects/collider';
 import { StructureCollisionOverlay } from '../structure/StructureCollisionOverlay';
 import { LightingLayer } from '../lighting/LightingLayer';
@@ -29,7 +32,7 @@ import { GridLayer } from '../layers/GridLayer';
 import { TokenLayer } from '../layers/TokenLayer';
 import { InteractionLayer } from '../layers/InteractionLayer';
 import type { SceneStore } from '../state/SceneStore';
-import type { Tool } from '../types/scene';
+import type { Point, Tool } from '../types/scene';
 import { currentTokenId } from '../types/combat';
 import { screenToWorld, snapPoint, worldToScreen } from '../utils/coordinates';
 
@@ -210,7 +213,7 @@ export class TabletopRenderer {
         let previousEditor = this.store.getSnapshot().mapEditor;
         const sync = () => {
             const state = this.store.getSnapshot();
-            if (state.mapEditor !== previousEditor || state.build !== previousBuild)
+            if (state.mapEditor !== previousEditor || state.build?.mode !== previousBuild?.mode)
                 this.input?.cancel();
             previousBuild = state.build;
             this.input?.refreshBuild();
@@ -218,14 +221,15 @@ export class TabletopRenderer {
             this.map.visible = state.mapEditor?.backgroundVisible !== false;
             this.props.visible = state.mapEditor?.objectsVisible !== false;
             this.tokens.alpha = state.mapEditor ? 0.35 : 1;
-            this.fog.visible = !state.mapEditor;
             if (this.notes) this.notes.visible = !state.mapEditor;
             if (this.regions) this.regions.visible = !state.mapEditor;
             const scene = displayScene(state.scene, state.mapDraft);
             this.terrain.sync(scene);
             this.vision.sync(
                 this.app.renderer,
-                this.store.role === 'player' ? scene.vision : undefined,
+                this.store.role === 'player'
+                    ? scene.vision
+                    : this.store.spatial.tool === 'fog' ? this.store.spatial.fogVision : undefined,
                 scene.width,
                 scene.height,
                 movementUpdate !== state.movementUpdate
@@ -233,7 +237,7 @@ export class TabletopRenderer {
                     : undefined,
                 this.store.directCommandPending || this.store.queuedMovementPending,
             );
-            this.lighting.sync(scene, this.vision.currentMask.texture, state.lightingDraft);
+            this.lighting.sync(scene, this.store.role === 'player' ? this.vision.currentMask.texture : undefined, state.lightingDraft);
             if ('backBuffer' in this.app.renderer) {
                 // Only the Darkvision saturation pass samples the already rendered map.
                 this.app.renderer.backBuffer.useBackBuffer =
@@ -330,7 +334,7 @@ export class TabletopRenderer {
                 now,
                 this.reducedMotion.matches,
             );
-            this.response.clear();
+            if (this.response.context.instructions.length) this.response.clear();
             if (this.responseTarget && this.responseTarget.until > now) {
                 const target = this.responseTarget;
                 const scene = this.store.getSnapshot().scene;
@@ -407,7 +411,7 @@ export class TabletopRenderer {
                 };
             }
             this.input?.updateTerrainCursor();
-            this.input?.updateBuildZoom();
+            this.input?.updateBuildCamera();
             this.weather.configure(this.effects, this.reducedMotion.matches);
             this.weather.tick(ticker.deltaMS, this.width, this.height, this.reducedMotion.matches);
             this.director.tick(ticker.deltaMS);
@@ -417,7 +421,7 @@ export class TabletopRenderer {
             this.regions?.zoom(camera.zoom);
             const state = this.store.getSnapshot();
             const scene = displayScene(state.scene, state.mapDraft);
-            this.mapGuide.clear();
+            if (this.mapGuide.context.instructions.length) this.mapGuide.clear();
             for (const p of state.mapCalibrationPoints ?? []) {
                 const r = 9 / camera.zoom;
                 this.mapGuide
@@ -427,14 +431,22 @@ export class TabletopRenderer {
                     .lineTo(p.x, p.y + r)
                     .stroke({ color: 0xb7e1ce, width: 2 / camera.zoom });
             }
+            const gm = this.store.role === 'gm';
+            const fogTool = gm && this.store.spatial.tool === 'fog';
+            const encoded = !gm && !!scene.vision?.enabled;
+            this.fog.visible = !encoded && (!state.mapEditor || fogTool);
             this.fog.update(
                 this.app.renderer,
                 scene.fog,
-                this.store.spatial.draft,
+                fogTool ? this.store.spatial.draft ?? this.store.spatial.pendingFog ?? null : null,
                 scene.width,
                 scene.height,
-                this.store.role === 'gm',
+                encoded ? 'encoded' : fogTool ? 'gm' : gm ? 'gm-plain' : 'plain',
             );
+            if (gm)
+                this.vision.sync(this.app.renderer, fogTool ? this.store.spatial.fogVision : undefined, scene.width, scene.height);
+            const manualFog = scene.fog?.base === 'covered' || !!scene.fog?.actions.length;
+            this.vision.setFogPresentation(encoded && manualFog ? this.fog.texture : undefined, gm);
             this.spatial.update(
                 this.store.spatial,
                 scene.grid,
@@ -484,8 +496,63 @@ export class TabletopRenderer {
         }
         const prop = this.props.hit(point);
         if (prop) return { kind: 'prop' as const, id: prop };
+        const opening = this.contextOpening(point);
+        if (opening) return { kind: 'opening' as const, id: opening };
         const region = this.regions?.hit(point);
         if (region) return { kind: 'region' as const, id: region };
+    }
+    private contextOpening(point: Point) {
+        const { structure, vision } = this.store.getSnapshot().scene;
+        const graph = structure?.graph;
+        if (!graph?.openings?.length) return;
+        const playerVision = this.store.role === 'player' && vision?.enabled ? vision : undefined;
+        const raster = playerVision?.raster;
+        const bits = raster ? maskBytes(raster.bits) : '';
+        const visible = (p: Point) => {
+            if (!raster) return !playerVision || pointInPolygons(p, playerVision.polygons);
+            const x = Math.floor(p.x / raster.cellSize);
+            const y = Math.floor(p.y / raster.cellSize);
+            if (x < 0 || x >= raster.width || y < 0 || y >= raster.height) return false;
+            const index = y * raster.width + x;
+            return !!(bits.charCodeAt(index >> 3) & (1 << (index & 7)));
+        };
+        const vertices = vertexIndex(graph);
+        const edges = new Map(graph.edges.map((edge) => [edge.id, edge]));
+        const radius = Math.max(4, 8 / this.camera.state.zoom);
+        let nearest = Infinity;
+        let id: string | undefined;
+        for (const opening of graph.openings) {
+            const edge = edges.get(opening.edgeId);
+            if (!edge) continue;
+            const [a, b] = openingEnds(edge, vertices, opening);
+            let d = distance(point, project(point, a, b));
+            if (opening.type === 'door' && opening.open) {
+                const { hinge, angle } = doorLeaf(a, b, opening);
+                const length = distance(a, b);
+                const tip = {
+                    x: hinge.x + length * Math.cos(angle),
+                    y: hinge.y + length * Math.sin(angle),
+                };
+                d = Math.min(d, distance(point, project(point, hinge, tip)));
+            }
+            if (d > radius || d >= nearest) continue;
+            if (playerVision) {
+                // Sample both faces so a closed panel can be clicked from the visible side.
+                const reach = Math.min(4, edge.thickness / 2) + (raster?.cellSize ?? 0) / 2 + 0.01;
+                const scale = reach / distance(a, b);
+                const dx = (b.y - a.y) * scale;
+                const dy = (b.x - a.x) * scale;
+                const seen = [0.25, 0.5, 0.75].some((t) => {
+                    const p = along(a, b, t);
+                    return visible({ x: p.x - dx, y: p.y + dy }) ||
+                        visible({ x: p.x + dx, y: p.y - dy });
+                });
+                if (!seen) continue;
+            }
+            nearest = d;
+            id = opening.id;
+        }
+        return id;
     }
     isTokenInMotion(id: string) {
         return (
@@ -516,6 +583,16 @@ export class TabletopRenderer {
     }
     selectedContextPoint() {
         const state = this.store.getSnapshot();
+        if (this.store.role === 'gm' && state.structureSelection?.kind === 'opening') {
+            const id = state.structureSelection.id;
+            const graph = state.scene.structure?.graph;
+            const opening = graph?.openings?.find((o) => o.id === id);
+            const edge = graph?.edges.find((e) => e.id === opening?.edgeId);
+            if (graph && edge && opening) {
+                const [a, b] = openingEnds(edge, vertexIndex(graph), opening);
+                return this.screenPoint(along(a, b, 0.5));
+            }
+        }
         const region = state.scene.regions?.find((r) => r.id === state.selectedRegionId);
         const target =
             state.scene.tokens.find((t) => t.id === state.selectedIds[0]) ??
@@ -588,8 +665,9 @@ export class TabletopRenderer {
             preset?.pivotY,
         );
     }
-    rotatePlacement(rotation: number) {
+    transformPlacement(rotation: number, scale: number) {
         this.placementGhost.angle = rotation;
+        this.placementGhost.scale.set(scale);
     }
     hidePlacement() {
         this.placementGhost.visible = false;
@@ -643,6 +721,7 @@ export class TabletopRenderer {
         this.camera.zoomBy(factor, { x: this.width / 2, y: this.height / 2 });
     }
     setTool(tool: Tool) {
+        if (tool === 'fog' && this.store.abilityTargeting) return;
         if (this.input) {
             this.input.cancel();
             this.input.tool = tool;
@@ -666,6 +745,7 @@ export class TabletopRenderer {
     private release() {
         this.app.canvas.removeEventListener('webglcontextlost', this.contextLost);
         this.tokens.finishMovements();
+        this.structure.releaseArt();
         this.app.destroy(true, { children: true });
         this.textures.forEach((texture) => texture.destroy(true));
         this.textures.clear();

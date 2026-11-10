@@ -32,7 +32,7 @@ class TokenMovementTest extends TestCase
         foreach ($fixture['cases'] as $case) {
             $graph = $fixture['graph'];
             $graph['openings'][0]['open'] = ! ($case['closeDoor'] ?? false);
-            $graph['openings'][1]['blocksMovement'] = $case['blockWindow'] ?? false;
+            $graph['openings'][1]['open'] = ! ($case['closeWindow'] ?? false);
             $shapes = StructuralGeometry::compile($graph)['shapes'];
             $this->assertSame($case['blocked'], $collision->blocks($case['a'], $case['b'], $case['radius'], $shapes), $case['name']);
         }

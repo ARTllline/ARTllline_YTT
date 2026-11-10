@@ -8,6 +8,7 @@ import { ColliderEditor } from './ColliderEditor';
 import '../../../css/object-presets.css';
 
 const endpoint = '/library/object-presets';
+const categories = ['Природа', 'Мебель и декор', 'Освещение'];
 const defaults: PresetSettings = {
     width: 120,
     height: 120,
@@ -140,6 +141,9 @@ function PresetEditor({
                     Игровые теги через запятую
                     <input maxLength={400} value={tags} onChange={(e) => setTags(e.target.value)} />
                 </label>
+                {settings.light && (
+                    <p className="hint">Свет Fantasy Classic · радиус {settings.light.radius} wu</p>
+                )}
                 <div className="object-preset-actions">
                     <button className="primary-button" disabled={!draft.asset}>
                         Сохранить пресет
@@ -162,34 +166,37 @@ function PresetPicker({
 }) {
     const [draft, setDraft] = useState<Draft | null>(null);
     const [search, setSearch] = useState('');
+    const [source, setSource] = useState('');
+    const [category, setCategory] = useState('');
     const [page, setPage] = useState(1);
     const [version, refresh] = useState(0);
-    const [result, setResult] = useState<{ presets: ObjectPreset[]; pages: number }>();
+    type Result = { presets: ObjectPreset[]; pages: number };
+    const query = new URLSearchParams({ search, page: String(page), source, category }).toString();
+    const [loaded, setLoaded] = useState<{ query: string; data: Result }>();
+    const result = loaded?.query === query ? loaded.data : undefined;
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
     const [deleting, setDeleting] = useState<ObjectPreset | null>(null);
     useEffect(() => {
         const controller = new AbortController();
-        const timer = window.setTimeout(() => {
-            void request<NonNullable<typeof result>>(
-                `${endpoint}?search=${encodeURIComponent(search)}&page=${page}`,
-                'GET',
-                undefined,
-                controller.signal,
-            )
-                .then((data) => {
-                    if (page > data.pages) setPage(data.pages);
-                    setResult(data);
-                })
-                .catch((e: Error) => {
-                    if (!controller.signal.aborted) setError(e.message);
-                });
-        }, 140);
+        const timer = window.setTimeout(
+            () => {
+                void request<Result>(`${endpoint}?${query}`, 'GET', undefined, controller.signal)
+                    .then((data) => {
+                        if (page > data.pages) setPage(data.pages);
+                        setLoaded({ query, data });
+                    })
+                    .catch((e: Error) => {
+                        if (!controller.signal.aborted) setError(e.message);
+                    });
+            },
+            search ? 140 : 0,
+        );
         return () => {
             clearTimeout(timer);
             controller.abort();
         };
-    }, [search, page, version]);
+    }, [query, search, page, version]);
     const mutate = async (fn: () => Promise<unknown>) => {
         setBusy(true);
         setError('');
@@ -241,8 +248,9 @@ function PresetPicker({
                     <>
                         <div className="object-preset-actions">
                             <input
+                                autoFocus
                                 aria-label="Поиск пресетов"
-                                placeholder="Название или категория"
+                                placeholder="Дуб, стол, фонарь…"
                                 maxLength={120}
                                 value={search}
                                 onChange={(e) => {
@@ -251,6 +259,20 @@ function PresetPicker({
                                     setError('');
                                 }}
                             />
+                            <select
+                                aria-label="Источник пресетов"
+                                value={source}
+                                onChange={(e) => {
+                                    setSource(e.target.value);
+                                    setCategory('');
+                                    setPage(1);
+                                    setError('');
+                                }}
+                            >
+                                <option value="">Все пресеты</option>
+                                <option value="builtin">Fantasy Classic</option>
+                                <option value="personal">Мои пресеты</option>
+                            </select>
                             <button
                                 className="primary-button"
                                 disabled={busy || !!deleting}
@@ -267,6 +289,27 @@ function PresetPicker({
                                 Новый пресет
                             </button>
                         </div>
+                        {source !== 'personal' && (
+                            <div
+                                className="object-preset-actions object-preset-filters"
+                                aria-label="Категории пресетов"
+                            >
+                                {['', ...categories].map((value) => (
+                                    <button
+                                        type="button"
+                                        key={value}
+                                        aria-pressed={category === value}
+                                        onClick={() => {
+                                            setCategory(value);
+                                            setPage(1);
+                                            setError('');
+                                        }}
+                                    >
+                                        {value || 'Все категории'}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                         {deleting && (
                             <div className="object-preset-actions" role="alert">
                                 Удалить «{deleting.name}» из библиотеки? Размещённые экземпляры
@@ -290,9 +333,31 @@ function PresetPicker({
                             <div className="object-preset-grid">
                                 {result.presets.map((preset) => (
                                     <article key={preset.id} className="surface">
-                                        <img src={preset.asset.url} alt="" loading="lazy" />
+                                        <img
+                                            src={preset.thumbnailUrl ?? preset.asset.url}
+                                            alt=""
+                                            loading="lazy"
+                                        />
                                         <strong>{preset.name}</strong>
-                                        <small>{preset.category}</small>
+                                        <small>
+                                            {preset.category} ·{' '}
+                                            {Math.round(
+                                                preset.settings.width * preset.settings.scaleX,
+                                            )}{' '}
+                                            ×{' '}
+                                            {Math.round(
+                                                preset.settings.height * preset.settings.scaleY,
+                                            )}{' '}
+                                            wu
+                                        </small>
+                                        <small className="object-preset-details">
+                                            {preset.builtin ? 'Fantasy Classic' : 'Личный'}
+                                            {preset.settings.collider.type !== 'none' &&
+                                                preset.settings.collider.blocksMovement &&
+                                                ' · препятствие'}
+                                            {preset.settings.light &&
+                                                ` · свет ${preset.settings.light.radius} wu`}
+                                        </small>
                                         <div className="object-preset-actions">
                                             {onPlace && (
                                                 <button
@@ -306,17 +371,19 @@ function PresetPicker({
                                                     Разместить
                                                 </button>
                                             )}
-                                            <button
-                                                disabled={busy || !!deleting}
-                                                onClick={() => setDraft(preset)}
-                                            >
-                                                Правка
-                                            </button>
+                                            {!preset.builtin && (
+                                                <button
+                                                    disabled={busy || !!deleting}
+                                                    onClick={() => setDraft(preset)}
+                                                >
+                                                    Правка
+                                                </button>
+                                            )}
                                             <button
                                                 disabled={busy || !!deleting}
                                                 onClick={() =>
-                                                    void mutate(() =>
-                                                        request(
+                                                    void mutate(async () => {
+                                                        await request(
                                                             endpoint +
                                                                 '/' +
                                                                 preset.id +
@@ -326,18 +393,26 @@ function PresetPicker({
                                                                 clientMutationId:
                                                                     crypto.randomUUID(),
                                                             },
-                                                        ),
-                                                    )
+                                                        );
+                                                        if (preset.builtin) {
+                                                            setSource('personal');
+                                                            setCategory('');
+                                                            setSearch('');
+                                                            setPage(1);
+                                                        }
+                                                    })
                                                 }
                                             >
                                                 Копия
                                             </button>
-                                            <button
-                                                disabled={busy || !!deleting}
-                                                onClick={() => setDeleting(preset)}
-                                            >
-                                                Удалить
-                                            </button>
+                                            {!preset.builtin && (
+                                                <button
+                                                    disabled={busy || !!deleting}
+                                                    onClick={() => setDeleting(preset)}
+                                                >
+                                                    Удалить
+                                                </button>
+                                            )}
                                         </div>
                                     </article>
                                 ))}

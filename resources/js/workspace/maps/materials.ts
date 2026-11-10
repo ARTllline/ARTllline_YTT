@@ -6,6 +6,8 @@ export const materialTypes = {
     terrain: 'Terrain · грунт',
     floor: 'Floor · пол',
     wall: 'Wall · стены',
+    door: 'Door · двери',
+    window: 'Window · окна',
 };
 export interface Material {
     id: string;
@@ -16,6 +18,9 @@ export interface Material {
     asset: ImageAsset;
     repeatSize: number;
     rotation: number;
+    builtin?: boolean;
+    displayName?: string;
+    layout?: 'wall-strip' | 'door-atlas' | 'gate-atlas' | null;
     variation: { offset: boolean; quarterTurns: boolean };
 }
 export const materialBody = (m: Omit<Material, 'id' | 'versionId'>) => ({
@@ -24,6 +29,7 @@ export const materialBody = (m: Omit<Material, 'id' | 'versionId'>) => ({
     assetId: m.asset.id,
     repeatSize: m.repeatSize,
     rotation: m.rotation,
+    layout: m.layout,
     variation: m.variation,
     version: m.version,
 });

@@ -7,6 +7,7 @@ use App\Services\SceneSnapshotBuilder;
 use App\Services\PropCollider;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class SceneProp extends Model
 {
@@ -27,9 +28,14 @@ class SceneProp extends Model
         return $this->belongsTo(Scene::class);
     }
 
+    public function lootContainer(): HasOne
+    {
+        return $this->hasOne(LootContainer::class, 'prop_id');
+    }
+
     public function projection(bool $gm): array
     {
-        $loot = LootContainer::where('prop_id', $this->id)->first();
+        $loot = $this->relationLoaded('lootContainer') ? $this->lootContainer : $this->lootContainer()->first();
         $image = app(SceneSnapshotBuilder::class)->asset($this->asset) ?? ['id' => 'loot', 'url' => '/assets/player/utility/loot.svg', 'width' => 96, 'height' => 96];
         $snapshot = $this->preset_snapshot;
         if ($snapshot) {

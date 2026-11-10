@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\PropCollider;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class PropActions
 {
@@ -20,15 +21,22 @@ class PropActions
             Gate::forUser($user)->authorize('update', $scene);
             $previous = ['tokens' => [], 'props' => []];
             if ($data['action'] === 'create') {
-                $preset = isset($data['presetId']) ? ObjectPreset::where('library_user_id', $user->id)->findOrFail($data['presetId']) : null;
-                $asset = Asset::available($scene->campaign_id, $user)->where('kind', 'prop')->lockForUpdate()
+                $preset = isset($data['presetId']) ? ObjectPreset::available($user)->findOrFail($data['presetId']) : null;
+                $asset = Asset::where(fn ($q) => $q->available($scene->campaign_id, $user)
+                    ->orWhere(fn ($q) => $q->whereNotNull('builtin_key')->where('category', 'props')))
+                    ->where('kind', 'prop')->lockForUpdate()
                     ->findOrFail($preset?->asset_id ?? $data['assetId']);
                 $settings = $preset?->settings;
                 $size = $scene->grid_visible ? $scene->grid_size * 2 : 120;
+                $factor = $data['scaleFactor'] ?? 1;
+                $scaleX = $settings ? round($settings['scaleX'] * $factor, 4) : $size / max($asset->width, $asset->height);
+                $scaleY = $settings ? round($settings['scaleY'] * $factor, 4) : $scaleX;
+                if ($settings && (min($scaleX, $scaleY) < .001 || max($scaleX, $scaleY) > 100)) {
+                    throw ValidationException::withMessages(['scaleFactor' => 'Масштаб выходит за пределы настроек пресета.']);
+                }
                 $prop = SceneProp::create(['scene_id' => $scene->id, 'asset_id' => $asset->id, 'name' => $preset?->name ?? mb_substr($asset->name, 0, 160),
                     'x' => $data['x'], 'y' => $data['y'], 'rotation' => $data['rotation'] ?? $settings['rotation'] ?? 0,
-                    'scale_x' => $settings['scaleX'] ?? $size / max($asset->width, $asset->height),
-                    'scale_y' => $settings['scaleY'] ?? $size / max($asset->width, $asset->height),
+                    'scale_x' => $scaleX, 'scale_y' => $scaleY,
                     'preset_snapshot' => $settings ? $settings + ['presetId' => (string) $preset->id, 'category' => $preset->category] : null,
                     'z_index' => (SceneProp::where('scene_id', $scene->id)->max('z_index') ?? -1) + 1]);
                 if (($data['purpose'] ?? null) === 'container') {

@@ -23,6 +23,7 @@ class ObjectController extends Controller
         $data = $request->validate(['action' => 'required|in:create,update', 'id' => 'required_if:action,update|integer',
             'assetId' => 'exclude_if:action,update|required_without:presetId|integer|prohibits:presetId', 'presetId' => 'exclude_if:action,update|sometimes|integer',
             'rotation' => 'sometimes|numeric|between:-360,360',
+            'scaleFactor' => 'exclude_if:action,update|exclude_without:presetId|numeric|between:0.25,4',
             'purpose' => 'sometimes|in:container,interaction', 'x' => 'required_if:action,create|numeric|between:-1000000,1000000',
             'y' => 'required_if:action,create|numeric|between:-1000000,1000000', 'order' => 'sometimes|in:front,back,forward,backward',
             'patch' => 'sometimes|array:name,x,y,rotation,scale_x,scale_y,is_hidden,is_locked,collider',

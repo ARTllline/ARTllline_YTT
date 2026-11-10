@@ -213,6 +213,37 @@ describe('scene subscription recovery', () => {
         expect(s.store.getSnapshot().scene.revision).toBe(11);
         s.subscriber.destroy();
     });
+
+    it('applies the player opening receipt when the matching WebSocket event is ignored', () => {
+        const s = setup('player');
+        const opening = {
+            id: 'window', edgeId: 'wall', type: 'window', center: 0.5, width: 40, frame: 'wood',
+        } as const;
+        s.store.reconcile({
+            ...s.scene,
+            structure: {
+                hash: 'open',
+                materials: [],
+                graph: { vertices: [], edges: [], rooms: [], openings: [opening] },
+            },
+        });
+        const delta = { upsert: [], remove: [] };
+        const payload = {
+            structurePatch: {
+                base: 'open', hash: 'closed', materials: [], vertices: delta, edges: delta, rooms: delta,
+                openings: { upsert: [{ ...opening, open: false }], remove: [] },
+            },
+            deletedIds: [s.scene.tokens[0].id],
+        };
+        s.store.trackMutation('own');
+        s.receive({ ...s.event(11, 'own'), type: 'vision.updated', payload });
+        expect(s.store.getSnapshot().scene.structure?.hash).toBe('open');
+        s.store.accept({ revision: 11, ...payload }, true);
+        const scene = s.store.getSnapshot().scene;
+        expect(scene.structure?.graph.openings?.[0].open).toBe(false);
+        expect(scene.tokens.some((token) => payload.deletedIds.includes(token.id))).toBe(false);
+        s.subscriber.destroy();
+    });
 });
 
 it('ignores other spatial epochs and clears ephemeral projections on disposal', () => {

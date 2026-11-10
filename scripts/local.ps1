@@ -117,7 +117,7 @@ foreach ($port in @($url.Port, [int]$reverbPort)) {
     } finally { $client.Dispose() }
 }
 Invoke-Checked $php @('artisan', 'optimize:clear')
-Invoke-Checked $php @('artisan', 'migrate', '--no-interaction')
+Invoke-Checked $php @('artisan', 'migrate', '--seed', '--no-interaction')
 if (-not $SkipBuild) { Invoke-Checked 'npm.cmd' @('run', 'build') }
 $entries = @()
 try {

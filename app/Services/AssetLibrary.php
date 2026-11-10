@@ -19,6 +19,7 @@ use App\Models\SceneProp;
 use App\Models\Token;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class AssetLibrary
 {
@@ -32,6 +33,7 @@ class AssetLibrary
             'duration' => $asset->duration_ms === null ? null : (int) $asset->duration_ms,
             'thumbnailUrl' => '/api/assets/'.$asset->id.'/thumbnail', 'mimeType' => $asset->mime_type,
             'fileSize' => $asset->file_size, 'createdAt' => $asset->created_at->toIso8601String(),
+            ...($asset->builtin_key ? ['builtin' => true, 'displayName' => Str::after($asset->name, ' · ')] : []),
             'tags' => $asset->tags->map(fn ($tag) => $this->label($tag))->all(),
             'collections' => $asset->collections->map(fn ($item) => $this->label($item))->all(),
         ];
@@ -95,7 +97,8 @@ class AssetLibrary
 
     public function authorizeEdit(Asset $asset): void
     {
-        abort_unless($asset->library_user_id === auth()->id() || ($asset->campaign && $asset->campaign->roleFor(auth()->user()) === 'gm'), 403);
+        abort_unless(! $asset->builtin_key && ($asset->library_user_id === auth()->id()
+            || ($asset->campaign && $asset->campaign->roleFor(auth()->user()) === 'gm')), 403);
     }
 
     public function update(Asset $asset, array $data): array

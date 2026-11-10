@@ -1,3 +1,4 @@
+import { Eye, X } from 'lucide-react';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { commandId, type Mutation } from '../../api/workspace';
 import { request } from '../../api/client';
@@ -6,7 +7,15 @@ import type { Point } from '../../tabletop/types/scene';
 import { probePoints, type LosDebug } from '../../tabletop/vision/model';
 import { ConfirmDialog } from '../ConfirmDialog';
 
-export function LosDebugPanel({ store, probing }: { store: SceneStore; probing: boolean }) {
+export function LosDebugPanel({
+    store,
+    probing,
+    onClose,
+}: {
+    store: SceneStore;
+    probing: boolean;
+    onClose: () => void;
+}) {
     const { scene } = useSyncExternalStore(store.subscribe, store.getSnapshot);
     const [observerId, setObserverId] = useState(scene.tokens[0]?.id ?? '');
     const [targetId, setTargetId] = useState('');
@@ -111,154 +120,178 @@ export function LosDebugPanel({ store, probing }: { store: SceneStore; probing: 
     ]);
     const last = result?.revision === (scene.revision ?? 0) ? result.results.at(-1) : undefined;
     return (
-        <aside className="los-debug-panel panel" aria-label="Проверка LOS">
-            <strong>LOS · Player Vision 360°</strong>
-            <label>
-                <input
-                    type="checkbox"
-                    aria-label="Player Vision"
-                    checked={!!scene.vision?.enabled}
-                    disabled={saving}
-                    onChange={(e) => void saveVision(e.target.checked)}
-                />
-                Обзор игроков
-            </label>
-            <label>
-                Память карты
-                <select
-                    aria-label="Память карты"
-                    value={scene.vision?.memoryPolicy ?? 'player'}
-                    disabled={saving}
-                    onChange={(e) =>
-                        void saveVision(
-                            !!scene.vision?.enabled,
-                            e.target.value as 'player' | 'party',
-                        )
-                    }
-                >
-                    <option value="player">Личная · каждый игрок</option>
-                    <option value="party">Общая · партия</option>
-                </select>
-            </label>
-            <label>
-                Наблюдатель
-                <select
-                    aria-label="LOS наблюдатель"
-                    value={observerId}
-                    onChange={(e) => {
-                        setObserverId(e.target.value);
-                        setRange(
-                            scene.tokens.find((t) => t.id === e.target.value)?.visionRange ?? 600,
-                        );
-                    }}
-                >
-                    {scene.tokens.map((t) => (
-                        <option key={t.id} value={t.id}>
-                            {t.name}
-                        </option>
-                    ))}
-                </select>
-            </label>
-            <label>
-                Дальность · мировые единицы
-                <input
-                    aria-label="Дальность LOS"
-                    type="number"
-                    min={0}
-                    max={40000}
-                    value={range}
-                    onChange={(e) => setRange(Math.max(0, Math.min(40000, Number(e.target.value))))}
-                />
-            </label>
-            <button
-                disabled={saving || !observerId}
-                onClick={() => void saveVision(!!scene.vision?.enabled)}
-            >
-                Сохранить дальность персонажа
-            </button>
-            <p className="hint">
-                Сохранено: {observer?.visionRange ?? 600} ед. · 360°, без направления. Каждый игрок
-                видит от своих персонажей. Память хранит только территорию; сущности видны сейчас.
-                Ручной Fog сохраняет силу. Без наблюдателя остаётся только память карты.
-            </p>
-            <button
-                className="secondary-button"
-                disabled={saving}
-                onClick={() => setResetting(true)}
-            >
-                Сбросить память карты…
-            </button>
-            {resetting && (
-                <ConfirmDialog
-                    title="Сбросить память карты?"
-                    description="Разведанная территория всех игроков и партии в этой сцене будет забыта. Текущий обзор сразу запомнится заново. Ручной Fog сохраняется."
-                    buttonLabel="Сбросить память"
-                    onClose={() => setResetting(false)}
-                    submit={async () => {
-                        const result = await request<Mutation>(
-                            `/scenes/${scene.id}/vision`,
-                            'POST',
-                            {
-                                enabled: !!scene.vision?.enabled,
-                                resetMemory: true,
-                                clientMutationId: commandId(),
-                            },
-                        );
-                        store.accept(result, true);
-                    }}
-                />
-            )}
-            <label>
-                Цель
-                <select
-                    aria-label="LOS цель"
-                    value={targetId}
-                    onChange={(e) => {
-                        setTargetId(e.target.value);
-                        setPoint(undefined);
-                    }}
-                >
-                    <option value="">
-                        {point
-                            ? `Точка ${point.x.toFixed(0)}, ${point.y.toFixed(0)}`
-                            : 'Укажите точку на карте'}
-                    </option>
-                    {scene.tokens
-                        .filter((t) => t.id !== observerId)
-                        .map((t) => (
+        <aside className="map-editor-panel los-debug-panel panel" aria-label="Проверка LOS">
+            <div className="panel-heading">
+                <Eye size={16} />
+                <strong>Обзор и LOS</strong>
+                <button className="icon-button" aria-label="Закрыть LOS" onClick={onClose}>
+                    <X size={16} />
+                </button>
+            </div>
+            <div className="map-editor-panel-body">
+                <label className="check-field">
+                    <input
+                        type="checkbox"
+                        aria-label="Player Vision"
+                        checked={!!scene.vision?.enabled}
+                        disabled={saving}
+                        onChange={(e) => void saveVision(e.target.checked)}
+                    />
+                    Обзор игроков
+                </label>
+                <label>
+                    Наблюдатель
+                    <select
+                        aria-label="LOS наблюдатель"
+                        disabled={!scene.tokens.length}
+                        value={observerId}
+                        onChange={(e) => {
+                            setObserverId(e.target.value);
+                            setRange(
+                                scene.tokens.find((t) => t.id === e.target.value)?.visionRange ??
+                                    600,
+                            );
+                        }}
+                    >
+                        {!scene.tokens.length && <option value="">Нет токенов</option>}
+                        {scene.tokens.map((t) => (
                             <option key={t.id} value={t.id}>
                                 {t.name}
                             </option>
                         ))}
-                </select>
-            </label>
-            <p className="hint">
-                Центр → центр + 8 точек footprint цели. Мятный — виден, красный — преграда, янтарный
-                — вне дальности. Заливка показывает visibility polygon; лучи — точные LOS-замеры.
-            </p>
-            {!probing && (
-                <p className="hint">
-                    Для проверки кликом выберите инструмент «Выбор». Стены и двери можно править в
-                    Build при включённом LOS.
-                </p>
-            )}
-            <output aria-live="polite">
-                {status ||
-                    (!observer
-                        ? 'В сцене нет токенов.'
-                        : last && (targetId || point)
-                          ? 'visibility' in last
-                              ? `Цель: ${last.visibility === 'full' ? 'видна полностью' : last.visibility === 'partial' ? 'видна частично' : 'не видна'} · ${last.visibleSamples}/${last.sampleCount}`
-                              : last.reason === 'clear'
-                                ? 'Точка видна'
-                                : last.reason === 'out_of_range'
-                                  ? 'Точка вне дальности'
-                                  : `Блокирует ${last.blocker?.source ?? 'геометрия'} · ${last.blocker?.id ?? ''}`
-                          : 'Укажите цель. Space + drag — панорама.')}
-            </output>
-            <button className="text-button" onClick={() => setRetry((n) => n + 1)}>
-                Обновить проверку
-            </button>
+                    </select>
+                </label>
+                <label>
+                    Цель
+                    <select
+                        aria-label="LOS цель"
+                        disabled={!observer}
+                        value={targetId}
+                        onChange={(e) => {
+                            setTargetId(e.target.value);
+                            setPoint(undefined);
+                        }}
+                    >
+                        <option value="">
+                            {point
+                                ? `Точка ${point.x.toFixed(0)}, ${point.y.toFixed(0)}`
+                                : 'Укажите точку на карте'}
+                        </option>
+                        {scene.tokens
+                            .filter((t) => t.id !== observerId)
+                            .map((t) => (
+                                <option key={t.id} value={t.id}>
+                                    {t.name}
+                                </option>
+                            ))}
+                    </select>
+                </label>
+                {!probing && (
+                    <p className="hint">
+                        Для проверки кликом выберите инструмент «Выбор». Стены и двери можно править
+                        в Build при включённом LOS.
+                    </p>
+                )}
+                <output aria-live="polite">
+                    {status ||
+                        (!observer
+                            ? 'В сцене нет токенов.'
+                            : last && (targetId || point)
+                              ? 'visibility' in last
+                                  ? `Цель: ${last.visibility === 'full' ? 'видна полностью' : last.visibility === 'partial' ? 'видна частично' : 'не видна'} · ${last.visibleSamples}/${last.sampleCount}`
+                                  : last.reason === 'clear'
+                                    ? 'Точка видна'
+                                    : last.reason === 'out_of_range'
+                                      ? 'Точка вне дальности'
+                                      : `Блокирует ${last.blocker?.source ?? 'геометрия'} · ${last.blocker?.id ?? ''}`
+                              : 'Укажите цель. Space + drag — панорама.')}
+                </output>
+                <button className="text-button" onClick={() => setRetry((n) => n + 1)}>
+                    Обновить проверку
+                </button>
+                <details className="map-editor-disclosure">
+                    <summary>Дальность и память карты</summary>
+                    <div className="los-details">
+                        <label>
+                            Дальность · мировые единицы
+                            <input
+                                aria-label="Дальность LOS"
+                                type="number"
+                                min={0}
+                                max={40000}
+                                value={range}
+                                onChange={(e) =>
+                                    setRange(Math.max(0, Math.min(40000, Number(e.target.value))))
+                                }
+                            />
+                        </label>
+                        <button
+                            disabled={saving || !observerId}
+                            onClick={() => void saveVision(!!scene.vision?.enabled)}
+                        >
+                            Сохранить дальность персонажа
+                        </button>
+                        <p className="hint">
+                            Сохранено: {observer?.visionRange ?? 600} ед. · 360°, без направления.
+                            Каждый игрок видит от своих персонажей. Память хранит только территорию;
+                            сущности видны сейчас. Ручной Fog сохраняет силу. Без наблюдателя
+                            остаётся только память карты.
+                        </p>
+                        <button
+                            className="secondary-button"
+                            disabled={saving}
+                            onClick={() => setResetting(true)}
+                        >
+                            Сбросить память карты…
+                        </button>
+                        {resetting && (
+                            <ConfirmDialog
+                                title="Сбросить память карты?"
+                                description="Разведанная территория всех игроков и партии в этой сцене будет забыта. Текущий обзор сразу запомнится заново. Ручной Fog сохраняется."
+                                buttonLabel="Сбросить память"
+                                onClose={() => setResetting(false)}
+                                submit={async () => {
+                                    const result = await request<Mutation>(
+                                        `/scenes/${scene.id}/vision`,
+                                        'POST',
+                                        {
+                                            enabled: !!scene.vision?.enabled,
+                                            resetMemory: true,
+                                            clientMutationId: commandId(),
+                                        },
+                                    );
+                                    store.accept(result, true);
+                                }}
+                            />
+                        )}
+                        <label>
+                            Память карты
+                            <select
+                                aria-label="Память карты"
+                                value={scene.vision?.memoryPolicy ?? 'player'}
+                                disabled={saving}
+                                onChange={(e) =>
+                                    void saveVision(
+                                        !!scene.vision?.enabled,
+                                        e.target.value as 'player' | 'party',
+                                    )
+                                }
+                            >
+                                <option value="player">Личная · каждый игрок</option>
+                                <option value="party">Общая · партия</option>
+                            </select>
+                        </label>
+                    </div>
+                </details>
+                <details className="map-editor-disclosure">
+                    <summary>Условные обозначения</summary>
+                    <p className="hint">
+                        Центр → центр + 8 точек footprint цели. Мятный — виден, красный — преграда,
+                        янтарный — вне дальности. Заливка показывает visibility polygon; лучи —
+                        точные LOS-замеры.
+                    </p>
+                </details>
+            </div>
         </aside>
     );
 }

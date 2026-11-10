@@ -14,10 +14,12 @@ export const assetCategories = {
     props: 'Объекты',
     handouts: 'Раздаточные материалы',
     art: 'UI / Game art',
+    architecture: 'Архитектура',
+    terrain: 'Ландшафт',
     audio: 'Аудио',
 };
 type Category = keyof typeof assetCategories;
-type GlobalAsset = LibraryAsset & { category: Category };
+type GlobalAsset = LibraryAsset & { category: Category; builtin?: boolean; displayName?: string };
 
 export function AssetPicker({
     value,
@@ -307,8 +309,11 @@ export function AssetLibrary({
                                     ) : (
                                         <img src={a.thumbnailUrl} alt="" loading="lazy" />
                                     )}
-                                    <strong>{a.name}</strong>
-                                    <small>{assetCategories[a.category]}</small>
+                                    <strong title={a.name}>{a.displayName ?? a.name}</strong>
+                                    <small>
+                                        {assetCategories[a.category]}
+                                        {a.builtin && ' · Встроенный'}
+                                    </small>
                                 </button>
                             ))}
                         </div>
@@ -367,6 +372,7 @@ function AssetInspector({
         [busy, setBusy] = useState(false),
         [deleting, setDeleting] = useState(false);
     useEffect(() => {
+        if (asset.builtin) return;
         const abort = new AbortController();
         void request<{ usage: string[] }>(
             `/assets/${asset.id}/detail`,
@@ -391,6 +397,8 @@ function AssetInspector({
             setBusy(false);
         }
     };
+    const duplicate = () =>
+        void run(() => request<GlobalAsset>(`/library/assets/${asset.id}/duplicate`, 'POST'));
     return (
         <aside className="global-asset-inspector">
             {asset.duration != null ? (
@@ -414,103 +422,108 @@ function AssetInspector({
                     {error}
                 </p>
             )}
-            <fieldset disabled={busy}>
-                <label className="field">
-                    Название
-                    <input value={name} maxLength={255} onChange={(e) => setName(e.target.value)} />
-                </label>
-                <label className="field">
-                    Tags через запятую
-                    <input value={tags} onChange={(e) => setTags(e.target.value)} />
-                </label>
+            {asset.builtin ? (
                 <button
                     type="button"
                     className="secondary-button"
-                    disabled={!name.trim()}
-                    onClick={() =>
-                        void run(() =>
-                            request<GlobalAsset>(`/assets/${asset.id}`, 'PATCH', {
-                                name,
-                                tags: [
-                                    ...new Set(
-                                        tags
-                                            .split(',')
-                                            .map((v) => v.trim())
-                                            .filter(Boolean),
-                                    ),
-                                ],
-                            }),
-                        )
-                    }
+                    disabled={busy}
+                    onClick={duplicate}
                 >
-                    Сохранить
+                    <Copy size={14} /> Дубликат
                 </button>
-                <div className="asset-management-actions">
+            ) : (
+                <fieldset disabled={busy}>
+                    <label className="field">
+                        Название
+                        <input
+                            value={name}
+                            maxLength={255}
+                            onChange={(e) => setName(e.target.value)}
+                        />
+                    </label>
+                    <label className="field">
+                        Tags через запятую
+                        <input value={tags} onChange={(e) => setTags(e.target.value)} />
+                    </label>
                     <button
                         type="button"
+                        className="secondary-button"
+                        disabled={!name.trim()}
                         onClick={() =>
                             void run(() =>
-                                request<GlobalAsset>(
-                                    `/library/assets/${asset.id}/duplicate`,
-                                    'POST',
-                                ),
+                                request<GlobalAsset>(`/assets/${asset.id}`, 'PATCH', {
+                                    name,
+                                    tags: [
+                                        ...new Set(
+                                            tags
+                                                .split(',')
+                                                .map((v) => v.trim())
+                                                .filter(Boolean),
+                                        ),
+                                    ],
+                                }),
                             )
                         }
                     >
-                        <Copy size={14} /> Дубликат
+                        Сохранить
                     </button>
-                    <label className="secondary-button">
-                        Заменить файл
-                        <input
-                            type="file"
-                            accept={
-                                asset.duration != null
-                                    ? 'audio/*'
-                                    : 'image/png,image/jpeg,image/webp'
-                            }
-                            onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                    const form = new FormData();
-                                    form.append('file', file);
-                                    void run(() =>
-                                        request<GlobalAsset>(
-                                            `/library/assets/${asset.id}/replace`,
-                                            'POST',
-                                            form,
-                                        ),
-                                    );
+                    <div className="asset-management-actions">
+                        <button type="button" onClick={duplicate}>
+                            <Copy size={14} /> Дубликат
+                        </button>
+                        <label className="secondary-button">
+                            Заменить файл
+                            <input
+                                type="file"
+                                accept={
+                                    asset.duration != null
+                                        ? 'audio/*'
+                                        : 'image/png,image/jpeg,image/webp'
                                 }
-                                e.target.value = '';
-                            }}
-                        />
-                    </label>
-                </div>
-                <p className="hint">
-                    Замена сохраняет ID и обновляет ресурс во всех местах использования после
-                    перезагрузки.
-                </p>
-                <strong>Использование</strong>
-                {usage === null ? (
-                    <p role="status">Проверка ссылок…</p>
-                ) : usage.length ? (
-                    <ul className="asset-reference-list">
-                        {usage.map((u, i) => (
-                            <li key={i}>{u}</li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="muted">Пока не используется</p>
-                )}
-                <button
-                    type="button"
-                    className="danger-button"
-                    disabled={usage === null || usage.length > 0}
-                    onClick={() => setDeleting(true)}
-                >
-                    <Trash2 size={14} /> Удалить
-                </button>
-            </fieldset>
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        const form = new FormData();
+                                        form.append('file', file);
+                                        void run(() =>
+                                            request<GlobalAsset>(
+                                                `/library/assets/${asset.id}/replace`,
+                                                'POST',
+                                                form,
+                                            ),
+                                        );
+                                    }
+                                    e.target.value = '';
+                                }}
+                            />
+                        </label>
+                    </div>
+                    <p className="hint">
+                        Замена сохраняет ID и обновляет ресурс во всех местах использования после
+                        перезагрузки.
+                    </p>
+                    <strong>Использование</strong>
+                    {usage === null ? (
+                        <p role="status">Проверка ссылок…</p>
+                    ) : usage.length ? (
+                        <ul className="asset-reference-list">
+                            {usage.map((u, i) => (
+                                <li key={i}>{u}</li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="muted">Пока не используется</p>
+                    )}
+                    <button
+                        type="button"
+                        className="danger-button"
+                        disabled={usage === null || usage.length > 0}
+                        onClick={() => setDeleting(true)}
+                    >
+                        <Trash2 size={14} /> Удалить
+                    </button>
+                </fieldset>
+            )}
             {deleting && (
                 <ConfirmDialog
                     title="Удалить ресурс?"

@@ -19,6 +19,9 @@ class SceneEditHistory
 {
     public function execute(User $user, Scene $scene, array $input): array
     {
+        if (($input['changes'][0]['kind'] ?? null) === 'fog') {
+            return app(FogActions::class)->history($user, $scene, $input);
+        }
         if (($input['changes'][0]['kind'] ?? null) === 'structure') {
             $data = Validator::make($input, ['changes' => 'required|array|size:1',
                 'changes.0.id' => 'required|integer', 'changes.0.expected.hash' => 'required|string|size:64',

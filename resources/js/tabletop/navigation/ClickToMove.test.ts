@@ -41,6 +41,11 @@ it.each([false, true])(
         expect(store.getSnapshot().routePreview?.status).toBe('ready');
         expect(command).not.toHaveBeenCalled();
         expect(overlay.showMovement).toHaveBeenCalled();
+        const renders = vi.mocked(overlay.showMovement).mock.calls.length;
+        click.sync(1);
+        expect(overlay.showMovement).toHaveBeenCalledTimes(renders);
+        click.sync(0.8);
+        expect(overlay.showMovement).toHaveBeenCalledTimes(renders + 1);
         click.chooseDestination(token.id, { x: target.x + 1, y: target.y }, 5);
         expect(command).toHaveBeenCalledTimes(1);
         click.destroy();

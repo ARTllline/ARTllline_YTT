@@ -1,0 +1,673 @@
+{
+  "name": "Fantasy Classic — Environment & Props",
+  "version": 1,
+  "sources": {
+    "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png": "398cd5fb8aeb22036275403520eb77edba52e64d83b7e465ea016a76ba5e6e30",
+    "exec-005557cf-266b-44d1-8d10-029b551076aa.png": "d4b8725a3d32bb7147d020f0bdb74633e4bffee259b3e8e56c78199e4b67d356",
+    "exec-334f08db-ae77-4fa7-89cf-967c30e9d91d.png": "a877b77d0fbcb8b9333837710e6a0f1fe750e096e656c3cb17e1d8bba59109df",
+    "exec-93b83b02-9e62-4982-aba4-7820bf1d5bb7.png": "577757bb66730542e90adbb8d21b669403464db1ef43a00b0d25d53194604bdc",
+    "exec-20d21499-2427-4f19-803e-be3857deed8a.png": "fdcd8920dbed22bcb5ef6e362701dbfbb150910c171a7e7e448d24eeeb63951e",
+    "exec-e3128566-da13-4018-9a34-40ed1d2a011a.png": "442e78af9eac55e9f786f881ffc785c22759335ee63a1fb6ae5f68e91dc5410e",
+    "exec-64f24cf5-ed36-442c-ac6a-3d0299cd5a8b.png": "4fa44bfd4e0145dac4c9893d243f4ebfe116089365eabaeeb59b7c2e0125083c",
+    "exec-e0fd2abb-40af-4df1-8e56-14bb762abd85.png": "ed63303de22234eb67d89441786bb517242a94f689107ac40105b3ce68f55f1f"
+  },
+  "terrain": [
+    {
+      "key": "woodland-grass",
+      "name": "Луговая трава",
+      "source": "exec-334f08db-ae77-4fa7-89cf-967c30e9d91d.png",
+      "cell": 1,
+      "sha256": "0a70f1e2e9ccdde6421712806dab49c436a492058c68a345da41134927946a23",
+      "repeatSize": 380
+    },
+    {
+      "key": "packed-earth",
+      "name": "Утоптанный грунт",
+      "source": "exec-334f08db-ae77-4fa7-89cf-967c30e9d91d.png",
+      "cell": 2,
+      "sha256": "f044c0e4c24cd965c05607268d40e4ccb356bf89a41471f5f94f2037adf255b9",
+      "repeatSize": 350
+    },
+    {
+      "key": "forest-duff",
+      "name": "Лесная подстилка",
+      "source": "exec-334f08db-ae77-4fa7-89cf-967c30e9d91d.png",
+      "cell": 3,
+      "sha256": "93a80194b9c89646bec7fff217a9a3ec0331b08dea4e156f1e3e73528951e536",
+      "repeatSize": 380
+    },
+    {
+      "key": "road-gravel",
+      "name": "Мелкий гравий",
+      "source": "exec-334f08db-ae77-4fa7-89cf-967c30e9d91d.png",
+      "cell": 4,
+      "sha256": "f3f4fb3def13c354e77f70b7497fd0955659697dd22542a6fce642ae11b49440",
+      "repeatSize": 330
+    }
+  ],
+  "objects": [
+    {
+      "key": "woodland-oak",
+      "name": "Лесной дуб",
+      "source": "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png",
+      "cell": 1,
+      "sha256": "3c48645fd8dd76ed29f7be983ce2c4c166a73d38e38ebdeb73564d841eaf437f",
+      "category": "Природа",
+      "settings": {
+        "width": 225,
+        "height": 215,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "circle",
+          "blocksMovement": true,
+          "blocksVision": true,
+          "blocksLight": true,
+          "x": 112.5,
+          "y": 107.5,
+          "radius": 27.9
+        },
+        "tags": []
+      }
+    },
+    {
+      "key": "woodland-fir",
+      "name": "Лесная ель",
+      "source": "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png",
+      "cell": 2,
+      "sha256": "479f6c920560a4ad7e1c4410fd092ee51df19c8388930ea201e4bfb89195f245",
+      "category": "Природа",
+      "settings": {
+        "width": 186,
+        "height": 195,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "circle",
+          "blocksMovement": true,
+          "blocksVision": true,
+          "blocksLight": true,
+          "x": 93.0,
+          "y": 97.5,
+          "radius": 22.3
+        },
+        "tags": []
+      },
+      "artwork": {
+        "directory": "v1-top-down",
+        "source": "exec-93b83b02-9e62-4982-aba4-7820bf1d5bb7.png",
+        "cell": 1,
+        "sha256": "47669da66bd9f0d9c148260e0551915858812855cda51b2b6ddb8df937b86c86"
+      }
+    },
+    {
+      "key": "woodland-fern",
+      "name": "Папоротник",
+      "source": "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png",
+      "cell": 3,
+      "sha256": "a662869d8cb52a7e9fbc3e7eea069ec3b15edd238a46c904ddcf95ee6ace2140",
+      "category": "Природа",
+      "settings": {
+        "width": 76,
+        "height": 75,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "none",
+          "blocksMovement": false,
+          "blocksVision": false,
+          "blocksLight": false
+        },
+        "tags": []
+      }
+    },
+    {
+      "key": "mossy-rocks",
+      "name": "Замшелые валуны",
+      "source": "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png",
+      "cell": 4,
+      "sha256": "5f4b3a8d7e1311345cc0578b77ebbb391d08e4bf28044407cf89753454984121",
+      "category": "Природа",
+      "settings": {
+        "width": 112,
+        "height": 99,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "circle",
+          "blocksMovement": true,
+          "blocksVision": false,
+          "blocksLight": false,
+          "x": 56.0,
+          "y": 49.5,
+          "radius": 34.6
+        },
+        "tags": []
+      }
+    },
+    {
+      "key": "oak-stump",
+      "name": "Дубовый пень",
+      "source": "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png",
+      "cell": 5,
+      "sha256": "6414a23d50adfe2b95f6bfb579c6529b331c1aab8f25734edff57146579cb249",
+      "category": "Природа",
+      "settings": {
+        "width": 60,
+        "height": 60,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "circle",
+          "blocksMovement": true,
+          "blocksVision": false,
+          "blocksLight": false,
+          "x": 30.0,
+          "y": 30.0,
+          "radius": 22.2
+        },
+        "tags": []
+      },
+      "artwork": {
+        "directory": "v1-top-down",
+        "source": "exec-93b83b02-9e62-4982-aba4-7820bf1d5bb7.png",
+        "cell": 2,
+        "sha256": "dd209b1d543719980e279aee2ddce0799636005af91e79e2892dc9b0ef206e09"
+      }
+    },
+    {
+      "key": "fallen-log",
+      "name": "Упавшее бревно",
+      "source": "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png",
+      "cell": 6,
+      "sha256": "cef2cdca3b63e818f21dc03e75c4d32d3ae28a41feb3ca7177a172b34f27acc9",
+      "category": "Природа",
+      "settings": {
+        "width": 126,
+        "height": 62,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "rectangle",
+          "blocksMovement": true,
+          "blocksVision": false,
+          "blocksLight": false,
+          "x": 9.45,
+          "y": 13.95,
+          "width": 107.1,
+          "height": 34.1
+        },
+        "tags": []
+      }
+    },
+    {
+      "key": "trestle-table",
+      "name": "Обеденный стол",
+      "source": "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png",
+      "cell": 7,
+      "sha256": "3588bcff768abe7c4c5b95c550acfc3b1c9c8114f12b382e016dc56f6010908f",
+      "category": "Мебель и декор",
+      "settings": {
+        "width": 135,
+        "height": 91,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "rectangle",
+          "blocksMovement": true,
+          "blocksVision": false,
+          "blocksLight": false,
+          "x": 7.4,
+          "y": 11.4,
+          "width": 120.2,
+          "height": 68.2
+        },
+        "tags": []
+      },
+      "artwork": {
+        "directory": "v1-top-down",
+        "source": "exec-64f24cf5-ed36-442c-ac6a-3d0299cd5a8b.png",
+        "cell": 1,
+        "sha256": "d4a2fe33202aa6a4ec71b11bdc89393baa168d2f3c1771ed2a3c4e750cd9771b"
+      }
+    },
+    {
+      "key": "round-table",
+      "name": "Круглый стол",
+      "source": "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png",
+      "cell": 8,
+      "sha256": "52b2853e463f127bcee33ccf3ba258835a83d1e24359b9187aa6f3473b98cf73",
+      "category": "Мебель и декор",
+      "settings": {
+        "width": 74,
+        "height": 76,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "circle",
+          "blocksMovement": true,
+          "blocksVision": false,
+          "blocksLight": false,
+          "x": 37.0,
+          "y": 38.0,
+          "radius": 32.6
+        },
+        "tags": []
+      }
+    },
+    {
+      "key": "oak-bench",
+      "name": "Дубовая скамья",
+      "source": "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png",
+      "cell": 9,
+      "sha256": "b924f1e2ccad3f2bc3b0d39b1189bd5e064a197323bbc318674f1915ccb53877",
+      "category": "Мебель и декор",
+      "settings": {
+        "width": 117,
+        "height": 48,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "rectangle",
+          "blocksMovement": true,
+          "blocksVision": false,
+          "blocksLight": false,
+          "x": 7.6,
+          "y": 8.4,
+          "width": 101.8,
+          "height": 31.2
+        },
+        "tags": []
+      },
+      "artwork": {
+        "directory": "v1-top-down",
+        "source": "exec-e0fd2abb-40af-4df1-8e56-14bb762abd85.png",
+        "cell": 1,
+        "sha256": "f459c8fc1ca47e8d42d644e57142f0f7285d92cc7d44c2fa325a493ba399cf7c"
+      }
+    },
+    {
+      "key": "oak-chair",
+      "name": "Дубовый стул",
+      "source": "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png",
+      "cell": 10,
+      "sha256": "072eb211779dbaede57dbd1a3c673f23fe582745a07dd263931a7e7d1d448cdb",
+      "category": "Мебель и декор",
+      "settings": {
+        "width": 28,
+        "height": 40,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "rectangle",
+          "blocksMovement": true,
+          "blocksVision": false,
+          "blocksLight": false,
+          "x": 4.5,
+          "y": 8.0,
+          "width": 19.0,
+          "height": 24.0
+        },
+        "tags": []
+      },
+      "artwork": {
+        "directory": "v1-top-down",
+        "source": "exec-20d21499-2427-4f19-803e-be3857deed8a.png",
+        "cell": 4,
+        "sha256": "badfb5105165a2d7fa9c64555716ceea926bc7459e0f02f89499ade884d0479c"
+      }
+    },
+    {
+      "key": "ironbound-barrel",
+      "name": "Бочка с обручами",
+      "source": "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png",
+      "cell": 11,
+      "sha256": "bf01cb534e2414ca6a1a31da4f70b786a14d3bc9bd8e13553d68afd60389f28a",
+      "category": "Мебель и декор",
+      "settings": {
+        "width": 41,
+        "height": 51,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "circle",
+          "blocksMovement": true,
+          "blocksVision": false,
+          "blocksLight": false,
+          "x": 20.5,
+          "y": 25.5,
+          "radius": 16.0
+        },
+        "tags": []
+      },
+      "artwork": {
+        "directory": "v1-top-down",
+        "source": "exec-e3128566-da13-4018-9a34-40ed1d2a011a.png",
+        "cell": 1,
+        "sha256": "e45e29e5951e20b748e89aa24de0fdafa95c2bb015aa73f4ff638b16affef980"
+      }
+    },
+    {
+      "key": "wooden-crate",
+      "name": "Деревянный ящик",
+      "source": "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png",
+      "cell": 12,
+      "sha256": "06185e1d1ff97136de118d8356842da3afe7ad4f8820199dff8969f83459c45d",
+      "category": "Мебель и декор",
+      "settings": {
+        "width": 53,
+        "height": 56,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "rectangle",
+          "blocksMovement": true,
+          "blocksVision": false,
+          "blocksLight": false,
+          "x": 4.25,
+          "y": 5.05,
+          "width": 44.5,
+          "height": 45.9
+        },
+        "tags": []
+      },
+      "artwork": {
+        "directory": "v1-top-down",
+        "source": "exec-e3128566-da13-4018-9a34-40ed1d2a011a.png",
+        "cell": 2,
+        "sha256": "8974bc7c75edfeb8006989bf658d192dcbde1eba6aebcf913d23b62cd7c8a6ee"
+      }
+    },
+    {
+      "key": "woven-rug",
+      "name": "Тканый ковёр",
+      "source": "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png",
+      "cell": 13,
+      "sha256": "7005aecd319b9a1f889c43a9acd31e0ec02f70784ae9b9dc8f812a766376e338",
+      "category": "Мебель и декор",
+      "settings": {
+        "width": 155,
+        "height": 118,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "none",
+          "blocksMovement": false,
+          "blocksVision": false,
+          "blocksLight": false
+        },
+        "tags": []
+      }
+    },
+    {
+      "key": "tavern-counter",
+      "name": "Стойка таверны",
+      "source": "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png",
+      "cell": 14,
+      "sha256": "d3bcb52a1661b5ee8521c62645fd6c2e24492d4c04ba0161a2e2a4425c318729",
+      "category": "Мебель и декор",
+      "settings": {
+        "width": 168,
+        "height": 94,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "rectangle",
+          "blocksMovement": true,
+          "blocksVision": false,
+          "blocksLight": false,
+          "x": 10.1,
+          "y": 15.05,
+          "width": 147.8,
+          "height": 63.9
+        },
+        "tags": []
+      },
+      "artwork": {
+        "directory": "v1-top-down",
+        "source": "exec-e3128566-da13-4018-9a34-40ed1d2a011a.png",
+        "cell": 3,
+        "sha256": "85757cb1e85092095e28172ab60d625a4ee163c1048339f637423e929d029d01"
+      }
+    },
+    {
+      "key": "campfire",
+      "name": "Костровище",
+      "source": "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png",
+      "cell": 15,
+      "sha256": "f9ae0b4e144294ad82135cb39013cb6d264ce5caeb4bf7efd62992f38c923dfe",
+      "category": "Освещение",
+      "settings": {
+        "width": 80,
+        "height": 76,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "circle",
+          "blocksMovement": true,
+          "blocksVision": false,
+          "blocksLight": false,
+          "x": 40.0,
+          "y": 38.0,
+          "radius": 28.1
+        },
+        "tags": [],
+        "light": {
+          "radius": 235,
+          "color": "#ffb36a",
+          "intensity": 1.35,
+          "falloff": 1.35
+        }
+      }
+    },
+    {
+      "key": "iron-lantern",
+      "name": "Кованый фонарь",
+      "source": "exec-46fe1b9e-d348-452e-b61c-c5690067eafd.png",
+      "cell": 16,
+      "sha256": "611a42970ad3cf2086fc82e576816416cb2e4becac40ca2e04b6ce3f447507c6",
+      "category": "Освещение",
+      "settings": {
+        "width": 17,
+        "height": 31,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "none",
+          "blocksMovement": false,
+          "blocksVision": false,
+          "blocksLight": false
+        },
+        "tags": [],
+        "light": {
+          "radius": 155,
+          "color": "#ffd191",
+          "intensity": 1.2,
+          "falloff": 1.55
+        }
+      },
+      "artwork": {
+        "directory": "v1-top-down",
+        "source": "exec-e3128566-da13-4018-9a34-40ed1d2a011a.png",
+        "cell": 4,
+        "sha256": "6de024957d407966cd7741af8149cf136d724ec1b0b0eda068b7269e91bac6ba"
+      }
+    },
+    {
+      "key": "stone-hearth",
+      "name": "Каменный очаг",
+      "source": "exec-005557cf-266b-44d1-8d10-029b551076aa.png",
+      "cell": 1,
+      "sha256": "01d3d87946d8f4cc0d79155d38a2226608ce0046d03870fb5217b80a57226ea5",
+      "category": "Освещение",
+      "settings": {
+        "width": 120,
+        "height": 74,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "rectangle",
+          "blocksMovement": true,
+          "blocksVision": false,
+          "blocksLight": false,
+          "x": 9.0,
+          "y": 8.9,
+          "width": 102.0,
+          "height": 56.2
+        },
+        "tags": [],
+        "light": {
+          "radius": 220,
+          "color": "#ffab65",
+          "intensity": 1.55,
+          "falloff": 1.35
+        }
+      },
+      "artwork": {
+        "directory": "v1-top-down",
+        "source": "exec-93b83b02-9e62-4982-aba4-7820bf1d5bb7.png",
+        "cell": 3,
+        "sha256": "4498a023a320b012592a2e0b0a296cb44c73c2499b1c1774faba15b9bce923bf"
+      }
+    },
+    {
+      "key": "candle-tray",
+      "name": "Свечи на подносе",
+      "source": "exec-005557cf-266b-44d1-8d10-029b551076aa.png",
+      "cell": 2,
+      "sha256": "9f275560b4da00e9d63007b199157bcd417a819efd975bbe98af24d544a4a8ac",
+      "category": "Освещение",
+      "settings": {
+        "width": 24,
+        "height": 24,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "none",
+          "blocksMovement": false,
+          "blocksVision": false,
+          "blocksLight": false
+        },
+        "tags": [],
+        "light": {
+          "radius": 95,
+          "color": "#ffdca8",
+          "intensity": 0.9,
+          "falloff": 1.75
+        }
+      }
+    },
+    {
+      "key": "flowering-shrub",
+      "name": "Цветущий куст",
+      "source": "exec-005557cf-266b-44d1-8d10-029b551076aa.png",
+      "cell": 3,
+      "sha256": "80760bf612035c33c5b6e26bafd6348103f2493a6c8ff98db8c11303293d30d4",
+      "category": "Природа",
+      "settings": {
+        "width": 85,
+        "height": 70,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "none",
+          "blocksMovement": false,
+          "blocksVision": false,
+          "blocksLight": false
+        },
+        "tags": []
+      }
+    },
+    {
+      "key": "firewood-stack",
+      "name": "Охапка дров",
+      "source": "exec-005557cf-266b-44d1-8d10-029b551076aa.png",
+      "cell": 4,
+      "sha256": "e416cb9027912f3ad50efc4bbcc071e5f3e4a7bc7ea6bdae73aa122a460f8e84",
+      "category": "Мебель и декор",
+      "settings": {
+        "width": 67,
+        "height": 31,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "collider": {
+          "type": "rectangle",
+          "blocksMovement": true,
+          "blocksVision": false,
+          "blocksLight": false,
+          "x": 7.05,
+          "y": 5.9,
+          "width": 52.9,
+          "height": 19.2
+        },
+        "tags": []
+      },
+      "artwork": {
+        "directory": "v1-top-down",
+        "source": "exec-93b83b02-9e62-4982-aba4-7820bf1d5bb7.png",
+        "cell": 4,
+        "sha256": "4b60c623f0bf505ca063642944b2d63df27d103ff22d4d1c6b798d134e61a278"
+      }
+    }
+  ]
+}

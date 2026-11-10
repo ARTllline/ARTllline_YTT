@@ -47,7 +47,8 @@ export class GameplayLayer extends Container {
         if (this.floating.length > 12) this.floating.shift()!.label.destroy();
     }
     tick(scene: Scene, zoom: number, now: number, reduced: boolean) {
-        this.rings.clear();
+        if (this.rings.context.instructions.length) this.rings.clear();
+        if (!this.targetKind && !this.ability && !this.floating.length) return;
         const actor = scene.tokens.find((t) => t.id === this.actorId);
         const target: AbilityTarget | null = this.hover?.point
             ? { kind: 'point', ...this.hover.point }

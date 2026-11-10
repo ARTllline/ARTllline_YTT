@@ -23,12 +23,15 @@ export interface PresetSettings {
     rotation: number;
     collider: Collider;
     tags: string[];
+    light?: { radius: number; color: string; intensity: number; falloff: number };
 }
 export interface ObjectPreset {
     id: string;
     name: string;
     category: string;
     asset: ImageAsset;
+    builtin?: boolean;
+    thumbnailUrl?: string;
     settings: PresetSettings;
 }
 

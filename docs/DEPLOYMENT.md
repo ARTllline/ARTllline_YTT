@@ -87,7 +87,7 @@ resolve correctly from the server too. Credentials are distinct from APP_KEY.
 
 ```sh
 cd /srv/ytt/current
-sudo -u www-data php artisan migrate --force
+sudo -u www-data php artisan migrate --seed --force
 sudo -u www-data php artisan config:cache
 sudo -u www-data php artisan route:cache
 sudo -u www-data php artisan view:cache
@@ -161,7 +161,7 @@ WSS or worker execution: perform the release checklist with independent browsers
 1. Announce maintenance outside play. Take a consistent backup as BACKUP_RESTORE.md describes.
 2. Prepare a separate release with locked dependencies/build; validate without replacing shared .env.
 3. `php artisan down`; stop `ytt-queue`, `ytt-reverb`, `ytt-scheduler.timer` and wait for an active scheduler tick to finish.
-4. Switch current symlink atomically to the prepared release, then `migrate --force`,
+4. Switch current symlink atomically to the prepared release, then `migrate --seed --force`,
    config/route/view cache and doctor. Do not run destructive automatic rollback migrations.
 5. Reload PHP-FPM; start the three services, `php artisan up`, test external HTTPS/WSS,
    invite/join, a Cue, private upload and a Player movement. Check fresh logs.

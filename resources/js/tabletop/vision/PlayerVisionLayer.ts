@@ -3,6 +3,7 @@ import {
     Container,
     Graphics,
     Matrix,
+    Rectangle,
     RenderTexture,
     Sprite,
     Texture,
@@ -13,23 +14,26 @@ import { visibilityPlayback, visibilityPlaybackProgress } from './playback';
 import type { Point, Scene } from '../types/scene';
 import { explorationPixels } from './explorationPixels';
 import { visionComposite } from './composite';
+import { VISION_FEATHER_CELLS } from './coverage';
 import { maskPixels } from '../lighting/model';
 
-/** Exact authority is rasterized only on changes; a quad handles bounded reveal easing. */
+interface VisionMask {
+    texture: Texture;
+    pixels?: Uint8Array;
+    cellSize?: number;
+}
+
+/** Two reusable masks feed exact entity clipping and bounded presentation easing. */
 export class PlayerVisionLayer extends Container {
-    private currentTexture?: RenderTexture;
-    private previousTexture?: RenderTexture;
+    private currentSurface?: VisionMask;
+    private previousSurface?: VisionMask;
     readonly currentMask = new Sprite();
     private current = new Graphics();
-    private rasterLayer = new Container();
-    private rasterSprite = new Sprite();
-    private rasterTexture?: Texture;
-    private rasterPixels = new Uint8Array(0);
     private composite?: ReturnType<typeof visionComposite>;
     private display?: ReturnType<typeof visionComposite>['display'];
     private memoryTexture?: Texture;
     private memoryPixels = new Uint8Array(0);
-    private memoryKey = '';
+    private memory?: NonNullable<Scene['vision']>['explored'];
     private polygonKey = '';
     private prior?: Scene['vision'];
     private worldWidth = 0;
@@ -37,10 +41,10 @@ export class PlayerVisionLayer extends Container {
     private elapsed = 120;
     private playback = visibilityPlayback();
     private waitingForReceipt = false;
+    private manual?: Texture;
     constructor() {
         super();
         this.addChild(this.currentMask);
-        this.rasterLayer.addChild(this.rasterSprite);
         this.eventMode = 'none';
     }
     sync(
@@ -56,7 +60,7 @@ export class PlayerVisionLayer extends Container {
             this.prior = undefined;
             return;
         }
-        if (movements?.length) {
+        if (movements?.length && this.waitingForReceipt) {
             this.playback = visibilityPlayback(movements);
             this.waitingForReceipt = false;
         }
@@ -69,69 +73,66 @@ export class PlayerVisionLayer extends Container {
         }
         const first = !this.prior;
         this.prior = vision;
-        const resized =
-            !this.currentTexture || width !== this.worldWidth || height !== this.worldHeight;
+        const resized = width !== this.worldWidth || height !== this.worldHeight;
         if (resized) {
-            // Unbind readers before disposing resources. No instruction may retain a dead source.
-            this.currentMask.texture = Texture.EMPTY;
-            this.composite.shader.resources.uCurrent = Texture.EMPTY.source;
-            this.composite.shader.resources.uPrevious = Texture.EMPTY.source;
-            this.currentTexture?.destroy(true);
-            this.previousTexture?.destroy(true);
-            const scale = Math.min(1, 4096 / Math.max(width, height));
-            const options = {
-                width: Math.ceil(width * scale),
-                height: Math.ceil(height * scale),
-                antialias: true,
-            };
-            this.currentTexture = RenderTexture.create(options);
-            this.previousTexture = RenderTexture.create(options);
             this.worldWidth = width;
             this.worldHeight = height;
             this.display!.scale.set(width, height);
         }
         const raster = vision?.raster;
-        const key = JSON.stringify(raster ?? vision?.polygons ?? []);
+        const feather = VISION_FEATHER_CELLS * (raster?.cellSize ?? 0);
+        const key = raster
+            ? `${raster.width}:${raster.height}:${raster.cellSize}:${raster.bits}:${raster.darkvision ?? ''}`
+            : JSON.stringify(vision?.polygons ?? []);
         if (resized || first || key !== this.polygonKey) {
             this.polygonKey = key;
             this.playback = visibilityPlayback(movements);
             this.waitingForReceipt = !first && !resized && pendingMovement && !movements?.length;
-            // Ping-pong two fixed surfaces; never allocate one per movement receipt.
-            [this.previousTexture, this.currentTexture] = [
-                this.currentTexture,
-                this.previousTexture,
-            ];
+            const reusable = this.previousSurface;
+            this.composite.shader.resources.uPrevious = Texture.EMPTY.source;
+            this.previousSurface = this.currentSurface;
+            this.currentSurface = this.maskSurface(reusable, width, height, raster);
+            const { texture, pixels } = this.currentSurface;
             if (raster) {
-                this.syncRaster(raster);
+                maskPixels(raster.bits, pixels!, raster.darkvision);
+                texture.source.update();
             } else {
                 this.current.clear();
                 for (const polygon of vision?.polygons ?? []) {
                     if (polygon.length >= 3)
                         this.current.poly(polygon.flatMap((p) => [p.x, p.y])).fill(0xffffff);
                 }
+                renderer.render({
+                    container: this.current,
+                    target: texture as RenderTexture,
+                    clear: true,
+                    transform: new Matrix().scale(texture.width / width, texture.height / height),
+                });
             }
-            renderer.render({
-                container: raster ? this.rasterLayer : this.current,
-                target: this.currentTexture,
-                clear: true,
-                transform: new Matrix().scale(
-                    this.currentTexture!.width / width,
-                    this.currentTexture!.height / height,
-                ),
-            });
-            this.currentMask.texture = this.currentTexture!;
+            this.currentMask.texture = texture;
             this.currentMask.width = width;
             this.currentMask.height = height;
-            this.composite.shader.resources.uCurrent = this.currentTexture!.source;
-            this.composite.shader.resources.uPrevious = (
-                first || resized ? this.currentTexture! : this.previousTexture!
-            ).source;
+            const previous = first || resized ? texture : this.previousSurface!.texture;
+            this.composite.shader.resources.uCurrent = texture.source;
+            this.composite.shader.resources.uPrevious = previous.source;
+            const { uCurrentScale, uPreviousScale, uVisionFeather } = this.composite.uniforms.uniforms;
+            uCurrentScale[0] = texture.frame.width / texture.source.width;
+            uCurrentScale[1] = texture.frame.height / texture.source.height;
+            uPreviousScale[0] = previous.frame.width / previous.source.width;
+            uPreviousScale[1] = previous.frame.height / previous.source.height;
+            uVisionFeather[0] = feather * uCurrentScale[0] / width;
+            uVisionFeather[1] = feather * uCurrentScale[1] / height;
             this.elapsed = first || resized ? 120 : 0;
         }
         const memory = vision?.explored;
-        const memoryKey = JSON.stringify(memory);
-        if (resized || memoryKey !== this.memoryKey) {
-            this.memoryKey = memoryKey;
+        if (
+            resized ||
+            memory?.bits !== this.memory?.bits ||
+            memory?.width !== this.memory?.width ||
+            memory?.height !== this.memory?.height ||
+            memory?.cellSize !== this.memory?.cellSize
+        ) {
+            this.memory = memory;
             const w = memory?.width ?? 1,
                 h = memory?.height ?? 1;
             if (
@@ -164,26 +165,63 @@ export class PlayerVisionLayer extends Container {
         this.composite.uniforms.uniforms.uBase = memory ? 0.94 : 1;
         this.tick(0, false, undefined, pendingMovement);
     }
-    private syncRaster(raster: NonNullable<NonNullable<Scene['vision']>['raster']>) {
-        const { width, height, cellSize } = raster;
-        if (this.rasterTexture?.width !== width || this.rasterTexture.height !== height) {
-            this.rasterSprite.texture = Texture.EMPTY;
-            this.rasterTexture?.destroy(true);
-            this.rasterPixels = new Uint8Array(width * height * 4);
-            this.rasterTexture = new Texture({
-                source: new BufferImageSource({
-                    resource: this.rasterPixels,
-                    width,
-                    height,
-                    format: 'rgba8unorm',
-                    scaleMode: 'linear',
-                }),
-            });
-            this.rasterSprite.texture = this.rasterTexture;
+    private maskSurface(
+        reusable: VisionMask | undefined,
+        width: number,
+        height: number,
+        raster: NonNullable<Scene['vision']>['raster'],
+    ): VisionMask {
+        if (!raster) {
+            const scale = Math.min(1, 4096 / Math.max(width, height));
+            const w = Math.ceil(width * scale);
+            const h = Math.ceil(height * scale);
+            if (
+                reusable && !reusable.pixels &&
+                reusable.texture.width === w && reusable.texture.height === h
+            )
+                return reusable;
+            reusable?.texture.destroy(true);
+            return { texture: RenderTexture.create({ width: w, height: h, antialias: true }) };
         }
-        maskPixels(raster.bits, this.rasterPixels, raster.darkvision);
-        this.rasterTexture.source.update();
-        this.rasterSprite.scale.set(cellSize);
+        const { width: w, height: h, cellSize } = raster;
+        const frame = new Rectangle(0, 0, width / cellSize, height / cellSize);
+        if (
+            reusable?.cellSize === cellSize &&
+            reusable.texture.source.width === w &&
+            reusable.texture.source.height === h &&
+            reusable.texture.frame.width === frame.width &&
+            reusable.texture.frame.height === frame.height
+        )
+            return reusable;
+        reusable?.texture.destroy(true);
+        const pixels = new Uint8Array(w * h * 4);
+        const texture = new Texture({
+            source: new BufferImageSource({
+                resource: pixels,
+                width: w,
+                height: h,
+                format: 'rgba8unorm',
+                scaleMode: 'linear',
+            }),
+            frame,
+        });
+        // The last server cell can extend past the world. Clip at the scene edge.
+        texture.textureMatrix.clampMargin = 0;
+        texture.textureMatrix.update();
+        return { texture, pixels, cellSize };
+    }
+    setFogPresentation(texture: Texture | undefined, gm: boolean) {
+        if (!this.composite || !this.visible) return;
+        // Player masking consumes this sprite. The GM only samples its texture.
+        if (gm) this.currentMask.renderable = false;
+        if (texture !== this.manual) {
+            this.manual = texture;
+            this.composite.shader.resources.uManual = (texture ?? Texture.EMPTY).source;
+        }
+        const uniforms = this.composite.uniforms.uniforms;
+        uniforms.uManualEnabled = texture ? 1 : 0;
+        uniforms.uExplored = gm ? 0.28 : 0.63;
+        uniforms.uBase = gm ? 0.58 : this.prior?.explored ? 0.94 : 1;
     }
     tick(
         deltaMs: number,
@@ -207,13 +245,11 @@ export class PlayerVisionLayer extends Container {
     override destroy() {
         this.currentMask.texture = Texture.EMPTY;
         this.current.destroy();
-        this.rasterLayer.destroy({ children: true });
-        this.rasterTexture?.destroy(true);
         this.composite?.shader.destroy();
         this.composite?.geometry.destroy();
         this.memoryTexture?.destroy(true);
-        this.currentTexture?.destroy(true);
-        this.previousTexture?.destroy(true);
+        this.currentSurface?.texture.destroy(true);
+        this.previousSurface?.texture.destroy(true);
         super.destroy({ children: true });
     }
 }

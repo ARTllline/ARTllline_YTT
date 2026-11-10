@@ -16,6 +16,8 @@ import type { SceneStore } from '../tabletop/state/SceneStore';
 import { SpatialSettings } from './SpatialSettings';
 import { NumberField } from './NumberField';
 import { HistoryControls } from './HistoryControls';
+import { FogPanel } from './FogControls';
+import type { SaveQueue } from '../tabletop/state/SaveQueue';
 const RegionControls = lazy(() =>
     import('../automation/RegionControls').then((m) => ({ default: m.RegionControls })),
 );
@@ -24,11 +26,13 @@ export function Toolbar({
     onTool,
     preparation = true,
     dockedRegions = false,
+    queue,
 }: {
     store: SceneStore;
     onTool: (tool: Tool) => void;
     preparation?: boolean;
     dockedRegions?: boolean;
+    queue?: SaveQueue;
 }) {
     const tool = useSyncExternalStore(store.spatial.subscribe, store.spatial.getTool);
     const [gridOpen, setGridOpen] = useState(false);
@@ -98,7 +102,7 @@ export function Toolbar({
                         aria-label={t('Fog tool')}
                         title={t('Fog · F')}
                         aria-pressed={tool === 'fog'}
-                        onClick={() => choose('fog')}
+                        onClick={() => choose(tool === 'fog' ? 'select' : 'fog')}
                     >
                         <CloudFog size={18} />
                     </button>
@@ -143,6 +147,14 @@ export function Toolbar({
                 </button>
             </div>
             <SpatialSettings store={store} tool={tool} onTool={choose} />
+            {store.role === 'gm' && tool === 'fog' && queue && (
+                <FogPanel
+                    store={store}
+                    queue={queue}
+                    showHistory={!preparation}
+                    onClose={() => choose('select')}
+                />
+            )}
             {store.role === 'gm' && tool === 'region' && !dockedRegions && (
                 <Suspense fallback={<div className="spatial-settings">Открываем области…</div>}>
                     <RegionControls store={store} />

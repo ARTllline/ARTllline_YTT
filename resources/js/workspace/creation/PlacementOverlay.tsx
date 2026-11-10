@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, type RefObject } from 'react';
-import { MousePointer2, X } from 'lucide-react';
+import { Minus, MousePointer2, Plus, RotateCcw, RotateCw, X } from 'lucide-react';
 import type { TabletopRenderer } from '../../tabletop/renderer/TabletopRenderer';
 import type { Point } from '../../tabletop/types/scene';
 import { repeatsPlacement, type Placement } from './model';
@@ -11,6 +11,7 @@ export function PlacementOverlay({
     onPlace,
     onCancel,
     onRotate,
+    onScale,
 }: {
     item: Placement;
     renderer: RefObject<TabletopRenderer | null>;
@@ -18,18 +19,20 @@ export function PlacementOverlay({
     onPlace: (point: Point) => Promise<void>;
     onCancel: () => void;
     onRotate: (delta: number) => void;
+    onScale: (delta: number) => void;
 }) {
     const marker = useRef<HTMLDivElement>(null);
     const placing = useRef(false);
-    const latest = useRef({ busy, onPlace, onCancel, onRotate, item });
+    const latest = useRef({ busy, onPlace, onCancel, onRotate, onScale, item });
     useLayoutEffect(() => {
-        latest.current = { busy, onPlace, onCancel, onRotate, item };
-    }, [busy, onPlace, onCancel, onRotate, item]);
+        latest.current = { busy, onPlace, onCancel, onRotate, onScale, item };
+    }, [busy, onPlace, onCancel, onRotate, onScale, item]);
     const asset =
         item.type === 'token' ? item.draft.asset : item.type === 'prop' ? item.asset : undefined;
     const preset = item.type === 'objectPreset' ? item.preset : undefined;
     const prop = item.type === 'prop' ? item.asset : undefined;
     const rotation = item.type === 'objectPreset' ? item.rotation : 0;
+    const scale = item.type === 'objectPreset' ? item.scaleFactor : 1;
     const url = item.type === 'libraryActor' ? item.previewUrl : (preset?.asset.url ?? asset?.url);
     useLayoutEffect(() => {
         const current = renderer.current;
@@ -39,8 +42,8 @@ export function PlacementOverlay({
         };
     }, [renderer, item.name, prop, preset, url]);
     useLayoutEffect(() => {
-        renderer.current?.rotatePlacement(rotation);
-    }, [renderer, rotation, preset, prop, url, item.name]);
+        renderer.current?.transformPlacement(rotation, scale);
+    }, [renderer, rotation, scale, preset, prop, url, item.name]);
     useLayoutEffect(() => {
         const host = marker.current!.parentElement!,
             canvas = host.querySelector('canvas');
@@ -91,7 +94,7 @@ export function PlacementOverlay({
             if ((e.target as HTMLElement).closest('input,textarea,select,dialog')) return;
             if (e.code === 'Space') pan = true;
             if (
-                e.code === 'KeyR' &&
+                ['KeyR', 'BracketLeft', 'BracketRight'].includes(e.code) &&
                 latest.current.item.type === 'objectPreset' &&
                 !e.ctrlKey &&
                 !e.metaKey &&
@@ -100,7 +103,8 @@ export function PlacementOverlay({
             ) {
                 e.preventDefault();
                 e.stopImmediatePropagation();
-                latest.current.onRotate(e.shiftKey ? -15 : 15);
+                if (e.code === 'KeyR') latest.current.onRotate(e.shiftKey ? -15 : 15);
+                else latest.current.onScale(e.code === 'BracketLeft' ? -0.1 : 0.1);
             }
             if (['KeyV', 'KeyH'].includes(e.code) && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 latest.current.onCancel();
@@ -156,12 +160,46 @@ export function PlacementOverlay({
                     <strong>{busy ? 'Размещаем…' : item.name}</strong>
                     <small>
                         {item.type === 'objectPreset'
-                            ? `Клик — штамп · R / Shift+R — ${rotation}° · Esc — закончить`
+                            ? 'Клик — штамп · [ / ] масштаб · R / Shift+R поворот · Esc завершить'
                             : repeatsPlacement(item)
                               ? 'Клик — копия · Esc — закончить'
                               : 'Клик — разместить · Enter — в центре · Esc — отменить'}
                     </small>
                 </div>
+                {item.type === 'objectPreset' && (
+                    <div className="placement-transform">
+                        <button
+                            className="icon-button"
+                            aria-label="Уменьшить масштаб"
+                            onClick={() => onScale(-0.1)}
+                        >
+                            <Minus size={15} />
+                        </button>
+                        <output aria-label="Масштаб пресета">{Math.round(scale * 100)}%</output>
+                        <button
+                            className="icon-button"
+                            aria-label="Увеличить масштаб"
+                            onClick={() => onScale(0.1)}
+                        >
+                            <Plus size={15} />
+                        </button>
+                        <button
+                            className="icon-button"
+                            aria-label="Повернуть влево"
+                            onClick={() => onRotate(-15)}
+                        >
+                            <RotateCcw size={15} />
+                        </button>
+                        <output aria-label="Поворот пресета">{rotation}°</output>
+                        <button
+                            className="icon-button"
+                            aria-label="Повернуть вправо"
+                            onClick={() => onRotate(15)}
+                        >
+                            <RotateCw size={15} />
+                        </button>
+                    </div>
+                )}
                 <button
                     className="icon-button"
                     aria-label="Закончить размещение"

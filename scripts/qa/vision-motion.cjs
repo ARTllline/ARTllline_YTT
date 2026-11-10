@@ -117,9 +117,11 @@ async function instrument(p, tokenId) {
             const r = render(options);
             if (
                 profile.enabled &&
-                [layer.texture, layer.currentTexture, layer.memoryTexture].includes(
-                    options?.target,
-                ) &&
+                [
+                    layer.texture,
+                    layer.currentSurface?.texture ?? layer.currentTexture,
+                    layer.memoryTexture,
+                ].includes(options?.target) &&
                 options?.target
             )
                 profile.passes.push({

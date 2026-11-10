@@ -68,14 +68,26 @@ export function maskBytes(bits: string) {
 }
 export function maskPixels(bits: string, pixels: Uint8Array, darkvision?: string) {
     const bytes = maskBytes(bits);
+    const dark = darkvision ? maskBytes(darkvision) : '';
     const rgba = new Uint32Array(pixels.buffer, pixels.byteOffset, pixels.byteLength / 4);
-    for (let i = 0; i < rgba.length; i++)
-        rgba[i] = bytes.charCodeAt(i >> 3) & (1 << (i & 7)) ? 0xffffffff : 0;
-    if (!darkvision) return;
+    rgba.fill(0);
     // Red and alpha stay intact for the existing Pixi content/Fog masks.
-    const dark = maskBytes(darkvision);
-    for (let i = 0; i < rgba.length; i++)
-        if (rgba[i] && dark.charCodeAt(i >> 3) & (1 << (i & 7))) rgba[i] = 0xff0000ff;
+    const count = Math.min(bytes.length, Math.ceil(rgba.length / 8));
+    for (let i = 0; i < count; i++) {
+        let visible = bytes.charCodeAt(i);
+        if (!visible) continue;
+        const dim = dark.charCodeAt(i) | 0;
+        const offset = i * 8;
+        if (visible === 255 && !dim) {
+            rgba.fill(0xffffffff, offset, offset + 8);
+            continue;
+        }
+        while (visible) {
+            const bit = visible & -visible;
+            rgba[offset + 31 - Math.clz32(bit)] = dim & bit ? 0xff0000ff : 0xffffffff;
+            visible ^= bit;
+        }
+    }
 }
 export function pointInPolygons(point: Point, polygons: Point[][]) {
     return polygons.some((polygon) => {

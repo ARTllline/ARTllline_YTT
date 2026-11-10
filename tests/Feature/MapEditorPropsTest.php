@@ -6,12 +6,18 @@ use App\Events\TabletopEvent;
 use App\Models\Asset;
 use App\Models\Campaign;
 use App\Models\LootContainer;
+use App\Models\MapMaterialVersion;
+use App\Models\ObjectPreset;
 use App\Models\Scene;
 use App\Models\SceneProp;
 use App\Models\User;
+use App\Services\AssetThumbnail;
+use App\Services\FantasyClassicPack;
+use App\Services\SceneLighting;
 use App\Services\StructuralGeometry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -64,6 +70,108 @@ class MapEditorPropsTest extends TestCase
                 'scaleX' => 2, 'scaleY' => 0.5, 'rotation' => 90, 'tags' => ['climbable'],
                 'collider' => $shape + ['blocksMovement' => true, 'blocksVision' => false, 'blocksLight' => true]],
             'clientMutationId' => (string) Str::uuid()];
+    }
+
+    public function test_seed_installs_a_shared_immutable_catalog_without_duplicate_ids(): void
+    {
+        Storage::fake('campaigns');
+        $this->seed();
+        $presets = ObjectPreset::orderBy('id')->pluck('id', 'builtin_key')->all();
+        $assets = Asset::whereNotNull('builtin_key')->orderBy('id')->pluck('id', 'builtin_key')->all();
+        $this->assertCount(20, $presets);
+        $this->assertCount(43, $assets);
+        $this->assertSame(23, MapMaterialVersion::count());
+        $this->seed();
+        $this->assertSame($presets, ObjectPreset::orderBy('id')->pluck('id', 'builtin_key')->all());
+        $this->assertSame($assets, Asset::whereNotNull('builtin_key')->orderBy('id')->pluck('id', 'builtin_key')->all());
+        $this->assertSame(23, MapMaterialVersion::count());
+        foreach (Asset::whereNotNull('builtin_key')->get() as $asset) {
+            Storage::disk('campaigns')->assertExists($asset->storage_path);
+        }
+
+        $this->actingAs(User::factory()->create());
+        $this->getJson('/api/library/assets?category=props')->assertJsonPath('total', 20);
+        $this->getJson('/api/library/assets?category=terrain')->assertJsonPath('total', 4);
+        $this->getJson('/api/library/materials?type=terrain')->assertJsonCount(4, 'materials');
+        $preset = $this->getJson('/api/library/object-presets?source=builtin&search=iron-lantern')
+            ->assertOk()->assertJsonCount(1, 'presets')->assertJsonPath('presets.0.builtin', true)->json('presets.0');
+        $this->getJson('/api/library/object-presets?search='.rawurlencode('кованый'))
+            ->assertJsonPath('presets.0.id', $preset['id']);
+        $this->get($preset['thumbnailUrl'])->assertOk();
+        $url = '/api/library/object-presets/'.$preset['id'];
+        $this->patchJson($url, [])->assertNotFound();
+        $this->deleteJson($url)->assertNotFound();
+        $this->postJson($url.'/duplicate')->assertOk()->assertJsonPath('builtin', false)
+            ->assertJsonPath('asset.id', $preset['asset']['id']);
+        $this->actingAs($this->gm)->getJson('/api/library/object-presets?source=personal')
+            ->assertJsonCount(0, 'presets');
+    }
+
+    public function test_stamped_light_follows_prop_history_and_player_permissions(): void
+    {
+        Storage::fake('campaigns');
+        $this->seed();
+        $this->scene->update(['lighting' => ['enabled' => true, 'mode' => 'night', 'brightness' => .25] + SceneLighting::defaults()]);
+        $preset = ObjectPreset::where('builtin_key', 'fantasy-classic/environment/iron-lantern/v1')->firstOrFail();
+        $placement = ['action' => 'create', 'presetId' => $preset->id, 'x' => 300, 'y' => 200,
+            'scaleFactor' => 1.3, 'rotation' => 45];
+        $result = $this->command('props', $placement)->assertOk()
+            ->assertJsonPath('props.0.scaleX', 1.3)->assertJsonPath('props.0.rotation', 45)->json();
+        $edit = $result['propEdits'][0];
+        $light = '/api/scenes/'.$this->scene->id.'/lighting';
+        $this->getJson($light)->assertJsonPath('sources.0.id', 'prop:'.$edit['id']);
+        $this->command('edit-history', ['changes' => [$this->inverse($edit, true)]])->assertOk();
+        $this->getJson($light)->assertJsonCount(0, 'sources');
+        $this->command('edit-history', ['changes' => [$this->inverse($edit, false)]])->assertOk();
+        $this->command('props', ['action' => 'update', 'id' => $edit['id'], 'patch' => ['x' => 350]])->assertOk();
+        $this->actingAs($this->player);
+        $this->command('props', $placement)->assertForbidden();
+        $this->getJson($light)->assertJsonPath('sources.0.x', 350)->assertJsonMissingPath('settings.sources');
+        $this->actingAs($this->gm)->command('props', ['action' => 'update', 'id' => $edit['id'],
+            'patch' => ['is_hidden' => true]])->assertOk();
+        $this->actingAs($this->player)->getJson($light)->assertJsonCount(0, 'sources');
+    }
+
+    public function test_artwork_revision_updates_existing_props_and_refreshes_thumbnails(): void
+    {
+        $disk = Storage::fake('campaigns');
+        $this->seed();
+        $key = 'iron-lantern';
+        $preset = ObjectPreset::with('asset')->where('builtin_key', 'fantasy-classic/environment/'.$key.'/v1')->firstOrFail();
+        $asset = $preset->asset;
+        $updatedPath = $asset->storage_path;
+        $updatedBytes = $disk->get($updatedPath);
+        $originalPath = 'builtin/'.$asset->builtin_key.'.webp';
+        $originalBytes = file_get_contents(resource_path('environment/fantasy-classic/v1/'.$key.'.webp'));
+        $disk->put($originalPath, $originalBytes);
+        $disk->delete($updatedPath);
+        $asset->update(['storage_path' => $originalPath, 'file_size' => strlen($originalBytes)]);
+        $originalThumbnail = $disk->get(app(AssetThumbnail::class)->ensure($asset));
+
+        $copy = $this->postJson('/api/library/assets/'.$asset->id.'/duplicate')->assertOk()->json();
+        $personal = $this->postJson('/api/library/object-presets/'.$preset->id.'/duplicate')->assertOk()->json();
+        unset($personal['mutationId']);
+        $result = $this->command('props', ['action' => 'create', 'presetId' => $preset->id, 'x' => 100, 'y' => 120])
+            ->assertOk()->json('props.0');
+        $props = $this->getJson('/api/scenes/'.$this->scene->id.'/snapshot')->assertOk()->json('props');
+        $this->assertSame($result['id'], $props[0]['id']);
+        $this->assertNotSame($originalBytes, $updatedBytes);
+
+        $pack = app(FantasyClassicPack::class);
+        $pack->installEnvironment();
+        $pack->installEnvironment();
+
+        $asset->refresh();
+        $this->assertSame($updatedPath, $asset->storage_path);
+        $this->assertSame($updatedBytes, $disk->get($asset->storage_path));
+        $this->assertSame(strlen($updatedBytes), $asset->file_size);
+        $this->assertNotSame($originalThumbnail, $disk->get(app(AssetThumbnail::class)->ensure($asset)));
+        $this->assertSame($originalBytes, $disk->get(Asset::findOrFail($copy['id'])->storage_path));
+        $this->assertSame($personal, ObjectPreset::with('asset')->findOrFail($personal['id'])->projection());
+        $this->assertSame($preset->settings, $preset->fresh()->settings);
+        $this->getJson('/api/scenes/'.$this->scene->id.'/snapshot')->assertOk()->assertJsonPath('props', $props);
+        $this->assertSame(21, ObjectPreset::count());
+        $this->assertSame(43, Asset::whereNotNull('builtin_key')->count());
     }
 
     public function test_preset_snapshot_geometry_undo_and_player_privacy(): void

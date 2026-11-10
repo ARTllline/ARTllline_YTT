@@ -31,6 +31,15 @@ export class SaveQueue {
         if (debounce) this.timer = setTimeout(() => void this.drain(), debounce);
         else void this.drain();
     }
+    cancel(key: string) {
+        this.jobs = this.jobs.filter(
+            (job, index) => job.key !== key || (index === 0 && this.running),
+        );
+        if (!this.jobs.length && !this.running) {
+            clearTimeout(this.timer);
+            this.publish({ status: 'saved', error: null });
+        }
+    }
     private async drain() {
         if (this.running || this.state.status === 'failed') return;
         this.running = true;

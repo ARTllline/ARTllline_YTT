@@ -24,7 +24,7 @@ class LineOfSightTest extends TestCase
     {
         $graph = json_decode(file_get_contents(base_path('tests/Fixtures/movement.json')), true)['graph'];
         $graph['edges'][0]['blocksVision'] = true;
-        $graph['openings'][1]['blocksVision'] = false;
+        $graph['openings'][1]['open'] = true;
 
         return $graph;
     }
@@ -42,7 +42,7 @@ class LineOfSightTest extends TestCase
             $this->assertSame($visible, $los->point($this->point(100, $y), $this->point(700, $y))['visible'], "y=$y");
         }
         $graph['openings'][0]['open'] = false;
-        $graph['openings'][1]['blocksVision'] = true;
+        $graph['openings'][1]['open'] = false;
         $changed = new LineOfSight(StructuralGeometry::compile($graph));
         $this->assertNotSame($los->geometryKey, $changed->geometryKey);
         $this->assertFalse($changed->point($this->point(100, 234), $this->point(700, 234))['visible']);

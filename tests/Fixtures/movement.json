@@ -14,8 +14,8 @@
     {"name":"door too narrow","a":{"x":100,"y":234},"b":{"x":700,"y":234},"radius":32,"blocked":true},
     {"name":"near door jamb","a":{"x":100,"y":210},"b":{"x":700,"y":210},"radius":10,"blocked":true},
     {"name":"closed door","a":{"x":100,"y":234},"b":{"x":700,"y":234},"radius":10,"blocked":true,"closeDoor":true},
-    {"name":"open window movement flag","a":{"x":100,"y":410},"b":{"x":700,"y":410},"radius":20,"blocked":false},
-    {"name":"closed window movement flag","a":{"x":100,"y":410},"b":{"x":700,"y":410},"radius":20,"blocked":true,"blockWindow":true},
+    {"name":"open window blocks movement","a":{"x":100,"y":410},"b":{"x":700,"y":410},"radius":20,"blocked":true},
+    {"name":"closed window blocks movement","a":{"x":100,"y":410},"b":{"x":700,"y":410},"radius":20,"blocked":true,"closeWindow":true},
     {"name":"rounded end contact","a":{"x":100,"y":62},"b":{"x":700,"y":62},"radius":10,"blocked":true},
     {"name":"rounded end clearance","a":{"x":100,"y":61.9},"b":{"x":700,"y":61.9},"radius":10,"blocked":false},
     {"name":"embedded origin","a":{"x":300,"y":150},"b":{"x":700,"y":150},"radius":10,"blocked":true}

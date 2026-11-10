@@ -10,7 +10,7 @@ for (const example of fixture.cases) {
         const door = graph.openings?.[0];
         const window = graph.openings?.[1];
         if (door?.type === 'door') door.open = !example.closeDoor;
-        if (window?.type === 'window') window.blocksMovement = !!example.blockWindow;
+        if (window?.type === 'window') window.open = !example.closeWindow;
         const obstacles = movementObstacles({
             ...scene,
             structure: { graph, hash: 'fixture', materials: [] },

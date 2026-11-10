@@ -9,6 +9,7 @@ import {
     type Renderer,
 } from 'pixi.js';
 import type { Point, Scene } from '../types/scene';
+import { VISION_FEATHER_CELLS } from '../vision/coverage';
 import { LightingReader } from './LightingReader';
 import { spillPixels } from './spill';
 import { darkvisionComposite, lightShader, lightingComposite } from './shaders';
@@ -34,7 +35,6 @@ interface Emitter {
 export class LightingLayer extends Container {
     readonly guides = new Graphics();
     private field = new Container();
-    private ambient = new Graphics();
     private composite?: ReturnType<typeof lightingComposite>;
     private darkvision?: ReturnType<typeof darkvisionComposite>;
     private emitters = new Map<string, Emitter>();
@@ -61,8 +61,8 @@ export class LightingLayer extends Container {
     constructor(private player: boolean) {
         super();
         this.eventMode = 'none';
-        this.field.addChild(this.ambient);
         this.spillSprite.blendMode = 'add';
+        this.spillSprite.alpha = 0.5;
         this.field.addChild(this.spillSprite);
     }
     sync(scene: Scene, current?: Texture, preview?: LightingSettings) {
@@ -72,7 +72,7 @@ export class LightingLayer extends Container {
         }
         this.scene = scene;
         this.visible = !!(preview ?? scene.lighting)?.enabled;
-        this.guides.clear();
+        if (this.guides.context.instructions.length) this.guides.clear();
         if (!this.player && preview) {
             for (const source of preview.sources ?? []) {
                 const token = scene.tokens.find((t) => t.id === source.tokenId);
@@ -93,6 +93,14 @@ export class LightingLayer extends Container {
             this.addChild(this.composite.mesh);
         }
         this.composite.uniforms.uniforms.uClipped = this.player && scene.vision?.enabled ? 1 : 0;
+        const feather = VISION_FEATHER_CELLS * (scene.vision?.raster?.cellSize ?? 0);
+        const scaleX = current ? current.frame.width / current.source.width : 1;
+        const scaleY = current ? current.frame.height / current.source.height : 1;
+        const { uVisionScale, uVisionFeather } = this.composite.uniforms.uniforms;
+        uVisionScale[0] = scaleX;
+        uVisionScale[1] = scaleY;
+        uVisionFeather[0] = (feather * scaleX) / scene.width;
+        uVisionFeather[1] = (feather * scaleY) / scene.height;
         this.composite.shader.resources.uCurrent = current?.source ?? Texture.EMPTY.source;
         const darkvision = this.player && !!scene.vision?.raster?.darkvision;
         if (darkvision && !this.darkvision) {
@@ -102,6 +110,7 @@ export class LightingLayer extends Container {
         if (this.darkvision) {
             this.darkvision.mesh.visible = darkvision;
             this.darkvision.mesh.scale.set(scene.width, scene.height);
+            this.darkvision.uniforms.uniforms.uVisionScale.set(uVisionScale);
             this.darkvision.shader.resources.uCurrent = current?.source ?? Texture.EMPTY.source;
         }
         const dimensions = `${scene.id}:${scene.width}:${scene.height}`;
@@ -123,28 +132,25 @@ export class LightingLayer extends Container {
         let lightFloor = 0;
         if (!this.player) {
             // Keep unlit terrain legible for the GM even when gameplay ambient is zero.
-            lightFloor = Math.max(0, 0.24 - lighting.brightness);
+            const twilight = Math.min(1, lighting.brightness * 2);
+            lightFloor = 0.34 * (1 - twilight * twilight * (3 - 2 * twilight));
         } else if (scene.vision?.enabled && scene.vision.raster) {
             // The darkness raster admits only lit or Darkvision cells. Keep
             // the edge of a torch readable next to explored Fog.
-            lightFloor = 0.46;
+            lightFloor = 0.4;
         }
         this.composite.uniforms.uniforms.uLightFloor = lightFloor;
-        const ambientKey = `${lighting.brightness}:${lighting.color}:${dimensions}`;
+        const ambientKey = `${lighting.brightness}:${lighting.color}`;
         if (ambientKey !== this.ambientKey) {
             this.ambientKey = ambientKey;
-            const [r, g, b] = rgb(lighting.color).map((v) =>
-                Math.round(v * lighting.brightness * 255),
-            );
-            this.ambient
-                .clear()
-                .rect(0, 0, scene.width, scene.height)
-                .fill((r << 16) | (g << 8) | b);
-            this.dirty = true;
+            const u = this.composite.uniforms.uniforms;
+            u.uAmbient.set(rgb(lighting.color).map((channel) => channel * lighting.brightness));
+            // Public map art under Fog gets a stable grade independent of hidden light sources.
+            u.uUnseen = 0.65 + 0.35 * lighting.brightness;
         }
         // Immediate revocation while the independent request is in flight.
         const raster = scene.vision?.raster;
-        const currentBits = raster ? maskBytes(raster.bits) : '';
+        let currentBits: string | undefined;
         for (const emitter of this.emitters.values()) {
             const model = emitter.model;
             const token = model.tokenId
@@ -155,16 +161,21 @@ export class LightingLayer extends Container {
                 (!this.player ||
                     (model.tokenId
                         ? !!token && !token.isHidden
-                        : !scene.vision?.enabled || (raster
-                            ? this.rasterContains(model, raster, currentBits)
-                            : pointInPolygons(model, scene.vision.polygons))));
+                        : !scene.vision?.enabled ||
+                          (raster
+                              ? this.rasterContains(model, raster, (currentBits ??= maskBytes(raster.bits)))
+                              : pointInPolygons(model, scene.vision.polygons))));
             if (emitter.draw.mesh.visible !== visible) {
                 emitter.draw.mesh.visible = visible;
                 this.dirty = true;
             }
         }
     }
-    private rasterContains(point: Point, raster: NonNullable<NonNullable<Scene['vision']>['raster']>, bits: string) {
+    private rasterContains(
+        point: Point,
+        raster: NonNullable<NonNullable<Scene['vision']>['raster']>,
+        bits: string,
+    ) {
         const x = Math.floor(point.x / raster.cellSize);
         const y = Math.floor(point.y / raster.cellSize);
         if (x < 0 || x >= raster.width || y < 0 || y >= raster.height) return false;
@@ -246,6 +257,7 @@ export class LightingLayer extends Container {
                 scene.width / (projection.width * projection.cellSize),
                 scene.height / (projection.height * projection.cellSize),
             ]);
+            u.uMaskStep.set([0.72 / projection.width, 0.72 / projection.height]);
             u.uTint.set(rgb(model.color));
             u.uRadius = model.radius;
             u.uIntensity = model.intensity;

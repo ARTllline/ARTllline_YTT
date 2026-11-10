@@ -1,6 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import type { Renderer } from 'pixi.js';
 import { PlayerVisionLayer } from './PlayerVisionLayer';
+import { VISION_FEATHER_CELLS } from './coverage';
 import type { Scene } from '../types/scene';
 
 vi.hoisted(() => vi.stubGlobal('navigator', { userAgent: '' }));
@@ -12,7 +13,14 @@ vi.mock('./composite', async () => {
             shader: { resources: {}, destroy: vi.fn() },
             geometry: { destroy: vi.fn() },
             uniforms: {
-                uniforms: { uProgress: 1, uBase: 0.94, uMemoryScale: new Float32Array([1, 1]) },
+                uniforms: {
+                    uProgress: 1,
+                    uBase: 0.94,
+                    uMemoryScale: new Float32Array([1, 1]),
+                    uCurrentScale: new Float32Array([1, 1]),
+                    uPreviousScale: new Float32Array([1, 1]),
+                    uVisionFeather: new Float32Array(2),
+                },
             },
         }),
     };
@@ -94,26 +102,46 @@ it('holds a newer projection until its pending receipt and attaches playback wit
     layer.destroy();
 });
 
-it('switches between polygon and darkness masks and reuses the raster upload', () => {
+it('switches between polygon and darkness masks and uploads only the two reusable raster surfaces', () => {
     const layer = new PlayerVisionLayer();
     const render = vi.fn();
     const renderer = { render } as unknown as Renderer;
-    const raster = { width: 2, height: 2, cellSize: 50, bits: 'Aw==', darkvision: 'Ag==' };
+    const raster = { width: 2, height: 2, cellSize: 60, bits: 'Aw==', darkvision: 'Ag==' };
     const dark = { ...vision(), polygons: [], raster };
+    const feather = () =>
+        (
+            layer as unknown as {
+                composite: { uniforms: { uniforms: { uVisionFeather: Float32Array } } };
+            }
+        ).composite.uniforms.uniforms.uVisionFeather[0];
     layer.sync(renderer, vision(), 100, 100);
+    expect(feather()).toBe(0);
     layer.sync(renderer, dark, 100, 100);
-    const rasterLayer = render.mock.lastCall?.[0].container;
-    const sprite = rasterLayer.children[0];
-    const texture = sprite.texture;
-    expect(Array.from(texture.source.resource)).toEqual([
+    expect(feather()).toBeCloseTo(VISION_FEATHER_CELLS / 2);
+    const texture = layer.currentMask.texture;
+    expect(texture.frame.width).toBeCloseTo(100 / 60);
+    expect(texture.textureMatrix.uClampFrame[2]).toBeCloseTo(100 / 120);
+    expect(layer.currentMask.width).toBeCloseTo(100);
+    expect(Array.from(texture.source.resource as Uint8Array)).toEqual([
         255, 255, 255, 255, 255, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0,
     ]);
     layer.sync(renderer, { ...dark }, 100, 100);
-    expect(render).toHaveBeenCalledTimes(2);
-    layer.sync(renderer, { ...dark, raster: { ...raster, bits: 'AQ==', darkvision: undefined } }, 100, 100);
-    expect(sprite.texture).toBe(texture);
+    expect(render).toHaveBeenCalledTimes(1);
+    layer.sync(
+        renderer,
+        { ...dark, raster: { ...raster, bits: 'AQ==', darkvision: undefined } },
+        100,
+        100,
+    );
+    const alternate = layer.currentMask.texture;
+    expect(alternate).not.toBe(texture);
+    layer.sync(renderer, dark, 100, 100);
+    expect(layer.currentMask.texture).toBe(texture);
+    expect(render).toHaveBeenCalledTimes(1);
     layer.sync(renderer, vision(), 100, 100);
-    expect(render.mock.lastCall?.[0].container).not.toBe(rasterLayer);
+    expect(feather()).toBe(0);
+    expect(render).toHaveBeenCalledTimes(2);
     layer.destroy();
     expect(texture.destroyed).toBe(true);
+    expect(alternate.destroyed).toBe(true);
 });

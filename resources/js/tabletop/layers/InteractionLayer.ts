@@ -6,6 +6,7 @@ import { movementMarker } from './movementMarker';
 
 export class InteractionLayer extends Container {
     private ink = new Graphics();
+    revision = 0;
     private movementLabel = new Text({
         style: { fontFamily: 'Inter, system-ui, sans-serif', fontSize: 12, fill: '#f3f8fb' },
     });
@@ -14,6 +15,7 @@ export class InteractionLayer extends Container {
         this.addChild(this.ink, this.movementLabel);
     }
     clear() {
+        this.revision++;
         this.movementLabel.visible = false;
         return this.ink.clear();
     }

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Jobs\RefreshSceneLighting;
 use App\Models\Scene;
+use App\Models\SceneProp;
 use App\Models\User;
 use App\Support\RequestPerformance;
 use Illuminate\Support\Facades\Cache;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 /** Shared light geometry and the independent MAP-10A visual stream. */
 class SceneLighting
 {
+    public const SOURCE_LIMIT = 16;
+
     private \WeakMap $fields;
 
     private array $roles = [];
@@ -147,6 +150,22 @@ class SceneLighting
             $sources[] = array_replace($source, $origin);
         }
 
+        $remaining = self::SOURCE_LIMIT - count($sources);
+        if ($remaining <= 0 || ! ($scene->lighting['enabled'] ?? false)) {
+            return $sources;
+        }
+        $props = SceneProp::where('scene_id', $scene->id)->where('is_hidden', false)
+            ->whereBetween('x', [0, $scene->width])->whereBetween('y', [0, $scene->height])
+            ->whereNotNull('preset_snapshot->light')->orderBy('id')->limit($remaining)
+            ->get(['id', 'name', 'x', 'y', 'preset_snapshot']);
+        foreach ($props as $prop) {
+            $sources[] = [
+                // Colon keeps generated IDs distinct from manually supplied IDs.
+                'id' => 'prop:'.$prop->id, 'name' => $prop->name, 'enabled' => true,
+                'x' => (float) $prop->x, 'y' => (float) $prop->y,
+            ] + $prop->preset_snapshot['light'];
+        }
+
         return $sources;
     }
 
@@ -167,7 +186,8 @@ class SceneLighting
         $geometryKey = hash('sha256', json_encode([$shapes, $scene->width, $scene->height]));
         $cacheKey = 'lighting-masks-v3:'.$scene->id;
         $cache = Cache::get($cacheKey, []);
-        $next = array_intersect_key($cache, array_flip(array_column($scene->lighting['sources'] ?? [], 'id')));
+        $ids = [...array_column($scene->lighting['sources'] ?? [], 'id'), ...array_column($sources, 'id')];
+        $next = array_intersect_key($cache, array_flip($ids));
         $entries = [];
         $polygon = null;
         foreach ($sources as $source) {

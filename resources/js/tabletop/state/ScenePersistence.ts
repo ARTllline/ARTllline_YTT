@@ -1,4 +1,6 @@
 import { objects } from '../../api/objects';
+import { placementGraph } from '../structure/placement';
+import { emptyHash, openingsError } from '../structure/model';
 import { automation } from '../../automation/model';
 import { api, commandId, type Mutation } from '../../api/workspace';
 import type { SceneStore, SceneCommand } from './SceneStore';
@@ -16,27 +18,31 @@ export class ScenePersistence {
     ) {
         if (store.role === 'gm') store.history = new SceneHistory(store, this.queue, sceneId);
         store.bindCommands((command, before) => this.submit(command, before));
+        store.cancelOpeningJob = (id) => this.queue.cancel(`opening:${id}`);
         this.queue.subscribe(() => {
             store.objectEditingEnabled = this.queue.getSnapshot().status === 'saved';
+            store.placementEnabled = this.queue.getSnapshot().status !== 'failed';
         });
     }
     private submit(command: SceneCommand, before?: Scene) {
         const mutationId = commandId();
         this.store.trackMutation(mutationId);
         const key =
-            command.type === 'terrain'
-                ? `terrain:${mutationId}`
-                : command.type === 'token' || command.type === 'tokenCombat'
-                  ? `token:${command.id}`
-                  : command.type === 'move'
-                    ? `move:${command.id}`
-                    : command.type === 'objects'
-                      ? `objects:${mutationId}`
-                      : command.type === 'region'
-                        ? `region:${command.command.id ?? mutationId}`
-                        : command.type === 'note'
-                          ? `note:${command.command.action === 'create' ? mutationId : command.command.id}`
-                          : command.type;
+            command.type === 'structure' && command.placement
+                ? `opening:${command.placement.opening.id}`
+                : command.type === 'terrain'
+                  ? `terrain:${mutationId}`
+                  : command.type === 'token' || command.type === 'tokenCombat'
+                    ? `token:${command.id}`
+                    : command.type === 'move'
+                      ? `move:${command.id}`
+                      : command.type === 'objects'
+                        ? `objects:${mutationId}`
+                        : command.type === 'region'
+                          ? `region:${command.command.id ?? mutationId}`
+                          : command.type === 'note'
+                            ? `note:${command.command.action === 'create' ? mutationId : command.command.id}`
+                            : command.type;
         const version = (this.versions.get(key) ?? 0) + 1;
         this.versions.set(key, version);
         this.queue.enqueue(
@@ -46,14 +52,40 @@ export class ScenePersistence {
                 try {
                     let result: Mutation;
                     if (command.type === 'structure') {
+                        if (command.placement && !command.placement.sent) {
+                            // Freeze the exact payload/UUID once sent, including ambiguous HTTP failures.
+                            before = this.store.getSnapshot().scene;
+                            try {
+                                const value = placementGraph(before, command.placement);
+                                const error = openingsError(value);
+                                if (error) throw new Error(error);
+                                command.value = value;
+                                command.expected = before.structure?.hash ?? emptyHash;
+                            } catch (error) {
+                                const message = (error as Error).message;
+                                this.store.updateOpening(command.placement, {
+                                    status: 'rejected',
+                                    error: message,
+                                });
+                                this.store.editorNotice(message);
+                                return;
+                            }
+                            this.store.updateOpening(command.placement, { sent: true });
+                        }
                         result = await api.structure(
                             this.sceneId,
-                            command.door ? { door: command.door } : { value: command.value },
+                            command.opening
+                                ? { opening: command.opening }
+                                : command.door
+                                  ? { door: command.door }
+                                  : { value: command.value },
                             command.expected,
                             mutationId,
                         );
                         this.store.history?.record(command, before, result);
                         this.store.accept(result, true);
+                        if (command.placement)
+                            this.store.updateOpening(command.placement, { status: 'confirmed' });
                         return;
                     }
                     if (command.type === 'terrain') {
@@ -126,10 +158,9 @@ export class ScenePersistence {
                             command.type === 'fog'
                                 ? await api.fog(this.sceneId, command.stroke, mutationId)
                                 : await api.resetFog(this.sceneId, command.base, mutationId);
-                        this.store.acceptFog(
-                            result,
-                            command.type === 'fog' ? command.localId : undefined,
-                        );
+                        this.store.history?.record(command, before, result);
+                        this.store.accept(result, true);
+                        this.store.spatial.finishFog(command.type === 'fog' ? command.stroke : undefined);
                         return;
                     }
                     if (command.type === 'token')
@@ -155,6 +186,14 @@ export class ScenePersistence {
                     );
                 } catch (error) {
                     if (
+                        (command.type === 'fog' || command.type === 'fogReset') &&
+                        error instanceof ApiError &&
+                        [403, 404, 409, 422].includes(error.status)
+                    ) {
+                        this.store.spatial.finishFog(command.type === 'fog' ? command.stroke : undefined, error.message);
+                        return;
+                    }
+                    if (
                         (command.type === 'terrain' || command.type === 'structure') &&
                         error instanceof ApiError &&
                         [403, 404, 409, 422].includes(error.status)
@@ -165,6 +204,13 @@ export class ScenePersistence {
                             /* Access can be revoked along with the write. */
                         }
                         this.store.editorNotice(error.message);
+                        if (command.type === 'structure' && command.opening)
+                            command.onRejected(error);
+                        if (command.type === 'structure' && command.placement)
+                            this.store.updateOpening(command.placement, {
+                                status: 'rejected',
+                                error: error.message,
+                            });
                         if (command.type === 'terrain') command.complete?.(error);
                         return;
                     }

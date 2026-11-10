@@ -44,6 +44,7 @@ import {
     ImagePlus,
     LogOut,
     EyeOff,
+    Map,
 } from 'lucide-react';
 import { preparation, type LibraryAsset, type AssetKind } from '../api/preparation';
 import { ASSET_MIME, readAssetDrag } from './assets/assetDrag';
@@ -399,7 +400,11 @@ export function Workspace({
                         action: 'create',
                         ...(item.type === 'prop'
                             ? { assetId: item.asset.id, purpose: item.purpose }
-                            : { presetId: item.preset.id, rotation: item.rotation }),
+                            : {
+                                  presetId: item.preset.id,
+                                  rotation: item.rotation,
+                                  scaleFactor: item.scaleFactor,
+                              }),
                         ...at,
                     },
                 });
@@ -470,12 +475,27 @@ export function Workspace({
         renderer.current?.setTool(next);
         if (next === 'region') openRight('region');
     };
+    const toggleMapEditor = () =>
+        void run(async () => {
+            if (panelGuard.current) throw new Error(panelGuard.current);
+            await queue.flush();
+            setPlacement(null);
+            if (!mapOpen) {
+                setHubOpen(false);
+                setDropping(false);
+                store.select(null);
+                dispatch({ type: 'left', panel: null });
+                renderer.current?.setTool('select');
+            }
+            setMapOpen(!mapOpen);
+        });
     return (
         <div
             className={`workspace redesigned-workspace mode-${workspace.mode} ${mapOpen ? 'map-editor-open' : ''} ${sessionMode ? 'session-mode map-first-session' : ''}`}
             onKeyDownCapture={(event) => {
                 if (
                     event.key !== 'Escape' ||
+                    tool === 'fog' ||
                     document.querySelector('dialog[open]') ||
                     (event.target as HTMLElement).closest(
                         'input, textarea, select, [contenteditable="true"]',
@@ -525,6 +545,25 @@ export function Workspace({
                     </button>
                 </div>
                 <div className="topbar-actions">
+                    {!sessionMode && scene.id && (
+                        <button
+                            className="map-editor-launch"
+                            aria-expanded={mapOpen}
+                            aria-label={
+                                mapOpen
+                                    ? 'Закрыть редактор карты'
+                                    : scene.mapWorld
+                                      ? 'Редактировать карту'
+                                      : 'Создать редактируемую карту'
+                            }
+                            title={mapOpen ? 'Вернуться к сцене' : 'Открыть редактор карты'}
+                            disabled={busy}
+                            onClick={toggleMapEditor}
+                        >
+                            {mapOpen ? <X size={16} /> : <Map size={16} />}
+                            <span>{mapOpen ? 'Выйти из редактора' : 'Редактор карты'}</span>
+                        </button>
+                    )}
                     <button
                         className="command-launch"
                         title="Поиск и команды · Ctrl/Cmd+K"
@@ -629,7 +668,7 @@ export function Workspace({
                     className="tabletop"
                     aria-label={t('Tabletop workspace')}
                     onDragOver={(event) => {
-                        if (mapOpen) {
+                        if (mapOpen || tool === 'fog') {
                             event.preventDefault();
                             return;
                         }
@@ -678,7 +717,7 @@ export function Workspace({
                             setDropping(false);
                     }}
                     onDrop={(event) => {
-                        if (mapOpen) {
+                        if (mapOpen || tool === 'fog') {
                             event.preventDefault();
                             return;
                         }
@@ -763,6 +802,20 @@ export function Workspace({
                                           }
                                         : current,
                                 )
+                            }
+                            onScale={(delta) =>
+                                setPlacement((current) => {
+                                    if (current?.type !== 'objectPreset') return current;
+                                    const { scaleX, scaleY } = current.preset.settings;
+                                    const min = Math.max(0.25, 0.001 / Math.min(scaleX, scaleY));
+                                    const max = Math.min(4, 100 / Math.max(scaleX, scaleY));
+                                    const next =
+                                        Math.round((current.scaleFactor + delta) * 100) / 100;
+                                    return {
+                                        ...current,
+                                        scaleFactor: Math.min(max, Math.max(min, next)),
+                                    };
+                                })
                             }
                             onPlace={(point) => commitPlacement(placement, point)}
                         />
@@ -959,34 +1012,13 @@ export function Workspace({
                                 <Toolbar
                                     store={store}
                                     onTool={changeTool}
+                                    queue={queue}
                                     preparation={workspace.mode !== 'session'}
                                     dockedRegions
                                 />
                             )}
                             {!sessionMode && !mapOpen && (
                                 <div className="scene-quick-actions">
-                                    <button
-                                        className="secondary-button"
-                                        aria-expanded={mapOpen}
-                                        disabled={mapOpen}
-                                        onClick={() =>
-                                            void run(async () => {
-                                                if (panelGuard.current)
-                                                    throw new Error(panelGuard.current);
-                                                await queue.flush();
-                                                setPlacement(null);
-                                                setHubOpen(false);
-                                                store.select(null);
-                                                dispatch({ type: 'left', panel: null });
-                                                renderer.current?.setTool('select');
-                                                setMapOpen(true);
-                                            })
-                                        }
-                                    >
-                                        {scene.mapWorld
-                                            ? 'Редактировать карту'
-                                            : 'Создать редактируемую карту'}
-                                    </button>
                                     <button
                                         className="icon-button surface"
                                         title={t('Show / hide GM notes')}
@@ -1021,7 +1053,6 @@ export function Workspace({
                                 store={store}
                                 queue={queue}
                                 active={campaign.activeSceneId === scene.id}
-                                onClose={() => setMapOpen(false)}
                                 onFit={() => renderer.current?.fit()}
                                 onTool={(tool) => renderer.current?.setTool(tool)}
                                 onPlace={(asset) =>
@@ -1033,6 +1064,7 @@ export function Workspace({
                                         preset,
                                         name: preset.name,
                                         rotation: preset.settings.rotation,
+                                        scaleFactor: 1,
                                     })
                                 }
                                 onCancelPlacement={() => setPlacement(null)}
