@@ -138,7 +138,10 @@ class VisibilityPolygon
         }
         sort($angles, SORT_NUMERIC);
         $angles = array_values(array_unique($angles, SORT_REGULAR));
-        $cast = function (float $angle) use ($origin, $range, $width, $height, $buckets, $segments, $ellipses) {
+        // Reuse one conservative ray index for exact epsilon validation too. Querying
+        // a world-space rectangle for every ray rechecks unrelated silhouettes.
+        $exactCandidates = $this->los->radialCandidates($origin, 512);
+        $cast = function (float $angle) use ($origin, $range, $width, $height, $buckets, $segments, $ellipses, $exactCandidates) {
             $angle = fmod($angle, 2 * M_PI);
             $dx = cos($angle);
             $dy = sin($angle);
@@ -148,7 +151,8 @@ class VisibilityPolygon
                     $distance = min($distance, max(0, (($direction > 0 ? $limit : 0) - $origin[$axis]) / $direction));
                 }
             }
-            $bucket = $buckets[min(511, (int) floor($angle * 512 / (2 * M_PI)))];
+            $sector = min(511, (int) floor($angle * 512 / (2 * M_PI)));
+            $bucket = $buckets[$sector];
             foreach ($bucket['segments'] as $id) {
                 [$a, $b] = $segments[$id];
                 $sx = $b['x'] - $a['x'];
@@ -185,7 +189,7 @@ class VisibilityPolygon
             }
             $distance = max(0, $distance - .0001);
             // Honor MAP-08A's epsilon at grazes and curve tangencies too.
-            $distance = $this->los->clearDistance($origin, $dx, $dy, $distance);
+            $distance = $this->los->clearDistance($origin, $dx, $dy, $distance, $exactCandidates[$sector]);
 
             return ['x' => $origin['x'] + $dx * $distance, 'y' => $origin['y'] + $dy * $distance];
         };

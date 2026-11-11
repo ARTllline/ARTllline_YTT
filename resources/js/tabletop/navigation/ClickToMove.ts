@@ -268,6 +268,7 @@ export class ClickToMove {
             undefined,
             step.slice(1, -1),
             context.instant ? true : undefined,
+            context.instant ? true : undefined,
         );
     };
     sync(zoom: number) {

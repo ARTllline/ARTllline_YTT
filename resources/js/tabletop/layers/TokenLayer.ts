@@ -49,7 +49,7 @@ export class TokenLayer extends Container {
                     // Overlapping steps reuse the reserve instead of accumulating delay.
                     if (movement?.continuous && !append) duration += 50;
                     // A throttled/background spectator must not accumulate a playback queue.
-                    if (movement?.continuous && (combined.length > 64 || duration > 600)) {
+                    if (movement?.continuous && (combined.length > 64 || duration > 800)) {
                         combined = path;
                         duration = movement?.duration ?? 200;
                     }

@@ -5,6 +5,8 @@ import { visualCoverage } from './coverage';
 export function visionComposite() {
     const uniforms = new UniformGroup({
         uProgress: { value: 1, type: 'f32' },
+        uFocus: { value: new Float32Array(4), type: 'vec4<f32>' },
+        uWorldSize: { value: new Float32Array(2), type: 'vec2<f32>' },
         uBase: { value: 0.94, type: 'f32' },
         uExplored: { value: 0.63, type: 'f32' },
         uManualEnabled: { value: 0, type: 'f32' },
@@ -34,6 +36,8 @@ export function visionComposite() {
                 uniform sampler2D uMemory;
                 uniform sampler2D uManual;
                 uniform float uProgress;
+                uniform vec4 uFocus;
+                uniform vec2 uWorldSize;
                 uniform float uBase;
                 uniform float uExplored;
                 uniform float uManualEnabled;
@@ -64,6 +68,13 @@ export function visionComposite() {
                     }
                     float remembered = max(manual.r, smoothstep(0.04, 0.96, memory));
                     float alpha = mix(uBase, uExplored, remembered) * (1.0 - visualCoverage(reveal));
+                    // Presentation only: this indicator can darken authorized pixels,
+                    // never reveal a pixel, move the authority texture or change entity clipping.
+                    if (uFocus.z > 0.0) {
+                        float edge = abs(length(vUV * uWorldSize - uFocus.xy) - uFocus.z);
+                        float ring = 1.0 - smoothstep(uFocus.w * 0.4, uFocus.w, edge);
+                        alpha = max(alpha, 0.14 * ring * current);
+                    }
                     vec4 automatic = vec4(vec3(12.0, 17.0, 26.0) / 255.0 * alpha, alpha);
                     float cover = clamp(manual.a - manual.r, 0.0, 1.0);
                     finalColor = mix(automatic, vec4(vec3(16.0, 24.0, 32.0) / 255.0, 1.0), cover) * uColor;

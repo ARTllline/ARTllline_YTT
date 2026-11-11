@@ -69,7 +69,8 @@ class MovementTriggerTest extends TestCase
     private function move(float $x, array $waypoints = [], ?string $id = null)
     {
         return $this->postJson('/api/tokens/'.$this->token->id.'/move', ['x' => $x, 'y' => 200,
-            'waypoints' => $waypoints, 'clientMutationId' => $id ?? (string) Str::uuid()]);
+            'waypoints' => $waypoints, 'instant' => true, 'playback' => true,
+            'clientMutationId' => $id ?? (string) Str::uuid()]);
     }
 
     public function test_route_order_repeated_crossings_retry_snapshot_undo_and_secret_projection(): void

@@ -11,6 +11,17 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
+it('releases the store lighting callback when the renderer is destroyed', () => {
+    vi.stubGlobal('window', { matchMedia: () => ({ matches: false }) });
+    const store = new SceneStore(createDemoScene(), 'player');
+    const renderer = new TabletopRenderer({} as HTMLDivElement, store, vi.fn(), vi.fn());
+    store.onLightingFrame = vi.fn();
+    store.onLightingReset = vi.fn();
+    renderer.destroy();
+    expect(store.onLightingFrame).toBeUndefined();
+    expect(store.onLightingReset).toBeUndefined();
+});
+
 it('leaves pointer ownership with PointerController without retaining HUD events in Pixi', async () => {
     vi.stubGlobal('window', { matchMedia: () => ({ matches: false }) });
     vi.stubGlobal(

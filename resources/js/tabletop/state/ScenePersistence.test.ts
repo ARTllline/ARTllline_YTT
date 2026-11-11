@@ -104,7 +104,7 @@ describe('persistent scene commands', () => {
         const patch = vi.spyOn(api, 'token');
         for (let x = 0; x < 20; x++) store.previewMove('kern', { x, y: 50 });
         expect(move).not.toHaveBeenCalled();
-        store.moveToken('kern', { x: 120.25, y: 44.75 });
+        store.moveToken('kern', { x: 120.25, y: 44.75 }, undefined, [], true, true);
         await persistence.queue.flush();
         expect(move).toHaveBeenCalledExactlyOnceWith(
             'kern',
@@ -112,8 +112,9 @@ describe('persistent scene commands', () => {
             expect.any(String),
             undefined,
             undefined,
-            undefined,
-            undefined,
+            [],
+            true,
+            true,
         );
         expect(patch).not.toHaveBeenCalled();
         expect(store.getSnapshot().scene.revision).toBe(1);

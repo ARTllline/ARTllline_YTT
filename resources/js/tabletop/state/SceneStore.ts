@@ -111,6 +111,7 @@ export type SceneCommand =
           intent?: 'override' | 'teleport';
           waypoints?: Point[];
           instant?: boolean;
+          playback?: boolean;
       }
     | { type: 'token'; id: string; patch: TokenPatch }
     | { type: 'fog'; stroke: FogStroke }
@@ -834,6 +835,7 @@ export class SceneStore {
         intent?: 'override' | 'teleport',
         waypoints?: Point[],
         instant?: boolean,
+        playback?: boolean,
     ) {
         this.combatNotice('');
         const before = this.snapshot.scene;
@@ -847,6 +849,7 @@ export class SceneStore {
                 intent,
                 waypoints,
                 instant,
+                playback,
             },
             before,
         );

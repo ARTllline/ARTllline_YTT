@@ -35,9 +35,9 @@ class DirectControlTest extends TestCase
         return [$player, $other, $campaign, $scene, $token];
     }
 
-    private function open($token): array
+    private function open($token, bool $batching = false): array
     {
-        $data = ['streamId' => (string) Str::uuid(), 'clientMutationId' => (string) Str::uuid()];
+        $data = ['streamId' => (string) Str::uuid(), 'clientMutationId' => (string) Str::uuid(), 'batching' => $batching];
         $this->postJson("/api/tokens/{$token->id}/control/start", $data)->assertOk()->assertJsonPath('streamId', $data['streamId']);
         // Deterministic server clock credit; no sleeps or live MySQL.
         $state = $token->fresh()->direct_control;
@@ -62,6 +62,61 @@ class DirectControlTest extends TestCase
         $this->postJson($url, $data)->assertConflict();
         $this->getJson("/api/scenes/{$scene->id}/snapshot")->assertOk()->assertDontSee('direct_control')->assertDontSee($data['streamId']);
         Event::assertNotDispatched(TabletopEvent::class, fn ($event) => str_contains(json_encode($event->envelope), $data['streamId']));
+    }
+
+    public function test_batch_credit_accepts_only_a_prefix_and_retries_do_not_move_twice(): void
+    {
+        [, , , $scene, $token] = $this->fixture();
+        $data = $this->open($token, true);
+        $data['waypoints'] = [['x' => 100, 'y' => 170]];
+        $data['x'] = 190;
+        $data['y'] = 170;
+        $url = "/api/tokens/{$token->id}/control/step";
+        $response = $this->postJson($url, $data)->assertOk()
+            ->assertJsonPath('controlReceipt.streamId', $data['streamId'])
+            ->assertJsonPath('controlReceipt.acceptedSequence', 1)
+            ->assertJsonPath('controlReceipt.maxBatchDistance', 126)->json();
+        $this->assertGreaterThan(100, $response['token']['x']);
+        $this->assertLessThan(190, $response['token']['x']);
+        $this->assertEquals(170, $response['token']['y']);
+        $this->assertEqualsWithDelta(20 + $response['token']['x'] - 100, $response['controlReceipt']['acceptedDistance'], .002);
+        $this->assertEquals(['x' => $response['token']['x'], 'y' => 170], $response['controlReceipt']['position']);
+        $this->assertEquals(['x' => 100, 'y' => 170], $response['tokenMovements'][0]['path'][1]);
+        $retry = $this->postJson($url, $data)->assertOk()->json();
+        $this->assertEquals($response['controlReceipt'], $retry['controlReceipt']);
+        $this->assertEquals($response['revision'], $scene->fresh()->revision);
+        Event::assertNotDispatched(TabletopEvent::class, fn ($event) => str_contains(json_encode($event->envelope), 'controlReceipt') || str_contains(json_encode($event->envelope), $data['streamId']));
+    }
+
+    public function test_batch_supports_delayed_input_but_cannot_exceed_the_bounded_distance(): void
+    {
+        [, , , , $token] = $this->fixture();
+        $data = $this->open($token, true);
+        $state = $token->fresh()->direct_control;
+        $state['at'] -= 400;
+        $token->update(['direct_control' => $state]);
+        $url = "/api/tokens/{$token->id}/control/step";
+        $this->postJson($url, array_replace($data, ['x' => 230]))->assertUnprocessable();
+        $this->postJson($url, array_replace($data, ['x' => 200]))->assertOk()
+            ->assertJsonPath('token.x', 200)->assertJsonPath('controlReceipt.acceptedDistance', 100);
+        $this->assertEquals(200, $token->fresh()->x);
+    }
+
+    public function test_batch_collision_rejects_atomically_without_consuming_credit_or_sequence(): void
+    {
+        [, , , $scene, $token] = $this->fixture();
+        $scene->mapWorld()->create(['structure' => json_decode(file_get_contents(base_path('tests/Fixtures/movement.json')), true)['graph']]);
+        $token->update(['x' => 283, 'y' => 150]);
+        $data = $this->open($token, true);
+        $state = $token->fresh()->direct_control;
+        $state['at'] -= 400;
+        $token->update(['direct_control' => $state]);
+        $this->postJson("/api/tokens/{$token->id}/control/step", array_replace($data, ['x' => 383]))
+            ->assertUnprocessable()->assertJsonPath('message', 'Перемещение недоступно.')
+            ->assertJsonMissingPath('controlReceipt')->assertDontSee('wall');
+        $this->assertEquals(283, $token->fresh()->x);
+        $this->assertEquals($state, $token->fresh()->direct_control);
+        $this->assertEquals(0, $scene->fresh()->revision);
     }
 
     public function test_speed_frequency_waypoint_length_and_expiry_are_server_validated(): void

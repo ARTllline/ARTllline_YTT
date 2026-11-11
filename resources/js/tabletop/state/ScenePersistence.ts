@@ -174,6 +174,7 @@ export class ScenePersistence {
                             command.intent,
                             command.waypoints,
                             command.instant,
+                            command.playback,
                         );
                     else if (command.type === 'grid')
                         result = await api.grid(this.sceneId, command.grid, mutationId);

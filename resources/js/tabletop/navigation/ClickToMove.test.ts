@@ -248,7 +248,7 @@ it('requires explicit combat confirmation and uses the existing movement scale a
 });
 
 it.each([false, true])(
-    'Drag routes commit the complete detour instantly with actual route cost (combat=%s)',
+    'Drag routes commit once with separate playback and actual route cost (combat=%s)',
     (combat) => {
         const { click, token, command, store } = fixture(combat, 100);
         const path = [
@@ -265,6 +265,7 @@ it.each([false, true])(
             position: path.at(-1),
             waypoints: path.slice(1, -1),
             instant: true,
+            playback: true,
         });
         expect(store.getSnapshot().routePreview?.cost).toBeCloseTo(33.3334);
         click.cancel();

@@ -236,6 +236,8 @@ export class TabletopRenderer {
                     ? state.movementUpdate?.movements
                     : undefined,
                 this.store.directCommandPending || this.store.queuedMovementPending,
+                movementUpdate !== state.movementUpdate &&
+                    !!(state.movementUpdate?.reset || state.movementUpdate?.geometryChanged),
             );
             this.lighting.sync(scene, this.store.role === 'player' ? this.vision.currentMask.texture : undefined, state.lightingDraft);
             if ('backBuffer' in this.app.renderer) {
@@ -313,9 +315,12 @@ export class TabletopRenderer {
             );
             movementUpdate = state.movementUpdate;
             if (scene !== previousScene) this.syncImages();
+            // Route completion can synchronously emit UI state from reapplyPreview.
+            // Publish the consumed scene before that nested sync: recipient prop
+            // deltas must not look like a second geometry edit and cancel playback.
+            previousScene = scene;
             this.input?.reapplyPreview();
             this.input?.refresh();
-            previousScene = scene;
         };
         this.grid.update(previousScene.grid, previousScene.width, previousScene.height);
         sync();
@@ -325,7 +330,14 @@ export class TabletopRenderer {
         this.observer.observe(this.host);
         this.resize();
         this.fit();
+        let movementConnected = this.store.spatial.connected;
         this.app.ticker.add((ticker) => {
+            const connected = this.store.spatial.connected;
+            if (movementConnected && !connected) {
+                this.tokens.finishMovements();
+                this.vision.finishPresentation();
+            }
+            movementConnected = connected;
             this.input?.reapplyPreview();
             const now = performance.now();
             this.gameplay.tick(
@@ -389,6 +401,16 @@ export class TabletopRenderer {
                 if (view.x !== view.model.x || view.y !== view.model.y)
                     view.position.set(view.model.x, view.model.y);
             }
+            const selected = this.store.getSnapshot().selectedIds;
+            const focus =
+                connected && this.store.role === 'player' && selected.length === 1
+                    ? this.tokens.views.get(selected[0])
+                    : undefined;
+            this.vision.focus(
+                focus?.model.canMove && focus.model.kind === 'player_character' ? focus : undefined,
+                focus?.model.visionRange ?? 0,
+                this.camera.state.zoom,
+            );
             this.vision.tick(
                 ticker.elapsedMS,
                 this.reducedMotion.matches,
@@ -735,9 +757,6 @@ export class TabletopRenderer {
         this.observer?.disconnect();
         this.directControl?.destroy();
         this.input?.destroy();
-        this.store.onLightingFrame = (frame) => this.lighting.frame(frame);
-        const lightingFrame = this.store.getLightingFrame();
-        if (lightingFrame) this.lighting.frame(lightingFrame);
         this.store.onGameplayFeedback = undefined;
         this.unsubscribe?.();
         if (this.ready) this.release();

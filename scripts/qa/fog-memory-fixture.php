@@ -5,16 +5,19 @@ use App\Models\Scene;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\DB;
 
-// Reversible QA of the existing Scene 7 only. No accounts/entities are created.
+// Scene 7 by default; Scene 10 is explicitly profiled by map-engine-motion.cjs.
+// No accounts/entities are created.
 require __DIR__.'/../../vendor/autoload.php';
 $app = require __DIR__.'/../../bootstrap/app.php';
 $app->make(Kernel::class)->bootstrap();
 abort_unless(app()->environment('local'), 403);
-$file = storage_path('app/map09-memory.private.json');
-DB::transaction(function () use ($argv, $file) {
+$sceneId = (int) ($argv[2] ?? 7);
+abort_unless(in_array($sceneId, [7, 10], true), 403);
+$file = storage_path($sceneId === 7 ? 'app/map09-memory.private.json' : 'app/map-engine-memory.private.json');
+DB::transaction(function () use ($argv, $file, $sceneId) {
     Campaign::whereKey(5)->lockForUpdate()->firstOrFail();
-    $scene = Scene::whereKey(7)->where('campaign_id', 5)->lockForUpdate()->firstOrFail();
-    $query = DB::table('fog_memories')->where('scene_id', 7);
+    $scene = Scene::whereKey($sceneId)->where('campaign_id', 5)->lockForUpdate()->firstOrFail();
+    $query = DB::table('fog_memories')->where('scene_id', $sceneId);
     if (($argv[1] ?? '') === 'backup') {
         if (file_exists($file)) {
             throw new RuntimeException('Unrestored fog backup exists; restore it before another QA run.');

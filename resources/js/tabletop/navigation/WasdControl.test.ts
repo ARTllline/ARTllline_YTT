@@ -54,7 +54,7 @@ function fixture() {
         now += 16;
         return control.tick(16, now);
     };
-    return { events, token, store, control, key, tick };
+    return { events, token, store, control, key, tick, now: () => now };
 }
 
 it('normalizes diagonal input and cancels opposing keys', () => {
@@ -178,6 +178,13 @@ it('stops on rejection and requests authoritative recovery without retrying', as
     expect(f.store.getSnapshot().directControl).toBeUndefined();
     expect(f.store.onRevisionGap).toHaveBeenCalledTimes(1);
     expect(request).toHaveBeenCalledTimes(2);
+    f.control.toggle();
+    expect(f.store.getSnapshot().directControl).toBeUndefined();
+    f.store.reconcile({ ...f.store.getSnapshot().scene });
+    // A later ordinary delta must not hide the fact that recovery already completed.
+    f.store.reconcile({ ...f.store.getSnapshot().scene }, { geometryChanged: false });
+    f.control.toggle();
+    expect(f.store.getSnapshot().directControl).toBeDefined();
     f.control.destroy();
 });
 
@@ -223,6 +230,34 @@ it('does not consume typing keys and disposes listeners on renderer teardown', (
     expect(f.key('keydown', 'KeyW')).toBe(true);
 });
 
+it('recovers an unknown commit even when Escape cancelled its presentation while in flight', async () => {
+    const f = fixture();
+    let reject!: (error: Error) => void;
+    vi.mocked(request)
+        .mockResolvedValueOnce({ streamId: 'stream', position: f.token })
+        .mockImplementationOnce(
+            () =>
+                new Promise((_resolve, fail) => {
+                    reject = fail;
+                }),
+        );
+    f.store.onRevisionGap = vi.fn();
+    f.control.toggle();
+    f.key('keydown', 'KeyD');
+    f.tick();
+    await Promise.resolve();
+    for (let i = 0; i < 20; i++) f.tick();
+    f.key('keydown', 'Escape');
+    reject(Error('Response lost after commit'));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(f.store.onRevisionGap).toHaveBeenCalledOnce();
+    f.control.toggle();
+    expect(f.store.getSnapshot().directControl).toBeUndefined();
+    expect(request).toHaveBeenCalledTimes(2);
+    f.control.destroy();
+});
+
 it('continues held-key movement through empty Vision/Fog recipient deltas', async () => {
     const f = fixture();
     let revision = 0;
@@ -247,5 +282,108 @@ it('continues held-key movement through empty Vision/Fog recipient deltas', asyn
     expect(revision).toBeGreaterThan(4);
     expect(f.store.getSnapshot().directControl?.tokenId).toBe(f.token.id);
     expect(f.store.getSnapshot().scene.tokens[0].x).toBeGreaterThan(200);
+    f.control.destroy();
+});
+
+it('does not let a disposed controller cancel its successor after a lost receipt', async () => {
+    const f = fixture();
+    let reject!: (error: Error) => void;
+    vi.mocked(request)
+        .mockResolvedValueOnce({ streamId: 'stream', position: f.token })
+        .mockImplementationOnce(
+            () =>
+                new Promise((_resolve, fail) => {
+                    reject = fail;
+                }),
+        );
+    f.store.onRevisionGap = vi.fn();
+    f.control.toggle();
+    f.key('keydown', 'KeyD');
+    f.tick();
+    await Promise.resolve();
+    for (let i = 0; i < 20; i++) f.tick();
+    f.control.destroy();
+    const successor = { tokenId: 'successor', follow: false };
+    f.store.setDirectControl(successor);
+    reject(Error('Response lost'));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(f.store.onRevisionGap).toHaveBeenCalledOnce();
+    expect(f.store.getSnapshot().directControl).toBe(successor);
+    expect(f.store.directCommandPending).toBe(false);
+});
+
+it('keeps local velocity through 400 ms receipts, batches at most 5 Hz and drains to canonical', async () => {
+    const f = fixture();
+    let deliver: (() => void) | undefined;
+    let due = 0,
+        revision = 0;
+    const sends: number[] = [];
+    vi.mocked(request).mockImplementation(
+        (url, _method, body) =>
+            new Promise((resolve) => {
+                expect(deliver).toBeUndefined();
+                due = f.now() + 400;
+                const data = body as {
+                    x: number;
+                    y: number;
+                    sequence: number;
+                    origin: { x: number; y: number };
+                    streamId: string;
+                };
+                if (url.endsWith('/start'))
+                    deliver = () =>
+                        resolve({
+                            streamId: data.streamId,
+                            position: f.token,
+                            acceptedSequence: 0,
+                            maxBatchDistance: 126,
+                        } as never);
+                else {
+                    sends.push(f.now());
+                    deliver = () =>
+                        resolve({
+                            revision: ++revision,
+                            token: { ...f.token, x: data.x, y: data.y },
+                            controlReceipt: {
+                                streamId: data.streamId,
+                                acceptedSequence: data.sequence,
+                                position: { x: data.x, y: data.y },
+                                acceptedDistance: Math.hypot(
+                                    data.x - data.origin.x,
+                                    data.y - data.origin.y,
+                                ),
+                                maxBatchDistance: 126,
+                                remainingCredit: 0,
+                            },
+                        } as never);
+                }
+            }),
+    );
+    const step = async () => {
+        const result = f.tick();
+        if (deliver && f.now() >= due) {
+            const call = deliver;
+            deliver = undefined;
+            call();
+            await Promise.resolve();
+        }
+        return result;
+    };
+    f.control.toggle();
+    f.key('keydown', 'KeyD');
+    let previous = 100;
+    for (let i = 0; i < 250; i++) {
+        const result = await step();
+        expect(result).toBeDefined();
+        // Until start negotiates batching, the legacy 71.8-unit safety bound applies.
+        expect(result!.position.x - previous).toBeGreaterThanOrEqual(i < 28 ? 0 : 2.84);
+        expect(result!.position.x - previous).toBeLessThan(2.9);
+        previous = result!.position.x;
+    }
+    f.key('keyup', 'KeyD');
+    for (let i = 0; i < 100; i++) expect((await step())!.position.x).toBeCloseTo(previous, 2);
+    expect(f.store.getSnapshot().scene.tokens[0].x).toBeCloseTo(previous, 2);
+    expect(sends.slice(1).every((time, i) => time - sends[i] >= 200)).toBe(true);
     f.control.destroy();
 });

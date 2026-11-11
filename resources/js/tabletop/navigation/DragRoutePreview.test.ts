@@ -30,7 +30,7 @@ function fixture() {
     vi.stubGlobal('Worker', FakeWorker);
     const scene = { ...createDemoScene(), props: [], combat: null };
     const token = { ...scene.tokens[0], x: 100, y: 100 };
-    const overlay = { showMovement: vi.fn(), showDestination: vi.fn() };
+    const overlay = { revision: 0, showMovement: vi.fn(), showDestination: vi.fn() };
     const preview = new DragRoutePreview(overlay as unknown as InteractionLayer);
     return { scene, token, overlay, preview, target: { x: 300, y: 100 } };
 }
@@ -38,6 +38,26 @@ afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
     FakeWorker.instances = [];
+});
+
+it('keeps unchanged preview geometry through ticks but redraws results, zoom and a replaced overlay', () => {
+    const f = fixture();
+    f.preview.preview(f.scene, f.token, f.target, 1);
+    for (let i = 0; i < 30; i++) f.preview.preview(f.scene, f.token, { ...f.target }, 1);
+    expect(f.overlay.showDestination).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(0);
+    FakeWorker.instances[0].deliver();
+    for (let i = 0; i < 30; i++) f.preview.preview(f.scene, f.token, { ...f.target }, 1);
+    expect(f.overlay.showMovement).toHaveBeenCalledTimes(1);
+    f.preview.preview(f.scene, f.token, f.target, 0.5);
+    expect(f.overlay.showMovement).toHaveBeenCalledTimes(2);
+    f.overlay.revision++;
+    f.preview.preview(f.scene, f.token, f.target, 0.5);
+    expect(f.overlay.showMovement).toHaveBeenCalledTimes(3);
+    f.preview.cancel();
+    f.preview.preview(f.scene, f.token, f.target, 0.5);
+    expect(f.overlay.showDestination).toHaveBeenCalledTimes(2);
+    f.preview.cancel();
 });
 
 it('draws the actual detour, not the straight line, at the current zoom', () => {

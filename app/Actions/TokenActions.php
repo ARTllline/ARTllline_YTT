@@ -82,9 +82,13 @@ class TokenActions
             $control = $data['_directControl'] ?? null;
             $instant = $data['instant'] ?? false;
             $routeStep = $data['routeStep'] ?? false;
-            unset($data['_directControl'], $data['instant'], $data['routeStep']);
+            $playback = $data['playback'] ?? false;
+            unset($data['_directControl'], $data['instant'], $data['routeStep'], $data['playback']);
             if ($control) {
                 $data['direct_control'] = app(\App\Services\DirectControl::class)->step($user, $token, $control);
+                $data['x'] = $control['x'];
+                $data['y'] = $control['y'];
+                $data['waypoints'] = $control['waypoints'] ?? [];
             }
             if ($move || array_key_exists('x', $data) || array_key_exists('y', $data)) {
                 $intent = $data['intent'] ?? ($move ? TokenMovement::NORMAL : TokenMovement::EDIT);
@@ -147,12 +151,16 @@ class TokenActions
             }
 
             $presentation = [];
-            if ($routeStep && $path) {
+            if (($routeStep || $playback) && $path) {
                 $length = 0;
                 foreach (array_slice($path, 1) as $i => $point) {
                     $length += hypot($point['x'] - $path[$i]['x'], $point['y'] - $path[$i]['y']);
                 }
                 $presentation = ['continuous' => true, 'duration' => max(1, min(600, $length / 360 * 1000))];
+                if ($playback) {
+                    $instant = false;
+                    $presentation = ['duration' => max(80, $length / 360 * 1000)];
+                }
             }
             return ($path ? ['tokenMovements' => [['tokenId' => (string) $token->id, 'path' => $path, 'instant' => $instant] + ($control ? ['continuous' => true, 'duration' => $data['direct_control']['duration']] : $presentation)]] : [])
                 + ['token' => $this->snapshots->token($token, $scene->campaign->roleFor($user) === 'gm', $user), 'charactersChanged' => $token->character_id !== null && ! $move, '_wasVisible' => $wasVisible, '_combatChanged' => (! $control && $move) || array_key_exists('is_hidden', $data) || Combat::where('scene_id', $scene->id)->where('status', 'active')->exists()];

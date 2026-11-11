@@ -14,6 +14,7 @@ export class DragRoutePreview {
     private timer?: ReturnType<typeof setTimeout>;
     private deadline?: ReturnType<typeof setTimeout>;
     private lastStarted = -Infinity;
+    private drawn?: { target: Target; result?: RouteResult; zoom: number; revision: number };
 
     constructor(private overlay: InteractionLayer) {}
 
@@ -31,8 +32,16 @@ export class DragRoutePreview {
             this.result = undefined;
             this.schedule();
         }
-        const radius = (token.size * token.scale) / 2;
         const result = this.result;
+        const drawn = this.drawn;
+        if (
+            drawn?.target === this.latest &&
+            drawn.result === result &&
+            drawn.zoom === zoom &&
+            drawn.revision === this.overlay.revision
+        )
+            return;
+        const radius = (token.size * token.scale) / 2;
         if (result?.status === 'found') {
             const range = movementRange(scene, token);
             const remaining =
@@ -54,6 +63,7 @@ export class DragRoutePreview {
                 result.path,
             );
         } else this.overlay.showDestination(point, radius, zoom, !!result);
+        this.drawn = { target: this.latest!, result, zoom, revision: this.overlay.revision };
     }
 
     private schedule() {
@@ -117,6 +127,7 @@ export class DragRoutePreview {
         this.timer = this.deadline = undefined;
         this.latest = this.job = undefined;
         this.result = undefined;
+        this.drawn = undefined;
         this.lastStarted = -Infinity;
     }
 }

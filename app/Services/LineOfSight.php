@@ -106,11 +106,50 @@ class LineOfSight
         return ['visible' => false, 'reason' => 'blocked', 'distance' => $distance, 'blocker' => $hits[0]];
     }
 
+    /** Conservative angular broad phase for many rays from one observer. IDs stay server-side. */
+    public function radialCandidates(array $origin, int $sectors): array
+    {
+        $buckets = array_fill(0, $sectors, []);
+        foreach ($this->bounds as $id => [$left, $top, $right, $bottom]) {
+            // The bounds already include the exact intersection kernel's epsilon.
+            if ($origin['x'] >= $left && $origin['x'] <= $right && $origin['y'] >= $top && $origin['y'] <= $bottom) {
+                foreach ($buckets as &$bucket) {
+                    $bucket[$id] = true;
+                }
+                unset($bucket);
+                continue;
+            }
+            $angles = [];
+            foreach ([[$left, $top], [$right, $top], [$right, $bottom], [$left, $bottom]] as [$x, $y]) {
+                $angles[] = fmod(atan2($y - $origin['y'], $x - $origin['x']) + 2 * M_PI, 2 * M_PI);
+            }
+            sort($angles, SORT_NUMERIC);
+            // An observer outside a convex box sees the complement of its largest angular gap.
+            $gap = -1;
+            $start = $span = 0;
+            foreach ($angles as $i => $angle) {
+                $next = $angles[($i + 1) % 4] + ($i === 3 ? 2 * M_PI : 0);
+                if ($next - $angle > $gap) {
+                    $gap = $next - $angle;
+                    $start = $next;
+                    $span = 2 * M_PI - $gap;
+                }
+            }
+            $first = (int) floor(($start - 1e-9) * $sectors / (2 * M_PI));
+            $last = (int) floor(($start + $span + 1e-9) * $sectors / (2 * M_PI));
+            for ($i = $first; $i <= $last; $i++) {
+                $buckets[($i % $sectors + $sectors) % $sectors][$id] = true;
+            }
+        }
+
+        return $buckets;
+    }
+
     /** Clip a ray at the exact LOS boundary without querying the index for each prefix. */
-    public function clearDistance(array $origin, float $dx, float $dy, float $distance): float
+    public function clearDistance(array $origin, float $dx, float $dy, float $distance, ?array $candidates = null): float
     {
         $target = ['x' => $origin['x'] + $dx * $distance, 'y' => $origin['y'] + $dy * $distance];
-        $blockers = iterator_to_array($this->blockingShapes($origin, $target), false);
+        $blockers = iterator_to_array($this->blockingShapes($origin, $target, $candidates), false);
         if (! $blockers) {
             return $distance;
         }
@@ -129,13 +168,13 @@ class LineOfSight
         return $low;
     }
 
-    private function blockingShapes(array $observer, array $target): iterable
+    private function blockingShapes(array $observer, array $target, ?array $candidates = null): iterable
     {
         $minX = min($observer['x'], $target['x']);
         $minY = min($observer['y'], $target['y']);
         $maxX = max($observer['x'], $target['x']);
         $maxY = max($observer['y'], $target['y']);
-        $candidates = $this->candidates($minX, $minY, $maxX, $maxY);
+        $candidates ??= $this->candidates($minX, $minY, $maxX, $maxY);
         foreach ($candidates as $id => $_) {
             [$left, $top, $right, $bottom] = $this->bounds[$id];
             if ($maxX < $left || $maxY < $top || $minX > $right || $minY > $bottom) {

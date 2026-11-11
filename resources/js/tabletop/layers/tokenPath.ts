@@ -22,7 +22,7 @@ export function tokenPath(path: readonly Point[], continuous = false, durationMs
             (a.length * b.length);
         return Math.max(0.35, Math.sqrt(Math.max(0, (1 + dot) / 2)));
     };
-    const continuousDuration = Math.min(600, Math.max(1, durationMs ?? (length / 180) * 1000));
+    const continuousDuration = Math.min(800, Math.max(1, durationMs ?? (length / 180) * 1000));
     const segments = edges.map((edge, i) => {
         const cruise = (edge.length / speed) * 1000;
         const ramp = continuous ? 0 : Math.min(movementTiming.rampMs, cruise / 3);
@@ -33,7 +33,15 @@ export function tokenPath(path: readonly Point[], continuous = false, durationMs
             : cruise + ramp * (1 - (startSpeed + endSpeed) / 2);
         return { ...edge, duration, ramp, startSpeed, endSpeed };
     });
-    const duration = segments.reduce((sum, segment) => sum + segment.duration, 0);
+    let duration = segments.reduce((sum, segment) => sum + segment.duration, 0);
+    if (!continuous && durationMs !== undefined && Number.isFinite(durationMs) && durationMs > 0) {
+        const scale = Math.max(movementTiming.minimumMs, durationMs) / duration;
+        for (const segment of segments) {
+            segment.duration *= scale;
+            segment.ramp *= scale;
+        }
+        duration *= scale;
+    }
     return { segments, length, duration, elapsed: 0, continuous };
 }
 

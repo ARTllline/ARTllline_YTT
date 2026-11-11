@@ -631,6 +631,9 @@ export class PointerController {
                 gesture.token,
                 position,
                 gesture.override ? 'override' : undefined,
+                undefined,
+                true,
+                gesture.override ? undefined : true,
             );
             return;
         }

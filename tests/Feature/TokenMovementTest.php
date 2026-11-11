@@ -69,8 +69,9 @@ class TokenMovementTest extends TestCase
             $move(['x' => 700, 'y' => 150, 'intent' => $intent])->assertForbidden();
         }
         $this->patchJson($path, ['x' => 700])->assertForbidden();
-        $move(['x' => 700, 'y' => 150, 'waypoints' => [['x' => 100, 'y' => 234], ['x' => 700, 'y' => 234]]])
+        $move(['x' => 700, 'y' => 150, 'instant' => true, 'playback' => true, 'waypoints' => [['x' => 100, 'y' => 234], ['x' => 700, 'y' => 234]]])
             ->assertOk()->assertJsonPath('token.x', 700)
+            ->assertJsonPath('tokenMovements.0.instant', false)
             ->assertJsonPath('tokenMovements.0.tokenId', (string) $token->id)
             ->assertJsonPath('tokenMovements.0.path', [
                 ['x' => 100, 'y' => 150], ['x' => 100, 'y' => 234],

@@ -36,7 +36,17 @@ export interface TokenMovement {
     path: Point[];
 }
 
+export interface ControlReceipt {
+    streamId: string;
+    acceptedSequence: number;
+    position: Point;
+    maxBatchDistance: number;
+    remainingCredit: number;
+    acceptedDistance: number;
+}
+
 export interface Mutation extends importObjectPatch {
+    controlReceipt?: ControlReceipt;
     lighting?: Scene['lighting'];
     movementGeometryChanged?: boolean;
     vision?: Scene['vision'];
@@ -248,6 +258,7 @@ export const api = {
         intent?: 'override' | 'teleport',
         waypoints?: Point[],
         instant = waypoints === undefined,
+        playback?: boolean,
     ) =>
         request<Mutation>(`/tokens/${id}/move`, 'POST', {
             ...point,
@@ -256,6 +267,7 @@ export const api = {
             intent,
             waypoints,
             instant,
+            playback,
             routeStep: !instant && waypoints !== undefined,
         }),
     token: (id: string, patch: TokenPatch, clientMutationId = commandId()) => {

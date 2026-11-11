@@ -64,6 +64,8 @@ export function useCampaignLive(id: string, onCampaign: (campaign: Campaign) => 
             }
         };
         transport.bind('state_change', state);
+        const retry = () => state({ current: 'connecting' });
+        transport.bind('connecting_in', retry);
         client.private(`campaign.${id}.control`).listen('.tabletop', refresh).subscribed(refresh);
         client
             .join(`campaign.${id}`)
@@ -89,6 +91,7 @@ export function useCampaignLive(id: string, onCampaign: (campaign: Campaign) => 
             clearInterval(probe);
             window.removeEventListener('online', refresh);
             transport.unbind('state_change', state);
+            transport.unbind('connecting_in', retry);
             client.disconnect();
             bindSocket(() => undefined);
         };

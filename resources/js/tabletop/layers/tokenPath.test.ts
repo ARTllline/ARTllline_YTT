@@ -59,3 +59,30 @@ it('slows locally at turns, never rounds corners, and preserves the eased remain
     path.elapsed = cornerTime + 30;
     expect(remainingTokenPath(path)).toEqual([pathPosition(path), { x: 180, y: 180 }]);
 });
+
+it('honors an accepted drag duration without cutting a corner or capping a long route', () => {
+    const path = tokenPath(
+        [
+            { x: 0, y: 0 },
+            { x: 180, y: 0 },
+            { x: 180, y: 180 },
+        ],
+        false,
+        2000,
+    )!;
+    expect(path.duration).toBeCloseTo(2000);
+    path.elapsed = path.segments[0].duration;
+    expect(pathPosition(path)).toEqual({ x: 180, y: 0 });
+    path.elapsed = 2000;
+    expect(pathPosition(path)).toEqual({ x: 180, y: 180 });
+    expect(
+        tokenPath(
+            [
+                { x: 0, y: 0 },
+                { x: 126, y: 0 },
+            ],
+            true,
+            750,
+        )!.duration,
+    ).toBe(750);
+});

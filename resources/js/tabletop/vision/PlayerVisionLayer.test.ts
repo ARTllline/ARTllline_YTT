@@ -15,6 +15,8 @@ vi.mock('./composite', async () => {
             uniforms: {
                 uniforms: {
                     uProgress: 1,
+                    uFocus: new Float32Array(4),
+                    uWorldSize: new Float32Array(2),
                     uBase: 0.94,
                     uMemoryScale: new Float32Array([1, 1]),
                     uCurrentScale: new Float32Array([1, 1]),
@@ -35,6 +37,30 @@ const vision = (x = 0, bits = 'AQ=='): NonNullable<Scene['vision']> => ({
         ],
     ],
     explored: { policy: 'player', width: 2, height: 2, cellSize: 50, bits },
+});
+it('animates presentation uniforms without moving the authoritative mask or allocating geometry', () => {
+    const layer = new PlayerVisionLayer(),
+        render = vi.fn();
+    layer.sync({ render } as unknown as Renderer, vision(), 100, 100);
+    const texture = layer.currentMask.texture;
+    const position = { x: layer.currentMask.x, y: layer.currentMask.y };
+    const uniforms = (
+        layer as unknown as {
+            composite: { uniforms: { uniforms: { uFocus: Float32Array; uProgress: number } } };
+        }
+    ).composite.uniforms.uniforms;
+    for (let i = 0; i < 100; i++) {
+        layer.focus({ x: i, y: 25 }, 40, 1);
+        layer.tick(8, false);
+    }
+    expect(uniforms.uFocus[0]).toBe(99);
+    expect(layer.currentMask.texture).toBe(texture);
+    expect({ x: layer.currentMask.x, y: layer.currentMask.y }).toEqual(position);
+    expect(render).toHaveBeenCalledTimes(1);
+    layer.sync({ render } as unknown as Renderer, vision(10), 100, 100, undefined, false, true);
+    expect(uniforms.uFocus[2]).toBe(0);
+    expect(uniforms.uProgress).toBe(1);
+    layer.destroy();
 });
 it('keeps two mask surfaces and one memory source through movement, and does no per-frame raster work', () => {
     const layer = new PlayerVisionLayer();

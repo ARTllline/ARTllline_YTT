@@ -39,6 +39,7 @@ export class PlayerVisionLayer extends Container {
     private worldWidth = 0;
     private worldHeight = 0;
     private elapsed = 120;
+    private transitionMs = 120;
     private playback = visibilityPlayback();
     private waitingForReceipt = false;
     private manual?: Texture;
@@ -54,7 +55,9 @@ export class PlayerVisionLayer extends Container {
         height: number,
         movements?: readonly TokenMovement[],
         pendingMovement = false,
+        reset = false,
     ) {
+        if (reset) this.finishPresentation();
         this.visible = !!vision?.enabled;
         if (!this.visible) {
             this.prior = undefined;
@@ -78,6 +81,7 @@ export class PlayerVisionLayer extends Container {
             this.worldWidth = width;
             this.worldHeight = height;
             this.display!.scale.set(width, height);
+            this.composite.uniforms.uniforms.uWorldSize.set([width, height]);
         }
         const raster = vision?.raster;
         const feather = VISION_FEATHER_CELLS * (raster?.cellSize ?? 0);
@@ -87,6 +91,10 @@ export class PlayerVisionLayer extends Container {
         if (resized || first || key !== this.polygonKey) {
             this.polygonKey = key;
             this.playback = visibilityPlayback(movements);
+            this.transitionMs = Math.min(
+                700,
+                Math.max(120, ...(movements ?? []).map((m) => m.duration ?? 120)),
+            );
             this.waitingForReceipt = !first && !resized && pendingMovement && !movements?.length;
             const reusable = this.previousSurface;
             this.composite.shader.resources.uPrevious = Texture.EMPTY.source;
@@ -122,7 +130,7 @@ export class PlayerVisionLayer extends Container {
             uPreviousScale[1] = previous.frame.height / previous.source.height;
             uVisionFeather[0] = feather * uCurrentScale[0] / width;
             uVisionFeather[1] = feather * uCurrentScale[1] / height;
-            this.elapsed = first || resized ? 120 : 0;
+            this.elapsed = first || resized || reset ? this.transitionMs : 0;
         }
         const memory = vision?.explored;
         if (
@@ -233,14 +241,31 @@ export class PlayerVisionLayer extends Container {
         const waiting = this.waitingForReceipt && pendingMovement;
         if (!waiting) {
             this.waitingForReceipt = false;
-            this.elapsed = Math.min(120, this.elapsed + deltaMs);
+            this.elapsed = Math.min(this.transitionMs, this.elapsed + deltaMs);
         }
         const t = waiting
             ? 0
             : reducedMotion
               ? 1
-              : Math.min(this.elapsed / 120, visibilityPlaybackProgress(this.playback, positions));
+              : Math.min(this.elapsed / this.transitionMs, visibilityPlaybackProgress(this.playback, positions));
         this.composite!.uniforms.uniforms.uProgress = t * t * (3 - 2 * t);
+    }
+    /** Discard presentation clocks on reset/disconnect; keep the last authority texture. */
+    finishPresentation() {
+        this.playback = [];
+        this.waitingForReceipt = false;
+        this.elapsed = this.transitionMs;
+        if (this.composite) this.composite.uniforms.uniforms.uProgress = 1;
+        this.focus();
+    }
+    /** A radius indicator clipped by current authority; it never computes visibility. */
+    focus(position?: Point, radius = 0, zoom = 1) {
+        const focus = this.composite?.uniforms.uniforms.uFocus;
+        if (!focus) return;
+        focus[0] = position?.x ?? 0;
+        focus[1] = position?.y ?? 0;
+        focus[2] = this.visible && position ? radius : 0;
+        focus[3] = 2 / zoom;
     }
     override destroy() {
         this.currentMask.texture = Texture.EMPTY;

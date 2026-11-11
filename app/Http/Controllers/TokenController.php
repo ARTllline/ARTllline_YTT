@@ -30,6 +30,7 @@ class TokenController extends Controller
             'intent' => 'sometimes|in:normal,teleport,override',
             'instant' => 'sometimes|boolean',
             'routeStep' => 'sometimes|boolean',
+            'playback' => 'sometimes|boolean|prohibited_if:intent,teleport,override',
             'waypoints' => 'sometimes|array|list|max:16|prohibited_if:intent,teleport,override',
             'waypoints.*' => 'required|array:x,y',
             'waypoints.*.x' => self::POSITION['x'],

@@ -1,6 +1,7 @@
 import { sameMovementGeometry } from './movementContext';
 import { request } from '../../api/client';
-import { commandId, type Mutation } from '../../api/workspace';
+import { commandId, type Mutation, type ControlReceipt } from '../../api/workspace';
+import { predictionRemainder } from './prediction';
 import type { SceneStore } from '../state/SceneStore';
 import type { Point, Scene } from '../types/scene';
 import { movementBlocked, movementObstacles, routeLength } from '../utils/movement';
@@ -78,6 +79,9 @@ export class WasdControl {
     private lastReceipt = 0;
     private networkMs = 200;
     private speed = directTiming.speed;
+    private batch = directTiming.step;
+    private batching = false;
+    private recovery?: { update: ReturnType<SceneStore['getSnapshot']>['movementUpdate'] };
     private direction: Point = { x: 0, y: 0 };
     private authority?: Point;
     private pendingLength = 0;
@@ -86,6 +90,7 @@ export class WasdControl {
     private update?: ReturnType<SceneStore['getSnapshot']>['movementUpdate'];
     private obstacles: ReturnType<typeof movementObstacles> = [];
     private tokenId?: string;
+    private unsubscribe: () => void;
     constructor(
         private canvas: HTMLCanvasElement,
         private store: SceneStore,
@@ -93,6 +98,7 @@ export class WasdControl {
     ) {
         store.toggleDirectControl = this.toggle;
         store.stopDirectControl = this.stop;
+        this.unsubscribe = store.subscribe(() => this.recover());
         const signal = this.abort.signal;
         window.addEventListener('keydown', this.keyDown, { signal, capture: true });
         window.addEventListener('keyup', this.keyUp, { signal, capture: true });
@@ -125,8 +131,14 @@ export class WasdControl {
             { signal, capture: true },
         );
     }
+    private recover() {
+        const update = this.store.getSnapshot().movementUpdate;
+        if (this.recovery && update !== this.recovery.update && update?.reset)
+            this.recovery = undefined;
+    }
     eligible(id: string) {
         const s = this.store.getSnapshot();
+        if (this.recovery) return false;
         return (
             this.store.canMove(id) &&
             this.store.spatial.connected &&
@@ -147,13 +159,21 @@ export class WasdControl {
         }
         const state = this.store.getSnapshot(),
             id = state.selectedIds[0];
-        if (this.busy || state.selectedIds.length !== 1 || !this.eligible(id)) return;
+        if (
+            this.busy ||
+            this.store.directCommandPending ||
+            state.selectedIds.length !== 1 ||
+            !this.eligible(id)
+        )
+            return;
         this.cancelGesture();
         this.store.setDirectNotice();
         const token = state.scene.tokens.find((t) => t.id === id)!;
         this.tokenId = id;
         this.networkMs = 200;
         this.speed = directTiming.speed;
+        this.batch = directTiming.step;
+        this.batching = false;
         this.authority = { x: token.x, y: token.y };
         this.path = [this.authority];
         this.context = state.scene;
@@ -254,14 +274,13 @@ export class WasdControl {
         }
         const current = this.path.at(-1)!;
         const backlog = routeLength(this.path) + this.pendingLength;
-        const sustainable = Math.min(
-            directTiming.speed,
-            (directTiming.step * 1000) / this.networkMs,
-        );
+        const sustainable = this.batching
+            ? directTiming.speed
+            : Math.min(directTiming.speed, (directTiming.step * 1000) / this.networkMs);
         this.speed += (sustainable - this.speed) * (1 - Math.exp(-Math.min(32, deltaMs) / 150));
         const amount = Math.min(
             (this.speed * Math.min(32, deltaMs)) / 1000,
-            directTiming.ahead - backlog,
+            (this.batching ? this.batch * 2 : directTiming.ahead) - backlog,
         );
         if (moving && amount > 0 && this.path.length < 18) {
             const r = (token.size * token.scale) / 2;
@@ -304,10 +323,12 @@ export class WasdControl {
         const began = performance.now();
         try {
             const stream = commandId();
-            const result = await request<{ streamId: string; position: Point }>(
+            const result = await request<
+                Partial<ControlReceipt> & { streamId: string; position: Point }
+            >(
                 `/tokens/${id}/control/start`,
                 'POST',
-                { streamId: stream, clientMutationId: commandId() },
+                { streamId: stream, batching: true, clientMutationId: commandId() },
                 AbortSignal.timeout(directTiming.timeout),
             );
             if (generation !== this.generation) return;
@@ -315,6 +336,10 @@ export class WasdControl {
                 throw Error('Позиция изменилась.');
             this.stream = result.streamId;
             this.sequence = 0;
+            this.batching = result.maxBatchDistance !== undefined && result.acceptedSequence === 0;
+            this.batch = this.batching
+                ? Math.min(126, result.maxBatchDistance!) - 0.1
+                : directTiming.step;
             this.lastReceipt = performance.now();
             this.networkMs = Math.max(200, this.lastReceipt - began);
             this.lastSend = this.lastReceipt; // Accrue server-time credit before first step.
@@ -326,7 +351,7 @@ export class WasdControl {
     }
     private async send(id: string, now: number) {
         const path = [this.path[0]];
-        let remaining = directTiming.step;
+        let remaining = this.batch;
         while (this.path.length > 1 && path.length < 18) {
             const a = this.path[0],
                 b = this.path[1],
@@ -369,6 +394,23 @@ export class WasdControl {
                 AbortSignal.timeout(directTiming.timeout),
             );
             if (generation === this.generation) {
+                const receipt = result.controlReceipt;
+                if (this.batching) {
+                    if (
+                        !receipt ||
+                        receipt.streamId !== this.stream ||
+                        receipt.acceptedSequence !== this.sequence ||
+                        !result.token ||
+                        distance(receipt.position, result.token) > 0.002
+                    )
+                        throw Error('Несогласованное подтверждение движения.');
+                    this.path = predictionRemainder(
+                        path,
+                        receipt.acceptedDistance,
+                        receipt.position,
+                        this.path,
+                    );
+                }
                 this.authority = { x: result.token!.x, y: result.token!.y };
                 this.pendingLength = 0;
                 this.lastReceipt = performance.now();
@@ -380,7 +422,9 @@ export class WasdControl {
                 this.store.accept(result, true);
             }
         } catch {
-            if (generation === this.generation) this.fail();
+            // Esc/blur cancels unsent input, not a server commit. An ambiguous
+            // result still needs a snapshot even if that presentation generation ended.
+            if (this.store.getSnapshot().scene.id === sceneId) this.fail();
         } finally {
             this.busy = false;
             this.store.directCommandPending = false;
@@ -388,12 +432,20 @@ export class WasdControl {
         }
     }
     private fail() {
+        if (this.abort.signal.aborted) {
+            // A successor renderer owns presentation now. It still needs the
+            // unknown commit resolved, but this disposed controller cannot stop it.
+            this.store.onRevisionGap?.();
+            return;
+        }
+        this.recovery = { update: this.store.getSnapshot().movementUpdate };
         this.stop();
         this.store.setDirectNotice('Перемещение остановлено. Синхронизация позиции…');
         this.store.onRevisionGap?.();
     }
     destroy() {
         this.stop();
+        this.unsubscribe();
         this.abort.abort();
         this.store.toggleDirectControl = undefined;
         this.store.stopDirectControl = undefined;
