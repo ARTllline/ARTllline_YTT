@@ -6,6 +6,7 @@ use App\Items\ItemRules;
 use App\Models\Character;
 use App\Models\ItemDefinition;
 use App\Models\LibraryItem;
+use App\Models\LootContainer;
 use App\Models\User;
 
 /** Library templates never become mutable runtime definitions. */
@@ -26,17 +27,21 @@ class ItemLibrary
         return ['definition' => [...$item->definition, 'id' => $item->id]];
     }
 
-    public function instantiate(User $user, string $id, Character $character): ItemDefinition
+    public function instantiate(User $user, string $id, Character|LootContainer $character): ItemDefinition
     {
         $item = LibraryItem::where('user_id', $user->id)->findOrFail($id);
         // Reuse an identical local snapshot so ordinary stacking/merging still works.
         // Changed templates and other characters receive independent definitions.
-        $existing = $character->inventory()->with('definition')->whereHas('definition', fn ($q) => $q->whereNull('campaign_id'))->get()
+        $relation = $character instanceof Character ? $character->inventory() : $character->items();
+        $existing = $relation->with('definition')->when($character instanceof Character, fn ($q) => $q->whereHas('definition', fn ($d) => $d->whereNull('campaign_id')))->get()
             ->pluck('definition')->first(fn ($d) => array_intersect_key($d->toArray(), $item->definition) == $item->definition);
         if ($existing) {
             return $existing;
         }
         $definition = new ItemDefinition($item->definition);
+        if ($character instanceof LootContainer) {
+            $definition->forceFill(['campaign_id' => $character->scene->campaign_id]);
+        }
         $definition->save();
 
         return $definition;

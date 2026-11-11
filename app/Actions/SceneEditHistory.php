@@ -19,6 +19,26 @@ class SceneEditHistory
 {
     public function execute(User $user, Scene $scene, array $input): array
     {
+        if (in_array($input['changes'][0]['kind'] ?? null, ['lootContents', 'interactionConfig'])) {
+            return app(PreparationObjectHistory::class)->apply($user, $scene, $input);
+        }
+        if (($input['changes'][0]['kind'] ?? null) === 'encounter') {
+            Gate::forUser($user)->authorize('update', $scene);
+            $change = Validator::make($input, ['changes' => 'required|array|size:1', 'changes.0.id' => 'required|uuid',
+                'changes.0.expected' => 'required|array', 'changes.0.value' => 'required|array',
+                'changes.0.expected.encounter' => 'present|nullable|array', 'changes.0.value.encounter' => 'present|nullable|array'])->validate()['changes'][0];
+            return app(EncounterActions::class)->execute($user, $scene, ['id' => $change['id'], 'expected' => $change['expected']['encounter'], 'value' => $change['value']['encounter']]);
+        }
+        if (($input['changes'][0]['kind'] ?? null) === 'selectionPresence') {
+            return app(SceneTransaction::class)->run($scene, function ($scene) use ($user, $input) {
+                Gate::forUser($user)->authorize('update', $scene);
+                $data = Validator::make($input, ['changes' => 'required|array|size:1',
+                    'changes.0.id' => 'required|integer', 'changes.0.expected' => 'required|array:present,snapshot',
+                    'changes.0.value' => 'required|array:present,snapshot', 'changes.0.value.snapshot' => 'required|string|max:1500000'])->validate();
+                abort_unless((int) $data['changes'][0]['id'] === $scene->id, 422);
+                return app(PreparationSelection::class)->history($scene, $user, $data['changes'][0]);
+            }, 'objects.changed');
+        }
         if (($input['changes'][0]['kind'] ?? null) === 'fog') {
             return app(FogActions::class)->history($user, $scene, $input);
         }
@@ -81,7 +101,7 @@ class SceneEditHistory
                 abort_if(($model->is_locked ?? false) && ! ($kind === 'prop' && array_key_exists('isLocked', $change['value'])), 409, 'Отмена недоступна: объект заблокирован.');
                 $current = $kind === 'token' ? app(SceneSnapshotBuilder::class)->token($model, true, $user) : $model->projection(true);
                 $allowed = match ($kind) {
-                    'token', 'note' => ['x', 'y'],
+                    'token' => ['x', 'y', 'isHidden'], 'note' => ['x', 'y'],
                     'prop' => ['name', 'x', 'y', 'rotation', 'scaleX', 'scaleY', 'zIndex', 'isHidden', 'isLocked', 'collider'],
                     'region' => ['name', 'shape', 'geometry', 'enabled'],
                 };
@@ -94,6 +114,7 @@ class SceneEditHistory
                     $patch = RegionGeometry::validate(array_replace($current, $change['value']));
                 } else {
                     $rules = ['x' => 'sometimes|numeric|between:-1000000,1000000', 'y' => 'sometimes|numeric|between:-1000000,1000000'];
+                    if ($kind === 'token') $rules['isHidden'] = 'sometimes|boolean';
                     if ($kind === 'prop') {
                         $rules += ['name' => 'sometimes|nullable|string|max:160', 'rotation' => 'sometimes|numeric|between:-360,360', 'scaleX' => 'sometimes|numeric|between:0.001,100', 'scaleY' => 'sometimes|numeric|between:0.001,100', 'zIndex' => 'sometimes|integer|between:-1000000,1000000', 'isHidden' => 'sometimes|boolean', 'isLocked' => 'sometimes|boolean', 'collider' => 'sometimes|array'];
                     }
@@ -108,8 +129,8 @@ class SceneEditHistory
                         }
                     }
                 }
-                if ($kind === 'prop' && ! $model->is_hidden) {
-                    $result['_previousVisibility']['props'][] = (string) $model->id;
+                if (in_array($kind, ['token', 'prop']) && ! $model->is_hidden) {
+                    $result['_previousVisibility'][$kind === 'token' ? 'tokens' : 'props'][] = (string) $model->id;
                 }
                 $model->update($patch);
                 $model = $model->fresh();

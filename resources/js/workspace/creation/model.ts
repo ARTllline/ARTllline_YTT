@@ -18,8 +18,10 @@ export interface TokenDraft {
     asset?: LibraryAsset;
 }
 export type Placement =
+    | { type: 'composition'; preset: import('../../api/compositions').CompositionPreset; name: string }
     | {
           type: 'libraryActor';
+          encounter?: {id: string; groupId: string};
           actorId: string;
           library: 'characters' | 'npcs';
           name: string;
@@ -38,6 +40,7 @@ export type Placement =
     | { type: 'note' | 'region'; name: string };
 export const CREATION_MIME = 'application/x-ytt-creation';
 export const repeatsPlacement = (item: Placement) =>
+    item.type === 'composition' ||
     item.type === 'prop' ||
     item.type === 'objectPreset' ||
     (item.type === 'libraryActor' && item.library === 'npcs');
@@ -61,4 +64,25 @@ export function creationFromAsset(asset: LibraryAsset, raw: string): Placement |
         /* Ignore unrelated native drag payloads. */
     }
     return null;
+}
+
+export function placementAppearance(item: Placement) {
+    const asset =
+        item.type === 'token' ? item.draft.asset : item.type === 'prop' ? item.asset : undefined;
+    const preset = item.type === 'objectPreset' ? item.preset : undefined;
+    return {
+        url: item.type === 'libraryActor' ? item.previewUrl : (preset?.asset.url ?? asset?.url),
+        prop: item.type === 'prop' ? item.asset : undefined,
+        settings: preset?.settings,
+        rotation: item.type === 'objectPreset' ? item.rotation : 0,
+        scale: item.type === 'objectPreset' ? item.scaleFactor : 1,
+    };
+}
+
+export function placementIdentity(item: Placement): string {
+    if (item.type === 'composition') return `composition:${item.preset.id}`;
+    if (item.type === 'libraryActor') return `${item.library}:${item.actorId}`;
+    if (item.type === 'prop') return `prop:${item.purpose ?? 'prop'}:${item.asset.id}`;
+    if (item.type === 'objectPreset') return `preset:${item.preset.id}`;
+    return item.type;
 }

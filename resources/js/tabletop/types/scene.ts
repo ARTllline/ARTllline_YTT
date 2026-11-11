@@ -93,6 +93,8 @@ export interface Scene {
     activeCharacterId?: string | null;
     regions?: readonly import('../../automation/model').Region[];
     props?: readonly SceneProp[];
+    encounters?: readonly import('../../workspace/encounters/model').PreparedEncounter[];
+    encounterRuns?: readonly import('../../workspace/encounters/model').EncounterRun[];
     notes?: readonly SceneNote[];
     combat?: Combat | null;
     fog?: FogState;
@@ -207,6 +209,7 @@ export interface ObjectSelection {
     propIds: string[];
 }
 export type ObjectCommand =
+    | { endpoint: 'composition-placement'; data: { presetId: string; expectedRevision: number; x: number; y: number } }
     | {
           endpoint: 'props';
           data:
@@ -240,7 +243,23 @@ export type ObjectCommand =
           endpoint: 'selection';
           data: ObjectSelection &
               (
-                  | { action: 'duplicate' | 'delete' }
+                  | { action: 'delete' | 'hide' | 'show' }
+                  | {
+                        action: 'duplicate';
+                        anchorKind?: 'token' | 'prop';
+                        anchorId?: string;
+                        x?: number;
+                        y?: number;
+                        expected?: { kind: 'token' | 'prop'; id: string; x: number; y: number }[];
+                    }
+                  | {
+                        action: 'translate';
+                        anchorKind: 'token' | 'prop';
+                        anchorId: string;
+                        x: number;
+                        y: number;
+                        expected: { kind: 'token' | 'prop'; id: string; x: number; y: number }[];
+                    }
                   | {
                         action: 'move';
                         anchorKind: 'token' | 'prop';

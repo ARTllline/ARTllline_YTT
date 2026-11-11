@@ -32,7 +32,12 @@ export class TokenLayer extends Container {
                 const start = path?.[0];
                 const end = path?.at(-1);
                 if (existing.model !== token) existing.update(token);
-                if (path && !movement?.instant && samePoint(start, previous) && samePoint(end, token)) {
+                if (
+                    path &&
+                    !movement?.instant &&
+                    samePoint(start, previous) &&
+                    samePoint(end, token)
+                ) {
                     const previousAnimation = this.movements.get(token.id);
                     const append =
                         previousAnimation &&
@@ -107,10 +112,14 @@ export class TokenLayer extends Container {
         else this.preview(id, pathPosition(active));
         return true;
     }
-    hit(point: Point) {
+    hit(point: Point, padding = 5) {
+        const views = [...this.views.values()].reverse();
+        // A real footprint wins over another small token's expanded pointer target.
         return (
-            [...this.views.values()].reverse().find((view) => view.contains(point.x, point.y))
-                ?.model.id ?? null
+            (
+                views.find((view) => view.contains(point.x, point.y, 0)) ??
+                views.find((view) => view.contains(point.x, point.y, padding))
+            )?.model.id ?? null
         );
     }
     preview(id: string, point: Point) {

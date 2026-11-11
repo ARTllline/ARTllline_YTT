@@ -1,0 +1,164 @@
+.container-editor h3,
+.container-access,
+.container-item-tools,
+.container-sources,
+.container-search,
+.container-replacing {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.container-editor h3 {
+    margin: 0 0 10px;
+}
+.container-editor h3 small {
+    margin-left: auto;
+    color: var(--muted);
+}
+.container-access {
+    flex-wrap: wrap;
+    margin: 12px 0;
+    font-size: 11px;
+}
+.container-access span {
+    color: var(--muted);
+    margin-right: auto;
+}
+.container-access button,
+.container-item-tools button,
+.container-sources button {
+    font-size: 11px;
+}
+.container-drop {
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    transition:
+        background 0.15s,
+        border-color 0.15s;
+}
+.container-drop.is-over {
+    border-color: #c2a46d;
+    background: #c2a46d18;
+}
+.container-empty {
+    padding: 16px 4px;
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+}
+.container-drop-hint {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 10px;
+    text-align: center;
+}
+.container-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+.container-item:last-of-type {
+    border-bottom: 0;
+}
+.container-item-info {
+    min-width: 0;
+    flex: 1;
+}
+.container-item-info > strong {
+    display: block;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+.container-item small,
+.container-template small {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+}
+.container-item .item-gameplay-facts,
+.container-template .item-gameplay-facts {
+    font-size: 10px;
+}
+.container-item-tools {
+    flex-wrap: wrap;
+    margin-top: 8px;
+    gap: 6px;
+}
+.container-item-tools label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+}
+.container-item-tools input {
+    width: 58px;
+    padding: 4px;
+}
+.container-item-tools .icon-button {
+    margin-left: auto;
+}
+.container-add {
+    margin-top: 10px;
+    width: 100%;
+    justify-content: center;
+}
+.container-catalog {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+.container-sources button {
+    flex: 1;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+}
+.container-sources button[aria-pressed='true'] {
+    background: #c2a46d18;
+    border-color: #c2a46d66;
+}
+.container-search {
+    margin: 10px 0;
+}
+.container-search input {
+    width: 100%;
+    min-width: 0;
+}
+.container-library {
+    max-height: 320px;
+    overflow: auto;
+}
+.container-template {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+    align-items: center;
+    padding: 9px 5px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+.container-template > span {
+    flex: 1;
+    min-width: 0;
+}
+.container-template strong {
+    display: block;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+.container-template:hover {
+    background: #ffffff08;
+}
+.container-template[draggable='true'] {
+    cursor: grab;
+}
+.container-replacing {
+    font-size: 12px;
+    color: #dec38e;
+}
+.container-replacing button {
+    margin-left: auto;
+}

@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Combat\AppliedConditions;
 use App\Combat\CombatLog;
 use App\Combat\TurnBudget;
+use App\Models\Character;
 use App\Models\Combat;
 use App\Models\Scene;
 use App\Models\User;
@@ -21,29 +22,35 @@ class CombatActions
     public function execute(User $user, Scene $scene, string $command, array $data): array
     {
         return $this->transaction->run($scene, function (Scene $scene) use ($user, $command, $data) {
-            Gate::forUser($user)->authorize('update', $scene);
-            $combat = Combat::where('scene_id', $scene->id)->whereIn('status', ['preparing', 'active'])->first();
-            $previousStatus = $combat?->status;
-            $previousRound = $combat?->round;
-            if ($command === 'prepare') {
-                abort_if($combat !== null, 409, 'This scene already has a combat. Reload its current state.');
-                Combat::create(['scene_id' => $scene->id, 'created_by' => $user->id]);
-            } else {
-                abort_unless($combat && (string) $combat->id === $data['combatId'], 409, 'Combat changed. Reload its current state.');
-                $this->change($combat, $scene, $command, $data);
-                $type = $previousStatus === 'preparing' && $combat->status === 'active' ? 'combat.started'
-                    : ($previousStatus === 'active' && $combat->round > $previousRound ? 'combat.round' : null);
-                if ($type) {
-                    app(CombatLog::class)->write($combat, $type, ['round' => $combat->round]);
-                    app(TriggerEvents::class)->event($scene, $type, 'scene:'.$scene->id.':revision:'.($scene->revision + 1).':combat:'.$combat->id, ['round' => $combat->round]);
-                }
-                if ($command === 'end') {
-                    app(CombatLog::class)->write($combat, 'combat.ended', ['round' => $combat->round]);
-                }
-            }
-
-            return ['charactersChanged' => true, '_combatChanged' => true, 'tokens' => $scene->tokens()->get()->map(fn ($t) => app(SceneSnapshotBuilder::class)->token($t, true, $user))->all()];
+            return $this->apply($user, $scene, $command, $data);
         }, 'combat.updated');
+    }
+
+    /** Execute inside an existing campaign and scene transaction; does not publish. */
+    public function apply(User $user, Scene $scene, string $command, array $data): array
+    {
+        Gate::forUser($user)->authorize('update', $scene);
+        $combat = Combat::where('scene_id', $scene->id)->whereIn('status', ['preparing', 'active'])->first();
+        $previousStatus = $combat?->status;
+        $previousRound = $combat?->round;
+        if ($command === 'prepare') {
+            abort_if($combat !== null, 409, 'This scene already has a combat. Reload its current state.');
+            Combat::create(['scene_id' => $scene->id, 'created_by' => $user->id]);
+        } else {
+            abort_unless($combat && (string) $combat->id === $data['combatId'], 409, 'Combat changed. Reload its current state.');
+            $this->change($combat, $scene, $command, $data);
+            $type = $previousStatus === 'preparing' && $combat->status === 'active' ? 'combat.started'
+                : ($previousStatus === 'active' && $combat->round > $previousRound ? 'combat.round' : null);
+            if ($type) {
+                app(CombatLog::class)->write($combat, $type, ['round' => $combat->round]);
+                app(TriggerEvents::class)->event($scene, $type, 'scene:'.$scene->id.':revision:'.($scene->revision + 1).':combat:'.$combat->id, ['round' => $combat->round]);
+            }
+            if ($command === 'end') {
+                app(CombatLog::class)->write($combat, 'combat.ended', ['round' => $combat->round]);
+            }
+        }
+
+        return ['charactersChanged' => true, '_combatChanged' => true, '_encounterRunsChanged' => in_array($command, ['begin', 'end']), 'tokens' => $scene->tokens()->get()->map(fn ($t) => app(SceneSnapshotBuilder::class)->token($t, true, $user))->all()];
     }
 
     private function change(Combat $combat, Scene $scene, string $command, array $data): void
@@ -58,7 +65,10 @@ class CombatActions
                 }
                 $position = ($entries->max('position') ?? -1) + 1;
                 foreach ($tokenIds as $tokenId) {
-                    $combat->combatants()->firstOrCreate(['token_id' => $tokenId], ['position' => $position++]);
+                    $entry = $combat->combatants()->firstOrCreate(['token_id' => $tokenId], ['position' => $position++]);
+                    if ($entry->wasRecentlyCreated && $combat->status === 'active') {
+                        $this->interruptRest($entry->token->character);
+                    }
                 }
                 break;
             case 'remove':
@@ -86,10 +96,7 @@ class CombatActions
                 abort_unless($combat->status === 'preparing' && $entries->isNotEmpty(), 422, 'Add combatants before beginning combat.');
                 $combat->update(['status' => 'active', 'round' => 1, 'current_combatant_id' => $entries->first()->id, 'started_at' => now()]);
                 foreach ($entries as $entry) {
-                    $c = $entry->token->character;
-                    if ($c && ($c->rest_state['status'] ?? '') === 'spending') {
-                        $c->update(['rest_state' => array_replace($c->rest_state, ['status' => 'interrupted', 'interruption' => 'initiative'])]);
-                    }
+                    $this->interruptRest($entry->token->character);
                 }
                 $combat->combatants()->update(['action_available' => true, 'bonus_available' => true, 'reaction_available' => true, 'movement_spent' => 0]);
                 app(TurnBudget::class)->start($combat, $entries->first()->id);
@@ -139,6 +146,13 @@ class CombatActions
                 app(SpellEffects::class)->finish($combat);
                 $combat->update(['status' => 'ended', 'ended_at' => now(), 'current_combatant_id' => null]);
                 break;
+        }
+    }
+
+    private function interruptRest(?Character $character): void
+    {
+        if ($character && ($character->rest_state['status'] ?? '') === 'spending') {
+            $character->update(['rest_state' => array_replace($character->rest_state, ['status' => 'interrupted', 'interruption' => 'initiative'])]);
         }
     }
 

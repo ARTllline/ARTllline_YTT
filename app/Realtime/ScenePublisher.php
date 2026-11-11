@@ -46,6 +46,7 @@ class ScenePublisher
         if ($gm) {
             $payload = $result;
             unset($payload['revision'], $payload['mutationId'], $payload['propEdits'], $payload['terrainEdit'],
+                $payload['selectionEdit'], $payload['selectionVisibilityBefore'],
                 $payload['structure'], $payload['structureEdit'], $payload['_structureBefore'], $payload['_lightingInvalidated']);
             if (isset($result['_structureBefore'])) {
                 $payload += StructureData::patch($scene, $result['_structureBefore'], true);
@@ -81,7 +82,7 @@ class ScenePublisher
             } else {
                 $payloadLighting = null;
             }
-            if (str_starts_with($type, 'note.') || str_starts_with($type, 'region.') || str_starts_with($type, 'trigger.')) {
+            if (str_starts_with($type, 'encounter.') || str_starts_with($type, 'note.') || str_starts_with($type, 'region.') || str_starts_with($type, 'trigger.')) {
                 $event['type'] = 'scene.revision';
             }
             $payload = [];

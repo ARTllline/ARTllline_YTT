@@ -17,6 +17,12 @@ vi.mock('../objects/TokenView', async () => {
                 this.position.set(model.x, model.y);
             }
             setActiveTurn() {}
+            contains(x: number, y: number, padding = 5) {
+                return (
+                    Math.hypot(x - this.x, y - this.y) <=
+                    (this.model.size * this.model.scale) / 2 + padding
+                );
+            }
         },
     };
 });
@@ -121,5 +127,18 @@ it('bounds playback when a background spectator receives many steps without tick
     layer.tickMovement(previous.id, 1000, false);
     expect(layer.views.get(previous.id)!.x).toBe(previous.x);
     expect(layer.isMoving(previous.id)).toBe(false);
+    layer.destroy({ children: true });
+});
+
+it('prioritizes actual overlapping footprints and retains a forgiving target for tiny tokens', () => {
+    const layer = new TokenLayer(),
+        base = createDemoScene().tokens[0];
+    const big = { ...base, id: 'big', x: 0, y: 0, size: 40, scale: 1 },
+        small = { ...base, id: 'small', x: 27, y: 0, size: 2, scale: 1 };
+    layer.sync([big, small]);
+    expect(layer.hit({ x: 20, y: 0 }, 30)).toBe('big');
+    expect(layer.hit({ x: 28.5, y: 0 }, 4)).toBe('small');
+    layer.sync([big, { ...small, x: 0 }]);
+    expect(layer.hit({ x: 0, y: 0 }, 4)).toBe('small');
     layer.destroy({ children: true });
 });

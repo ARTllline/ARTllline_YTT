@@ -10,6 +10,8 @@ import { ItemFacts } from './itemGameplay';
 import { useInventory } from './useInventory';
 import { InventoryGridView } from './InventoryView';
 import type { Character } from '../tabletop/types/scene';
+import type { EditChange } from '../tabletop/state/SceneHistory';
+import { ContainerEditor } from '../workspace/objects/ContainerEditor';
 export interface LootSummary {
     id: string;
     name: string;
@@ -22,13 +24,19 @@ export interface LootState extends LootSummary {
     items: InventoryItem[];
 }
 export const lootApi = {
-    read: (campaign: string, id: string) =>
-        request<{ loot: LootState }>(`/campaigns/${campaign}/loot?containerId=${id}`),
+    read: (campaign: string, id: string, signal?: AbortSignal) =>
+        request<{ loot: LootState }>(
+            `/campaigns/${campaign}/loot?containerId=${id}`,
+            'GET',
+            undefined,
+            signal,
+        ),
     command: (campaign: string, data: Record<string, unknown>, id: string = commandId()) =>
         request<{
             loot: LootState;
             transferred?: { itemId: string; quantity: number }[];
             mutation?: Mutation;
+            preparationEdit?: EditChange;
         }>(`/campaigns/${campaign}/loot`, 'POST', { ...data, clientMutationId: id }),
 };
 export function openLoot(id: string) {
@@ -422,38 +430,48 @@ export function LootSetup({
 }) {
     const [busy, setBusy] = useState(false),
         [error, setError] = useState('');
+    const pending = useRef<string | null>(null);
+    if (store.role !== 'gm') return null;
+    if (loot)
+        return (
+            <ContainerEditor
+                key={`${store.getSnapshot().scene.id}:${loot.id}`}
+                store={store}
+                meta={loot}
+            />
+        );
     return (
         <div className="inspector-section">
             <button
                 disabled={busy}
                 onClick={async () => {
-                    if (loot) {
-                        openLoot(loot.id);
-                        return;
-                    }
                     setBusy(true);
+                    setError('');
                     try {
                         const scene = store.getSnapshot().scene;
-                        const r = await lootApi.command(scene.campaignId!, {
-                            action: 'configure',
-                            sceneId: scene.id,
-                            kind,
-                            objectId: id,
-                        });
+                        pending.current ??= commandId();
+                        const r = await lootApi.command(
+                            scene.campaignId!,
+                            {
+                                action: 'configure',
+                                sceneId: scene.id,
+                                kind,
+                                objectId: id,
+                            },
+                            pending.current,
+                        );
+                        pending.current = null;
                         if (r.mutation) store.accept(r.mutation, true);
-                        openLoot(r.loot.id);
                     } catch (e) {
+                        if (e instanceof ApiError && e.status > 0 && e.status < 500)
+                            pending.current = null;
                         setError((e as Error).message);
                     } finally {
                         setBusy(false);
                     }
                 }}
             >
-                {loot
-                    ? 'Открыть содержимое добычи'
-                    : kind === 'token'
-                      ? 'Подготовить добычу NPC'
-                      : 'Сделать контейнером'}
+                {kind === 'token' ? 'Подготовить добычу NPC' : 'Сделать контейнером'}
             </button>
             {error && <p role="alert">{error}</p>}
         </div>

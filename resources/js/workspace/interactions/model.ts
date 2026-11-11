@@ -122,11 +122,13 @@ export const interactions = {
         id: string,
         actions: ObjectInteraction[],
         clientMutationId: string,
+        expected?: ObjectInteraction[],
     ) =>
         request<Mutation>(`/scenes/${scene}/object-actions`, 'POST', {
             kind,
             id,
             actions,
+            ...(expected ? { expected } : {}),
             clientMutationId,
         }),
     run: (

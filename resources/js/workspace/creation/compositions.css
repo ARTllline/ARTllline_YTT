@@ -1,0 +1,124 @@
+.composition-save {
+    display: grid;
+    gap: 10px;
+}
+.composition-form {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid #425950;
+    border-radius: 10px;
+    background: #182722;
+}
+.composition-form label {
+    display: grid;
+    gap: 5px;
+    font-size: 12px;
+    color: #bdc9c5;
+}
+.composition-form input,
+.composition-form textarea {
+    width: 100%;
+    min-width: 0;
+    padding: 8px;
+    color: #e4ece8;
+    background: #101b18;
+    border: 1px solid #46564f;
+    border-radius: 6px;
+}
+.composition-form textarea {
+    min-height: 64px;
+    resize: vertical;
+}
+.composition-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.composition-members {
+    display: grid;
+    gap: 5px;
+    max-height: 170px;
+    overflow: auto;
+    color: #b8c8c1;
+    font-size: 12px;
+}
+.composition-intro {
+    padding: 0 14px;
+    margin: 4px 0 8px;
+}
+.composition-catalog {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.composition-card {
+    border: 1px solid #35453e;
+    border-radius: 10px;
+    background: #18211e;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.composition-place {
+    display: grid;
+    gap: 7px;
+    width: 100%;
+    padding: 12px;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    color: #e2eae5;
+    cursor: grab;
+}
+.composition-place:hover,
+.composition-place[aria-pressed='true'] {
+    background: #24382e;
+}
+.composition-place small {
+    color: #a4b7ac;
+    font-size: 11px;
+}
+.composition-place p {
+    margin: 0;
+    color: #b8c3bd;
+    font-size: 12px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.composition-thumbnails {
+    display: flex;
+    gap: 7px;
+    height: 56px;
+    align-items: center;
+}
+.composition-thumbnails img,
+.composition-thumbnails > span {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    border-radius: 7px;
+    background: #101a16;
+}
+.composition-thumbnails > span {
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    color: #b5d5c1;
+}
+.composition-card > .composition-actions,
+.composition-card > details {
+    padding: 6px 12px;
+}
+.composition-card > details {
+    color: #a6b7ad;
+    font-size: 12px;
+}
+.composition-card summary {
+    cursor: pointer;
+    margin-bottom: 6px;
+}
+.composition-card > [role='alert'],
+.composition-card > .composition-form {
+    margin: 8px;
+}

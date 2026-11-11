@@ -39,9 +39,13 @@ class ObjectController extends Controller
     public function selection(Request $request, Scene $scene, SelectionActions $actions): array
     {
         Gate::authorize('update', $scene);
-        $data = $request->validate(self::selectionRules() + ['action' => 'required|in:move,duplicate,delete',
-            'anchorKind' => 'required_if:action,move|in:token,prop', 'anchorId' => 'required_if:action,move|integer',
-            'x' => 'required_if:action,move|numeric|between:-1000000,1000000', 'y' => 'required_if:action,move|numeric|between:-1000000,1000000']);
+        $data = $request->validate(self::selectionRules() + ['action' => 'required|in:move,translate,duplicate,delete,hide,show',
+            'anchorKind' => 'required_if:action,move,translate|in:token,prop', 'anchorId' => 'required_if:action,move,translate|integer',
+            'x' => 'required_if:action,move,translate|numeric|between:-1000000,1000000', 'y' => 'required_if:action,move,translate|numeric|between:-1000000,1000000',
+            'expected' => 'required_if:action,translate|array|min:1|max:200',
+            'expected.*' => 'required|array:kind,id,x,y', 'expected.*.kind' => 'required|in:token,prop',
+            'expected.*.id' => 'required|integer|min:1', 'expected.*.x' => 'required|numeric|between:-1000000,1000000',
+            'expected.*.y' => 'required|numeric|between:-1000000,1000000']);
 
         return $actions->execute($request->user(), $scene, $data);
     }

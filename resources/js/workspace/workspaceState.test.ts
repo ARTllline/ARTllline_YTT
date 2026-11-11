@@ -26,7 +26,8 @@ describe('workspace navigation', () => {
     });
     it('keeps one secondary preparation workspace and returns space on selection', () => {
         const prep = workspaceReducer(initialWorkspace, { type: 'mode', mode: 'prepare' });
-        expect(prep.left).toBe('scenes');
+        expect(prep.left).toBeNull();
+        expect(contextualPanel(prep, '')).toBe('entities');
         const assets = workspaceReducer(prep, { type: 'left', panel: 'assets' });
         expect(assets.left).toBe('assets');
         expect(workspaceReducer(assets, { type: 'selection', key: 'prop-1' }).left).toBeNull();
@@ -84,4 +85,19 @@ describe('workspace navigation', () => {
         expect(library.left).toBe('assets');
         expect(library.right).toBe('context');
     });
+});
+
+it('returns catalog space to Inspector on selection and closes an empty catalog explicitly', () => {
+    const prep = workspaceReducer(initialWorkspace, { type: 'mode', mode: 'prepare' });
+    const catalog = workspaceReducer(prep, { type: 'right', panel: 'entities', force: true });
+    const selected = workspaceReducer(catalog, { type: 'selection', key: 'npc' });
+    expect(contextualPanel(selected, 'npc')).toBe('context');
+    expect(contextualPanel(workspaceReducer(selected, { type: 'selection', key: '' }), '')).toBe(
+        'entities',
+    );
+    const closed = workspaceReducer(catalog, { type: 'close-right', selection: '' });
+    expect(contextualPanel(closed, '')).toBeNull();
+    expect(
+        contextualPanel(workspaceReducer(closed, { type: 'right', panel: 'entities' }), ''),
+    ).toBe('entities');
 });

@@ -68,10 +68,12 @@ class ObjectInteractionActions
 
     public function save(User $user, Scene $scene, array $data): array
     {
-        return app(SceneTransaction::class)->run($scene, function ($scene) use ($user, $data) {
+        $edit = null;
+        $result = app(SceneTransaction::class)->run($scene, function ($scene) use ($user, $data, &$edit) {
             Gate::forUser($user)->authorize('update', $scene);
             $data = Validator::make($data, [
                 'kind' => 'required|in:token,prop', 'id' => 'required|integer|min:1',
+                'expected' => 'sometimes|array|max:8',
                 'actions' => 'present|array|max:8',
                 'actions.*' => 'required|array:id,label,icon,result_type,result_target,enabled,check',
                 'actions.*.id' => 'required|uuid|distinct', 'actions.*.label' => 'required|string|max:48',
@@ -82,6 +84,11 @@ class ObjectInteractionActions
                 'actions.*.check.enabled' => 'required_with:actions.*.check|boolean',
             ])->validate();
             $object = $this->object($scene, $data['kind'], $data['id']);
+            $before = null;
+            if (array_key_exists('expected', $data)) {
+                abort_unless($this->projection($object, true) == $data['expected'], 409, 'Взаимодействия изменились. Загрузите актуальные действия перед сохранением.');
+                $before = app(PreparationObjectHistory::class)->captureInteractions($scene, $data['kind'], $object->id);
+            }
             foreach ($data['actions'] as &$action) {
                 if ($action['check']['enabled'] ?? false) {
                     $action['check'] = Validator::make($action['check'], [
@@ -114,10 +121,15 @@ class ObjectInteractionActions
             unset($action);
             $object->update(['interactions' => $data['actions']]);
             $object->setRelation('scene', $scene);
+            if ($before !== null) {
+                $edit = app(PreparationObjectHistory::class)->edit('interactionConfig', (string) $object->id, $before, app(PreparationObjectHistory::class)->captureInteractions($scene, $data['kind'], $object->id));
+            }
 
             return $object instanceof Token
                 ? ['tokens' => [app(SceneSnapshotBuilder::class)->token($object, true, $user)], '_previousVisibility' => ['tokens' => $object->is_hidden ? [] : [(string) $object->id], 'props' => []]]
                 : ['props' => [$object->projection(true)], '_previousVisibility' => ['tokens' => [], 'props' => $object->is_hidden ? [] : [(string) $object->id]]];
         }, 'objects.changed');
+        if ($edit !== null) $result['preparationEdit'] = $edit;
+        return $result;
     }
 }

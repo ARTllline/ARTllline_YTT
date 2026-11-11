@@ -1,4 +1,6 @@
 import { performanceMark } from '../../realtime/performance';
+import { encounterPatch, type EncounterCommand } from '../../workspace/encounters/model';
+import { selectionMembers, duplicateIssue } from '../utils/selectionTransform';
 import {
     attachRoom,
     movedRoom,
@@ -45,6 +47,11 @@ import { clamp } from '../utils/coordinates';
 import type { CombatCommand, TokenCombatCommand } from '../types/combat';
 
 export interface WorkspaceSnapshot {
+    duplicatePlacement?: {
+        members: ReturnType<typeof selectionMembers>;
+        selection: ObjectSelection;
+    };
+    entityAuthoring?: boolean;
     roomProposal?: {
         incoming: Graph;
         before?: Graph;
@@ -80,6 +87,7 @@ export interface WorkspaceSnapshot {
     spawnedEncounter?: { name: string; tokenIds: string[] };
     selectedNoteId?: string;
     showNotes?: boolean;
+    selectedEncounterId?: string;
     combatNotice?: string;
     scene: Scene;
     movementUpdate?: {
@@ -94,13 +102,23 @@ export type SceneCommand =
     | ({ type: 'structure'; expected: string; placement?: Placement } & (
           | { value: Graph; door?: never; opening?: never }
           | { door: DoorCommand; value?: never; opening?: never }
-          | { opening: OpeningCommand; value?: never; door?: never; onRejected: (error: Error) => void }
+          | {
+                opening: OpeningCommand;
+                value?: never;
+                door?: never;
+                onRejected: (error: Error) => void;
+            }
       ))
     | { type: 'terrain'; stroke: TerrainStroke; complete?: (error?: Error) => void }
     | { type: 'mapWorld'; value: MapState; expected: MapState; complete: (error?: Error) => void }
     | { type: 'region'; command: RegionCommand }
     | { type: 'objects'; command: ObjectCommand }
     | { type: 'note'; command: NoteCommand; debounce?: boolean }
+    | { type: 'encounter'; command: EncounterCommand }
+    | {
+          type: 'encounterCombat';
+          command: import('../../workspace/encounters/model').EncounterCombatCommand;
+      }
     | { type: 'combat'; command: CombatCommand }
     | { type: 'tokenCombat'; id: string; command: TokenCombatCommand }
     | {
@@ -374,7 +392,10 @@ export class SceneStore {
     changeOpening(opening: OpeningCommand, onRejected: (error: Error) => void) {
         const scene = this.snapshot.scene;
         if (!this.objectEditingEnabled || !scene.structure) return;
-        this.command?.({ type: 'structure', opening, expected: scene.structure.hash, onRejected }, scene);
+        this.command?.(
+            { type: 'structure', opening, expected: scene.structure.hash, onRejected },
+            scene,
+        );
     }
     configureBuild(patch: Partial<BuildSettings>) {
         if (this.role !== 'gm' || !this.snapshot.mapEditor) return;
@@ -578,6 +599,16 @@ export class SceneStore {
         };
     };
     private emit(next: WorkspaceSnapshot) {
+        if (
+            next.duplicatePlacement &&
+            (!next.entityAuthoring ||
+                next.mapEditor ||
+                next.selectedIds.join(',') !==
+                    next.duplicatePlacement.selection.tokenIds.join(',') ||
+                (next.selectedPropIds ?? []).join(',') !==
+                    next.duplicatePlacement.selection.propIds.join(','))
+        )
+            next = { ...next, duplicatePlacement: undefined };
         const geometryChanged =
             next.movementUpdate !== this.snapshot.movementUpdate &&
             next.movementUpdate?.geometryChanged;
@@ -592,6 +623,11 @@ export class SceneStore {
             sceneId: this.snapshot.scene.id,
             revision: this.snapshot.scene.revision,
         });
+    }
+    setEntityAuthoring(enabled: boolean) {
+        const entityAuthoring = enabled && this.role === 'gm';
+        if (!!this.snapshot.entityAuthoring !== entityAuthoring)
+            this.emit({ ...this.snapshot, entityAuthoring });
     }
     select(id: string | null) {
         if (id && this.snapshot.mapEditor) return;
@@ -610,6 +646,61 @@ export class SceneStore {
             tokenIds: [...this.snapshot.selectedIds],
             propIds: [...(this.snapshot.selectedPropIds ?? [])],
         };
+    }
+    beginDuplicate() {
+        if (
+            this.role !== 'gm' ||
+            !this.snapshot.entityAuthoring ||
+            this.snapshot.mapEditor ||
+            !this.objectEditingEnabled
+        )
+            return;
+        const selection = this.selection(),
+            members = selectionMembers(this.snapshot.scene, selection);
+        const issue = duplicateIssue(members);
+        if (issue || !members.length) {
+            this.editorNotice(issue || 'Выберите объекты.');
+            return;
+        }
+        this.spatial.setTool('select');
+        this.emit({
+            ...this.snapshot,
+            duplicatePlacement: { members, selection },
+            editorNotice: undefined,
+        });
+    }
+    cancelDuplicate() {
+        if (this.snapshot.duplicatePlacement)
+            this.emit({ ...this.snapshot, duplicatePlacement: undefined });
+    }
+    placeDuplicate(point: Point) {
+        const draft = this.snapshot.duplicatePlacement;
+        if (!draft || !this.objectEditingEnabled) return;
+        const current = selectionMembers(this.snapshot.scene, draft.selection);
+        // Cancel previews that no longer match canonical entities after a remote edit/reconnect.
+        if (JSON.stringify(current) !== JSON.stringify(draft.members)) {
+            this.cancelDuplicate();
+            this.editorNotice('Группа изменилась. Повторите дублирование.');
+            return;
+        }
+        const anchor = draft.members[0];
+        this.cancelDuplicate();
+        this.objectCommand({
+            endpoint: 'selection',
+            data: {
+                action: 'duplicate',
+                ...draft.selection,
+                anchorKind: 'size' in anchor ? 'token' : 'prop',
+                anchorId: anchor.id,
+                ...point,
+                expected: draft.members.map((o) => ({
+                    kind: 'size' in o ? 'token' : 'prop',
+                    id: o.id,
+                    x: o.x,
+                    y: o.y,
+                })),
+            },
+        });
     }
     selectObject(kind: 'token' | 'prop', id: string, toggle = false) {
         if (this.role !== 'gm') {
@@ -708,6 +799,22 @@ export class SceneStore {
                 ),
             };
         }
+        if (command.endpoint === 'selection' && command.data.action === 'translate') {
+            const d = command.data;
+            const anchor = d.expected.find((o) => o.kind === d.anchorKind && o.id === d.anchorId);
+            if (!anchor) return;
+            const dx = d.x - anchor.x,
+                dy = d.y - anchor.y;
+            scene = {
+                ...scene,
+                tokens: scene.tokens.map((t) =>
+                    d.tokenIds.includes(t.id) ? { ...t, x: t.x + dx, y: t.y + dy } : t,
+                ),
+                props: scene.props?.map((p) =>
+                    d.propIds.includes(p.id) ? { ...p, x: p.x + dx, y: p.y + dy } : p,
+                ),
+            };
+        }
         this.emit({ ...this.snapshot, scene, editorNotice: undefined });
         this.command?.({ type: 'objects', command }, before);
     }
@@ -782,6 +889,28 @@ export class SceneStore {
     }
     updateNote(id: string, patch: Partial<Omit<SceneNote, 'id'>>, debounce = false) {
         this.noteCommand({ action: 'update', id, patch }, debounce);
+    }
+    encounterCommand(command: EncounterCommand) {
+        if (this.role !== 'gm') return;
+        this.editorNotice('');
+        this.command?.({ type: 'encounter', command }, this.snapshot.scene);
+    }
+    encounterCombatCommand(
+        command: import('../../workspace/encounters/model').EncounterCombatCommand,
+    ) {
+        if (this.role !== 'gm') return;
+        this.editorNotice('');
+        this.command?.({ type: 'encounterCombat', command });
+    }
+    selectEncounter(id: string) {
+        if (this.role !== 'gm') return;
+        this.emit({ ...this.snapshot, selectedEncounterId: id });
+        const encounter = this.snapshot.scene.encounters?.find((e) => e.id === id);
+        if (encounter)
+            this.selectObjects({
+                tokenIds: encounter.groups.flatMap((g) => g.tokenIds),
+                propIds: [],
+            });
     }
     combatCommand(command: CombatCommand) {
         if (this.role !== 'gm') return;
@@ -932,7 +1061,8 @@ export class SceneStore {
             if (result.structure) scene = { ...scene, structure: result.structure };
             if (
                 result.structureRefresh ||
-                (result.structurePatch && result.structurePatch.base !== (scene.structure?.hash ?? emptyHash))
+                (result.structurePatch &&
+                    result.structurePatch.base !== (scene.structure?.hash ?? emptyHash))
             ) {
                 this.onRevisionGap?.();
             } else if (result.structurePatch) {
@@ -975,6 +1105,8 @@ export class SceneStore {
                 };
             if (result.grid) scene = { ...scene, grid: result.grid };
             if ('map' in result) scene = { ...scene, map: result.map };
+            if (this.role === 'gm')
+                scene = { ...encounterPatch(scene, result), revision: scene.revision };
             if ('combat' in result) scene = { ...scene, combat: result.combat };
             if (result.deletedId)
                 scene = { ...scene, tokens: scene.tokens.filter((t) => t.id !== result.deletedId) };

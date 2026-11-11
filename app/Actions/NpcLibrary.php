@@ -75,14 +75,14 @@ class NpcLibrary
         }, 3);
     }
 
-    public function place(User $user, Scene $scene, int $id, float $x, float $y): array
+    public function place(User $user, Scene $scene, int $id, float $x, float $y, ?array $encounter = null): array
     {
-        return DB::transaction(function () use ($user, $scene, $id, $x, $y) {
+        return DB::transaction(function () use ($user, $scene, $id, $x, $y, $encounter) {
             $campaign = Campaign::whereKey($scene->campaign_id)->lockForUpdate()->firstOrFail();
             Gate::forUser($user)->authorize('update', $campaign);
             $source = $this->query($user)->lockForUpdate()->findOrFail($id);
             $copy = $this->clone($source, $campaign, $user);
-            $result = app(TokenActions::class)->create($user, $scene, ['character_id' => $copy->id, 'x' => $x, 'y' => $y]);
+            $result = app(TokenActions::class)->create($user, $scene, ['character_id' => $copy->id, 'x' => $x, 'y' => $y, 'encounter' => $encounter]);
             if ($copy->npc_loot_backpack) {
                 $token = $copy->tokens()->where('scene_id', $scene->id)->firstOrFail();
                 $loot = LootContainer::create(['scene_id' => $scene->id, 'token_id' => $token->id,

@@ -6,6 +6,7 @@ use App\Models\Asset;
 use App\Models\Campaign;
 use App\Models\Character;
 use App\Models\Handout;
+use App\Models\LootContainer;
 use App\Models\Scene;
 use App\Models\SceneProp;
 use App\Models\Token;
@@ -52,6 +53,7 @@ class AssetPolicy
         }
         if ($role === 'gm') {
             return $asset->campaign_id === $campaign->id || $this->characterUse($asset, $campaign, $user, true)
+                || $this->lootUse($asset, $campaign, $user, true)
                 || Scene::where('campaign_id', $campaign->id)->where('map_asset_id', $asset->id)->exists()
                 || SceneProp::whereHas('scene', fn ($q) => $q->where('campaign_id', $campaign->id))->where('asset_id', $asset->id)->exists()
                 || Token::whereHas('scene', fn ($q) => $q->where('campaign_id', $campaign->id))->where('token_image_asset_id', $asset->id)->exists()
@@ -77,6 +79,7 @@ class AssetPolicy
 
         return Scene::whereKey($campaign->active_scene_id)->where('campaign_id', $campaign->id)->where('map_asset_id', $asset->id)->exists()
             || SceneProp::where('scene_id', $campaign->active_scene_id)->where('is_hidden', false)->where('asset_id', $asset->id)->get()->contains(fn ($p) => app(SceneVisibility::class)->allows($p, $user))
+            || $this->lootUse($asset, $campaign, $user, false)
             || Token::where('scene_id', $campaign->active_scene_id)->where('is_hidden', false)->where(function ($q) use ($asset) {
                 $q->where(fn ($q) => $q->whereNull('character_id')->where('token_image_asset_id', $asset->id))
                     ->orWhereHas('character', fn ($q) => $q->where('portrait_asset_id', $asset->id));
@@ -93,5 +96,22 @@ class AssetPolicy
                 ->orWhere('abilities', 'like', '%"'.$icon.'"%')
                 ->orWhereHas('inventory', fn ($q) => $q->where('quantity', '>', 0)->whereHas('definition', fn ($q) => $q->where('icon', $icon)->orWhere('gameplay', 'like', '%"'.$icon.'"%'))))
             ->exists();
+    }
+
+    private function lootUse(Asset $asset, Campaign $campaign, User $user, bool $gm): bool
+    {
+        $icon = 'asset:'.$asset->id;
+        $containers = LootContainer::whereHas('scene', fn ($q) => $q->where('campaign_id', $campaign->id))
+            ->whereHas('items', fn ($q) => $q->where('quantity', '>', 0)->whereHas('definition', fn ($q) => $q->where('icon', $icon)->orWhere('gameplay', 'like', '%"'.$icon.'"%')));
+        if ($gm) {
+            return $containers->exists();
+        }
+
+        return $containers->where('scene_id', $campaign->active_scene_id)->where('is_open', true)->get()
+            ->contains(function ($loot) use ($user) {
+                $object = $loot->object();
+
+                return $object && ! $object->is_hidden && app(SceneVisibility::class)->allows($object, $user);
+            });
     }
 }

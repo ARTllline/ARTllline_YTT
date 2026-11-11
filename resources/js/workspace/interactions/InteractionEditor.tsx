@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUp, ArrowDown, Plus, Trash2, MousePointer2 } from 'lucide-react';
 import { commandId } from '../../api/workspace';
+import { ApiError } from '../../api/client';
+import { abilityLabels } from '../../rpg/rules';
 import { CheckEditor, CheckHistoryList, defaultCheck } from './CheckEditor';
 import type { SceneStore } from '../../tabletop/state/SceneStore';
 import {
@@ -24,6 +26,8 @@ export function InteractionEditor({
     disabled: boolean;
 }) {
     const [draft, setDraft] = useState(actions);
+    const [base, setBase] = useState(actions);
+    const [uncertain, setUncertain] = useState(false);
     const [resources, setResources] = useState<InteractionResources | null>(null);
     const [busy, setBusy] = useState(false),
         [error, setError] = useState(''),
@@ -31,6 +35,21 @@ export function InteractionEditor({
     const [opened, setOpened] = useState(false);
     const mutation = useRef<string | null>(null);
     const sceneId = store.getSnapshot().scene.id!;
+    const remoteChanged = JSON.stringify(actions) !== JSON.stringify(base);
+    if (remoteChanged && JSON.stringify(draft) === JSON.stringify(base) && !busy) {
+        setBase(actions);
+        setDraft(actions);
+    }
+    const scene = store.getSnapshot().scene;
+    const stats = [
+        ...new Map(
+            [
+                ...Object.entries(abilityLabels).map(([key, label]) => ({ key, label })),
+                ...(scene.characters ?? []).flatMap((c) => c.derived?.checks ?? []),
+                ...scene.tokens.flatMap((t) => t.checkStats ?? []),
+            ].map((s) => [s.key, { key: s.key, label: s.label }]),
+        ).values(),
+    ];
     useEffect(() => {
         if (!opened) return;
         const controller = new AbortController();
@@ -47,6 +66,35 @@ export function InteractionEditor({
         setDraft(next);
         setSaved(false);
         setError('');
+    };
+    const save = () => {
+        mutation.current ??= commandId();
+        setBusy(true);
+        setError('');
+        setSaved(false);
+        const uuid = mutation.current;
+        const run = () => interactions.save(sceneId, kind, id, draft, uuid, base);
+        void (store.history ? store.history.prepare(uuid, run) : run())
+            .then((result) => {
+                store.accept(result, true);
+                if (result.preparationEdit)
+                    store.history?.recordPreparation(result.preparationEdit);
+                const canonical =
+                    (kind === 'prop' ? result.props : result.tokens)?.find((o) => o.id === id)
+                        ?.interactions ?? draft;
+                setBase(canonical);
+                setDraft(canonical);
+                mutation.current = null;
+                setUncertain(false);
+                setSaved(true);
+            })
+            .catch((e) => {
+                const terminal = e instanceof ApiError && e.status > 0 && e.status < 500;
+                if (terminal) mutation.current = null;
+                setUncertain(!terminal);
+                setError(e.message);
+            })
+            .finally(() => setBusy(false));
     };
     const patch = (index: number, value: Partial<ObjectInteraction>) =>
         change(draft.map((a, i) => (i === index ? { ...a, ...value } : a)));
@@ -68,7 +116,21 @@ export function InteractionEditor({
                     Игрок: ПКМ или долгое нажатие. Материал откроется только ему; событие действует
                     на сцену.
                 </p>
-                <fieldset disabled={disabled || busy}>
+                {remoteChanged && (
+                    <div role="alert">
+                        <p>Взаимодействия изменились в другой вкладке. Черновик сохранён здесь.</p>
+                        <button
+                            disabled={busy || uncertain}
+                            onClick={() => {
+                                setBase(actions);
+                                change(actions);
+                            }}
+                        >
+                            Загрузить актуальные действия
+                        </button>
+                    </div>
+                )}
+                <fieldset disabled={disabled || busy || uncertain}>
                     {draft.map((action, index) => {
                         const options =
                             action.result_type === 'cue' ? resources?.cues : resources?.handouts;
@@ -126,6 +188,7 @@ export function InteractionEditor({
                                     <CheckEditor
                                         value={action.check}
                                         resources={resources}
+                                        stats={stats}
                                         onChange={(check) => patch(index, { check })}
                                     />
                                 ) : (
@@ -217,6 +280,28 @@ export function InteractionEditor({
                         );
                     })}
                     <div className="interaction-editor-footer">
+                        {(['Осмотреть', 'Взаимодействовать'] as const).map((label) => (
+                            <button
+                                key={label}
+                                className="text-button"
+                                disabled={draft.length >= 8}
+                                onClick={() =>
+                                    change([
+                                        ...draft,
+                                        {
+                                            id: commandId(),
+                                            label,
+                                            icon: label === 'Осмотреть' ? 'eye' : 'hand',
+                                            result_type: 'nothing',
+                                            result_target: '',
+                                            enabled: true,
+                                        },
+                                    ])
+                                }
+                            >
+                                <Plus size={14} /> {label}
+                            </button>
+                        ))}
                         <button
                             className="text-button"
                             disabled={draft.length >= 8}
@@ -240,6 +325,7 @@ export function InteractionEditor({
                             className="secondary-button"
                             disabled={
                                 !resources ||
+                                remoteChanged ||
                                 draft.some(
                                     (a) =>
                                         !a.label.trim() ||
@@ -254,21 +340,7 @@ export function InteractionEditor({
                                             : a.result_type !== 'nothing' && !a.result_target),
                                 )
                             }
-                            onClick={() => {
-                                mutation.current ??= commandId();
-                                setBusy(true);
-                                setError('');
-                                setSaved(false);
-                                void interactions
-                                    .save(sceneId, kind, id, draft, mutation.current)
-                                    .then((result) => {
-                                        store.accept(result, true);
-                                        mutation.current = null;
-                                        setSaved(true);
-                                    })
-                                    .catch((e) => setError(e.message))
-                                    .finally(() => setBusy(false));
-                            }}
+                            onClick={save}
                         >
                             {busy ? 'Сохраняем…' : 'Сохранить'}
                         </button>
@@ -283,6 +355,11 @@ export function InteractionEditor({
                 {error && (
                     <p className="error" role="alert">
                         {error}
+                        {uncertain && (
+                            <button disabled={busy} onClick={save}>
+                                Повторить сохранение
+                            </button>
+                        )}
                     </p>
                 )}
             </section>

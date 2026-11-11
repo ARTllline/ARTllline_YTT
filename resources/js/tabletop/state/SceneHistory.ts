@@ -7,12 +7,16 @@ import type { SaveQueue } from './SaveQueue';
 
 export interface EditChange {
     kind:
+        | 'encounter'
+        | 'lootContents'
+        | 'interactionConfig'
         | 'token'
         | 'prop'
         | 'note'
         | 'region'
         | 'mapWorld'
         | 'propPresence'
+        | 'selectionPresence'
         | 'terrain'
         | 'structure'
         | 'fog';
@@ -27,6 +31,34 @@ export function historyEntry(
     before: Scene,
     result: Mutation,
 ): Entry | undefined {
+    if (command.type === 'encounter') {
+        const next = result.encounters?.find((e) => e.id === command.command.id) ?? null;
+        return {
+            label: next ? 'Подготовка столкновения' : 'Удаление столкновения',
+            changes: [
+                {
+                    kind: 'encounter',
+                    id: command.command.id,
+                    expected: { encounter: next },
+                    value: { encounter: command.command.expected },
+                },
+            ],
+        };
+    }
+    if (result.selectionEdit) {
+        const { present, snapshot } = result.selectionEdit;
+        return {
+            label: present ? (command.type === 'objects' && command.command.endpoint === 'composition-placement' ? 'Размещение пресета' : 'Дублирование группы') : 'Удаление группы',
+            changes: [
+                {
+                    kind: 'selectionPresence',
+                    id: before.id!,
+                    expected: { present, snapshot },
+                    value: { present: !present, snapshot },
+                },
+            ],
+        };
+    }
     if (result.fogPrevious && command.type === 'fog' && result.fogAction) {
         const { sequence } = result.fogAction;
         const { base } = result.fogPrevious;
@@ -146,11 +178,17 @@ export function historyEntry(
         );
     } else if (command.type === 'objects') {
         const c = command.command;
-        if (c.endpoint === 'selection' && c.data.action === 'move') {
+        if (
+            c.endpoint === 'selection' &&
+            (c.data.action === 'move' || c.data.action === 'translate')
+        ) {
+            const originals = c.data.action === 'translate' ? c.data.expected : undefined;
+            if (originals) label = 'Перемещение группы';
             result.tokens?.forEach((t) =>
                 add(
                     'token',
-                    before.tokens.find((v) => v.id === t.id),
+                    originals?.find((v) => v.kind === 'token' && v.id === t.id) ??
+                        before.tokens.find((v) => v.id === t.id),
                     t,
                     ['x', 'y'],
                 ),
@@ -158,9 +196,28 @@ export function historyEntry(
             result.props?.forEach((p) =>
                 add(
                     'prop',
-                    before.props?.find((v) => v.id === p.id),
+                    originals?.find((v) => v.kind === 'prop' && v.id === p.id) ??
+                        before.props?.find((v) => v.id === p.id),
                     p,
                     ['x', 'y'],
+                ),
+            );
+        } else if (c.endpoint === 'selection' && ['hide', 'show'].includes(c.data.action)) {
+            label = 'Видимость группы';
+            result.tokens?.forEach((t) =>
+                add(
+                    'token',
+                    result.selectionVisibilityBefore?.tokens.find((v) => v.id === t.id),
+                    t,
+                    ['isHidden'],
+                ),
+            );
+            result.props?.forEach((p) =>
+                add(
+                    'prop',
+                    result.selectionVisibilityBefore?.props.find((v) => v.id === p.id),
+                    p,
+                    ['isHidden'],
                 ),
             );
         } else if (c.endpoint === 'props' && c.data.action === 'update') {
@@ -238,8 +295,55 @@ export class SceneHistory {
         this.redo = [];
         this.publish();
     }
+    recordPreparation(change: EditChange) {
+        this.redo = [];
+        this.undo.push({
+            label:
+                change.kind === 'interactionConfig'
+                    ? 'Взаимодействия объекта'
+                    : 'Содержимое контейнера',
+            changes: [change],
+        });
+        if (this.undo.length > 50) this.undo.shift();
+        while (
+            this.undo.length > 1 &&
+            this.undo.reduce((sum, e) => sum + JSON.stringify(e).length, 0) > 8 * 1024 * 1024
+        )
+            this.undo.shift();
+        this.publish({ notice: '' });
+    }
+    prepare<T>(id: string, run: () => Promise<T>): Promise<T> {
+        this.store.trackMutation(id);
+        return new Promise((resolve, reject) => {
+            this.queue.enqueue(`preparation:${id}`, async () => {
+                try {
+                    resolve(await run());
+                } catch (error) {
+                    if (error instanceof ApiError && [403, 404, 409, 422].includes(error.status)) {
+                        reject(error);
+                        return;
+                    }
+                    // SaveQueue owns ambiguous writes across Inspector closure and retries the same UUID.
+                    throw error;
+                }
+            });
+        });
+    }
     record(command: SceneCommand, before: Scene | undefined, result: Mutation) {
-        if (before && !result.fogPrevious && result.revision !== (before.revision ?? 0) + 1) {
+        const translated =
+            command.type === 'objects' &&
+            command.command.endpoint === 'selection' &&
+            command.command.data.action === 'translate';
+        // The server checked every original position; unrelated revisions cannot invalidate this inverse.
+        if (
+            before &&
+            !translated &&
+            command.type !== 'encounter' &&
+            !result.selectionEdit &&
+            !result.selectionVisibilityBefore &&
+            !result.fogPrevious &&
+            result.revision !== (before.revision ?? 0) + 1
+        ) {
             this.clear();
             this.publish({ notice: 'Сцена менялась параллельно. История правок начата заново.' });
             return;

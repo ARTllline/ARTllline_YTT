@@ -59,8 +59,16 @@ The light sheet keeps turn navigation and the resolution queue visible. “Ин�
 Players get the read-only timeline rather than a second combat panel. No combat
 rules, commands, persistence or reconnect contracts changed.
 
-Deferred: encounter authoring, Director/Cue integration, Fog/LOS/Lighting and
-additional combat/rules mechanics. HP for other players' and NPC tokens continues
+Prepared scene encounters now have a separate optional **Столкновения** entry
+and an action in **Сессия** (the compact-screen entry).
+Its compact list/details supports confirmed launch with selected heroes, reserve
+group/individual activation and independent GM-hidden controls. It uses the same
+floating dock without Pin, keeps the map/camera in place, and routes initiative
+and turn management to the existing Combat Workspace. Preparation stays in Prepare.
+Runtime links, retries and completion follow [ENCOUNTER-02](SCENE_PREPARATION.md#encounter-02--prepared-composition-into-live-combat).
+
+Deferred: encounter authoring in Session, Director/Cue integration, Fog/LOS/Lighting
+redesign and additional combat/rules mechanics. HP for other players' and NPC tokens continues
 to follow the existing server visibility policy.
 
 ## Add during Session
@@ -68,7 +76,8 @@ to follow the existing server visibility policy.
 `Добавить → Character / NPC / Prop / Container / Interaction → search → choose → click on map`
 
 The compact floating picker replaces Creation Hub only in Session. It uses the
-existing global Character/NPC and asset libraries, without authoring controls.
+existing global Character/NPC and asset libraries, without authoring controls. Its
+EntityPicker is shared with Preparation; Props also expose existing Object Presets.
 Already represented campaign Characters are disabled; other library Characters
 and NPCs follow the existing copy/link semantics. Character placement ends after
 one click; NPCs and Props repeat until Esc or the placement bar's close button.

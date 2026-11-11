@@ -110,6 +110,10 @@ It stores InventoryItem instances, open/closed state and a revision counter. Sce
 and realtime carry only public container identity/state, not contents. Opening uses the
 existing radial menu and an ephemeral RPG loot window with Take, quantity, Take All,
 details and drag to the recipient inventory. GM can configure contents and close containers.
+The GM Inspector now embeds the container editor: global Item Library/campaign
+search, click/drag copies, quantity, removal and atomic replacement. Reading the
+Inspector keeps closed containers closed. See [PREP-03](SCENE_PREPARATION.md#prep-03--containers-and-interactive-objects)
+for authoring concurrency, safe SceneHistory and unchanged loot access rules.
 
 Players may open visible containers on the active scene and take into a controlled
 Character. Distance/LOS restrictions are not invented. Closed container GET responses hide

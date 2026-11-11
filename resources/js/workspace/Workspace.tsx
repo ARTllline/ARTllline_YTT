@@ -3,6 +3,9 @@ import { SessionRuntimeControls } from './session/SessionRuntimeControls';
 import { MapEditor } from './maps/MapEditor';
 import { SessionLog } from './session/SessionLog';
 import { LootOverlay } from '../rpg/loot';
+import { PreparationCatalog, initialPreparationCatalog } from './creation/PreparationCatalog';
+import { ENTITY_MIME } from './creation/EntityPicker';
+import { placementAppearance } from './creation/model';
 import { CreationHub } from './creation/CreationHub';
 import { SessionAddMenu } from './session/SessionAddMenu';
 import { PlacementOverlay } from './creation/PlacementOverlay';
@@ -126,6 +129,8 @@ export function Workspace({
             leaveSurface('.workspace-body > .workspace-left');
             leaveSurface('.workspace-body > .workspace-dock');
             setRuntimeOpen(false);
+            setPlacement(null);
+            setHubOpen(false);
             setMapOpen(false);
             dispatch({ type: 'mode', mode });
             if (mode === 'session') renderer.current?.setTool('select');
@@ -175,6 +180,9 @@ export function Workspace({
         campaign.liveRevision,
         initialScene?.id,
     ]);
+    useEffect(() => {
+        store.setEntityAuthoring(workspace.mode === 'prepare' && !mapOpen);
+    }, [store, workspace.mode, mapOpen]);
     const save = useSyncExternalStore(queue.subscribe, queue.getSnapshot);
     const syncStatus = useSceneLive(
         live.echo,
@@ -198,10 +206,18 @@ export function Workspace({
     const selectionKey = useWorkspaceSelection(store);
     const [hubOpen, setHubOpen] = useState(false);
     const [placement, setPlacement] = useState<Placement | null>(null);
+    const [catalog, setCatalog] = useState(initialPreparationCatalog);
+    const draggedEntity = useRef<Placement | null>(null);
+    const entityDragPreview = useRef(false);
+    const placementBusy = useRef(false);
     const rightPanel =
-        mapOpen || placement || (workspace.left && !sessionMode)
+        mapOpen || (placement && workspace.mode !== 'prepare') || (workspace.left && !sessionMode)
             ? null
-            : contextualPanel(workspace, selectionKey);
+            : placement && workspace.mode === 'prepare'
+              ? placement.type === 'libraryActor' && placement.encounter
+                  ? 'encounters'
+                  : 'entities'
+              : contextualPanel(workspace, selectionKey);
     const selectedToken = scene.tokens.find((token) => token.id === snapshot.selectedIds[0]);
     const compactContext = sessionMode && rightPanel === 'context' && !workspace.expanded;
     const openRight = (panel: RightPanel) =>
@@ -209,6 +225,8 @@ export function Workspace({
             if (panelGuard.current) throw new Error(panelGuard.current);
             if (window.innerWidth <= 1100) await sessionFlush.current?.();
             leaveSurface('.workspace-body > .workspace-dock');
+            setPlacement(null);
+            setHubOpen(false);
             dispatch({ type: 'right', panel, compact: window.innerWidth <= 1100 });
         });
     const closeRight = () => {
@@ -217,6 +235,7 @@ export function Workspace({
             return;
         }
         leaveSurface('.workspace-body > .workspace-dock');
+        setPlacement(null);
         dispatch({ type: 'close-right', selection: selectionKey });
     };
     useEffect(() => {
@@ -240,7 +259,44 @@ export function Workspace({
         store.select(null);
         renderer.current?.setTool('select');
         setPlacement(item);
+        if (workspace.mode === 'prepare' && !mapOpen)
+            dispatch({
+                type: 'right',
+                panel: item.type === 'libraryActor' && item.encounter ? 'encounters' : 'entities',
+                force: true,
+            });
     };
+    const endEntityDrag = () => {
+        if (!draggedEntity.current) return;
+        draggedEntity.current = null;
+        entityDragPreview.current = false;
+        renderer.current?.endPlacement();
+    };
+    const startEntityDrag = (item: Placement) => {
+        setPlacement(null);
+        draggedEntity.current = item;
+        entityDragPreview.current = false;
+    };
+    const openEntities = () =>
+        void run(async () => {
+            if (panelGuard.current) throw new Error(panelGuard.current);
+            await queue.flush();
+            setPlacement(null);
+            setHubOpen(false);
+            setMapOpen(false);
+            renderer.current?.setTool('select');
+            dispatch({ type: 'right', panel: 'entities', force: true });
+        });
+    const openEncounters = () =>
+        void run(async () => {
+            if (panelGuard.current) throw new Error(panelGuard.current);
+            await queue.flush();
+            setPlacement(null);
+            setHubOpen(false);
+            setMapOpen(false);
+            renderer.current?.setTool('select');
+            dispatch({ type: 'right', panel: 'encounters', force: true });
+        });
     const closeHub = () => {
         leaveSurface('.creation-hub');
         setHubOpen(false);
@@ -280,7 +336,8 @@ export function Workspace({
         try {
             await action();
         } catch (error) {
-            setError((error as Error).message);
+            // Failed queued commands already own their message and retry lifecycle.
+            setError(queue.getSnapshot().status === 'failed' ? '' : (error as Error).message);
         } finally {
             setBusy(false);
         }
@@ -375,57 +432,75 @@ export function Workspace({
             setPlaced(`${asset.name} · на сцене`);
         });
     };
-    const commitPlacement = (item: Placement, point: Point) =>
-        run(async () => {
-            if (panelGuard.current) throw new Error(panelGuard.current);
-            await queue.flush();
-            const at = snapPoint(point, store.getSnapshot().scene.grid);
-            if (item.type === 'libraryActor') {
-                const result = await api.placeLibraryActor(
-                    scene.id!,
-                    item.library,
-                    item.actorId,
-                    at,
-                );
-                store.addToken(result.token!, result.revision);
-                store.accept(result, true);
-                store.select(result.token!.id);
-            } else if (item.type === 'token') {
-                const result = await api.createToken(scene.id!, at, item.draft.asset, item.draft);
-                store.addToken(result.token!, result.revision);
-            } else if (item.type === 'prop' || item.type === 'objectPreset') {
-                store.objectCommand({
-                    endpoint: 'props',
-                    data: {
+    const commitPlacement = async (item: Placement, point: Point) => {
+        if (placementBusy.current) return;
+        placementBusy.current = true;
+        try {
+            await run(async () => {
+                if (panelGuard.current) throw new Error(panelGuard.current);
+                await queue.flush();
+                const at = snapPoint(point, store.getSnapshot().scene.grid);
+                if (item.type === 'composition') {
+                    const { compositionIssue } = await import('../api/compositions');
+                    const issue = compositionIssue(item.preset.members, at.x, at.y);
+                    if (issue) throw new Error(issue);
+                    store.objectCommand({endpoint: 'composition-placement', data: {presetId: item.preset.id, expectedRevision: item.preset.revision, ...at}});
+                } else if (item.type === 'libraryActor') {
+                    const result = await api.placeLibraryActor(
+                        scene.id!,
+                        item.library,
+                        item.actorId,
+                        at,
+                        item.encounter,
+                    );
+                    store.addToken(result.token!, result.revision);
+                    store.accept(result, true);
+                    store.select(result.token!.id);
+                } else if (item.type === 'token') {
+                    const result = await api.createToken(
+                        scene.id!,
+                        at,
+                        item.draft.asset,
+                        item.draft,
+                    );
+                    store.addToken(result.token!, result.revision);
+                } else if (item.type === 'prop' || item.type === 'objectPreset') {
+                    store.objectCommand({
+                        endpoint: 'props',
+                        data: {
+                            action: 'create',
+                            ...(item.type === 'prop'
+                                ? { assetId: item.asset.id, purpose: item.purpose }
+                                : {
+                                      presetId: item.preset.id,
+                                      rotation: item.rotation,
+                                      scaleFactor: item.scaleFactor,
+                                  }),
+                            ...at,
+                        },
+                    });
+                } else if (item.type === 'template') placeTemplate(item.template, at);
+                else if (item.type === 'note') {
+                    store.noteCommand({ action: 'create', ...at });
+                } else {
+                    const size = scene.grid.size * 3;
+                    store.regionCommand({
                         action: 'create',
-                        ...(item.type === 'prop'
-                            ? { assetId: item.asset.id, purpose: item.purpose }
-                            : {
-                                  presetId: item.preset.id,
-                                  rotation: item.rotation,
-                                  scaleFactor: item.scaleFactor,
-                              }),
-                        ...at,
-                    },
-                });
-            } else if (item.type === 'template') placeTemplate(item.template, at);
-            else if (item.type === 'note') {
-                store.noteCommand({ action: 'create', ...at });
-            } else {
-                const size = scene.grid.size * 3;
-                store.regionCommand({
-                    action: 'create',
-                    name: 'Новая область',
-                    shape: 'rectangle',
-                    enabled: false,
-                    geometry: { ...at, width: size, height: size },
-                });
-            }
-            await queue.flush();
-            setPlaced(`${item.name} · на сцене`);
-            if (!repeatsPlacement(item))
-                setPlacement((current) => (current === item ? null : current));
-        });
+                        name: 'Новая область',
+                        shape: 'rectangle',
+                        enabled: false,
+                        geometry: { ...at, width: size, height: size },
+                    });
+                }
+                await queue.flush();
+                setPlaced(`${item.name} · на сцене`);
+                if (!repeatsPlacement(item))
+                    setPlacement((current) => (current === item ? null : current));
+            });
+        } finally {
+            placementBusy.current = false;
+        }
+    };
     const [zoom, setZoom] = useState(100);
     const help = useRef<HTMLDialogElement>(null);
     const allowExit = useRef(false);
@@ -448,6 +523,8 @@ export function Workspace({
     const toggleLibrary = () =>
         void run(async () => {
             setRuntimeOpen(false);
+            setPlacement(null);
+            setHubOpen(false);
             if (panelGuard.current) throw new Error(panelGuard.current);
             await sessionFlush.current?.();
             dispatch({
@@ -493,6 +570,29 @@ export function Workspace({
         <div
             className={`workspace redesigned-workspace mode-${workspace.mode} ${mapOpen ? 'map-editor-open' : ''} ${sessionMode ? 'session-mode map-first-session' : ''}`}
             onKeyDownCapture={(event) => {
+                if (
+                    event.key === 'Escape' &&
+                    placement &&
+                    !document.querySelector('dialog[open]')
+                ) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setPlacement(null);
+                    return;
+                }
+                if (
+                    event.key === 'Escape' &&
+                    snapshot.entityAuthoring &&
+                    !(event.target as HTMLElement).closest(
+                        'input,textarea,select,[contenteditable=true]',
+                    ) &&
+                    !document.querySelector('dialog[open]') &&
+                    renderer.current?.cancelActiveGesture()
+                ) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return;
+                }
                 if (
                     event.key !== 'Escape' ||
                     tool === 'fog' ||
@@ -546,23 +646,41 @@ export function Workspace({
                 </div>
                 <div className="topbar-actions">
                     {!sessionMode && scene.id && (
-                        <button
-                            className="map-editor-launch"
-                            aria-expanded={mapOpen}
-                            aria-label={
-                                mapOpen
-                                    ? 'Закрыть редактор карты'
-                                    : scene.mapWorld
-                                      ? 'Редактировать карту'
-                                      : 'Создать редактируемую карту'
-                            }
-                            title={mapOpen ? 'Вернуться к сцене' : 'Открыть редактор карты'}
-                            disabled={busy}
-                            onClick={toggleMapEditor}
+                        <div
+                            className="preparation-workflow"
+                            role="group"
+                            aria-label="Режим подготовки"
                         >
-                            {mapOpen ? <X size={16} /> : <Map size={16} />}
-                            <span>{mapOpen ? 'Выйти из редактора' : 'Редактор карты'}</span>
-                        </button>
+                            <button
+                                aria-pressed={rightPanel === 'encounters'}
+                                onClick={openEncounters}
+                            >
+                                <Users size={16} /> Столкновения
+                            </button>
+                            <button
+                                aria-pressed={!mapOpen && rightPanel !== 'encounters'}
+                                onClick={openEntities}
+                            >
+                                <Users size={16} /> Содержимое
+                            </button>
+                            <button
+                                className="map-editor-launch"
+                                aria-expanded={mapOpen}
+                                aria-label={
+                                    mapOpen
+                                        ? 'Закрыть редактор карты'
+                                        : scene.mapWorld
+                                          ? 'Редактировать карту'
+                                          : 'Создать редактируемую карту'
+                                }
+                                title={mapOpen ? 'Вернуться к сцене' : 'Открыть редактор карты'}
+                                disabled={busy}
+                                onClick={toggleMapEditor}
+                            >
+                                {mapOpen ? <X size={16} /> : <Map size={16} />}
+                                <span>Карта</span>
+                            </button>
+                        </div>
                     )}
                     <button
                         className="command-launch"
@@ -679,42 +797,58 @@ export function Workspace({
                         if (
                             !event.dataTransfer.types.includes('Files') &&
                             !event.dataTransfer.types.includes(ASSET_MIME) &&
-                            !event.dataTransfer.types.includes(TEMPLATE_MIME)
+                            !event.dataTransfer.types.includes(TEMPLATE_MIME) &&
+                            !event.dataTransfer.types.includes(ENTITY_MIME)
                         )
                             return;
                         event.preventDefault();
                         const target = renderer.current?.dropTarget(event.clientX, event.clientY);
+                        if (draggedEntity.current) {
+                            if (!entityDragPreview.current) {
+                                const item = draggedEntity.current;
+                                const { url, prop, settings, rotation, scale } =
+                                    placementAppearance(item);
+                                renderer.current?.beginPlacement(item.name, url, prop, settings, item.type === 'composition' ? item.preset.members : undefined);
+                                renderer.current?.transformPlacement(rotation, scale);
+                                entityDragPreview.current = true;
+                            }
+                            renderer.current?.placementPreview(event.clientX, event.clientY);
+                        }
                         setDropHint(
-                            event.dataTransfer.types.includes(TEMPLATE_MIME)
-                                ? t('Place the saved group here')
-                                : event.dataTransfer.types.includes('application/x-ytt-prop')
-                                  ? t('Place an object here')
-                                  : event.dataTransfer.types.includes('Files')
-                                    ? t('Drop to choose: map, token or library')
-                                    : event.dataTransfer.types.includes('application/x-ytt-map')
-                                      ? scene.map
-                                          ? t('Drop to replace the map — confirmation follows')
-                                          : t('Drop to place the scene map')
-                                      : event.dataTransfer.types.includes(
-                                              'application/x-ytt-handout',
-                                          )
-                                        ? t('Drop to prepare and preview handout')
-                                        : event.dataTransfer.types.includes(CREATION_MIME)
-                                          ? t('Create a token here')
-                                          : target?.tokenId
-                                            ? t('replaceImage', {
-                                                  name:
-                                                      scene.tokens.find(
-                                                          (token) => token.id === target.tokenId,
-                                                      )?.name ?? t('selected token'),
-                                              })
-                                            : t('Create a token here'),
+                            draggedEntity.current
+                                ? draggedEntity.current.name
+                                : event.dataTransfer.types.includes(TEMPLATE_MIME)
+                                  ? t('Place the saved group here')
+                                  : event.dataTransfer.types.includes('application/x-ytt-prop')
+                                    ? t('Place an object here')
+                                    : event.dataTransfer.types.includes('Files')
+                                      ? t('Drop to choose: map, token or library')
+                                      : event.dataTransfer.types.includes('application/x-ytt-map')
+                                        ? scene.map
+                                            ? t('Drop to replace the map — confirmation follows')
+                                            : t('Drop to place the scene map')
+                                        : event.dataTransfer.types.includes(
+                                                'application/x-ytt-handout',
+                                            )
+                                          ? t('Drop to prepare and preview handout')
+                                          : event.dataTransfer.types.includes(CREATION_MIME)
+                                            ? t('Create a token here')
+                                            : target?.tokenId
+                                              ? t('replaceImage', {
+                                                    name:
+                                                        scene.tokens.find(
+                                                            (token) => token.id === target.tokenId,
+                                                        )?.name ?? t('selected token'),
+                                                })
+                                              : t('Create a token here'),
                         );
                         if (scene.id && !busy) setDropping(true);
                     }}
                     onDragLeave={(event) => {
-                        if (!event.currentTarget.contains(event.relatedTarget as Node))
+                        if (!event.currentTarget.contains(event.relatedTarget as Node)) {
                             setDropping(false);
+                            renderer.current?.hidePlacement();
+                        }
                     }}
                     onDrop={(event) => {
                         if (mapOpen || tool === 'fog') {
@@ -729,7 +863,23 @@ export function Workspace({
                         setDropping(false);
                         const file = event.dataTransfer.files[0];
                         const target = renderer.current?.dropTarget(event.clientX, event.clientY);
-                        if (busy || !target) return;
+                        if (
+                            busy ||
+                            save.status !== 'saved' ||
+                            !target ||
+                            !(event.target as HTMLElement).closest('.canvas-host')
+                        )
+                            return;
+                        if (
+                            draggedEntity.current &&
+                            event.dataTransfer.types.includes(ENTITY_MIME)
+                        ) {
+                            const item = draggedEntity.current;
+                            endEntityDrag();
+                            armPlacement(item);
+                            void commitPlacement(item, target.point);
+                            return;
+                        }
                         if (file && scene.id) {
                             setFileDrop({ file, point: target.point });
                             return;
@@ -821,6 +971,18 @@ export function Workspace({
                         />
                     )}
 
+                    {snapshot.entityAuthoring && snapshot.editorNotice && (
+                        <div className="preparation-selection-notice surface" role="alert">
+                            <span>{snapshot.editorNotice}</span>
+                            <button
+                                className="icon-button"
+                                aria-label="Закрыть сообщение"
+                                onClick={() => store.editorNotice('')}
+                            >
+                                <X size={15} />
+                            </button>
+                        </div>
+                    )}
                     {placed && (
                         <div className="placement-feedback" role="status" key={placed}>
                             ✓ {placed}
@@ -977,13 +1139,30 @@ export function Workspace({
                             />
                         )}
                         {sessionMode && scene.id && <SessionLog key={scene.id} scene={scene} />}
+                        {sessionMode && scene.id && (
+                            <button
+                                className="scene-switch session-encounters-launch"
+                                aria-expanded={rightPanel === 'encounters'}
+                                onClick={rightPanel === 'encounters' ? closeRight : openEncounters}
+                            >
+                                <Users size={15} /> Столкновения
+                            </button>
+                        )}
                         {scene.id && !mapOpen && (
                             <button
                                 className="creation-launch primary-button"
-                                aria-expanded={hubOpen}
+                                aria-expanded={
+                                    workspace.mode === 'prepare'
+                                        ? rightPanel === 'entities'
+                                        : hubOpen
+                                }
                                 onClick={() => {
                                     if (panelGuard.current) {
                                         setError(panelGuard.current);
+                                        return;
+                                    }
+                                    if (workspace.mode === 'prepare') {
+                                        openEntities();
                                         return;
                                     }
                                     setPlacement(null);
@@ -1139,6 +1318,31 @@ export function Workspace({
                             onPin={() => dispatch({ type: 'pin' })}
                             selectionToken={selectedToken}
                             panel={rightPanel}
+                            onEncounterPlace={armPlacement}
+                            onEncounterDrag={startEntityDrag}
+                            onEncounterDragEnd={endEntityDrag}
+                            onEncounters={openEncounters}
+                            onCombat={() => openRight('combat')}
+                            catalog={
+                                <PreparationCatalog
+                                    echo={live.echo}
+                                    userId={user.id}
+                                    campaignId={campaign.id}
+                                    placedCharacterIds={scene.tokens.flatMap((token) =>
+                                        token.characterId ? [token.characterId] : [],
+                                    )}
+                                    selectedPlacement={placement}
+                                    state={catalog}
+                                    onState={(value) => {
+                                        setPlacement(null);
+                                        setCatalog(value);
+                                    }}
+                                    onPlace={armPlacement}
+                                    onClose={closeRight}
+                                    onDragStart={startEntityDrag}
+                                    onDragEnd={endEntityDrag}
+                                />
+                            }
                             renderer={renderer}
                             queue={queue}
                             members={live.members}

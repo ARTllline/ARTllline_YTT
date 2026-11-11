@@ -4,6 +4,8 @@ use App\Models\User;
 use App\Realtime\ChannelAccess;
 use Illuminate\Support\Facades\Broadcast;
 
+Broadcast::channel('library.{owner}.compositions', fn (User $user, string $owner) => (string) $user->id === $owner);
+
 Broadcast::channel('campaign.{campaign}', fn (User $user, string $campaign) => app(ChannelAccess::class)->presence($user, $campaign));
 Broadcast::channel('campaign.{campaign}.control', fn (User $user, string $campaign) => (bool) app(ChannelAccess::class)->presence($user, $campaign));
 Broadcast::channel('campaign.{campaign}.media.user.{participant}', fn (User $user, string $campaign, string $participant) => (string) $user->id === $participant && (bool) app(ChannelAccess::class)->presence($user, $campaign));

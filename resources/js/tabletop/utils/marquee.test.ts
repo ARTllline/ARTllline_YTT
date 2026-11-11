@@ -39,3 +39,26 @@ describe('marquee world geometry', () => {
         ).toEqual({ tokenIds: [], propIds: ['p'] });
     });
 });
+
+it('Preparation Shift marquee adds intersections without toggling existing members off', () => {
+    expect(
+        marqueeSelection(
+            scene,
+            { x: 50, y: 50 },
+            { x: 130, y: 130 },
+            { tokenIds: ['t'], propIds: ['p'] },
+            true,
+        ),
+    ).toEqual({ tokenIds: ['t'], propIds: ['p'] });
+});
+it('marquee respects a rotated prop with an off-center pivot', () => {
+    const shifted = {
+        ...scene,
+        tokens: [],
+        props: [{ ...scene.props![0], x: 200, y: 100, rotation: 0, pivotX: 0, pivotY: 0 }],
+    };
+    expect(marqueeSelection(shifted, { x: 275, y: 105 }, { x: 280, y: 110 }).propIds).toEqual([
+        'p',
+    ]);
+    expect(marqueeSelection(shifted, { x: 165, y: 90 }, { x: 175, y: 99 }).propIds).toEqual([]);
+});

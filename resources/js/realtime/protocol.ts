@@ -1,3 +1,4 @@
+import { encounterPatch } from '../workspace/encounters/model';
 import { applyObjectPatch } from '../tabletop/state/objectPatch';
 import { applyStructurePatch, emptyHash, type StructurePatch } from '../tabletop/structure/model';
 import { terrainPatch } from '../tabletop/terrain/model';
@@ -13,6 +14,9 @@ export interface SceneEvent {
     dragSessionId?: string;
     payload: Pick<
         Mutation,
+        | 'encounters'
+        | 'encounterRuns'
+        | 'deletedEncounterId'
         | 'movementGeometryChanged'
         | 'vision'
         | 'lighting'
@@ -79,7 +83,7 @@ export function reduceEvent(scene: Scene, event: SceneEvent): Scene | 'gap' {
     }
     if (payload.deletedId) tokens = tokens.filter((t) => t.id !== payload.deletedId);
     return {
-        ...patched,
+        ...encounterPatch(patched, payload),
         ...payload.scene,
         ...(payload.vision ? { vision: payload.vision } : {}),
         ...(payload.lighting ? { lighting: payload.lighting } : {}),

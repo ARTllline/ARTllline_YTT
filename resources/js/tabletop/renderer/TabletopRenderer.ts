@@ -20,6 +20,8 @@ import { DirectorCamera } from '../../director/DirectorCamera';
 import type { DirectorEvent } from '../../director/DirectorState';
 import { ScenePropLayer } from '../layers/ScenePropLayer';
 import { PlacementGhost } from '../layers/PlacementGhost';
+import { CompositionGhost } from '../layers/CompositionGhost';
+import type { CompositionMember } from '../../api/compositions';
 import { Application, Container, Texture, Graphics } from 'pixi.js';
 import { FogLayer } from '../layers/FogLayer';
 import { SpatialLayer } from '../layers/SpatialLayer';
@@ -69,6 +71,8 @@ export class TabletopRenderer {
     private overlay = new InteractionLayer();
     private response = new Graphics();
     private placementGhost = new PlacementGhost();
+    private compositionGhost = new CompositionGhost();
+    private compositionPlacement = false;
     private mapGuide = new Graphics();
     readonly gameplay = new GameplayLayer();
     setGameplayTarget(
@@ -158,6 +162,7 @@ export class TabletopRenderer {
             // Local interaction guides remain visible beyond LOS and manual fog.
             this.overlay,
             this.placementGhost,
+            this.compositionGhost,
             this.mapGuide,
             this.buildGuide,
             this.collision,
@@ -210,11 +215,17 @@ export class TabletopRenderer {
         );
         let movementUpdate = this.store.getSnapshot().movementUpdate;
         let previousBuild = this.store.getSnapshot().build;
+        let previousAuthoring = this.store.getSnapshot().entityAuthoring;
         let previousEditor = this.store.getSnapshot().mapEditor;
         const sync = () => {
             const state = this.store.getSnapshot();
-            if (state.mapEditor !== previousEditor || state.build?.mode !== previousBuild?.mode)
+            if (
+                state.entityAuthoring !== previousAuthoring ||
+                state.mapEditor !== previousEditor ||
+                state.build?.mode !== previousBuild?.mode
+            )
                 this.input?.cancel();
+            previousAuthoring = state.entityAuthoring;
             previousBuild = state.build;
             this.input?.refreshBuild();
             previousEditor = state.mapEditor;
@@ -229,7 +240,9 @@ export class TabletopRenderer {
                 this.app.renderer,
                 this.store.role === 'player'
                     ? scene.vision
-                    : this.store.spatial.tool === 'fog' ? this.store.spatial.fogVision : undefined,
+                    : this.store.spatial.tool === 'fog'
+                      ? this.store.spatial.fogVision
+                      : undefined,
                 scene.width,
                 scene.height,
                 movementUpdate !== state.movementUpdate
@@ -239,7 +252,11 @@ export class TabletopRenderer {
                 movementUpdate !== state.movementUpdate &&
                     !!(state.movementUpdate?.reset || state.movementUpdate?.geometryChanged),
             );
-            this.lighting.sync(scene, this.store.role === 'player' ? this.vision.currentMask.texture : undefined, state.lightingDraft);
+            this.lighting.sync(
+                scene,
+                this.store.role === 'player' ? this.vision.currentMask.texture : undefined,
+                state.lightingDraft,
+            );
             if ('backBuffer' in this.app.renderer) {
                 // Only the Darkvision saturation pass samples the already rendered map.
                 this.app.renderer.backBuffer.useBackBuffer =
@@ -460,13 +477,20 @@ export class TabletopRenderer {
             this.fog.update(
                 this.app.renderer,
                 scene.fog,
-                fogTool ? this.store.spatial.draft ?? this.store.spatial.pendingFog ?? null : null,
+                fogTool
+                    ? (this.store.spatial.draft ?? this.store.spatial.pendingFog ?? null)
+                    : null,
                 scene.width,
                 scene.height,
                 encoded ? 'encoded' : fogTool ? 'gm' : gm ? 'gm-plain' : 'plain',
             );
             if (gm)
-                this.vision.sync(this.app.renderer, fogTool ? this.store.spatial.fogVision : undefined, scene.width, scene.height);
+                this.vision.sync(
+                    this.app.renderer,
+                    fogTool ? this.store.spatial.fogVision : undefined,
+                    scene.width,
+                    scene.height,
+                );
             const manualFog = scene.fog?.base === 'covered' || !!scene.fog?.actions.length;
             this.vision.setFogPresentation(encoded && manualFog ? this.fog.texture : undefined, gm);
             this.spatial.update(
@@ -566,8 +590,10 @@ export class TabletopRenderer {
                 const dy = (b.x - a.x) * scale;
                 const seen = [0.25, 0.5, 0.75].some((t) => {
                     const p = along(a, b, t);
-                    return visible({ x: p.x - dx, y: p.y + dy }) ||
-                        visible({ x: p.x + dx, y: p.y - dy });
+                    return (
+                        visible({ x: p.x - dx, y: p.y + dy }) ||
+                        visible({ x: p.x + dx, y: p.y - dy })
+                    );
                 });
                 if (!seen) continue;
             }
@@ -637,6 +663,9 @@ export class TabletopRenderer {
             y: bounds.top + camera.y + target.y * camera.zoom,
         };
     }
+    cancelActiveGesture() {
+        return this.input?.cancelActiveGesture() ?? false;
+    }
     cancelGesture() {
         this.input?.cancel();
     }
@@ -653,6 +682,11 @@ export class TabletopRenderer {
     }
     placementPreview(clientX: number, clientY: number) {
         const target = this.dropTarget(clientX, clientY);
+        if (this.compositionPlacement) {
+            const point = snapPoint(target.point, this.store.getSnapshot().scene.grid);
+            this.compositionGhost.move(point, this.camera.state.zoom);
+            return worldToScreen(point, this.camera.state);
+        }
         this.placementGhost.position.copyFrom(
             snapPoint(target.point, this.store.getSnapshot().scene.grid),
         );
@@ -667,7 +701,14 @@ export class TabletopRenderer {
         url?: string,
         prop?: { width: number; height: number },
         preset?: PresetSettings,
+        composition?: CompositionMember[],
     ) {
+        this.endPlacement();
+        if (composition) {
+            this.compositionPlacement = true;
+            this.compositionGhost.configure(composition);
+            return;
+        }
         const grid = this.store.getSnapshot().scene.grid;
         const size = prop
             ? grid.visible
@@ -693,9 +734,12 @@ export class TabletopRenderer {
     }
     hidePlacement() {
         this.placementGhost.visible = false;
+        this.compositionGhost.visible = false;
     }
     endPlacement() {
         this.placementGhost.clear();
+        this.compositionGhost.clear();
+        this.compositionPlacement = false;
     }
     dropTarget(clientX: number, clientY: number) {
         const bounds = this.app.canvas.getBoundingClientRect();

@@ -4,6 +4,8 @@ namespace App\Items;
 
 use App\Actions\AbilityActions;
 use App\Actions\CharacterActions;
+use App\Actions\ItemLibrary;
+use App\Actions\PreparationObjectHistory;
 use App\Actions\SceneTransaction;
 use App\Combat\LifeCycle;
 use App\Models\Campaign;
@@ -26,7 +28,7 @@ class LootActions
     {
         Gate::forUser($u)->authorize('view', $campaign);
         $gm = $campaign->roleFor($u) === 'gm';
-        if (in_array($data['action'] ?? 'read', ['configure', 'give', 'remove', 'close'])) {
+        if (in_array($data['action'] ?? 'read', ['configure', 'give', 'remove', 'quantity', 'replace', 'close'])) {
             Gate::forUser($u)->authorize('update', $campaign);
         }
         if (empty($data['containerId'])) {
@@ -86,6 +88,9 @@ class LootActions
             $gm = $campaign->roleFor($u) === 'gm';
             $op = $data['action'];
             $taken = [];
+            abort_if($loot && isset($data['expectedVersion']) && $loot->version !== $data['expectedVersion'], 409, 'Содержимое изменилось. Обновите контейнер и повторите правку.');
+            $history = app(PreparationObjectHistory::class);
+            $before = $gm && $loot && isset($data['expectedVersion']) && in_array($op, ['give', 'remove', 'quantity', 'replace']) ? $history->captureLoot($loot) : null;
             if ($op === 'configure') {
                 $scene = $campaign->scenes()->findOrFail($data['sceneId']);
                 $object = ($data['kind'] === 'token' ? $scene->tokens() : $scene->props())->findOrFail($data['objectId']);
@@ -96,9 +101,19 @@ class LootActions
                 }
             } elseif ($op === 'open' || $op === 'close') {
                 $loot->update(['is_open' => $op === 'open']);
-            } elseif ($op === 'give') {
-                $d = ItemDefinition::where('campaign_id', $campaign->id)->findOrFail($data['definitionId']);
+            } elseif ($op === 'give' || $op === 'replace') {
+                abort_unless(isset($data['libraryItemId']) !== isset($data['definitionId']), 422, 'Выберите один предмет из библиотеки или кампании.');
+                $d = isset($data['libraryItemId'])
+                    ? app(ItemLibrary::class)->instantiate($u, $data['libraryItemId'], $loot)
+                    : ItemDefinition::where('campaign_id', $campaign->id)->findOrFail($data['definitionId']);
+                if ($op === 'replace') {
+                    $loot->items()->where('quantity', '>', 0)->findOrFail($data['itemId'])->update(['quantity' => 0]);
+                }
                 $taken = app(ItemTransfers::class)->add($loot, $d, $data['quantity']);
+            } elseif ($op === 'quantity') {
+                $i = $loot->items()->with('definition')->where('quantity', '>', 0)->findOrFail($data['itemId']);
+                abort_if($data['quantity'] > $i->definition->max_stack, 422, 'Количество превышает размер стопки. Добавьте ещё одну стопку из библиотеки.');
+                $i->update(['quantity' => $data['quantity']]);
             } elseif ($op === 'remove') {
                 $i = $loot->items()->findOrFail($data['itemId']);
                 $i->update(['quantity' => 0]);
@@ -119,6 +134,9 @@ class LootActions
             }
             $mutation = $this->changed($u, $loot);
             $result = ['mutation' => $mutation, 'loot' => $this->snapshot($loot->fresh(), $gm), 'transferred' => $taken];
+            if ($before !== null) {
+                $result['preparationEdit'] = $history->edit('lootContents', (string) $loot->id, $before, $history->captureLoot($loot->fresh()));
+            }
             DB::table('loot_commands')->insert(['user_id' => $u->id, 'campaign_id' => $campaign->id, 'mutation_id' => $uuid, 'fingerprint' => $hash, 'result' => json_encode($result), 'created_at' => now()]);
 
             return $result;

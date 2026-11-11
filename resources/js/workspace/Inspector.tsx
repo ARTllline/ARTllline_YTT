@@ -248,7 +248,13 @@ export function Inspector({
                                     }}
                                 />
                             </div>
-                            <LootSetup store={store} kind="token" id={token.id} loot={token.loot} />
+                            <LootSetup
+                                key={token.id}
+                                store={store}
+                                kind="token"
+                                id={token.id}
+                                loot={token.loot}
+                            />
                             <TokenCombatControls
                                 token={token}
                                 store={store}

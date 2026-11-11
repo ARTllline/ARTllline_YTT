@@ -1,3 +1,6 @@
+import { EncounterPanel, EncounterSelection } from './encounters/EncounterPanel';
+import { SessionEncounters } from './encounters/SessionEncounters';
+import { GroupInspector } from './objects/GroupInspector';
 import { lazy, Suspense, type ComponentProps } from 'react';
 import { Inspector } from './Inspector';
 import { NoteInspector } from './notes/NoteInspector';
@@ -40,8 +43,20 @@ export function WorkspaceDock({
     onExpand,
     onPin,
     selectionToken,
+    catalog,
+    onEncounterPlace,
+    onEncounterDrag,
+    onEncounterDragEnd,
+    onEncounters,
+    onCombat,
 }: {
     panel: RightPanel;
+    catalog?: React.ReactNode;
+    onEncounterPlace: (item: import('./creation/model').Placement) => void;
+    onEncounterDrag: (item: import('./creation/model').Placement) => void;
+    onEncounterDragEnd: () => void;
+    onEncounters: () => void;
+    onCombat: () => void;
     renderer?: React.RefObject<
         import('../tabletop/renderer/TabletopRenderer').TabletopRenderer | null
     >;
@@ -63,6 +78,9 @@ export function WorkspaceDock({
 }) {
     const { store, campaign, onClose } = inspector;
     const state = store.getSnapshot();
+    const group =
+        !!state.entityAuthoring &&
+        state.selectedIds.length + (state.selectedPropIds?.length ?? 0) > 1;
     const active = campaign.activeSceneId === state.scene.id;
     const runtimeToken = session && panel === 'context' && selectionToken;
     const contextProps = runtimeToken
@@ -86,7 +104,7 @@ export function WorkspaceDock({
             className={`workspace-dock dock-${panel} ${session ? `session-surface ${compact ? 'is-compact' : 'is-expanded'} ${pinned && panel !== 'combat' ? 'is-pinned' : ''}` : ''}`}
             aria-label="Контекстная панель"
         >
-            {session && !compact && panel !== 'combat' && (
+            {session && !compact && panel !== 'combat' && panel !== 'encounters' && (
                 <div className="session-surface-controls">
                     {panel === 'context' && expanded && (
                         <button onClick={() => onExpand?.(false)} title="Свернуть к контексту">
@@ -149,10 +167,45 @@ export function WorkspaceDock({
                         </Panel>
                     }
                 >
-                    {(panel === 'scene' ||
-                        (panel === 'context' &&
-                            !state.selectedNoteId &&
-                            !state.selectedRegionId)) && <Inspector {...inspector} />}
+                    {panel === 'encounters' && session && (
+                        <SessionEncounters
+                            store={store}
+                            queue={queue}
+                            onClose={onClose}
+                            onCombat={onCombat}
+                        />
+                    )}
+                    {panel === 'encounters' && !session && (
+                        <EncounterPanel
+                            store={store}
+                            queue={queue}
+                            onClose={onClose}
+                            onPlace={onEncounterPlace}
+                            onDragStart={onEncounterDrag}
+                            onDragEnd={onEncounterDragEnd}
+                        />
+                    )}
+                    {panel === 'context' && state.entityAuthoring && !group && (
+                        <EncounterSelection
+                            store={store}
+                            onOpen={onEncounters}
+                            disabled={inspector.combatBusy}
+                        />
+                    )}
+                    {panel === 'entities' && catalog}
+                    {panel === 'context' && group && (
+                        <GroupInspector
+                            store={store}
+                            queue={queue}
+                            onClose={onClose}
+                            onEncounters={onEncounters}
+                        />
+                    )}
+                    {!group &&
+                        (panel === 'scene' ||
+                            (panel === 'context' &&
+                                !state.selectedNoteId &&
+                                !state.selectedRegionId)) && <Inspector {...inspector} />}
                     {panel === 'context' && state.selectedNoteId && <NoteInspector store={store} />}
                     {(panel === 'region' || (panel === 'context' && state.selectedRegionId)) && (
                         <Panel title="Области" subtitle="АВТОМАТИЗАЦИЯ" onClose={onClose}>

@@ -27,6 +27,14 @@ class LootController extends Controller
 
     public function command(Request $r, Campaign $campaign, LootActions $a): array
     {
-        return $a->command($r->user(), $campaign, $r->validate(['clientMutationId' => 'required|uuid', 'action' => 'required|in:configure,open,close,give,remove,take,take-all', 'containerId' => 'required_unless:action,configure|integer|min:1', 'sceneId' => 'required_if:action,configure|integer|min:1', 'kind' => 'required_if:action,configure|in:token,prop', 'objectId' => 'required_if:action,configure|integer|min:1', 'name' => 'sometimes|string|max:80', 'definitionId' => 'required_if:action,give|uuid', 'itemId' => 'required_if:action,take,remove|uuid', 'characterId' => 'required_if:action,take,take-all|integer|min:1', 'quantity' => 'required_if:action,give|integer|between:1,999']));
+        return $a->command($r->user(), $campaign, $r->validate([
+            'clientMutationId' => 'required|uuid', 'action' => 'required|in:configure,open,close,give,remove,quantity,replace,take,take-all',
+            'containerId' => 'required_unless:action,configure|integer|min:1', 'sceneId' => 'required_if:action,configure|integer|min:1',
+            'kind' => 'required_if:action,configure|in:token,prop', 'objectId' => 'required_if:action,configure|integer|min:1', 'name' => 'sometimes|string|max:80',
+            'definitionId' => 'sometimes|uuid', 'libraryItemId' => 'sometimes|uuid',
+            'itemId' => 'required_if:action,take,remove,quantity,replace|uuid', 'characterId' => 'required_if:action,take,take-all|integer|min:1',
+            'quantity' => 'required_if:action,give,quantity,replace|integer|between:1,999',
+            'expectedVersion' => 'required_if:action,quantity,replace|integer|min:0',
+        ]));
     }
 }

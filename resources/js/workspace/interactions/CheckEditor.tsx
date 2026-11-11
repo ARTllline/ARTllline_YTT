@@ -75,10 +75,12 @@ export function CheckEditor({
     value,
     resources,
     onChange,
+    stats = [],
 }: {
     value: InteractionCheck;
     resources: InteractionResources | null;
     onChange: (next: InteractionCheck) => void;
+    stats?: { key: string; label: string }[];
 }) {
     const patch = (change: Partial<InteractionCheck>) => onChange({ ...value, ...change });
     return (
@@ -93,19 +95,34 @@ export function CheckEditor({
                 />
             </label>
             <label>
-                Ключ проверки персонажа
-                <input
-                    aria-label="Ключ проверки"
+                Характеристика или навык
+                <select
+                    aria-label="Навык проверки"
                     value={value.stat_key ?? ''}
-                    placeholder={value.ability_key ?? 'perception'}
-                    maxLength={48}
-                    onChange={(e) => patch({ stat_key: e.target.value })}
-                />
+                    onChange={(e) =>
+                        patch({
+                            stat_key: e.target.value,
+                            label:
+                                stats.find((s) => s.key === e.target.value)?.label ?? value.label,
+                        })
+                    }
+                >
+                    {!stats.some((s) => s.key === value.stat_key) && (
+                        <option value={value.stat_key ?? ''}>
+                            {value.stat_key ? value.label : 'Фиксированный модификатор'}
+                        </option>
+                    )}
+                    {stats.map((s) => (
+                        <option key={s.key} value={s.key}>
+                            {s.label}
+                        </option>
+                    ))}
+                </select>
             </label>
             {!value.stat_key && value.modifier !== undefined && (
                 <p className="hint">
-                    Старая проверка Task 16B · фиксированный модификатор {value.modifier ?? 0}.
-                    Укажите ключ, чтобы использовать характеристику персонажа.
+                    Модификатор задан вручную: {value.modifier ?? 0}. Выберите навык, чтобы
+                    использовать характеристику персонажа.
                 </p>
             )}
             <div className="check-numbers">
@@ -147,6 +164,15 @@ export function CheckEditor({
             />
             <details>
                 <summary>Дополнительно</summary>
+                <label>
+                    Ключ проверки персонажа
+                    <input
+                        aria-label="Ключ проверки"
+                        value={value.stat_key ?? ''}
+                        maxLength={48}
+                        onChange={(e) => patch({ stat_key: e.target.value })}
+                    />
+                </label>
                 <label className="check-toggle">
                     <input
                         type="checkbox"

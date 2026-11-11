@@ -66,6 +66,10 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
     });
     Route::middleware('auth')->group(function () {
+        Route::get('/library/compositions', [\App\Http\Controllers\CompositionPresetController::class, 'index']);
+        Route::post('/library/compositions/{composition}/command', [\App\Http\Controllers\CompositionPresetController::class, 'command'])->name('library.compositions.command')->middleware([IdempotentMutation::class, 'throttle:60,1']);
+        Route::post('/scenes/{scene}/composition-presets', [\App\Http\Controllers\CompositionPresetController::class, 'store'])->name('scene.composition-save')->middleware([IdempotentMutation::class, 'throttle:30,1']);
+        Route::post('/scenes/{scene}/composition-placement', [\App\Http\Controllers\CompositionPresetController::class, 'place'])->name('scene.composition-place')->middleware([IdempotentMutation::class, 'throttle:60,1']);
         Route::get('/library/object-presets', [ObjectPresetController::class, 'index']);
         Route::middleware('throttle:60,1')->prefix('/library/object-presets')->group(function () {
             Route::post('/', [ObjectPresetController::class, 'store'])->name('library.object-presets.store')->middleware(IdempotentMutation::class);
@@ -166,6 +170,8 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/campaigns/{campaign}/handouts/revoke', [HandoutController::class, 'revoke'])->name('campaign.handout.revoke')->middleware(IdempotentMutation::class);
         Route::post('/campaigns/{campaign}/handouts', [HandoutController::class, 'store'])->name('campaign.handout.save')->middleware(IdempotentMutation::class);
         Route::post('/campaigns/{campaign}/handouts/show', [HandoutController::class, 'show'])->name('campaign.handout.show')->middleware(IdempotentMutation::class);
+        Route::post('/scenes/{scene}/encounters', \App\Http\Controllers\EncounterController::class)->name('scene.encounters')->middleware(IdempotentMutation::class);
+        Route::post('/scenes/{scene}/encounters/combat', [\App\Http\Controllers\EncounterController::class, 'combat'])->name('scene.encounters.combat')->middleware(IdempotentMutation::class);
         Route::post('/scenes/{scene}/notes', NoteController::class)->name('scene.notes')->middleware(IdempotentMutation::class);
         Route::post('/scenes/{scene}/adventuring', [AdventuringController::class, 'command'])->name('scene.adventuring')->middleware(IdempotentMutation::class);
         Route::get('/scenes/{scene}/adventuring/history', [AdventuringController::class, 'history']);

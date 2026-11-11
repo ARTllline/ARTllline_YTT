@@ -1,3 +1,4 @@
+import { objects } from '../../api/objects';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { api, type Mutation } from '../../api/workspace';
 import { SceneStore } from './SceneStore';
@@ -185,4 +186,68 @@ describe('persistent scene commands', () => {
         expect(order).toEqual(['first', 'second']);
         expect(queue.getSnapshot()).toEqual({ status: 'saved', error: null });
     });
+});
+
+it('rejects an authoring group as one unit, restores canonical positions, retains selection and frees the queue', async () => {
+    const scene = { ...createDemoScene(), id: '1', revision: 4 },
+        token = scene.tokens[0];
+    const store = new SceneStore(scene),
+        { queue } = new ScenePersistence(store, '1');
+    store.setEntityAuthoring(true);
+    store.select(token.id);
+    vi.spyOn(objects, 'command').mockRejectedValue(new ApiError('Группа изменилась', 409));
+    vi.spyOn(api, 'snapshot').mockResolvedValue(scene);
+    store.objectCommand({
+        endpoint: 'selection',
+        data: {
+            action: 'translate',
+            tokenIds: [token.id],
+            propIds: [],
+            anchorKind: 'token',
+            anchorId: token.id,
+            x: token.x + 100,
+            y: token.y + 100,
+            expected: [{ kind: 'token', id: token.id, x: token.x, y: token.y }],
+        },
+    });
+    await queue.flush();
+    expect(queue.getSnapshot().status).toBe('saved');
+    expect(store.getSnapshot().scene).toEqual(scene);
+    expect(store.selection().tokenIds).toEqual([token.id]);
+    expect(store.getSnapshot().editorNotice).toBe('Группа изменилась');
+    expect(store.history!.getSnapshot().undo).toBe('');
+});
+it('retries an ambiguous authoring group with the same UUID and records exactly one undo', async () => {
+    const scene = { ...createDemoScene(), id: '1', revision: 4 },
+        token = scene.tokens[0];
+    const store = new SceneStore(scene),
+        { queue } = new ScenePersistence(store, '1');
+    store.setEntityAuthoring(true);
+    store.select(token.id);
+    const send = vi
+        .spyOn(objects, 'command')
+        .mockRejectedValueOnce(new ApiError('Нет связи', 0))
+        .mockResolvedValue({
+            revision: 5,
+            tokens: [{ ...token, x: token.x + 100, y: token.y + 100 }],
+        });
+    store.objectCommand({
+        endpoint: 'selection',
+        data: {
+            action: 'translate',
+            tokenIds: [token.id],
+            propIds: [],
+            anchorKind: 'token',
+            anchorId: token.id,
+            x: token.x + 100,
+            y: token.y + 100,
+            expected: [{ kind: 'token', id: token.id, x: token.x, y: token.y }],
+        },
+    });
+    await expect(queue.flush()).rejects.toThrow('Нет связи');
+    queue.retry();
+    await queue.flush();
+    expect(send.mock.calls[0][2]).toBe(send.mock.calls[1][2]);
+    expect(store.history!.getSnapshot().undo).toBe('Перемещение группы');
+    expect(store.selection().tokenIds).toEqual([token.id]);
 });

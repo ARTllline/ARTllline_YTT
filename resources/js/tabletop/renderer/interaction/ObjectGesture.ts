@@ -1,3 +1,4 @@
+import { selectionBounds, translationIssue } from '../../utils/selectionTransform';
 import type { Point, SceneProp, Token } from '../../types/scene';
 import type { SceneStore } from '../../state/SceneStore';
 import type { TokenLayer } from '../../layers/TokenLayer';
@@ -11,6 +12,9 @@ import type { Scene } from '../../types/scene';
 /** GM selection gestures use the same PointerController capture and DOM listeners. */
 export class ObjectGesture {
     private drag?: {
+        authoring: boolean;
+        collapse: boolean;
+        blocked: boolean;
         start: Point;
         anchor: Token | SceneProp;
         kind: 'token' | 'prop';
@@ -38,14 +42,27 @@ export class ObjectGesture {
         const state = this.store.getSnapshot();
         const editable = editorInteractionScene(state.scene, state.mapEditor);
         if (state.mapEditor && !editable.props?.length) return false;
-        const resize = this.props.resizeHit(point, state.selectedPropIds ?? [], zoom);
-        const tokenId = resize || state.mapEditor ? null : this.tokens.hit(point),
+        const count = state.selectedIds.length + (state.selectedPropIds?.length ?? 0);
+        const authoring = !!state.entityAuthoring && !state.mapEditor;
+        const resize =
+            authoring && count > 1
+                ? null
+                : this.props.resizeHit(point, state.selectedPropIds ?? [], zoom);
+        const tokenId =
+                resize || state.mapEditor
+                    ? null
+                    : this.tokens.hit(point, authoring ? Math.max(5, 6 / zoom) : 5),
             propId = resize ?? (!tokenId ? this.props.hit(point) : null);
         if (!tokenId && !propId) return false;
         const kind = tokenId ? 'token' : 'prop',
             id = (tokenId ?? propId)!;
         const selection = this.store.selection();
-        if (tokenId && !shift && selection.tokenIds.length + selection.propIds.length <= 1)
+        if (
+            tokenId &&
+            !authoring &&
+            !shift &&
+            selection.tokenIds.length + selection.propIds.length <= 1
+        )
             return false;
         const already = (kind === 'token' ? selection.tokenIds : selection.propIds).includes(id);
         if (shift || !already) this.store.selectObject(kind, id, shift);
@@ -53,10 +70,17 @@ export class ObjectGesture {
         const selected = this.store.selection();
         const tokens = state.scene.tokens.filter((t) => selected.tokenIds.includes(t.id));
         const props = (state.scene.props ?? []).filter((p) => selected.propIds.includes(p.id));
-        if ([...tokens, ...props].some((o) => o.isLocked)) return true;
+        const issue = translationIssue([...tokens, ...props]);
+        if (issue) {
+            if (authoring) this.store.editorNotice(issue);
+            if (!authoring) return true;
+        }
         const anchor = (kind === 'token' ? tokens : props).find((o) => o.id === id)!;
         tokens.forEach((token) => this.tokens.finishMovement(token.id));
         this.drag = {
+            authoring,
+            blocked: !!issue,
+            collapse: authoring && already && count > 1,
             start: point,
             anchor,
             kind,
@@ -72,13 +96,17 @@ export class ObjectGesture {
     move(point: Point, zoom: number) {
         const d = this.drag;
         if (!d) return;
+        if (d.blocked) {
+            d.moved ||= Math.hypot(point.x - d.start.x, point.y - d.start.y) > 3 / zoom;
+            return;
+        }
         if (point.x === d.point.x && point.y === d.point.y && zoom === d.zoom) {
             this.preview();
             return;
         }
         d.point = point;
         d.zoom = zoom;
-        d.moved ||= Math.hypot(point.x - d.start.x, point.y - d.start.y) > 2;
+        d.moved ||= Math.hypot(point.x - d.start.x, point.y - d.start.y) > 3 / zoom;
         this.preview();
     }
     private scales() {
@@ -118,6 +146,23 @@ export class ObjectGesture {
         }
         const { scene } = this.store.getSnapshot();
         if (d.frame?.scene === scene && d.frame.point === d.point) return;
+        if (
+            d.authoring &&
+            d.frame?.scene !== scene &&
+            (d.tokens.some((o) => {
+                const current = scene.tokens.find((v) => v.id === o.id);
+                return !current || current.isLocked || current.x !== o.x || current.y !== o.y;
+            }) ||
+                d.props.some((o) => {
+                    const current = scene.props?.find((v) => v.id === o.id);
+                    return !current || current.isLocked || current.x !== o.x || current.y !== o.y;
+                }))
+        ) {
+            this.cancel();
+            this.overlay.clear();
+            this.store.editorNotice('Группа изменилась во время перемещения. Повторите жест.');
+            return;
+        }
         d.frame = { scene, point: d.point };
         const target = snapPoint(
             { x: d.anchor.x + d.point.x - d.start.x, y: d.anchor.y + d.point.y - d.start.y },
@@ -126,6 +171,19 @@ export class ObjectGesture {
         const dx = target.x - d.anchor.x,
             dy = target.y - d.anchor.y;
         const moved = (p: Point) => ({ x: p.x + dx, y: p.y + dy });
+        if (d.authoring) {
+            const members = [...d.tokens, ...d.props];
+            const issue = translationIssue(members, dx, dy);
+            d.tokens.forEach((t) => this.tokens.preview(t.id, moved(t)));
+            d.props.forEach((p) => this.props.preview(p.id, moved(p)));
+            this.overlay.showSelectionTransform(
+                selectionBounds(members, { x: dx, y: dy }),
+                d.zoom,
+                members.length,
+                issue,
+            );
+            return;
+        }
         if (d.geometry?.scene !== scene) {
             const props = new Set(d.props.map((p) => p.id));
             const obstacles = d.tokens.length ? movementObstacles(scene) : [];
@@ -170,6 +228,7 @@ export class ObjectGesture {
         const d = this.drag;
         if (!d) return;
         this.move(point, d.zoom);
+        if (this.drag !== d) return;
         if (d.moved) {
             if (d.resize) {
                 const s = this.scales();
@@ -188,10 +247,41 @@ export class ObjectGesture {
                     this.store.getSnapshot().scene.grid,
                 );
                 this.cancel();
+                if (d.authoring) {
+                    this.overlay.clear();
+                    if (target.x === d.anchor.x && target.y === d.anchor.y) return;
+                    const issue = translationIssue(
+                        [...d.tokens, ...d.props],
+                        target.x - d.anchor.x,
+                        target.y - d.anchor.y,
+                    );
+                    if (issue) {
+                        this.store.editorNotice(issue);
+                        return;
+                    }
+                }
                 this.store.objectCommand({
                     endpoint: 'selection',
                     data: {
-                        action: 'move',
+                        ...(d.authoring
+                            ? {
+                                  action: 'translate' as const,
+                                  expected: [
+                                      ...d.tokens.map((o) => ({
+                                          kind: 'token' as const,
+                                          id: o.id,
+                                          x: o.x,
+                                          y: o.y,
+                                      })),
+                                      ...d.props.map((o) => ({
+                                          kind: 'prop' as const,
+                                          id: o.id,
+                                          x: o.x,
+                                          y: o.y,
+                                      })),
+                                  ],
+                              }
+                            : { action: 'move' as const }),
                         tokenIds: d.tokens.map((t) => t.id),
                         propIds: d.props.map((p) => p.id),
                         anchorKind: d.kind,
@@ -201,15 +291,24 @@ export class ObjectGesture {
                 });
             }
         }
+        if (!d.moved && d.collapse) this.store.selectObject(d.kind, d.anchor.id);
         this.drag = undefined;
     }
     cancel() {
         const d = this.drag;
         this.drag = undefined;
         if (!d) return;
+        if (d.authoring) {
+            const scene = this.store.getSnapshot().scene;
+            d.tokens.forEach((t) =>
+                this.tokens.preview(t.id, scene.tokens.find((o) => o.id === t.id) ?? t),
+            );
+            this.overlay.clear();
+        }
         d.props.forEach((p) => {
-            this.props.preview(p.id, p);
-            this.props.resize(p.id, p.scaleX, p.scaleY);
+            const current = this.store.getSnapshot().scene.props?.find((o) => o.id === p.id) ?? p;
+            this.props.preview(p.id, current);
+            this.props.resize(p.id, current.scaleX, current.scaleY);
         });
     }
     get tokenIds() {

@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, type RefObject } from 'react';
 import { Minus, MousePointer2, Plus, RotateCcw, RotateCw, X } from 'lucide-react';
 import type { TabletopRenderer } from '../../tabletop/renderer/TabletopRenderer';
 import type { Point } from '../../tabletop/types/scene';
-import { repeatsPlacement, type Placement } from './model';
+import { placementAppearance, repeatsPlacement, type Placement } from './model';
 
 export function PlacementOverlay({
     item,
@@ -27,23 +27,18 @@ export function PlacementOverlay({
     useLayoutEffect(() => {
         latest.current = { busy, onPlace, onCancel, onRotate, onScale, item };
     }, [busy, onPlace, onCancel, onRotate, onScale, item]);
-    const asset =
-        item.type === 'token' ? item.draft.asset : item.type === 'prop' ? item.asset : undefined;
-    const preset = item.type === 'objectPreset' ? item.preset : undefined;
-    const prop = item.type === 'prop' ? item.asset : undefined;
-    const rotation = item.type === 'objectPreset' ? item.rotation : 0;
-    const scale = item.type === 'objectPreset' ? item.scaleFactor : 1;
-    const url = item.type === 'libraryActor' ? item.previewUrl : (preset?.asset.url ?? asset?.url);
+    const { url, prop, settings, rotation, scale } = placementAppearance(item);
+    const composition = item.type === 'composition' ? item.preset.members : undefined;
     useLayoutEffect(() => {
         const current = renderer.current;
-        current?.beginPlacement(item.name, url, prop, preset?.settings);
+        current?.beginPlacement(item.name, url, prop, settings, composition);
         return () => {
             current?.endPlacement();
         };
-    }, [renderer, item.name, prop, preset, url]);
+    }, [renderer, item.name, prop, settings, url, composition]);
     useLayoutEffect(() => {
         renderer.current?.transformPlacement(rotation, scale);
-    }, [renderer, rotation, scale, preset, prop, url, item.name]);
+    }, [renderer, rotation, scale, settings, prop, url, item.name]);
     useLayoutEffect(() => {
         const host = marker.current!.parentElement!,
             canvas = host.querySelector('canvas');
@@ -91,7 +86,19 @@ export function PlacementOverlay({
             renderer.current?.hidePlacement();
         };
         const key = (e: KeyboardEvent) => {
-            if ((e.target as HTMLElement).closest('input,textarea,select,dialog')) return;
+            if (document.querySelector('dialog[open]')) return;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                latest.current.onCancel();
+                return;
+            }
+            if (
+                (e.target as HTMLElement).closest(
+                    'input,textarea,select,dialog,[contenteditable=true]',
+                )
+            )
+                return;
             if (e.code === 'Space') pan = true;
             if (
                 ['KeyR', 'BracketLeft', 'BracketRight'].includes(e.code) &&
@@ -106,15 +113,31 @@ export function PlacementOverlay({
                 if (e.code === 'KeyR') latest.current.onRotate(e.shiftKey ? -15 : 15);
                 else latest.current.onScale(e.code === 'BracketLeft' ? -0.1 : 0.1);
             }
-            if (['KeyV', 'KeyH'].includes(e.code) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            if (
+                [
+                    'KeyV',
+                    'KeyH',
+                    'KeyF',
+                    'KeyP',
+                    ...(latest.current.item.type === 'objectPreset' ? [] : ['KeyR']),
+                ].includes(e.code) &&
+                !e.ctrlKey &&
+                !e.metaKey &&
+                !e.altKey
+            ) {
                 latest.current.onCancel();
-                renderer.current?.setTool(e.code === 'KeyH' ? 'pan' : 'select');
+                renderer.current?.setTool(
+                    (
+                        {
+                            KeyV: 'select',
+                            KeyH: 'pan',
+                            KeyF: 'fog',
+                            KeyP: 'ping',
+                            KeyR: 'ruler',
+                        } as const
+                    )[e.code as 'KeyV' | 'KeyH' | 'KeyF' | 'KeyP' | 'KeyR'],
+                );
                 return;
-            }
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-                latest.current.onCancel();
             }
             if (e.key === 'Enter' && e.target === canvas) {
                 e.preventDefault();

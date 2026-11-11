@@ -8,6 +8,7 @@ import {
     X,
     ArrowLeft,
     SlidersHorizontal,
+    Swords,
 } from 'lucide-react';
 import { type Campaign } from '../../api/workspace';
 import { ResourcePicker } from '../../session/ResourcePicker';
@@ -133,6 +134,7 @@ export function SessionRuntimeControls({
                             </button>
                             {(
                                 [
+                                    ['encounters', 'Столкновения', Swords],
                                     ['handouts', 'Показать Handout', BookOpen],
                                     ['players', 'Игроки и подключение', Users],
                                     ['audio', 'Звук и атмосфера', Volume2],

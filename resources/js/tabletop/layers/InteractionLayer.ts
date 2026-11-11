@@ -60,6 +60,27 @@ export class InteractionLayer extends Container {
         ).fill({ color: 0x101820, alpha: 0.92 });
         this.movementLabel.visible = true;
     }
+    showSelectionTransform(
+        bounds: { x: number; y: number; width: number; height: number },
+        zoom: number,
+        count: number,
+        issue: string,
+    ) {
+        const pad = 8 / zoom;
+        this.clear()
+            .roundRect(
+                bounds.x - pad,
+                bounds.y - pad,
+                bounds.width + pad * 2,
+                bounds.height + pad * 2,
+                5 / zoom,
+            )
+            .stroke({ color: issue ? 0xff907b : 0xa6e5c9, width: 1.5 / zoom, alpha: 0.9 });
+        this.movementLabel.text = issue || `Выбрано: ${count} · перемещение группы`;
+        this.movementLabel.scale.set(1 / zoom);
+        this.movementLabel.position.set(bounds.x, bounds.y - pad - 24 / zoom);
+        this.movementLabel.visible = true;
+    }
     showMarquee(a: Point, b: Point, zoom: number) {
         this.clear()
             .rect(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(a.x - b.x), Math.abs(a.y - b.y))

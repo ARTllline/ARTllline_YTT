@@ -56,6 +56,7 @@ class SceneSnapshotBuilder
                 'props' => ($gm ? SceneProp::with('asset')->where('scene_id', $scene->id)->orderBy('z_index')->orderBy('id')->get() : app(SceneVisibility::class)->view($scene, $user)['props'])->map(fn ($p) => $p->projection($gm))->all(),
                 'combat' => app(CombatView::class)->build($scene, $gm, $user),
                 ...($gm ? ['regions' => SceneRegion::where('scene_id', $scene->id)->orderBy('id')->get()->map(fn ($r) => $r->projection())->all()] : []),
+                ...($gm ? ['encounters' => \App\Models\SceneEncounter::projections($scene), 'encounterRuns' => EncounterRuntime::projections($scene)] : []),
                 ...($gm ? ['notes' => SceneNote::where('scene_id', $scene->id)->orderBy('id')->get()->map(fn ($n) => $n->projection())->all()] : []),
             ];
         });

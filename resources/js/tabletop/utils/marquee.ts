@@ -1,3 +1,4 @@
+import { propFootprint } from './selectionTransform';
 import type { ObjectSelection, Point, Scene } from '../types/scene';
 
 /** Intersections in world coordinates, including rotated prop footprints. */
@@ -6,6 +7,7 @@ export function marqueeSelection(
     a: Point,
     b: Point,
     previous?: ObjectSelection,
+    additive = false,
 ): ObjectSelection {
     const x = Math.min(a.x, b.x),
         y = Math.min(a.y, b.y);
@@ -29,14 +31,7 @@ export function marqueeSelection(
             const r = (p.rotation * Math.PI) / 180,
                 c = Math.cos(r),
                 s = Math.sin(r);
-            const hw = (p.image.width * p.scaleX) / 2,
-                hh = (p.image.height * p.scaleY) / 2;
-            const corners = [
-                [-hw, -hh],
-                [hw, -hh],
-                [hw, hh],
-                [-hw, hh],
-            ].map(([u, v]) => ({ x: p.x + u * c - v * s, y: p.y + u * s + v * c }));
+            const corners = propFootprint(p);
             return [
                 { x: 1, y: 0 },
                 { x: 0, y: 1 },
@@ -55,8 +50,12 @@ export function marqueeSelection(
     ];
     return previous
         ? {
-              tokenIds: toggle(previous.tokenIds, tokenIds),
-              propIds: toggle(previous.propIds, propIds),
+              tokenIds: additive
+                  ? [...new Set([...previous.tokenIds, ...tokenIds])]
+                  : toggle(previous.tokenIds, tokenIds),
+              propIds: additive
+                  ? [...new Set([...previous.propIds, ...propIds])]
+                  : toggle(previous.propIds, propIds),
           }
         : { tokenIds, propIds };
 }

@@ -46,6 +46,10 @@ export interface ControlReceipt {
 }
 
 export interface Mutation extends importObjectPatch {
+    preparationEdit?: import('../tabletop/state/SceneHistory').EditChange;
+    encounters?: import('../workspace/encounters/model').PreparedEncounter[];
+    encounterRuns?: import('../workspace/encounters/model').EncounterRun[];
+    deletedEncounterId?: string;
     controlReceipt?: ControlReceipt;
     lighting?: Scene['lighting'];
     movementGeometryChanged?: boolean;
@@ -64,6 +68,11 @@ export interface Mutation extends importObjectPatch {
         after: import('../tabletop/terrain/model').TerrainEditState;
     };
     propEdits?: { id: string; present: boolean; snapshot: string }[];
+    selectionEdit?: { present: boolean; snapshot: string };
+    selectionVisibilityBefore?: {
+        tokens: { id: string; isHidden: boolean }[];
+        props: { id: string; isHidden: boolean }[];
+    };
     mapWorld?: import('../tabletop/mapWorld').MapWorld | null;
     scene?: Partial<Scene>;
     character?: import('../tabletop/types/scene').Character;
@@ -211,14 +220,30 @@ export const api = {
                   }
                 : { assetId: null, x: 0, y: 0, width: 1440, height: 1080, clientMutationId },
         ),
+    encounterCombat: (
+        scene: string,
+        command: import('../workspace/encounters/model').EncounterCombatCommand,
+        clientMutationId: string,
+    ) =>
+        request<Mutation>(`/scenes/${scene}/encounters/combat`, 'POST', {
+            ...command,
+            clientMutationId,
+        }),
+    encounter: (
+        scene: string,
+        command: import('../workspace/encounters/model').EncounterCommand,
+        clientMutationId: string,
+    ) => request<Mutation>(`/scenes/${scene}/encounters`, 'POST', { ...command, clientMutationId }),
     placeLibraryActor: (
         scene: string,
         library: 'characters' | 'npcs',
         actorId: string,
         point: Point,
+        encounter?: { id: string; groupId: string },
     ) =>
         request<Mutation>(`/scenes/${scene}/${library}`, 'POST', {
             [library === 'npcs' ? 'npcId' : 'characterId']: actorId,
+            ...(encounter ? { encounter } : {}),
             ...point,
             clientMutationId: commandId(),
         }),

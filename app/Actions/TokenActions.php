@@ -24,6 +24,9 @@ class TokenActions
     {
         return $this->transaction->run($scene, function ($scene) use ($user, $data) {
             Gate::forUser($user)->authorize('update', $scene);
+            $encounter = $data['encounter'] ?? null;
+            unset($data['encounter']);
+            if ($encounter && $encounter['groupId'] !== 'main') $data['is_hidden'] = true;
             $character = null;
             $newCharacter = false;
             if (! empty($data['character_id'])) {
@@ -65,7 +68,8 @@ class TokenActions
                 app(CharacterActions::class)->publish($user, $character, $scene->id);
             }
 
-            return ['token' => $this->snapshots->token($token, true, $user), 'charactersChanged' => $character !== null];
+            return ['token' => $this->snapshots->token($token, true, $user), 'charactersChanged' => $character !== null]
+                + ($encounter ? app(EncounterActions::class)->attach($scene, $encounter['id'], $encounter['groupId'], $token->id) : []);
         }, 'token.created');
     }
 
@@ -178,9 +182,10 @@ class TokenActions
                 app(CombatActions::class)->remove($combat, (string) $entry->id);
             }
             abort_if(LootContainer::where('token_id', $token->id)->whereHas('items', fn ($q) => $q->where('quantity', '>', 0))->exists(), 422, 'Сначала переместите содержимое добычи.');
+            $encounters = \App\Models\SceneEncounter::forTokens([$token->id]);
             $token->delete();
 
-            return ['deletedId' => (string) $token->id, 'tokens' => $scene->tokens()->get()->map(fn ($t) => $this->snapshots->token($t, true, $user))->all(), '_wasVisible' => ! $token->is_hidden, '_combatChanged' => true];
+            return ['encounters' => \App\Models\SceneEncounter::projections($scene, $encounters), 'deletedId' => (string) $token->id, 'tokens' => $scene->tokens()->get()->map(fn ($t) => $this->snapshots->token($t, true, $user))->all(), '_wasVisible' => ! $token->is_hidden, '_combatChanged' => true];
         }, 'token.removed');
     }
 }

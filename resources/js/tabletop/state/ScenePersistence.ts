@@ -38,11 +38,13 @@ export class ScenePersistence {
                       ? `move:${command.id}`
                       : command.type === 'objects'
                         ? `objects:${mutationId}`
-                        : command.type === 'region'
-                          ? `region:${command.command.id ?? mutationId}`
-                          : command.type === 'note'
-                            ? `note:${command.command.action === 'create' ? mutationId : command.command.id}`
-                            : command.type;
+                        : command.type === 'encounter' || command.type === 'encounterCombat'
+                          ? `encounter:${mutationId}`
+                          : command.type === 'region'
+                            ? `region:${command.command.id ?? mutationId}`
+                            : command.type === 'note'
+                              ? `note:${command.command.action === 'create' ? mutationId : command.command.id}`
+                              : command.type;
         const version = (this.versions.get(key) ?? 0) + 1;
         this.versions.set(key, version);
         this.queue.enqueue(
@@ -107,6 +109,21 @@ export class ScenePersistence {
                         command.complete();
                         return;
                     }
+                    if (command.type === 'encounterCombat') {
+                        result = await api.encounterCombat(
+                            this.sceneId,
+                            command.command,
+                            mutationId,
+                        );
+                        this.store.accept(result, true);
+                        return;
+                    }
+                    if (command.type === 'encounter') {
+                        result = await api.encounter(this.sceneId, command.command, mutationId);
+                        this.store.history?.record(command, before, result);
+                        this.store.accept(result, true);
+                        return;
+                    }
                     if (command.type === 'region') {
                         result = await automation.region(this.sceneId, command.command, mutationId);
                         this.store.history?.record(command, before, result);
@@ -122,6 +139,7 @@ export class ScenePersistence {
                         const data = command.command.data;
                         if (
                             command.command.endpoint === 'spawn' ||
+                            command.command.endpoint === 'composition-placement' ||
                             ('action' in data && ['create', 'duplicate'].includes(data.action))
                         )
                             this.store.selectObjects({
@@ -160,7 +178,9 @@ export class ScenePersistence {
                                 : await api.resetFog(this.sceneId, command.base, mutationId);
                         this.store.history?.record(command, before, result);
                         this.store.accept(result, true);
-                        this.store.spatial.finishFog(command.type === 'fog' ? command.stroke : undefined);
+                        this.store.spatial.finishFog(
+                            command.type === 'fog' ? command.stroke : undefined,
+                        );
                         return;
                     }
                     if (command.type === 'token')
@@ -187,11 +207,27 @@ export class ScenePersistence {
                     );
                 } catch (error) {
                     if (
+                        (command.type === 'encounter' || command.type === 'encounterCombat') &&
+                        error instanceof ApiError &&
+                        [403, 404, 409, 422].includes(error.status)
+                    ) {
+                        try {
+                            this.store.reconcile(await api.snapshot(this.sceneId));
+                        } catch {
+                            /* Permission can be revoked. */
+                        }
+                        this.store.editorNotice(error.message);
+                        return;
+                    }
+                    if (
                         (command.type === 'fog' || command.type === 'fogReset') &&
                         error instanceof ApiError &&
                         [403, 404, 409, 422].includes(error.status)
                     ) {
-                        this.store.spatial.finishFog(command.type === 'fog' ? command.stroke : undefined, error.message);
+                        this.store.spatial.finishFog(
+                            command.type === 'fog' ? command.stroke : undefined,
+                            error.message,
+                        );
                         return;
                     }
                     if (
@@ -218,14 +254,16 @@ export class ScenePersistence {
                     if (
                         command.type === 'objects' &&
                         (this.store.getSnapshot().mapEditor ||
-                            (command.command.endpoint === 'selection' &&
-                                command.command.data.action === 'move')) &&
+                            command.command.endpoint === 'selection' || command.command.endpoint === 'composition-placement') &&
                         error instanceof ApiError &&
                         [403, 404, 409, 422].includes(error.status)
                     ) {
                         // A definitive editor rejection must not trap the queue behind an invalid transform.
                         this.store.reconcile(await api.snapshot(this.sceneId));
-                        if (this.store.getSnapshot().mapEditor)
+                        if (
+                            this.store.getSnapshot().mapEditor ||
+                            this.store.getSnapshot().entityAuthoring
+                        )
                             this.store.editorNotice(error.message);
                         else this.store.combatNotice(error.message);
                         return;

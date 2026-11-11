@@ -1,4 +1,5 @@
 import { ObjectGesture } from './ObjectGesture';
+import { SelectionDuplicatePreview } from '../../layers/SelectionDuplicatePreview';
 import type { Graphics } from 'pixi.js';
 import { BuildGesture } from '../../structure/BuildGesture';
 import { TerrainGesture } from '../../terrain/TerrainGesture';
@@ -45,6 +46,7 @@ const isEditing = (target: EventTarget | null) =>
     !!target.closest('input,textarea,select,[contenteditable="true"]');
 
 export class PointerController {
+    private duplicatePreview = new SelectionDuplicatePreview();
     private clickMove: ClickToMove;
     private dragRoute: DragRoutePreview;
     private spatial: SpatialGesture;
@@ -86,6 +88,7 @@ export class PointerController {
         this.clickMove = new ClickToMove(store, overlay);
         this.dragRoute = new DragRoutePreview(overlay);
         this.spatial = new SpatialGesture(store);
+        overlay.addChild(this.duplicatePreview);
         if (buildGuide && store.role === 'gm') {
             this.buildGesture = new BuildGesture(store, buildGuide, () => ({
                 topLeft: screenToWorld({ x: 0, y: 0 }, this.camera.state),
@@ -157,11 +160,27 @@ export class PointerController {
         return { x: e.clientX - bounds.left, y: e.clientY - bounds.top };
     };
     refresh = () => {
+        const state = this.store.getSnapshot();
+        if (
+            state.duplicatePlacement &&
+            (!state.entityAuthoring || state.mapEditor || !['select', 'pan'].includes(this.tool))
+        )
+            this.store.cancelDuplicate();
+        this.duplicatePreview.sync(
+            this.store.getSnapshot().duplicatePlacement,
+            this.camera.state.zoom,
+        );
         this.tokens.selection(this.store.getSnapshot().selectedIds, this.hover);
         this.props?.selection(
             this.store.getSnapshot().selectedPropIds ?? [],
             this.propHover,
-            this.store.role === 'gm',
+            this.store.role === 'gm' &&
+                !(
+                    this.store.getSnapshot().entityAuthoring &&
+                    this.store.getSnapshot().selectedIds.length +
+                        (this.store.getSnapshot().selectedPropIds?.length ?? 0) >
+                        1
+                ),
         );
         this.canvas.style.cursor =
             !this.space && !['select', 'pan'].includes(this.tool)
@@ -190,6 +209,10 @@ export class PointerController {
         const point = this.local(e),
             world = screenToWorld(point, this.camera.state);
         const panning = e.button === 1 || this.space || this.tool === 'pan';
+        if (!panning && this.store.getSnapshot().duplicatePlacement) {
+            this.store.placeDuplicate(snapPoint(world, this.store.getSnapshot().scene.grid));
+            return;
+        }
         const selected = this.store.getSnapshot().selectedIds;
         const routeClick =
             !panning &&
@@ -198,6 +221,7 @@ export class PointerController {
             !e.ctrlKey &&
             !e.metaKey &&
             !e.altKey &&
+            !this.store.getSnapshot().entityAuthoring &&
             selected.length === 1 &&
             this.clickMove.eligible(selected[0]) &&
             !this.tokens.hit(world) &&
@@ -293,8 +317,14 @@ export class PointerController {
         if (!panning && !['select', 'pan'].includes(this.tool)) {
             if (this.tool === 'fog') {
                 const { width, height } = this.store.getSnapshot().scene;
-                if (this.store.role !== 'gm' || !this.store.objectEditingEnabled ||
-                    world.x < 0 || world.y < 0 || world.x > width || world.y > height)
+                if (
+                    this.store.role !== 'gm' ||
+                    !this.store.objectEditingEnabled ||
+                    world.x < 0 ||
+                    world.y < 0 ||
+                    world.x > width ||
+                    world.y > height
+                )
                     return;
             }
             this.tokens.finishMovements();
@@ -315,7 +345,10 @@ export class PointerController {
         }
         if (
             !panning &&
-            (!e.altKey || this.store.getSnapshot().mapEditor || !this.tokens.hit(world)) &&
+            (!e.altKey ||
+                this.store.getSnapshot().entityAuthoring ||
+                this.store.getSnapshot().mapEditor ||
+                !this.tokens.hit(world)) &&
             this.objects?.down(world, e.shiftKey, this.camera.state.zoom)
         ) {
             this.gesture = {
@@ -346,6 +379,7 @@ export class PointerController {
                     ? state.selectedIds[0]
                     : undefined;
             const route =
+                !state.entityAuthoring &&
                 id &&
                 this.clickMove.eligible(id) &&
                 !e.shiftKey &&
@@ -402,6 +436,16 @@ export class PointerController {
             point.y >= 0 &&
             point.x < this.canvas.clientWidth &&
             point.y < this.canvas.clientHeight;
+        if (!gesture && !this.space && this.store.getSnapshot().duplicatePlacement) {
+            this.duplicatePreview.move(
+                snapPoint(
+                    screenToWorld(point, this.camera.state),
+                    this.store.getSnapshot().scene.grid,
+                ),
+                this.camera.state.zoom,
+            );
+            return;
+        }
         if (
             this.tool === 'build' &&
             (!this.space || gesture?.build) &&
@@ -472,7 +516,12 @@ export class PointerController {
                 const [a, b] = draft.geometry.points;
                 this.overlay.showMarquee(a, b, this.camera.state.zoom);
             } else if (draft?.shape === 'brush') {
-                this.overlay.showBrush(world, draft.geometry.radius!, this.camera.state.zoom, draft.operation === 'cover');
+                this.overlay.showBrush(
+                    world,
+                    draft.geometry.radius!,
+                    this.camera.state.zoom,
+                    draft.operation === 'cover',
+                );
             }
             gesture.last = point;
             return;
@@ -590,6 +639,7 @@ export class PointerController {
                         gesture.origin,
                         screenToWorld(this.local(e), this.camera.state),
                         gesture.marquee.previous,
+                        !!this.store.getSnapshot().entityAuthoring,
                     ),
                 );
             else if (!gesture.marquee.previous) this.store.select(null);
@@ -671,6 +721,11 @@ export class PointerController {
         this.store.dragSessionId = undefined;
         this.finish();
     };
+    cancelActiveGesture() {
+        if (!this.gesture) return false;
+        this.cancel();
+        return true;
+    }
     reapplyPreview() {
         this.clickMove.sync(this.camera.state.zoom);
         this.spatial.tick();
@@ -774,6 +829,11 @@ export class PointerController {
     };
     private keyDown = (e: KeyboardEvent) => {
         if (isEditing(e.target) || document.querySelector('dialog[open]')) return;
+        if (e.key === 'Escape' && this.store.getSnapshot().duplicatePlacement) {
+            e.preventDefault();
+            this.store.cancelDuplicate();
+            return;
+        }
         if (
             this.tool === 'build' &&
             (e.key === 'Enter' || (e.code === 'Space' && !this.inside)) &&
@@ -878,7 +938,9 @@ export class PointerController {
             this.refresh();
         }
         if (e.key === 'Escape') {
+            const active = !!this.gesture;
             this.cancel();
+            if (active && this.store.getSnapshot().entityAuthoring) return;
             this.spatial.clearFinished();
             this.tool = 'select';
             this.store.select(null);
@@ -896,6 +958,7 @@ export class PointerController {
         }
     };
     destroy() {
+        this.duplicatePreview.destroy({ children: true });
         this.cancel();
         this.clickMove.destroy();
         this.dragRoute.cancel();

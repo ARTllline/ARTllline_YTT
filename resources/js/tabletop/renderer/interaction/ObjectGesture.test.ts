@@ -26,7 +26,11 @@ function fixture(resize = false, locked = false) {
         grid: { ...scene.grid, size: 60, offset: { x: 0, y: 0 }, snap: true },
         props: [prop],
     });
-    const tokens = { hit: vi.fn(() => null), finishMovement: vi.fn() };
+    const tokens = {
+        hit: vi.fn<() => string | null>(() => null),
+        finishMovement: vi.fn(),
+        preview: vi.fn(),
+    };
     const props = {
         hit: vi.fn(() => 'p'),
         resizeHit: vi.fn(() => (resize ? 'p' : null)),
@@ -37,7 +41,11 @@ function fixture(resize = false, locked = false) {
         store,
         tokens as unknown as TokenLayer,
         props as unknown as ScenePropLayer,
-        { showMovement: vi.fn() } as unknown as InteractionLayer,
+        {
+            showMovement: vi.fn(),
+            showSelectionTransform: vi.fn(),
+            clear: vi.fn(),
+        } as unknown as InteractionLayer,
     );
     const command = vi.fn();
     store.bindCommands(command);
@@ -82,5 +90,93 @@ it('Shift toggles selection without drag and a locked group never emits movement
     gesture.down({ x: 100, y: 200 }, false, 1);
     gesture.move({ x: 500, y: 500 }, 1);
     gesture.up({ x: 500, y: 500 });
+    expect(command).not.toHaveBeenCalled();
+});
+
+it('Preparation uses one authoring command and previews actual mixed members, independent of movement range', () => {
+    const { store, tokens, props, gesture, command } = fixture();
+    store.setEntityAuthoring(true);
+    store.selectObjects({ tokenIds: ['kern'], propIds: ['p'] });
+    gesture.down({ x: 100, y: 200 }, false, 1);
+    gesture.move({ x: 180, y: 250 }, 1);
+    expect(props.preview).toHaveBeenLastCalledWith('p', { x: 210, y: 270 });
+    const token = store.getSnapshot().scene.tokens.find((t) => t.id === 'kern')!;
+    expect(tokens.preview).toHaveBeenLastCalledWith('kern', { x: token.x + 110, y: token.y + 70 });
+    expect(command).not.toHaveBeenCalled();
+    gesture.up({ x: 180, y: 250 });
+    expect(command).toHaveBeenCalledTimes(1);
+    expect(command.mock.calls[0][0].command.data).toMatchObject({
+        action: 'translate',
+        expected: [
+            { kind: 'token', id: 'kern', x: token.x, y: token.y },
+            { kind: 'prop', id: 'p', x: 100, y: 200 },
+        ],
+    });
+    expect(store.selection()).toEqual({ tokenIds: ['kern'], propIds: ['p'] });
+});
+it('Preparation handles a single token through authoring and collapses a group on click only', () => {
+    const { store, tokens, props, gesture, command } = fixture();
+    store.setEntityAuthoring(true);
+    tokens.hit.mockReturnValue('kern');
+    expect(gesture.down({ x: 20, y: 20 }, false, 0.2)).toBe(true);
+    expect(tokens.hit).toHaveBeenCalledWith({ x: 20, y: 20 }, 30);
+    gesture.up({ x: 20, y: 20 });
+    expect(command).not.toHaveBeenCalled();
+    store.selectObjects({ tokenIds: ['kern'], propIds: ['p'] });
+    gesture.down({ x: 20, y: 20 }, false, 1);
+    gesture.up({ x: 20, y: 20 });
+    expect(store.selection()).toEqual({ tokenIds: ['kern'], propIds: [] });
+    expect(props.resize).not.toHaveBeenCalled();
+});
+it('Preparation cancellation restores all previews and remote position edits cancel the gesture', () => {
+    const { store, tokens, props, gesture, command } = fixture();
+    store.setEntityAuthoring(true);
+    store.selectObjects({ tokenIds: ['kern'], propIds: ['p'] });
+    gesture.down({ x: 100, y: 200 }, false, 1);
+    gesture.move({ x: 180, y: 250 }, 1);
+    gesture.cancel();
+    expect(tokens.preview).toHaveBeenLastCalledWith(
+        'kern',
+        expect.objectContaining({ id: 'kern' }),
+    );
+    expect(props.preview).toHaveBeenLastCalledWith(
+        'p',
+        expect.objectContaining({ x: 100, y: 200 }),
+    );
+    gesture.down({ x: 100, y: 200 }, false, 1);
+    gesture.move({ x: 180, y: 250 }, 1);
+    const scene = store.getSnapshot().scene;
+    store.reconcile({ ...scene, props: scene.props!.map((p) => ({ ...p, x: 101 })) });
+    gesture.preview();
+    gesture.up({ x: 180, y: 250 });
+    expect(command).not.toHaveBeenCalled();
+    expect(store.getSnapshot().editorNotice).toContain('Группа изменилась');
+});
+
+it('a blocked authoring group cannot move but a click can still select just one member', () => {
+    const { store, gesture, command } = fixture(false, true);
+    store.setEntityAuthoring(true);
+    store.selectObjects({ tokenIds: ['kern'], propIds: ['p'] });
+    gesture.down({ x: 100, y: 200 }, false, 1);
+    gesture.move({ x: 300, y: 300 }, 1);
+    gesture.up({ x: 300, y: 300 });
+    expect(command).not.toHaveBeenCalled();
+    expect(store.selection()).toEqual({ tokenIds: ['kern'], propIds: ['p'] });
+    gesture.down({ x: 100, y: 200 }, false, 1);
+    gesture.up({ x: 100, y: 200 });
+    expect(store.selection()).toEqual({ tokenIds: [], propIds: ['p'] });
+    expect(store.getSnapshot().editorNotice).toContain('разблокируйте');
+});
+
+it('does not persist a Preparation drag that snaps back to the original anchor', () => {
+    const { store, gesture, command } = fixture();
+    store.setEntityAuthoring(true);
+    store.reconcile({
+        ...store.getSnapshot().scene,
+        props: store.getSnapshot().scene.props!.map((p) => ({ ...p, x: 90, y: 210 })),
+    });
+    gesture.down({ x: 90, y: 210 }, false, 1);
+    gesture.move({ x: 95, y: 215 }, 1);
+    gesture.up({ x: 95, y: 215 });
     expect(command).not.toHaveBeenCalled();
 });

@@ -86,6 +86,7 @@ class GlobalAssetController extends Controller
                 $asset = Asset::whereKey($asset->id)->lockForUpdate()->firstOrFail();
                 abort_if(MapMaterialVersion::where('asset_id', $asset->id)->exists(), 409, 'Текстура используется в версии материала. Загрузите новый Asset для новой версии.');
                 abort_if(ObjectPreset::where('asset_id', $asset->id)->exists()
+                    || \App\Models\CompositionPreset::whereHas('assets', fn ($q) => $q->where('assets.id', $asset->id))->exists()
                     || SceneProp::where('asset_id', $asset->id)->whereNotNull('preset_snapshot')->exists(),
                     409, 'Изображение используется в пресете или его экземпляре. Загрузите новый Asset.');
                 $paths = [$asset->storage_path, app(AssetThumbnail::class)->path($asset), $asset->storage_path.'.thumb.lock'];

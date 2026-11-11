@@ -6,6 +6,38 @@ import { ScenePersistence } from './ScenePersistence';
 import { createDemoScene } from './demoScene';
 import { historyEntry } from './SceneHistory';
 afterEach(() => vi.restoreAllMocks());
+it('serializes preparation with history and preserves ambiguous commands for queue retry', async () => {
+    const store = new SceneStore({ ...createDemoScene(), id: '1', revision: 0 });
+    const { queue } = new ScenePersistence(store, '1');
+    const run = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValueOnce({ revision: 1 });
+    const pending = store.history!.prepare('stable-uuid', run);
+    await expect(queue.flush()).rejects.toThrow('offline');
+    expect(store.history!.getSnapshot().saving).toBe(true);
+    queue.retry();
+    await expect(pending).resolves.toMatchObject({ revision: 1 });
+    await queue.flush();
+    expect(run).toHaveBeenCalledTimes(2);
+    const change = {
+        kind: 'lootContents' as const,
+        id: '5',
+        expected: { snapshot: 'after' },
+        value: { snapshot: 'before' },
+    };
+    store.history!.recordPreparation(change);
+    const send = vi.spyOn(client, 'request').mockResolvedValue({ revision: 2 });
+    store.history!.run();
+    await queue.flush();
+    expect(send.mock.calls.at(-1)![2]).toMatchObject({ changes: [change] });
+    store.history!.run(true);
+    await queue.flush();
+    expect(send.mock.calls.at(-1)![2]).toMatchObject({
+        changes: [{ ...change, expected: change.value, value: change.expected }],
+    });
+});
+
 describe('bounded confirmed edit history', () => {
     it('drops stale prior values when another accepted edit interleaved', async () => {
         const scene = { ...createDemoScene(), id: '1', revision: 4 };
@@ -99,5 +131,44 @@ describe('bounded confirmed edit history', () => {
                 revision: 1,
             }),
         ).toBeUndefined();
+    });
+});
+
+it('authoring translation records one mixed inverse from server-validated originals across unrelated revisions', async () => {
+    const scene = { ...createDemoScene(), id: '1', revision: 4 };
+    const token = scene.tokens[0];
+    const store = new SceneStore(scene),
+        { queue } = new ScenePersistence(store, '1');
+    const send = vi.spyOn(client, 'request').mockResolvedValue({
+        revision: 6,
+        tokens: [{ ...token, x: token.x + 100, y: token.y + 200 }],
+    });
+    store.objectCommand({
+        endpoint: 'selection',
+        data: {
+            action: 'translate',
+            tokenIds: [token.id],
+            propIds: [],
+            anchorKind: 'token',
+            anchorId: token.id,
+            x: token.x + 100,
+            y: token.y + 200,
+            expected: [{ kind: 'token', id: token.id, x: token.x, y: token.y }],
+        },
+    });
+    await queue.flush();
+    expect(store.history!.getSnapshot().undo).toBe('Перемещение группы');
+    send.mockResolvedValue({ revision: 7, tokens: [token] });
+    store.history!.run();
+    await queue.flush();
+    expect(send.mock.calls.at(-1)![2]).toMatchObject({
+        changes: [
+            {
+                kind: 'token',
+                id: token.id,
+                expected: { x: token.x + 100, y: token.y + 200 },
+                value: { x: token.x, y: token.y },
+            },
+        ],
     });
 });

@@ -143,7 +143,13 @@ export function PropInspector({
                         />
                     </label>
                     {!mapEditor && (
-                        <LootSetup store={store} kind="prop" id={prop.id} loot={prop.loot} />
+                        <LootSetup
+                            key={prop.id}
+                            store={store}
+                            kind="prop"
+                            id={prop.id}
+                            loot={prop.loot}
+                        />
                     )}
                     {!mapEditor && (
                         <InteractionEditor
@@ -155,7 +161,7 @@ export function PropInspector({
                             disabled={busy}
                         />
                     )}
-                    {mapEditor ? (
+                    {mapEditor || prop.loot || prop.interactions?.length ? (
                         <details className="map-editor-disclosure">
                             <summary>Положение, размер и порядок</summary>
                             <div className="map-editor-prop-details">{properties}</div>

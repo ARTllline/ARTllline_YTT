@@ -58,6 +58,8 @@ class AssetLibrary
         }
 
         return array_merge(
+            \App\Models\CompositionPreset::whereHas('assets', fn ($q) => $q->where('assets.id', $asset->id))->get()
+                ->map(fn ($p) => $p->user_id === auth()->id() ? 'Пресет композиции · '.$p->name : 'Используется в другой библиотеке')->all(),
             ObjectPreset::where('asset_id', $asset->id)->get()->map(fn ($preset) => $preset->library_user_id === auth()->id()
                 ? 'Пресет объекта · '.$preset->name : 'Используется в другой библиотеке')->all(),
             MapMaterialVersion::with('material')->where('asset_id', $asset->id)->get()->map(fn ($m) => $this->reference((object) ['library_user_id' => $m->material->user_id, 'user_id' => null, 'campaign_id' => null], 'Материал · '.$m->name.' / v'.$m->version))->all(),

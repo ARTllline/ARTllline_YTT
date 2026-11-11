@@ -56,9 +56,9 @@ class NpcLibraryController extends Controller
 
     public function place(Request $r, Scene $scene, NpcLibrary $library): array
     {
-        $data = $r->validate(['npcId' => 'required|integer|min:1', 'x' => 'required|numeric|between:-1000000,1000000', 'y' => 'required|numeric|between:-1000000,1000000']);
+        $data = $r->validate(['encounter' => 'sometimes|array:id,groupId', 'encounter.id' => 'required_with:encounter|uuid', 'encounter.groupId' => 'required_with:encounter|string|max:40', 'npcId' => 'required|integer|min:1', 'x' => 'required|numeric|between:-1000000,1000000', 'y' => 'required|numeric|between:-1000000,1000000']);
 
-        return $library->place($r->user(), $scene, $data['npcId'], $data['x'], $data['y']);
+        return $library->place($r->user(), $scene, $data['npcId'], $data['x'], $data['y'], $data['encounter'] ?? null);
     }
 
     public function portraits(Request $r): array

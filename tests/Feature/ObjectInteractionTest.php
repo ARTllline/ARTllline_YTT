@@ -85,6 +85,30 @@ class ObjectInteractionTest extends TestCase
         return ['kind' => $kind, 'id' => $kind === 'token' ? $this->token->id : $this->prop->id, 'actionId' => $actionId, 'epoch' => 0, 'clientMutationId' => (string) Str::uuid()];
     }
 
+    public function test_preparation_config_history_and_concurrent_drafts_preserve_check_receipts(): void
+    {
+        $action = $this->action('nothing', ['result_target' => null, 'check' => [
+            'enabled' => true, 'label' => 'Осмотреть', 'dc' => 10, 'modifier' => 0,
+            'retry' => 'once_per_player', 'success' => ['result_type' => 'nothing'], 'failure' => ['result_type' => 'nothing'],
+        ]]);
+        $save = ['kind' => 'prop', 'id' => $this->prop->id, 'actions' => [$action], 'expected' => [], 'clientMutationId' => (string) Str::uuid()];
+        $result = $this->postJson($this->base.'/object-actions', $save)->assertOk()->json();
+        $edit = $result['preparationEdit'];
+        $this->postJson($this->base.'/object-actions', array_replace($save, ['clientMutationId' => (string) Str::uuid()]))->assertConflict();
+        $history = fn ($change) => $this->postJson($this->base.'/edit-history', ['changes' => [$change], 'clientMutationId' => (string) Str::uuid()]);
+        $history($edit)->assertOk();
+        $this->assertSame([], $this->prop->fresh()->interactions);
+        $history(array_replace($edit, ['expected' => $edit['value'], 'value' => $edit['expected']]))->assertOk();
+        $this->actingAs($this->player)->postJson($this->base.'/interact', $this->command('prop', $action['id']))->assertOk();
+        $this->assertDatabaseCount('object_checks', 1);
+        $this->actingAs($this->gm);
+        $history($edit)->assertConflict();
+        $this->assertDatabaseCount('object_checks', 1);
+        foreach (Event::dispatched(TabletopEvent::class) as [$event]) {
+            $this->assertArrayNotHasKey('preparationEdit', $event->envelope);
+        }
+    }
+
     public function test_visible_locked_prop_reveals_correct_handout_only_to_interacting_player(): void
     {
         $action = $this->action();

@@ -39,7 +39,10 @@ class SceneTransaction
             if ($result['_combatChanged'] ?? false) {
                 $result['combat'] = app(CombatView::class)->build($locked, true);
             }
-            unset($result['_combatChanged']);
+            if ($result['_encounterRunsChanged'] ?? false) {
+                $result['encounterRuns'] = \App\Services\EncounterRuntime::projections($locked);
+            }
+            unset($result['_combatChanged'], $result['_encounterRunsChanged']);
             $wasVisible = $result['_wasVisible'] ?? false;
             unset($result['_wasVisible']);
             $previousVisibility = $result['_previousVisibility'] ?? ['tokens' => [], 'props' => []];

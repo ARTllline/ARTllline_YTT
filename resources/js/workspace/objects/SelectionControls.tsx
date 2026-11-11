@@ -1,6 +1,6 @@
 import { t } from '../../i18n';
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { Copy, Trash2, PackagePlus, Swords, X } from 'lucide-react';
+import { Copy, Trash2, PackagePlus, Swords, X, MousePointer2 } from 'lucide-react';
 import type { SceneStore } from '../../tabletop/state/SceneStore';
 import type { SaveQueue } from '../../tabletop/state/SaveQueue';
 import { objects } from '../../api/objects';
@@ -31,9 +31,11 @@ export function SelectionControls({
     useEffect(() => {
         store.bindSelectionActions((action) => {
             const s = store.selection();
+            if (store.getSnapshot().duplicatePlacement) return;
             if ((!s.tokenIds.length && !s.propIds.length) || queue.getSnapshot().status !== 'saved')
                 return;
             if (action === 'delete') setModal('delete');
+            else if (store.getSnapshot().entityAuthoring) store.beginDuplicate();
             else store.objectCommand({ endpoint: 'selection', data: { action, ...s } });
         });
         return () => {
@@ -63,9 +65,32 @@ export function SelectionControls({
             setError((e as Error).message);
         }
     };
+    const groupBar =
+        state.entityAuthoring && count > 1 ? (
+            <div
+                className="selection-actions surface preparation-group-actions"
+                aria-label="Действия группы"
+            >
+                <MousePointer2 size={15} />
+                <strong>{count} выбрано</strong>
+                <span>
+                    {state.duplicatePlacement
+                        ? 'Клик — разместить · Esc — отмена'
+                        : 'Потяните за выбранный объект'}
+                </span>
+                <button
+                    onClick={() => store.select(null)}
+                    aria-label="Снять выделение группы"
+                    title="Снять выделение · Esc"
+                >
+                    <X size={16} />
+                </button>
+            </div>
+        ) : null;
     return (
         <>
-            {count > 0 && (!runtime || count > 1) && (
+            {groupBar}
+            {!groupBar && count > 0 && (!runtime || count > 1) && (
                 <div className="selection-actions surface" aria-label={t('Selection actions')}>
                     <span>
                         {count} {t('selected')}{' '}
@@ -126,11 +151,13 @@ export function SelectionControls({
                 <ConfirmDialog
                     title={t('Delete selection?')}
                     description={
-                        editor
-                            ? 'Декоративные объекты можно вернуть через Undo. Удаление объектов с игровыми связями не входит в историю отмены.'
-                            : t(
-                                  'Selected objects will be removed from this scene. Saved templates remain available.',
-                              )
+                        state.entityAuthoring
+                            ? `Удалить ${count} экземпляров из этой сцены? Шаблоны и персонажи библиотеки сохранятся. Действие можно отменить.`
+                            : editor
+                              ? 'Декоративные объекты можно вернуть через Undo. Удаление объектов с игровыми связями не входит в историю отмены.'
+                              : t(
+                                    'Selected objects will be removed from this scene. Saved templates remain available.',
+                                )
                     }
                     onClose={() => setModal(null)}
                     submit={async () => {

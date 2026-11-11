@@ -1,6 +1,8 @@
 export type WorkspaceMode = 'table' | 'prepare' | 'session' | 'library';
 export type LeftPanel = 'scenes' | 'assets' | 'prefabs' | 'encounters' | 'cues' | 'session';
 export type RightPanel =
+    | 'encounters'
+    | 'entities'
     | 'context'
     | 'scene'
     | 'combat'
@@ -42,12 +44,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
             return {
                 ...initialWorkspace,
                 mode: action.mode,
-                left:
-                    action.mode === 'prepare'
-                        ? 'scenes'
-                        : action.mode === 'library'
-                          ? 'assets'
-                          : null,
+                left: action.mode === 'library' ? 'assets' : null,
             };
         case 'left':
             return {
@@ -72,13 +69,17 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
                 ...state,
                 right: 'context',
                 dismissedSelection:
-                    state.right === 'context' && !state.expanded ? action.selection : null,
+                    (state.right === 'context' && !state.expanded) ||
+                    (state.right === 'entities' && !action.selection)
+                        ? action.selection
+                        : null,
                 expanded: false,
                 pinned: false,
             };
         case 'selection':
             return {
                 ...state,
+                right: action.key && state.right === 'entities' ? 'context' : state.right,
                 dismissedSelection: null,
                 expanded: state.pinned ? state.expanded : false,
                 left: action.key && state.right === 'context' ? null : state.left,
@@ -93,5 +94,8 @@ export function contextualPanel(state: WorkspaceState, selection: string): Right
     if (state.left) return null;
     if (state.right !== 'context') return state.right;
     if (state.pinned) return 'context';
-    return selection && state.dismissedSelection !== selection ? 'context' : null;
+    if (selection && state.dismissedSelection !== selection) return 'context';
+    return state.mode === 'prepare' && !selection && state.dismissedSelection !== ''
+        ? 'entities'
+        : null;
 }

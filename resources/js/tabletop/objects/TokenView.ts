@@ -216,7 +216,7 @@ export class TokenView extends Container {
         else if (this.hovered)
             this.ring.circle(0, 0, r + 4).stroke({ color: 0xe0e7ed, width: 1.5, alpha: 0.8 });
     }
-    contains(x: number, y: number) {
-        return Math.hypot(x - this.x, y - this.y) <= this.radius + 5;
+    contains(x: number, y: number, padding = 5) {
+        return Math.hypot(x - this.x, y - this.y) <= this.radius + padding;
     }
 }
