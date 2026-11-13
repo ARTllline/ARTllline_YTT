@@ -5,6 +5,7 @@ import type { SceneStore } from '../../tabletop/state/SceneStore';
 import { CombatResults } from './CombatResults';
 import { TokenCombatControls } from './TokenCombatControls';
 import type { SessionState, ResolutionTask } from './sessionModel';
+import { ContentUseConfirmation } from './ContentUseConfirmation';
 export function GMResolutionQueue({ store, disabled }: { store: SceneStore; disabled: boolean }) {
     const { scene } = store.getSnapshot();
     const [data, setData] = useState<SessionState>({ pending: [], undoId: null });
@@ -58,6 +59,7 @@ export function GMResolutionQueue({ store, disabled }: { store: SceneStore; disa
         }
     };
     const task = data.pending.find((t) => t.id === taskId);
+    const automatic = !!task?.result.gmContext?.contentUse?.automatic;
     const target = scene.tokens.find((t) => t.id === targetId);
     const open = (t: ResolutionTask) => {
         setTaskId(t.id);
@@ -102,7 +104,10 @@ export function GMResolutionQueue({ store, disabled }: { store: SceneStore; disa
                     >
                         <span>⚠ {t.result.abilityName}</span>
                         <small>
-                            {t.result.actorName} · {t.result.coverage}
+                            {t.result.actorName} ·{' '}
+                            {t.result.gmContext?.contentUse?.automatic
+                                ? 'Бросок → GM'
+                                : t.result.coverage}
                         </small>
                     </button>
                 ))}
@@ -110,111 +115,159 @@ export function GMResolutionQueue({ store, disabled }: { store: SceneStore; disa
             {task && (
                 <div className="manual-resolver">
                     <strong>
-                        {task.result.abilityName} · {task.result.coverage}
+                        {task.result.abilityName} ·{' '}
+                        {automatic ? 'Проверенный рецепт' : task.result.coverage}
                     </strong>
-                    <p className="hint">
-                        Уже выполнено:{' '}
-                        {task.result.gmContext?.appliedSummary ??
-                            (
-                                {
-                                    action: 'действие',
-                                    bonus_action: 'бонусное действие',
-                                    reaction: 'реакция',
-                                    free: 'свободное действие',
-                                    outside_combat: 'сотворение вне боя',
-                                    lifecycle: 'переход жизненного цикла',
-                                } as Record<string, string>
-                            )[task.result.gmContext?.activation ?? ''] ??
-                            'стоимость действия'}
-                        {task.result.gmContext?.slotSpent
-                            ? ` · ячейка ${task.result.gmContext.slotSpent}`
-                            : ''}
-                        . Броски и последствия ниже уже применены.
-                    </p>
-                    <CombatResults result={task.result} scene={scene} />
-                    <p className="manual-remaining">
-                        Осталось ГМ:{' '}
-                        {task.result.gmContext?.remaining ??
-                            'Разрешить ручные последствия по описанию заклинания.'}
-                    </p>
-                    <details>
-                        <summary>Подготовленное описание / источник</summary>
-                        <p className="spell-source-text">
-                            {task.result.gmContext?.description ??
-                                'Описание доступно в кампанийной копии заклинания.'}
-                        </p>
-                        {task.result.gmContext?.reference && (
-                            <small>{task.result.gmContext.reference}</small>
-                        )}
-                    </details>
-                    <div className="manual-targets">
-                        {Array.from(
-                            new Set([
-                                ...(task.result.outcomes?.map((o) => o.tokenId) ?? []),
-                                ...(task.result.target?.kind === 'token'
-                                    ? [task.result.target.id]
-                                    : []),
-                                ...(task.result.gmContext?.sourceTokenId
-                                    ? [task.result.gmContext.sourceTokenId]
-                                    : []),
-                            ]),
-                        ).map((id) => (
-                            <button
-                                key={id}
-                                aria-pressed={targetId === id}
-                                onClick={() => {
-                                    setTargetId(id);
-                                    store.select(id);
-                                }}
-                            >
-                                {scene.tokens.find((t) => t.id === id)?.name ?? 'Удалённая цель'}
-                            </button>
-                        ))}
-                        <button
-                            onClick={() => setTargetId(store.getSnapshot().selectedIds[0] ?? '')}
-                        >
-                            Выбранный на карте
-                        </button>
-                    </div>
-                    {target && (
-                        <details className="manual-primitives">
-                            <summary>HP / состояния · {target.name}</summary>
-                            <TokenCombatControls
-                                key={target.id}
-                                token={target}
-                                store={store}
-                                disabled={disabled || busy || !!pending}
-                            />
-                            <button onClick={() => store.select(target.id)}>
-                                Выбрать для перемещения на карте
-                            </button>
-                        </details>
-                    )}
-                    <label>
-                        Заметка ГМ
-                        <textarea
-                            aria-label="Итог ручного разрешения"
-                            value={note}
-                            maxLength={2000}
-                            onChange={(e) => setNote(e.target.value)}
-                        />
-                    </label>
-                    <div className="combat-row-actions">
-                        <button
+                    {task.result.gmContext?.contentUse && automatic && (
+                        <ContentUseConfirmation
+                            key={task.id}
+                            task={task}
+                            scene={scene}
                             disabled={disabled || busy || !!pending}
-                            className="primary-button"
-                            onClick={() =>
+                            onConfirm={(confirmation) =>
                                 void run({
                                     action: 'resolve',
                                     executionId: task.id,
                                     status: 'resolved',
                                     note,
                                     clientMutationId: commandId(),
+                                    ...confirmation,
                                 })
                             }
-                        >
-                            Шаг выполнен
-                        </button>
+                        />
+                    )}
+                    {!automatic && (
+                        <>
+                            <p className="hint">
+                                Уже выполнено:{' '}
+                                {task.result.gmContext?.appliedSummary ??
+                                    (
+                                        {
+                                            action: 'действие',
+                                            bonus_action: 'бонусное действие',
+                                            reaction: 'реакция',
+                                            free: 'свободное действие',
+                                            outside_combat: 'сотворение вне боя',
+                                            lifecycle: 'переход жизненного цикла',
+                                        } as Record<string, string>
+                                    )[task.result.gmContext?.activation ?? ''] ??
+                                    'стоимость действия'}
+                                {task.result.gmContext?.slotSpent
+                                    ? ` · ячейка ${task.result.gmContext.slotSpent}`
+                                    : ''}
+                                {task.result.gmContext?.contentUse
+                                    ? '. Ожидает подтверждения GM.'
+                                    : '. Броски и последствия ниже уже применены.'}
+                            </p>
+                            <CombatResults result={task.result} scene={scene} />
+                            <p className="manual-remaining">
+                                Осталось ГМ:{' '}
+                                {task.result.gmContext?.remaining ??
+                                    'Разрешить ручные последствия по описанию заклинания.'}
+                            </p>
+                            <details>
+                                <summary>Подготовленное описание / источник</summary>
+                                <p className="spell-source-text">
+                                    {task.result.gmContext?.description ??
+                                        'Описание доступно в кампанийной копии заклинания.'}
+                                </p>
+                                {task.result.gmContext?.reference && (
+                                    <small>{task.result.gmContext.reference}</small>
+                                )}
+                            </details>
+                            <div className="manual-targets">
+                                {Array.from(
+                                    new Set([
+                                        ...(task.result.outcomes?.map((o) => o.tokenId) ?? []),
+                                        ...(task.result.target?.kind === 'token'
+                                            ? [task.result.target.id]
+                                            : []),
+                                        ...(task.result.gmContext?.sourceTokenId
+                                            ? [task.result.gmContext.sourceTokenId]
+                                            : []),
+                                    ]),
+                                ).map((id) => (
+                                    <button
+                                        key={id}
+                                        aria-pressed={targetId === id}
+                                        onClick={() => {
+                                            setTargetId(id);
+                                            store.select(id);
+                                        }}
+                                    >
+                                        {scene.tokens.find((t) => t.id === id)?.name ??
+                                            'Удалённая цель'}
+                                    </button>
+                                ))}
+                                <button
+                                    onClick={() =>
+                                        setTargetId(store.getSnapshot().selectedIds[0] ?? '')
+                                    }
+                                >
+                                    Выбранный на карте
+                                </button>
+                            </div>
+                            {target && !task.result.gmContext?.contentUse && (
+                                <details className="manual-primitives">
+                                    <summary>HP / состояния · {target.name}</summary>
+                                    <TokenCombatControls
+                                        key={target.id}
+                                        token={target}
+                                        store={store}
+                                        disabled={disabled || busy || !!pending}
+                                    />
+                                    <button onClick={() => store.select(target.id)}>
+                                        Выбрать для перемещения на карте
+                                    </button>
+                                </details>
+                            )}
+                            <label>
+                                Заметка ГМ
+                                <textarea
+                                    aria-label="Итог ручного разрешения"
+                                    value={note}
+                                    maxLength={2000}
+                                    onChange={(e) => setNote(e.target.value)}
+                                />
+                            </label>
+                        </>
+                    )}
+                    {task.result.gmContext?.contentUse && !automatic && (
+                        <ContentUseConfirmation
+                            key={task.id}
+                            task={task}
+                            scene={scene}
+                            disabled={disabled || busy || !!pending}
+                            onConfirm={(confirmation) =>
+                                void run({
+                                    action: 'resolve',
+                                    executionId: task.id,
+                                    status: 'resolved',
+                                    note,
+                                    clientMutationId: commandId(),
+                                    ...confirmation,
+                                })
+                            }
+                        />
+                    )}
+                    <div className="combat-row-actions">
+                        {!task.result.gmContext?.contentUse && (
+                            <button
+                                disabled={disabled || busy || !!pending}
+                                className="primary-button"
+                                onClick={() =>
+                                    void run({
+                                        action: 'resolve',
+                                        executionId: task.id,
+                                        status: 'resolved',
+                                        note,
+                                        clientMutationId: commandId(),
+                                    })
+                                }
+                            >
+                                Шаг выполнен
+                            </button>
+                        )}
                         <button
                             disabled={disabled || busy || !!pending}
                             title="Закрыть без применения дополнительных последствий"

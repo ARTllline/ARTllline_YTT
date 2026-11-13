@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:equipment:serpent-venom:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "serpent-venom",
+            "checksum": "07b3c5194352f5f533cb413193eff9fbee69ec8ce5daa9001cec71419c982691"
+        },
+        {
+            "id": "srd:equipment:blanket:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "blanket",
+            "checksum": "f030c54dad7a5e3cc6e04db8d4f1ce917aad0678517cbb5293018fae1c4bfd5f"
+        },
+        {
+            "id": "srd:equipment:orb:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "orb",
+            "checksum": "240d41da9ab7aef75421bdfbe9f0961551bc082a4f392825e130e5b34d15b14c"
+        },
+        {
+            "id": "srd:equipment:sprig-of-mistletoe:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "sprig-of-mistletoe",
+            "checksum": "e57db9051c7f9b12d072035d015c0a9872f4a42777e55932f82cefd6ca8d1bbc"
+        },
+        {
+            "id": "srd:equipment:priests-pack:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "priests-pack",
+            "checksum": "da8dd4fa767ead3fe5bf77036509316ea7946d9f4b4e7a81bd71333539bf7f12"
+        },
+        {
+            "id": "srd:equipment:amulet:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "amulet",
+            "checksum": "9f3e246ffd4b9eb43b065c5bcb7a9abe7b6778d71d431a24aac05c78ece6e485"
+        },
+        {
+            "id": "srd:equipment:bullets-sling:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "bullets-sling",
+            "checksum": "76ef5c0ac4550682ff8b5616a0749150c57dff38cd3282a99f6594b06072260a"
+        },
+        {
+            "id": "srd:equipment:plate-armor:2024",
+            "kind": "equipment",
+            "entity_type": "armor",
+            "external_key": "plate-armor",
+            "checksum": "44005600574d79a785c199b46243324a9be04c0389b9047282cbb135d5958dee"
+        },
+        {
+            "id": "srd:equipment:studded-leather-armor:2024",
+            "kind": "equipment",
+            "entity_type": "armor",
+            "external_key": "studded-leather-armor",
+            "checksum": "3ce26b58e55dc5cc7e1005a71a133389dfdf5e9f6831ae3892c992d792933089"
+        },
+        {
+            "id": "srd:equipment:breastplate:2024",
+            "kind": "equipment",
+            "entity_type": "armor",
+            "external_key": "breastplate",
+            "checksum": "eb66c5c6279a659401f7e3b4d8455c23ffbd55c213763540a0e98c8e1801dbe6"
+        },
+        {
+            "id": "srd:equipment:glassblowers-tools:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "glassblowers-tools",
+            "checksum": "bbd7dc2e5e1a7364ea8ae75d86ee26545054356ac11c3db336c43bc329855792"
+        },
+        {
+            "id": "srd:equipment:three-dragon-ante:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "three-dragon-ante",
+            "checksum": "c76aa824edd7fb30de9e07b115dbca89e47e8d1bfbebc60526772e131049452b"
+        },
+        {
+            "id": "srd:equipment:lance:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "lance",
+            "checksum": "eefa1503d5a1aefa28347411631beb4b327fe957dafee45e022384eceeb4ea61"
+        },
+        {
+            "id": "srd:equipment:heavy-crossbow:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "heavy-crossbow",
+            "checksum": "79b9fdaa2901aaa988171a93817e04d99847420063d27ae78b95b62e9d3bd3e4"
+        },
+        {
+            "id": "srd:equipment:spear:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "spear",
+            "checksum": "cba611d2a31b62d07d7d59924a27cb3888d533a46076991fa85515df55e91491"
+        },
+        {
+            "id": "srd:equipment:dulcimer:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "dulcimer",
+            "checksum": "e9c61ac261231e0ca7d628cc612b4458868ac953154a56bf2bc9472b482bb911"
+        },
+        {
+            "id": "srd:equipment:navigators-tools:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "navigators-tools",
+            "checksum": "fc882fb9adfa68a0e9245b79b66b85ed04292da6046f55cdad2939a942ab5112"
+        },
+        {
+            "id": "srd:equipment:shortbow:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "shortbow",
+            "checksum": "5f65ece3f4f058a6c5f43aeb4bdc9734b79cbfdb9b308ab2e2418197e8bc7fa7"
+        },
+        {
+            "id": "srd:equipment:wyvern-poison:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "wyvern-poison",
+            "checksum": "868e9a70a0ef7ea93cf652755b469ad33b4bea7fc8174607abf0242a57fc57ae"
+        },
+        {
+            "id": "srd:equipment:climbers-kit:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "climbers-kit",
+            "checksum": "56c327017a5c76f0516eb9a47bb043c1ccb71eae38b80f417d8221fa2e10dee3"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:ray-of-enfeeblement:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "ray-of-enfeeblement",
+            "checksum": "14ba8bd6bde91c67f82d1ad99555905b1130c0723223e55c20d8a40cd8447345"
+        },
+        {
+            "id": "srd:spell:death-ward:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "death-ward",
+            "checksum": "4a502615a357cc7b55b80c274c4cdf0a1deed0e2a0a54b3e66e7317ae0032e5a"
+        },
+        {
+            "id": "srd:spell:conjure-animals:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "conjure-animals",
+            "checksum": "4d3e0da8f14ea8274cf925966ac4fdb486f1103a347cb496e627268975a7025c"
+        },
+        {
+            "id": "srd:spell:light:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "light",
+            "checksum": "43757fd0992966b6f34fc287228a3e5dcb638c8c00d8b67296045b142a987a14"
+        },
+        {
+            "id": "srd:spell:animate-objects:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "animate-objects",
+            "checksum": "eb422cf42d289c0ad793d997d77c51aa7560a8b79ac1ce546c7f0eb364f54c22"
+        },
+        {
+            "id": "srd:spell:find-traps:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "find-traps",
+            "checksum": "71d73ce81b892f18a529e5d5b9bd54618d527e30351447bde442ca2d4fde4be4"
+        },
+        {
+            "id": "srd:spell:charm-person:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "charm-person",
+            "checksum": "0ff10a72fe6b886fd417cb7f115fbb03761d414d578a3883d1c09920e43d6e6e"
+        },
+        {
+            "id": "srd:spell:invisibility:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "invisibility",
+            "checksum": "f6b50e9511cc3bb05a11be0c672c1a1585e1bd0064b4d5e64dec2e04bcd8c70c"
+        },
+        {
+            "id": "srd:spell:aura-of-life:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "aura-of-life",
+            "checksum": "b6dd045ecaea043c2b1413fd99e30835243c77e3dd5ffd519bca29023410b63d"
+        },
+        {
+            "id": "srd:spell:planar-ally:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "planar-ally",
+            "checksum": "e804b0da7085daa0eee7e9596c1499c90844a9a24dc0fa3aa7580335b6597262"
+        },
+        {
+            "id": "srd:spell:starry-wisp:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "starry-wisp",
+            "checksum": "8bf897165714c459161ea0934d0cbc2152acbd193006c8ca1ec40f7a8ddd76e9"
+        },
+        {
+            "id": "srd:spell:water-walk:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "water-walk",
+            "checksum": "6b86a8d873a8384f0f9e708a24ba509de813df775e1d81c52bf46b5d2407f7ab"
+        },
+        {
+            "id": "srd:spell:bless:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "bless",
+            "checksum": "09147d11f92c4915f2a2c15f19d66db8f7cb33cfd72f71c0730fd8d71e621338"
+        },
+        {
+            "id": "srd:spell:see-invisibility:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "see-invisibility",
+            "checksum": "a91b6c90d62da1691d7fa4b798f5bc2f93820b0dab9c4d45a78bcd2435d8d46b"
+        },
+        {
+            "id": "srd:spell:magic-mouth:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "magic-mouth",
+            "checksum": "2ec8f1708229070e97d6d6e4a4534864b19bb485af2b3300b84eeef81497a0fa"
+        },
+        {
+            "id": "srd:spell:private-sanctum:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "private-sanctum",
+            "checksum": "2612c3c19258b773662f93d4859f35f5b10f408814dd706c78de015fb4dd9439"
+        },
+        {
+            "id": "srd:spell:conjure-elemental:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "conjure-elemental",
+            "checksum": "8cc7f7c14a6ac1d8a4a44d6b4eb8dabb2a410ce09ad63de522485bbc2326c10e"
+        },
+        {
+            "id": "srd:spell:sunbeam:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "sunbeam",
+            "checksum": "00c82e43075f2081ed1f89b67d25c71a51d34fcb7b9e2f3809a559718dddbffc"
+        },
+        {
+            "id": "srd:spell:mending:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "mending",
+            "checksum": "ba735d0ba437a91e0d31e0cfd2e2e6204160e9deb9f0f2bd490a2dbfed2b0700"
+        },
+        {
+            "id": "srd:spell:hideous-laughter:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "hideous-laughter",
+            "checksum": "ea7f12c204b86c2a6452b06354d00efdbc1856d239a0685fda068152d60e3143"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

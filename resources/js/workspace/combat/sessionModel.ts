@@ -42,6 +42,30 @@ export interface SessionResult extends Omit<AbilityResult, 'outcomes' | 'roll'> 
         roll: { expression: string; rawDice: number[]; total: number };
     }[];
     gmContext?: {
+        contentUse?: {
+            automatic?: {
+                costSummary: string;
+                rolls: {
+                    success: boolean;
+                    critical: boolean;
+                    roll: { natural: number; total: number } | null;
+                    damageRolls: {
+                        roll: {
+                            expression: string;
+                            rawDice?: number[];
+                            modifier?: number;
+                            total: number;
+                        };
+                    }[];
+                    healingRoll: { expression: string; rawDice: number[]; total: number } | null;
+                };
+            };
+
+            icon: string;
+            inventoryItemId: string | null;
+            castLevel: number;
+            costs: { key: string; amount: number }[];
+        };
         sourceTokenId?: string;
         reference?: string;
         appliedSummary?: string;

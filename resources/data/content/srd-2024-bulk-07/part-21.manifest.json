@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:magic_item:bag-of-tricks:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:bag-of-tricks",
+            "checksum": "abbfae5cf36a508d9d3f63ebe0cad378780b9118b6438b84f8b3008f227614b7"
+        },
+        {
+            "id": "srd:magic_item:oil-of-sharpness:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:oil-of-sharpness",
+            "checksum": "5638446b2cdacbf26e03de6689439d2ac46ff52d5394c3c03aa76bf1eefbcf97"
+        },
+        {
+            "id": "srd:magic_item:apparatus-of-the-crab:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:apparatus-of-the-crab",
+            "checksum": "dd2adcb80af4041c5e71433cf7ddd7bb6a8b5210a7028ffa0551ec5805aa1f01"
+        },
+        {
+            "id": "srd:magic_item:rod-of-rulership:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:rod-of-rulership",
+            "checksum": "7f27b3c9eb0aa36bc28cdd546bb9801183ddd83d0919140474ec9c930fa3a25f"
+        },
+        {
+            "id": "srd:magic_item:dust-of-disappearance:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:dust-of-disappearance",
+            "checksum": "d6c19384a3001877e4cf5e3472aa9066eb3e4a55081ce3d1173d495ce01757d8"
+        },
+        {
+            "id": "srd:magic_item:spellguard-shield:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:spellguard-shield",
+            "checksum": "6cf73e96e1d3fe69c7831d217cf820d23ae4107d0bec276381599e589fc32814"
+        },
+        {
+            "id": "srd:magic_item:luck-blade:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:luck-blade",
+            "checksum": "0feda1f71a661b85af84575c9ca42ff95fb12f579817b1a0fc3d4e5a108c1223"
+        },
+        {
+            "id": "srd:magic_item:potion-of-heroism:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-heroism",
+            "checksum": "319cf7cabb13b1f2a72dc5f061a1b166eb13dfb07254e419699181c4c15434dd"
+        },
+        {
+            "id": "srd:magic_item:cloak-of-protection:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:cloak-of-protection",
+            "checksum": "166970e056fa2c39121e1a637232eb354169d1383c96534cf809b99fc467bcd3"
+        },
+        {
+            "id": "srd:magic_item:manual-of-quickness-of-action:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:manual-of-quickness-of-action",
+            "checksum": "6bb5075e0008db5e5afa2c5ed0496e1533556bf81bf32cdf3d44f1c2c8a40b0d"
+        },
+        {
+            "id": "srd:magic_item:potion-of-gaseous-form:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-gaseous-form",
+            "checksum": "f149f0609785cdb9b51b33fdb63ef517a2cd4f00562fc0e5560fa67625a7cbfa"
+        },
+        {
+            "id": "srd:magic_item:potion-of-animal-friendship:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-animal-friendship",
+            "checksum": "c66d0ba9e5620840cd518b3972e65579d996acc9d95f02cf63477414ab80871e"
+        },
+        {
+            "id": "srd:magic_item:mirror-of-life-trapping:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:mirror-of-life-trapping",
+            "checksum": "ecfd264e380340897043eeff25106e5f1d5353c95745c8c523261db164d3d169"
+        },
+        {
+            "id": "srd:magic_item:potion-of-clairvoyance:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-clairvoyance",
+            "checksum": "a0d2dfcaf18c1780f5aac8cf196864c7e6d27661e5570ff0319f47a076bdf3cc"
+        },
+        {
+            "id": "srd:magic_item:elemental-gem:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:elemental-gem",
+            "checksum": "8150f216756f6f493f4dc27de9fb31cad5f25ec3e0dbf975a3777e343f953405"
+        },
+        {
+            "id": "srd:magic_item:animated-shield:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:animated-shield",
+            "checksum": "2d93d342a36f920fe3b812c3ef77d3ad67642a63fe9e26847c79ab03a42505bf"
+        },
+        {
+            "id": "srd:magic_item:necklace-of-fireballs:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:necklace-of-fireballs",
+            "checksum": "b9f0c6aaa3864627ef98d1eb140f639ef495155e5779b7758172d4e8692810a8"
+        },
+        {
+            "id": "srd:magic_item:pearl-of-power:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:pearl-of-power",
+            "checksum": "c6f4bc673f73997770d22f5c89b35b3adc590389c23c3b1ec9b271b6ebe2c18f"
+        },
+        {
+            "id": "srd:magic_item:rod-of-alertness:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:rod-of-alertness",
+            "checksum": "b08847c16aefbd134edf6b0765ec3fd9aed75a72e8dbd403d0d04a91728be858"
+        },
+        {
+            "id": "srd:magic_item:censer-of-controlling-air-elementals:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:censer-of-controlling-air-elementals",
+            "checksum": "0ae4ef4ca8bb04083972cb8c6c9f68613e5eabaa6bfcdd3a4589a756225c715d"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

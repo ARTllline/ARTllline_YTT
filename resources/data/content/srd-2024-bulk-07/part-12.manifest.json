@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:equipment:midnight-tears:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "midnight-tears",
+            "checksum": "29c106310babd3bc13d2caf06c70fabac7a954e33b9e10e2ea227f24490020da"
+        },
+        {
+            "id": "srd:equipment:component-pouch:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "component-pouch",
+            "checksum": "97e20bc1e52dc3b5ba0d18de9bac76b13bef7d6b6c33313bc5981b4af4e035ff"
+        },
+        {
+            "id": "srd:equipment:painters-supplies:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "painters-supplies",
+            "checksum": "a1da2cd2f116f10fb776c63be57991b0ed7edc319c1223635f6130b180472d3b"
+        },
+        {
+            "id": "srd:equipment:morningstar:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "morningstar",
+            "checksum": "8e835bfd9ba90c148d798dab6f83b841e7c3a6f66486ae13ff81d0bf47b5f4e1"
+        },
+        {
+            "id": "srd:equipment:pale-tincture:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "pale-tincture",
+            "checksum": "bf4eba1e447ac72b8dd7465580d59375f8c1b5fb1511b54403a8b2a80b207db1"
+        },
+        {
+            "id": "srd:equipment:bedroll:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "bedroll",
+            "checksum": "1f05f677349df8376819837b9330dea8db55465623bc67dfd7cccc30fa9f0704"
+        },
+        {
+            "id": "srd:equipment:woodcarvers-tools:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "woodcarvers-tools",
+            "checksum": "fc92298bbeaf905f211008990160d5c6c3e6a289c5abc4a90ca1e32f279ac14a"
+        },
+        {
+            "id": "srd:equipment:battleaxe:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "battleaxe",
+            "checksum": "012d9a99f2cb0074c6cf2b3bc5210b43dfdc36269c5b05012c26594244a932a2"
+        },
+        {
+            "id": "srd:equipment:spell-scroll-level-1:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "spell-scroll-level-1",
+            "checksum": "7380713a803a5b107f0af8f97b7ded06c9e8cd1e287561140d9c4ef109f418aa"
+        },
+        {
+            "id": "srd:equipment:jewelers-tools:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "jewelers-tools",
+            "checksum": "ab805b1de6e30867976bc67553217ed988a5f3344222edf5f76b8cc7539e8ab7"
+        },
+        {
+            "id": "srd:equipment:pike:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "pike",
+            "checksum": "67fbe94f237840375042b2f504f220d8540e852271f848dad648d55de5728496"
+        },
+        {
+            "id": "srd:equipment:ladder:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "ladder",
+            "checksum": "ac2c7402edbb641de0bd309873ccdbe0f988c4c8ac8877bb2b6eb46bd9e81c11"
+        },
+        {
+            "id": "srd:equipment:cooks-utensils:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "cooks-utensils",
+            "checksum": "f9035657fad80df7a365a567d2d409f811073c62e9d6333c580e2ad4b9404d41"
+        },
+        {
+            "id": "srd:equipment:whip:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "whip",
+            "checksum": "23fd10b29fb023e939f46b6f21c1686837b55c1405a1121eedabc99cefb6d5e2"
+        },
+        {
+            "id": "srd:equipment:case-map-or-scroll:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "case-map-or-scroll",
+            "checksum": "38eb1653d3388cb9f79d448636333d81f17e15c04346901d3698e4487a198010"
+        },
+        {
+            "id": "srd:equipment:backpack:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "backpack",
+            "checksum": "c4c50b176d77e5737f9631eae9015a452674076c2a4b3f19934aa53f2455daec"
+        },
+        {
+            "id": "srd:equipment:clothes-fine:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "clothes-fine",
+            "checksum": "6b72788259debc4922c7db1c182774b1cace8e7273aeca24015218cfa49ed2ae"
+        },
+        {
+            "id": "srd:equipment:chain:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "chain",
+            "checksum": "26f83f05bcadbea1c4a5094d9a28fa93397bbe125dd2a468ebf7b76b3e304ea8"
+        },
+        {
+            "id": "srd:equipment:block-and-tackle:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "block-and-tackle",
+            "checksum": "67d168871eb7033824da93b63d275ddb0249e878601995a4ce021708bb058752"
+        },
+        {
+            "id": "srd:equipment:lantern-hooded:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "lantern-hooded",
+            "checksum": "0d17425b5d7163a1f87c10708b28bdcc8ae0b675ca5bf5260c570587ec19f888"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

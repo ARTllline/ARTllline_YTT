@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:mass-suggestion:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "mass-suggestion",
+            "checksum": "ddeb7517c0231c4b976b7e2f6b0ed08844b2a9abeb964f91c4baec8f743676ed"
+        },
+        {
+            "id": "srd:spell:delayed-blast-fireball:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "delayed-blast-fireball",
+            "checksum": "f4a838bdb906cf5da89f886703d5a26cad47f9e09b0b5aaee149c9369ad86c47"
+        },
+        {
+            "id": "srd:spell:clone:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "clone",
+            "checksum": "6425d8255ef7bfa1be5570588b507cc59c597462924571637e80fff777e13c49"
+        },
+        {
+            "id": "srd:spell:shapechange:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "shapechange",
+            "checksum": "102d55c16254fc131e43a36ed3a90748a9ac2b86bab44a87c81c6523051309f7"
+        },
+        {
+            "id": "srd:spell:color-spray:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "color-spray",
+            "checksum": "09a05b913d99412f6caaa6fbc0f7d5f3d43a94d7fb3879975c4ff24ea4eee19b"
+        },
+        {
+            "id": "srd:spell:web:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "web",
+            "checksum": "a87464af42150ba56bbc926a62020d8565fa2cd92d25adf44978ee50dd401694"
+        },
+        {
+            "id": "srd:spell:tongues:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "tongues",
+            "checksum": "6cdb2411a982fad75d2c3cc9664fe5c5048291ed95c901a5984bd0572007ca01"
+        },
+        {
+            "id": "srd:spell:dominate-beast:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "dominate-beast",
+            "checksum": "3b36e887ecf70fbf7a8809b59631cf09fb6a9c252fe9f9e7845231fe9caafc59"
+        },
+        {
+            "id": "srd:spell:arcane-hand:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "arcane-hand",
+            "checksum": "674a3455b5c0f026877e589b9c78646cefcc33bdcdca55e0693af41fb2a32cd5"
+        },
+        {
+            "id": "srd:spell:programmed-illusion:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "programmed-illusion",
+            "checksum": "a91a7a6ef6d44b9a0dbfcabaea80f26befce52d9bf6ae12f7865084cc49857d5"
+        },
+        {
+            "id": "srd:spell:finger-of-death:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "finger-of-death",
+            "checksum": "dea99fd7805c8d6dabc1912773787bd8d88e2790920956733564d35b787e00fd"
+        },
+        {
+            "id": "srd:spell:control-weather:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "control-weather",
+            "checksum": "67f069c29aafc823f6439d9051afb13e83f71ffd259559616c066236407c6cf4"
+        },
+        {
+            "id": "srd:spell:storm-of-vengeance:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "storm-of-vengeance",
+            "checksum": "616ea53a175a8b078153cb4b42c48eb6964f1d398d2f6c624b5f36a36c443382"
+        },
+        {
+            "id": "srd:spell:comprehend-languages:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "comprehend-languages",
+            "checksum": "7c2b7e0a3eb15ef437928837c1da92f906bf38fc48750d33d139db4573c53cad"
+        },
+        {
+            "id": "srd:spell:hold-person:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "hold-person",
+            "checksum": "59ff09cef09095497d491e3e199f2bdc80b98600adaf5f33f8f9e5f9f1907c5d"
+        },
+        {
+            "id": "srd:spell:wind-wall:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "wind-wall",
+            "checksum": "6519d2747f8db12f499cd6c44458de17304bc616dbe69fda0cfbed03e7f8cada"
+        },
+        {
+            "id": "srd:spell:greater-invisibility:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "greater-invisibility",
+            "checksum": "bc3ec4f795cb2e6a654167b72580b7c88dc6e29c3b97437777d40a54df46420e"
+        },
+        {
+            "id": "srd:spell:raise-dead:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "raise-dead",
+            "checksum": "dd13007a573379a8d3cf38ea9f802d16115964893d63b87de8f2b2d5a67c4995"
+        },
+        {
+            "id": "srd:spell:wind-walk:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "wind-walk",
+            "checksum": "119df5e77f9b6b57851a9a282d1e3096a65415e08bd6d17f22da55396c0c2d39"
+        },
+        {
+            "id": "srd:spell:magnificent-mansion:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "magnificent-mansion",
+            "checksum": "394cdd09df56c4314d95c0114f5adb347fa7d1e3b1edca0834cf969dd1365879"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

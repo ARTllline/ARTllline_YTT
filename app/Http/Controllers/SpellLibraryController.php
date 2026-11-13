@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\SpellLibrary;
+use App\Compendium\CompendiumContent;
 use App\Models\Character;
 use App\Models\CompendiumEntry;
 use Illuminate\Http\Request;
@@ -12,9 +13,16 @@ class SpellLibraryController extends Controller
     public function index(Request $r, SpellLibrary $library): array
     {
         $d = $r->validate(['search' => 'sometimes|nullable|string|max:100', 'page' => 'sometimes|integer|min:1',
-            'level' => 'sometimes|nullable|integer|between:0,9', 'school' => 'sometimes|nullable|string|max:48']);
+            'level' => 'sometimes|nullable|integer|between:0,9', 'school' => 'sometimes|nullable|string|max:48',
+            'origin' => 'sometimes|nullable|in:custom,system']);
         $query = CompendiumEntry::with('source')->where('entity_type', 'spells')
             ->where(fn ($q) => $q->whereNull('library_user_id')->orWhere('library_user_id', $r->user()->id));
+        app(CompendiumContent::class)->browseQuery($query);
+        if (($d['origin'] ?? '') === 'custom') {
+            $query->where('library_user_id', $r->user()->id);
+        } elseif (($d['origin'] ?? '') === 'system') {
+            $query->whereNull('library_user_id');
+        }
         if ($search = trim($d['search'] ?? '')) {
             $query->whereRaw("name LIKE ? ESCAPE '!'", ['%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search).'%']);
         }
@@ -26,7 +34,7 @@ class SpellLibraryController extends Controller
         }
         $page = $query->orderBy('name')->orderBy('id')->paginate(24);
 
-        return ['entries' => collect($page->items())->map(fn ($e) => $library->projection($e))->all(), 'page' => $page->currentPage(), 'pages' => $page->lastPage(), 'total' => $page->total()];
+        return ['entries' => collect($page->items())->filter(fn ($e) => app(CompendiumContent::class)->gates($e)['browse'])->map(fn ($e) => $library->projection($e))->values()->all(), 'page' => $page->currentPage(), 'pages' => $page->lastPage(), 'total' => $page->total()];
     }
 
     public function save(Request $r, SpellLibrary $library): array

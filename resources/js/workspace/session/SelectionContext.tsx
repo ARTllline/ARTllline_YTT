@@ -7,6 +7,7 @@ import { RuntimeQuickActions } from './RuntimeQuickActions';
 import { CombatActorControls } from '../combat/CombatActorControls';
 import { tokenAppearance } from '../../tabletop/objects/tokenAppearance';
 import { SessionTokenDetails } from './SessionTokenDetails';
+import { SessionCharacterContent } from './SessionCharacterContent';
 
 /** Runtime projection only. Commands use the same authoritative queue as Combat Console. */
 export function SelectionContext({
@@ -88,6 +89,16 @@ export function SelectionContext({
                 />
             </div>
             <RuntimeQuickActions token={token} store={store} disabled={disabled} />
+            {store.role === 'gm' &&
+                token.characterId &&
+                state.scene.characters?.find((c) => c.id === token.characterId) && (
+                    <SessionCharacterContent
+                        key={token.characterId}
+                        character={state.scene.characters.find((c) => c.id === token.characterId)!}
+                        store={store}
+                        disabled={disabled}
+                    />
+                )}
             <div className="runtime-primary-actions">
                 <span className="eyebrow">Действия</span>
                 <CombatActorControls

@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:hold-monster:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "hold-monster",
+            "checksum": "8bc6764dddc2db1d570348a8fec49bdafc6a3e833fecca0072609a04a18fa72b"
+        },
+        {
+            "id": "srd:spell:blade-barrier:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "blade-barrier",
+            "checksum": "80205c857076defefbeba02aca8114ea12ca790b9edff892f3fbbc740727e266"
+        },
+        {
+            "id": "srd:spell:mirage-arcane:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "mirage-arcane",
+            "checksum": "209d43b6bef3fe1a54a50613adb0ff8ab7a0fc29b7c5867cb36656c2b0d830e0"
+        },
+        {
+            "id": "srd:spell:true-resurrection:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "true-resurrection",
+            "checksum": "b501e45973af3dd1cbff14e2d6650c1d20dc1799a3aebb998315d76c12caa629"
+        },
+        {
+            "id": "srd:spell:earthquake:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "earthquake",
+            "checksum": "63cd9c634640800d2d87cce882962195c4e233127e3939d20462008ea7459672"
+        },
+        {
+            "id": "srd:spell:mage-armor:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "mage-armor",
+            "checksum": "493cc0fdbb7b06cd1c1894806c3d11a8797ffa351253f3fa9d601b88422ab034"
+        },
+        {
+            "id": "srd:spell:produce-flame:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "produce-flame",
+            "checksum": "afe6b7d17fdf044684e06b7617a82ae3b9e104a7cc64cb7ae85c4f66bbc8b0a6"
+        },
+        {
+            "id": "srd:spell:augury:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "augury",
+            "checksum": "bbb1ede7636e97cedcc379cdb3605d4fb4ba6729d3e0a6f4bf6ccc165743d1b8"
+        },
+        {
+            "id": "srd:spell:compulsion:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "compulsion",
+            "checksum": "067a91a3ee73ca130b60e3f0a892f3fad1bfe112025d4fdd50f555ec7b146d38"
+        },
+        {
+            "id": "srd:spell:daylight:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "daylight",
+            "checksum": "20b697de93fbe57a1867fb37ab291057a9859eb4914764b983f83d388c75140b"
+        },
+        {
+            "id": "srd:spell:dream:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "dream",
+            "checksum": "966d8ca3dcdf489433b7289765116ca405f79b145915b0362a25d27e9c3ec022"
+        },
+        {
+            "id": "srd:spell:circle-of-death:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "circle-of-death",
+            "checksum": "11122bc3e54fa8f8df4fc312abf4c6067695312147d23941f11de48ba1d8f25b"
+        },
+        {
+            "id": "srd:spell:reverse-gravity:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "reverse-gravity",
+            "checksum": "299eaa916a2d335701a8ea320fc3c7d8707a93c126a105bf5476e48a138e45bf"
+        },
+        {
+            "id": "srd:spell:holy-aura:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "holy-aura",
+            "checksum": "806475bc91f0976f5552761750cd585c9b495a530bd696b9ded9dde3f58625c2"
+        },
+        {
+            "id": "srd:spell:gate:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "gate",
+            "checksum": "2fd037ac244fe643497dac7578041e8fbcf8524e378a66adc48d7e120be47792"
+        },
+        {
+            "id": "srd:spell:true-strike:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "true-strike",
+            "checksum": "a6d0f469ea8d1fd1f38613dbd60c5f5b5263af902466bdc44250c6457b511626"
+        },
+        {
+            "id": "srd:spell:bane:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "bane",
+            "checksum": "b05fe295839128f5d467f6ef19cbc2cf8149790411d53b58681b5585db1ceca3"
+        },
+        {
+            "id": "srd:spell:spiritual-weapon:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "spiritual-weapon",
+            "checksum": "c43529244a6e74fc993a29c03ac28962d6410ba05f0bc95ee44a31e9afd8173b"
+        },
+        {
+            "id": "srd:spell:major-image:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "major-image",
+            "checksum": "7b1ec63fe701d8656174d0e8afdacda87859a9eff5643ac81a2b93783332e9f6"
+        },
+        {
+            "id": "srd:spell:reincarnate:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "reincarnate",
+            "checksum": "2e588524a73f6879030d0b6e0ce66d2bbcf39f8a55df2bb64b93eb80ff5fe15c"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

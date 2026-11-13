@@ -1,0 +1,236 @@
+{
+  "format": 1,
+  "adapter_version": 4,
+  "source": "srd-2024",
+  "ruleset": "dnd-2024",
+  "export": {
+    "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+    "library_version": "0.9.0-audit.1"
+  },
+  "selection": [
+    {
+      "id": "srd:equipment:acid:2024",
+      "kind": "equipment",
+      "entity_type": "items",
+      "external_key": "acid",
+      "checksum": "f5864f407cadbed32049992f8e4e22cab472192e18578209e75f6671876351cf"
+    },
+    {
+      "id": "srd:equipment:arrows:2024",
+      "kind": "equipment",
+      "entity_type": "items",
+      "external_key": "arrows",
+      "checksum": "13f1c3bd2b19d072847d47a35c48be5559f7d5c57ac8a3faf451d9b42a714e13"
+    },
+    {
+      "id": "srd:equipment:chain-mail:2024",
+      "kind": "equipment",
+      "entity_type": "armor",
+      "external_key": "chain-mail",
+      "checksum": "6bb1e158068a10e42e3107ed55bb66bf39d7c692a75554184b7c30dbcd818b44"
+    },
+    {
+      "id": "srd:equipment:leather-armor:2024",
+      "kind": "equipment",
+      "entity_type": "armor",
+      "external_key": "leather-armor",
+      "checksum": "10c5fb4514a6ead647601691b0832c91d884b726ecd39a8767c722fcbcd7b313"
+    },
+    {
+      "id": "srd:equipment:longsword:2024",
+      "kind": "equipment",
+      "entity_type": "weapons",
+      "external_key": "longsword",
+      "checksum": "db88a0878bb279d08635493d8f62b2747237674a648b1f2f663f268070e6e440"
+    },
+    {
+      "id": "srd:equipment:potion-of-healing:2024",
+      "kind": "equipment",
+      "entity_type": "items",
+      "external_key": "potion-of-healing",
+      "checksum": "a724b55079637251e53252de95faa5ef580da4b555191a8b569f9810636105dd",
+      "correction": {
+        "evidence": "Agent editorial proposal; NOT human approval. SRD 5.2.1 p. 95, 99; https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf; PDF SHA256 8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+        "fields": {
+          "description_ru": "Это зелье — магический предмет. Бонусным действием вы можете выпить его или напоить им другое существо в пределах 5 футов от себя. Существо, выпившее магическую красную жидкость из этой склянки, восстанавливает 2d4 + 2 хита."
+        }
+      },
+      "content_checksum": "496c81e1c47fded10cc863a7290bd8ec93023986400ed675a938d1b757bfe3f7"
+    },
+    {
+      "id": "srd:equipment:shield:2024",
+      "kind": "equipment",
+      "entity_type": "armor",
+      "external_key": "shield",
+      "checksum": "d05f779c0fc504a1cae3b6506acacf784e702981a174f463b92050b960ee2c51"
+    },
+    {
+      "id": "srd:magic_item:bag-of-holding:2024",
+      "kind": "magic_item",
+      "entity_type": "items",
+      "external_key": "magic-item:bag-of-holding",
+      "checksum": "19cd6ace39617152a54aff49973d5fb777424c443b30b6aea0063c9b784252a3",
+      "correction": {
+        "evidence": "Agent editorial proposal; NOT human approval. SRD 5.2.1 p. 212; https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf; PDF SHA256 8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+        "fields": {
+          "name_ru": "Сумка хранения",
+          "description_ru": "Чудесный предмет, необычный.\n\nВнутреннее пространство этой сумки значительно больше её внешних размеров: внутри оно составляет примерно 2 фута на 2 фута и 4 фута в глубину. Сумка вмещает до 500 фунтов при объёме не более 64 кубических футов. Независимо от содержимого сумка весит 5 фунтов. Чтобы достать из неё предмет, требуется действие «Использование» (Utilize).\n\nЕсли сумку перегрузить, проколоть или разорвать, она уничтожается, а её содержимое рассеивается на Астральном плане. Если вывернуть сумку наизнанку, содержимое высыпается без повреждений, но для дальнейшего использования сумку нужно вывернуть обратно. Воздуха внутри хватает на 10 минут дыхания; это время делится на число находящихся внутри дышащих существ.\n\nЕсли поместить Сумку хранения во внепространственное пространство, созданное Удобным рюкзаком (Handy Haversack), Переносной дырой (Portable Hole) или подобным предметом, оба предмета немедленно уничтожаются и открывается проход на Астральный план. Он возникает там, где один предмет поместили внутрь другого. Каждое существо в сфере радиусом 10 футов с центром на проходе затягивается через него в случайное место на Астральном плане. Затем проход закрывается. Он односторонний и не может быть открыт повторно."
+        }
+      },
+      "content_checksum": "b125cf57e16c46d32cec204dda2b2bb1ae578f289005458956c893fa01f65a8f"
+    },
+    {
+      "id": "srd:spell:cure-wounds:2024",
+      "kind": "spell",
+      "entity_type": "spells",
+      "external_key": "cure-wounds",
+      "checksum": "b5abdb0be7e0fa31a1db9ab639154a5c81fce55878c7cdcea9f426300c7eab7d"
+    },
+    {
+      "id": "srd:spell:detect-magic:2024",
+      "kind": "spell",
+      "entity_type": "spells",
+      "external_key": "detect-magic",
+      "checksum": "1a8deb39006aca1759cb8acd962e97bd5b2d6a6b0cde41d41fde1c75f11ccab7"
+    },
+    {
+      "id": "srd:spell:fireball:2024",
+      "kind": "spell",
+      "entity_type": "spells",
+      "external_key": "fireball",
+      "checksum": "babb980ff0d90a4c929cf75d201f327e82d80953af68842fdb90338005c06e97",
+      "correction": {
+        "evidence": "Agent editorial proposal; NOT human approval. SRD 5.2.1 p. 131; https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf; PDF SHA256 8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+        "fields": {
+          "description_en": "A bright streak flashes from you to a point you choose within range and then blossoms with a low roar into a fiery explosion. Each creature in a 20-foot-radius Sphere centered on that point makes a Dexterity saving throw, taking 8d6 Fire damage on a failed save or half as much damage on a successful one.\n  Flammable objects in the area that aren't being worn or carried start burning.\n\nUsing a Higher-Level Spell Slot. The damage increases by 1d6 for each spell slot level above 3.",
+          "description_ru": "Яркая вспышка проносится от вас к выбранной вами точке в пределах дистанции, а затем с низким гулом расцветает огненным взрывом. Каждое существо в Сфере радиусом 20 футов с центром в этой точке совершает спасбросок Ловкости, получая 8d6 урона Огнём при провале или половину этого урона при успехе.\n  Легковоспламеняющиеся объекты в области, которые никто не носит и не несёт, начинают гореть.\n\nПри использовании ячейки более высокого уровня урон увеличивается на 1d6 за каждый уровень ячейки выше 3-го."
+        }
+      },
+      "content_checksum": "56f3bef53a577baad6076e0939271950643b4a293afd633e01e16a6e32957322"
+    },
+    {
+      "id": "srd:spell:healing-word:2024",
+      "kind": "spell",
+      "entity_type": "spells",
+      "external_key": "healing-word",
+      "checksum": "94b92d3c1fed76365a4b812da8444131bf5413265008c9611e524c7f0275f964",
+      "correction": {
+        "evidence": "Agent editorial proposal; NOT human approval. SRD 5.2.1 p. 139; https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf; PDF SHA256 8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+        "fields": {
+          "description_en": "A creature of your choice that you can see within range regains Hit Points equal to 2d4 plus your spellcasting ability modifier.\n\nUsing a Higher-Level Spell Slot. The healing increases by 2d4 for each spell slot level above 1.",
+          "description_ru": "Существо по вашему выбору, которое вы видите в пределах дистанции, восстанавливает Хиты в количестве, равном 2d4 плюс модификатор вашей магической характеристики.\n\nПри использовании ячейки более высокого уровня лечение увеличивается на 2d4 за каждый уровень ячейки выше 1-го."
+        }
+      },
+      "content_checksum": "1864f0efb5131ca7647a60948c68261c2a87e71d02c547b94d1c5784057fbe47"
+    },
+    {
+      "id": "srd:spell:magic-missile:2024",
+      "kind": "spell",
+      "entity_type": "spells",
+      "external_key": "magic-missile",
+      "checksum": "f12ee013b3bbd77951377402ca2b83081297d6f2b239adf64a84daaff0fc67a9",
+      "correction": {
+        "evidence": "Agent editorial proposal; NOT human approval. SRD 5.2.1 p. 146; https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf; PDF SHA256 8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+        "fields": {
+          "description_en": "You create three glowing darts of magical force. Each dart strikes a creature of your choice that you can see within range. A dart deals 1d4 + 1 Force damage to its target. The darts all strike simultaneously, and you can direct them to hit one creature or several.\n\nUsing a Higher-Level Spell Slot. The spell creates one more dart for each spell slot level above 1.",
+          "description_ru": "Вы создаёте три светящихся заряда магической силы. Каждый заряд поражает существо по вашему выбору, которое вы видите в пределах дистанции. Заряд наносит своей цели 1d4 + 1 урона Силовой энергией. Все заряды поражают одновременно, и вы можете направить их в одно существо или в несколько.\n\nПри использовании ячейки более высокого уровня заклинание создаёт ещё один заряд за каждый уровень ячейки выше 1-го."
+        }
+      },
+      "content_checksum": "d216203216a7559e5ecd2b2630ef40f8b0791138bf8c4fba422e5f8a3bc03c6a"
+    },
+    {
+      "id": "srd:spell:shield:2024",
+      "kind": "spell",
+      "entity_type": "spells",
+      "external_key": "shield",
+      "checksum": "7b71ae6fd2a2a83f258a7423ee278c594c6d0c1fe304751f0602f03e35ea63f9"
+    },
+    {
+      "id": "srd:spell:wish:2024",
+      "kind": "spell",
+      "entity_type": "spells",
+      "external_key": "wish",
+      "checksum": "1f779153ffeb2255bfaea562f22eb7f1a663218f65ca93f9c336d2b5f12202b0",
+      "correction": {
+        "evidence": "Agent editorial proposal; NOT human approval. SRD 5.2.1 p. 175; https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf; PDF SHA256 8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+        "fields": {
+          "description_ru": "Желание — могущественнейшее заклинание, которое способен сотворить смертный. Просто произнеся слова вслух, вы можете изменить саму реальность.\n\nОсновное применение этого заклинания — воспроизвести любое другое заклинание 8-го уровня или ниже. При таком применении вам не требуется выполнять никакие требования для сотворения воспроизводимого заклинания, включая дорогостоящие компоненты. Заклинание просто вступает в действие.\n\nВместо этого вы можете создать один из следующих эффектов по своему выбору.\n\nСоздание предмета. Вы создаёте один немагический предмет стоимостью до 25 000 зм. Ни один его размер не может превышать 300 футов. Он появляется на земле в незанятом пространстве, которое вы видите.\n\nМгновенное исцеление. Вы и до двадцати существ, которых вы видите, восстанавливаете все хиты. Вы также прекращаете действующие на них эффекты, перечисленные в заклинании «Высшее восстановление» (Greater Restoration).\n\nСопротивление. До десяти существ, которых вы видите, получают постоянное сопротивление одному выбранному вами типу урона.\n\nИммунитет к заклинанию. До десяти существ, которых вы видите, получают иммунитет к одному заклинанию или другому магическому эффекту на 8 часов.\n\nМгновенное обучение. Вы заменяете одну из своих черт другой, требованиям которой соответствуете. Вы теряете все преимущества прежней черты и получаете преимущества новой. Нельзя заменить черту, которая служит требованием для любой другой вашей черты или особенности.\n\nПереброс. Вы отменяете одно недавнее событие, заставляя перебросить любой бросок кости, сделанный за последний раунд, включая ваш последний ход. Реальность меняется в соответствии с новым результатом. Например, Желание может отменить проваленный спасбросок союзника или критическое попадание врага. Вы можете назначить переброс с преимуществом или помехой и выбираете, использовать новый или первоначальный результат.\n\nИзменение реальности. Вы можете пожелать нечто, не входящее в перечисленные эффекты. Изложите желание Мастеру как можно точнее. Мастер вправе свободно решать, что произойдёт; чем масштабнее желание, тем выше вероятность, что что-то пойдёт не так. Заклинание может просто не сработать, желаемый эффект может осуществиться лишь частично, либо формулировка желания может привести к непредвиденным последствиям. Например, пожелав смерти злодея, вы можете оказаться в будущем, когда он уже умер, тем самым фактически выбыв из игры. Пожелав легендарный магический предмет или артефакт, вы можете мгновенно перенестись к его нынешнему владельцу. Если исполненное желание влияет на целое сообщество, регион или мир, оно, вероятно, привлечёт могущественных врагов. Если желание затрагивает бога, его божественные слуги могут немедленно вмешаться, чтобы помешать ему или побудить вас изменить формулировку. Попытка отменить саму мультивселенную проваливается.\n\nСотворение Желания для любого эффекта, кроме воспроизведения другого заклинания, вызывает стресс, который ослабляет вас. После такого стресса всякий раз, когда вы сотворяете заклинание до окончания продолжительного отдыха, вы получаете 1d10 некротического урона за каждый уровень этого заклинания. Этот урон невозможно уменьшить или предотвратить никаким способом. Кроме того, ваша Сила становится равна 3 на 2d4 дня. За каждый из этих дней, который вы проводите отдыхая и занимаясь лишь лёгкой деятельностью, оставшееся время восстановления сокращается на 2 дня. Наконец, пережив такой стресс, вы с вероятностью 33 процента навсегда теряете способность сотворять Желание."
+        }
+      },
+      "content_checksum": "cb26b66e86054106e3aeb94ea4f01098270a749c93a5b0ea9b4a99ae3a7c306e"
+    }
+  ],
+  "reviews": [],
+  "baseline_reviews": [
+    {
+      "id": "srd:equipment:acid:2024",
+      "policy": "legacy-equipment-missing-null-ammunition-v1",
+      "entry_id": 340,
+      "baseline_digest": "61b589d662b57002ac14d917e7070d3b3c61951d827eab9b5eb4a6daf2fabe80",
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T21:59:44+02:00",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B1. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+    },
+    {
+      "id": "srd:equipment:arrows:2024",
+      "policy": "legacy-equipment-missing-null-ammunition-v1",
+      "entry_id": 345,
+      "baseline_digest": "c3a9091eaa0a9eb8d4346b805ee02ca798d969a6c6bab96a9580449245b7e2d8",
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T21:59:44+02:00",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B2. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+    },
+    {
+      "id": "srd:equipment:chain-mail:2024",
+      "policy": "legacy-equipment-missing-null-ammunition-v1",
+      "entry_id": 374,
+      "baseline_digest": "9ab016ef867fe46282eafec7b0cbb21a013453b7713584993f1fbf54d4afef29",
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T21:59:44+02:00",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B3. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+    },
+    {
+      "id": "srd:equipment:leather-armor:2024",
+      "policy": "legacy-equipment-missing-null-ammunition-v1",
+      "entry_id": 430,
+      "baseline_digest": "dcc3aeba8f72970522d7a01aa953286d6c4ca909940721bb5d355e2b2bca3d85",
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T21:59:44+02:00",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B4. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+    },
+    {
+      "id": "srd:equipment:longsword:2024",
+      "policy": "legacy-equipment-missing-null-ammunition-v1",
+      "entry_id": 436,
+      "baseline_digest": "b629882ef28edd4bc52045ee6acd7f6deada21fd0b44445773b10b629b9ad9bf",
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T21:59:44+02:00",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B5. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+    },
+    {
+      "id": "srd:equipment:potion-of-healing:2024",
+      "policy": "legacy-equipment-missing-null-ammunition-v1",
+      "entry_id": 467,
+      "baseline_digest": "5322310b5da605e25d4d863fb383d439d211bcc153210a0d7f1728415863d4d8",
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T21:59:44+02:00",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B6. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+    },
+    {
+      "id": "srd:equipment:shield:2024",
+      "policy": "legacy-equipment-missing-null-ammunition-v1",
+      "entry_id": 486,
+      "baseline_digest": "35c25b0ab9d99301784023c17058009a2f624d7539065a43fbe8b1c4adfbcbbf",
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T21:59:44+02:00",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B7. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+    }
+  ]
+}

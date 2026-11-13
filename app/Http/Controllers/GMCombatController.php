@@ -24,6 +24,9 @@ class GMCombatController extends Controller
         Gate::authorize('update', $scene);
         $d = $request->validate(['action' => 'required|in:resolve,undo,check', 'executionId' => 'required_if:action,resolve|uuid',
             'status' => 'required_if:action,resolve|in:resolved,dismissed', 'note' => 'nullable|string|max:2000', 'correctionId' => 'required_if:action,undo|integer|min:1',
+            'confirmed' => 'sometimes|boolean', 'effect' => 'sometimes|in:damage,heal,log', 'targetId' => 'nullable|integer|min:1', 'amount' => 'sometimes|integer|between:1,9999',
+            'spendItem' => 'sometimes|boolean', 'spendSlot' => 'sometimes|boolean', 'spendCosts' => 'sometimes|boolean', 'spendAction' => 'sometimes|boolean',
+            'activation' => 'sometimes|in:action,bonus_action,reaction,free',
             'tokenIds' => 'required_if:action,check|array|min:1|max:40', 'tokenIds.*' => 'required|integer|min:1|distinct',
             'stat' => 'required_if:action,check|string|max:48|regex:/^[a-z][a-z0-9_]*$/', 'dc' => 'nullable|integer|between:0,100',
             'rollMode' => 'sometimes|in:normal,advantage,disadvantage', 'visibility' => 'required_if:action,check|in:gm_only,public', 'dcVisible' => 'sometimes|boolean']);
@@ -36,9 +39,9 @@ class GMCombatController extends Controller
             if ($d['action'] === 'check') {
                 return app(GMSessionChecks::class)->run($locked, $d);
             }
-            app(GMResolutions::class)->resolve($request->user(), $locked, $d['executionId'], $d['status'], $d['note'] ?? '');
+            app(GMResolutions::class)->resolve($request->user(), $locked, $d['executionId'], $d['status'], $d['note'] ?? '', $d);
 
-            return [];
+            return ['charactersChanged' => true, '_combatChanged' => true];
         }, 'combat.session');
     }
 }

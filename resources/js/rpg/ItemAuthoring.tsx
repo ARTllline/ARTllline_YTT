@@ -1,3 +1,4 @@
+import { rarityLabels } from '../compendium/presentation';
 import { AssetIconPicker } from '../control/AssetLibrary';
 import { request } from '../api/client';
 import { ItemGameplayEditor } from './ItemGameplayEditor';
@@ -268,14 +269,24 @@ export function ItemAuthoring({
                         ))}
                     </div>
                     <div className="ability-type-chips">
-                        {['common', 'uncommon', 'rare', 'epic', 'legendary'].map((rarity, i) => (
+                        {[
+                            'common',
+                            'uncommon',
+                            'rare',
+                            'very_rare',
+                            'epic',
+                            'legendary',
+                            'artifact',
+                            'varies',
+                            'unknown',
+                        ].map((rarity) => (
                             <button
                                 type="button"
                                 key={rarity}
                                 aria-pressed={draft.rarity === rarity}
                                 onClick={() => patch({ rarity })}
                             >
-                                {['Обычный', 'Необычный', 'Редкий', 'Эпический', 'Легендарный'][i]}
+                                {rarityLabels[rarity]}
                             </button>
                         ))}
                     </div>

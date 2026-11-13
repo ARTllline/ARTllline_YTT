@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:magic_item:potion-of-growth:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-growth",
+            "checksum": "b52f0ab22efc4c13270f5d84e6a93f39782cb85fc11285de4127ab1213b7f3b4"
+        },
+        {
+            "id": "srd:magic_item:horn-of-blasting:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:horn-of-blasting",
+            "checksum": "b561ee2b39aba33a4d77afd87ffbd5d4bddcf7d225961a9a2454e30a6cbbc0e7"
+        },
+        {
+            "id": "srd:magic_item:shield-1:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:shield-1",
+            "checksum": "1b18ed5c39a08afd11c5b75483873b2ac15c24e36a932c623ebeb504d0c6d4b8"
+        },
+        {
+            "id": "srd:magic_item:ring-of-resistance:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-resistance",
+            "checksum": "195ab76325724f71ea40b71c43a0f3c2226e1dab5ac708f6c23dd015b98af3fc"
+        },
+        {
+            "id": "srd:magic_item:pipes-of-haunting:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:pipes-of-haunting",
+            "checksum": "984a043ad5c605d477ce50a39dcd05e8464b90c7d2ebef6325635c96f646b232"
+        },
+        {
+            "id": "srd:magic_item:shield-of-missile-attraction:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:shield-of-missile-attraction",
+            "checksum": "23a770744e7db6602adcd17ef5598d0bc772f227977118f36a081ee052f66925"
+        },
+        {
+            "id": "srd:magic_item:gem-of-brightness:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:gem-of-brightness",
+            "checksum": "2219b3063bb6a208430d1d762847f51c5be47ee5b48b7c474a26dc41a1600b63"
+        },
+        {
+            "id": "srd:magic_item:ring-of-protection:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-protection",
+            "checksum": "45a5ba6628dcceeffdcdeed4daca08d0c2a3bf72a823bc749eee430d54226192"
+        },
+        {
+            "id": "srd:magic_item:ring-of-warmth:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-warmth",
+            "checksum": "ca44e62eb52b1260f617d5df95fc48c88e011fbe87fcfcf892b63f9eb895370c"
+        },
+        {
+            "id": "srd:magic_item:horseshoes-of-speed:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:horseshoes-of-speed",
+            "checksum": "3726e89b2eef63817ea78008db73c579994a665476045835d7b438eadfbb0278"
+        },
+        {
+            "id": "srd:magic_item:wand-of-secrets:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wand-of-secrets",
+            "checksum": "689127771f1aa750c6b54e2958a1a8d5d9f90325740bac7493b40966f93f3903"
+        },
+        {
+            "id": "srd:magic_item:vicious-weapon:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:vicious-weapon",
+            "checksum": "860f8d997144ee26ccfe2d0ea89f110b3ca6b8c5b639b9b4b71b732a97c851ef"
+        },
+        {
+            "id": "srd:magic_item:sword-of-wounding:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:sword-of-wounding",
+            "checksum": "142dc37a8306ae17704acac5315fb955e2c6eec34b028344d8a3a59ac24af342"
+        },
+        {
+            "id": "srd:magic_item:ring-of-x-ray-vision:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-x-ray-vision",
+            "checksum": "0a6a6335a2cecc1f4ef99eddb015e633d009572b9c936f2d681f1c5db1a91434"
+        },
+        {
+            "id": "srd:magic_item:cape-of-the-mountebank:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:cape-of-the-mountebank",
+            "checksum": "a274cfebfb212add783a11360bbc6fe5449717db607d5e7d534d8112bc6c6068"
+        },
+        {
+            "id": "srd:magic_item:cloak-of-the-bat:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:cloak-of-the-bat",
+            "checksum": "117ece9dcd9bc8fe8978e79fde72ee2109f1cb6725fd3ec7d5c04328f6771a7c"
+        },
+        {
+            "id": "srd:magic_item:wand-of-fear:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wand-of-fear",
+            "checksum": "77dea84a1dbb6daa5d9fa8183e09107e3389dec2f29d9b5fed41094449c524ae"
+        },
+        {
+            "id": "srd:magic_item:staff-of-withering:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:staff-of-withering",
+            "checksum": "c3e65d710d0c49ec0bf71caf07c0b4c5e1d6fadccf4384b4a02a90671b077579"
+        },
+        {
+            "id": "srd:magic_item:cube-of-force:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:cube-of-force",
+            "checksum": "a3a12bb3e215ea98d8595afd9496bae6a78efc50ff22a8779b00864c1f29f23f"
+        },
+        {
+            "id": "srd:magic_item:instant-fortress:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:instant-fortress",
+            "checksum": "696bc1249b160697ec8bd724f0acb4341c0f66b48d264eae74c334a332a62da4"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

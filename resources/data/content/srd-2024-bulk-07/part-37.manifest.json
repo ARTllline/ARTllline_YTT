@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:suggestion:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "suggestion",
+            "checksum": "5249419eba9cb7d60c55f882a6d9372259ca5847cb59ba4c637f08712bb97633"
+        },
+        {
+            "id": "srd:spell:guardian-of-faith:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "guardian-of-faith",
+            "checksum": "31bd52a7f11e14107775763bcecd20be3d8af0fdbb36dd7ee3c80afa5868ee83"
+        },
+        {
+            "id": "srd:spell:freezing-sphere:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "freezing-sphere",
+            "checksum": "a9bc5e956342f831e3b754c24e3f4b7a07b84c7ced12663d687ed33484cc0fca"
+        },
+        {
+            "id": "srd:spell:alarm:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "alarm",
+            "checksum": "c76cd9109b486dbeecf29105af3d0e4d8f38f2d0e3ac267de1290eea78e876fe"
+        },
+        {
+            "id": "srd:spell:speak-with-plants:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "speak-with-plants",
+            "checksum": "983fa539575f1fce2e55d004e5ea05a7db9fd40795219a371c5c5528ad3d5067"
+        },
+        {
+            "id": "srd:spell:antilife-shell:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "antilife-shell",
+            "checksum": "357bc711c00e35c2a007fafe6062e4954cf6bc09dbb995f0d460c9ae42516d0c"
+        },
+        {
+            "id": "srd:spell:secret-chest:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "secret-chest",
+            "checksum": "4e011228fc2dd686ea840778cf3bebfe41cb6e5f143538ce8c17e5e57555759f"
+        },
+        {
+            "id": "srd:spell:hellish-rebuke:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "hellish-rebuke",
+            "checksum": "2099271df798526b949eeac82dfee4495113d58bb79bfa9e99209eaa969a91e7"
+        },
+        {
+            "id": "srd:spell:fly:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "fly",
+            "checksum": "da6911e78b8b8a4d90da7f3fbe3532446dee6485d00b3a833d9f5352b088af2e"
+        },
+        {
+            "id": "srd:spell:conjure-fey:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "conjure-fey",
+            "checksum": "f1e7f555e3d3896984b776c7293bf3ca747c9cff9925f728a202bfe9e9848452"
+        },
+        {
+            "id": "srd:spell:planar-binding:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "planar-binding",
+            "checksum": "067a9fab98ec91e630aafc13eb930c39c921c90663f8406ae0c9a01bbde9c283"
+        },
+        {
+            "id": "srd:spell:chromatic-orb:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "chromatic-orb",
+            "checksum": "7872e61b91520bb4d265d425a679810cdd46353ea05a6cef900f2c52ac823caa"
+        },
+        {
+            "id": "srd:spell:gaseous-form:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "gaseous-form",
+            "checksum": "e8c98055e3aa282376ae29d568f17d51f1dc8d98ec7cdc34181c8c43adedb90b"
+        },
+        {
+            "id": "srd:spell:faithful-hound:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "faithful-hound",
+            "checksum": "a139a04b0ca63cf45d4b8b976d080644cc70f881028977897b29e2b8bbba9f29"
+        },
+        {
+            "id": "srd:spell:mass-cure-wounds:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "mass-cure-wounds",
+            "checksum": "d4199288694d69662cf05f3cfa88f3a2585162c2dfe24d5d23f8db4d22c87046"
+        },
+        {
+            "id": "srd:spell:searing-smite:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "searing-smite",
+            "checksum": "969a542fae4515bd53b03ce9120a7f9cc8fbda59d641ea133dd9ad79d850872b"
+        },
+        {
+            "id": "srd:spell:plant-growth:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "plant-growth",
+            "checksum": "33ec5076a91d22867576063bb7f5426b408ad5384106917b3e116cd5bedaeca3"
+        },
+        {
+            "id": "srd:spell:word-of-recall:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "word-of-recall",
+            "checksum": "9a34b5e86e1024604365a76a82e427d39685be6b6dcb46764b649ec70e69ff59"
+        },
+        {
+            "id": "srd:spell:greater-restoration:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "greater-restoration",
+            "checksum": "7c11aa3c58912673c0140c43ccce63a10a81e2afea3034464454e8203254fcd8"
+        },
+        {
+            "id": "srd:spell:faerie-fire:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "faerie-fire",
+            "checksum": "3eadeb5c33103b8979f77514f789fe3f6c2fe780a556c571d208d86078bcfba0"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

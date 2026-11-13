@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:magic_item:tome-of-clear-thought:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:tome-of-clear-thought",
+            "checksum": "6807dfc8148fa6e9ec915b7b03d188ddfa189a5f36a93ffdf03e4beadec3e2c1"
+        },
+        {
+            "id": "srd:magic_item:elixir-of-health:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:elixir-of-health",
+            "checksum": "9cb098003a47475f9412c36631dda00c5062d590fe143facfd3da7635bb696aa"
+        },
+        {
+            "id": "srd:magic_item:rod-of-lordly-might:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:rod-of-lordly-might",
+            "checksum": "f2f1979a25fc0ada579ebb43fb34ec8b71a55e2a85430a730ccb50a8fe3c0543"
+        },
+        {
+            "id": "srd:magic_item:folding-boat:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:folding-boat",
+            "checksum": "e6d51b5892e482d15e0df9c652cfcae0b22cd57dd76fcdb699ae25cca5669343"
+        },
+        {
+            "id": "srd:magic_item:broom-of-flying:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:broom-of-flying",
+            "checksum": "4ea0f06b4dbf3e855b5336d59eeab34b3f8a7e6aaa88f7bf3fae255e937b4ec2"
+        },
+        {
+            "id": "srd:magic_item:carpet-of-flying:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:carpet-of-flying",
+            "checksum": "17336ff777efbed4929c511abfe28e9bae95a13637a75fbeeaee67ec09ecf779"
+        },
+        {
+            "id": "srd:magic_item:shield-of-the-cavalier:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:shield-of-the-cavalier",
+            "checksum": "285baf9ccae6d8b3be4a64afd3d6a313141127ae3dcb61504ebf14aafc86505d"
+        },
+        {
+            "id": "srd:magic_item:sphere-of-annihilation:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:sphere-of-annihilation",
+            "checksum": "fe8dfc608be5a201f94ee568421f37579982be67bf6876370c2c22e12a7d0b66"
+        },
+        {
+            "id": "srd:magic_item:ring-of-feather-falling:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-feather-falling",
+            "checksum": "ee6f00bfe0903ed3164658a805874ec6a1d9e075be6ce6ef0773df06fede10a1"
+        },
+        {
+            "id": "srd:magic_item:wand-of-magic-detection:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wand-of-magic-detection",
+            "checksum": "070de065601dcd04373c34aa0ff7999f3c4ce591c05ba140955edc015971c086"
+        },
+        {
+            "id": "srd:magic_item:horn-of-valhalla-3:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:horn-of-valhalla-3",
+            "checksum": "b17f3da73df888f930212c5c1a2b4d5d103d184e417d827f8ac511ea8fafce7c"
+        },
+        {
+            "id": "srd:magic_item:potion-of-invulnerability:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-invulnerability",
+            "checksum": "47696b5672393e50c1a6616fefde5eafd2821cedc391ef5a9b6ecbe6a9db1bbc"
+        },
+        {
+            "id": "srd:magic_item:cubic-gate:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:cubic-gate",
+            "checksum": "7d5cab2aa09d6167a54e20b8d7a0a469cece7d87dc8d1c1f0d10c4f1eb305d35"
+        },
+        {
+            "id": "srd:magic_item:wings-of-flying:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wings-of-flying",
+            "checksum": "65067dd2e3a047ac5c9a49444e84c43c0d1de01081deeeb301daa84c2867e8ec"
+        },
+        {
+            "id": "srd:magic_item:wand-of-the-war-mage-1:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wand-of-the-war-mage-1",
+            "checksum": "891e2887b38df0d42eaeb92a469ed46b934cc47fb9993fa441d86777ae27ae50"
+        },
+        {
+            "id": "srd:magic_item:oathbow:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:oathbow",
+            "checksum": "60b385120d4bb433944a9e34fb8e7690d12fc9487b36cbc2ef26c527aafc6402"
+        },
+        {
+            "id": "srd:magic_item:gloves-of-thievery:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:gloves-of-thievery",
+            "checksum": "2541051723f03d8103ec81f7a363bed82aebd6db654f523c46e9a7f81da53290"
+        },
+        {
+            "id": "srd:magic_item:well-of-many-worlds:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:well-of-many-worlds",
+            "checksum": "f7ab8d9ed603221e901feece5c3c5170adc332da9b846e101ea335e715aacdbb"
+        },
+        {
+            "id": "srd:magic_item:necklace-of-prayer-beads:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:necklace-of-prayer-beads",
+            "checksum": "f3038abbb33616f35ae6a1896721879c563302e4684ac820f6f262873f6c49f0"
+        },
+        {
+            "id": "srd:magic_item:hat-of-disguise:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:hat-of-disguise",
+            "checksum": "e0c8901d8d0cb829373b591ad8e78ce7f0fe7fd964d56f5329d500caa8264fc7"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

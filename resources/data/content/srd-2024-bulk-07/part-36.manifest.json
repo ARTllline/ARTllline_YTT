@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:mind-spike:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "mind-spike",
+            "checksum": "09904fd53702639ae78a073e5546423a317e3807407df13420d1c67e9bca1019"
+        },
+        {
+            "id": "srd:spell:nondetection:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "nondetection",
+            "checksum": "951be12ee686f8068e24022c9f53a8880de624b1858c6150fa80df9075157801"
+        },
+        {
+            "id": "srd:spell:conjure-minor-elementals:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "conjure-minor-elementals",
+            "checksum": "af076fd7c3dc6ad3317003a1dded964f44e935dc312f18e47f5ff93b54259ae1"
+        },
+        {
+            "id": "srd:spell:cone-of-cold:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "cone-of-cold",
+            "checksum": "fac5c0a98efbf548ef3c8d2bc8477ddc1336f2ad1ad9679df5cfa463a80e70bf"
+        },
+        {
+            "id": "srd:spell:elementalism:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "elementalism",
+            "checksum": "f7e07bf56c27a8d2e128d73e45e9cb6f78b141f53b42a983bd0350ae08f52e0d"
+        },
+        {
+            "id": "srd:spell:zone-of-truth:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "zone-of-truth",
+            "checksum": "fd3fbea22c849f9da7278f4174d6e8650c815031cd0d47018695307ccadc6b13"
+        },
+        {
+            "id": "srd:spell:wall-of-thorns:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "wall-of-thorns",
+            "checksum": "af3bd9949aca5d2e221b34451b04cb9a1cb913dea860c028d39b3d8329f2ee85"
+        },
+        {
+            "id": "srd:spell:counterspell:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "counterspell",
+            "checksum": "9c8f191bae6af48eb17d9af5daec923f2d4f5b483b9c406d62267d8a6a5c912a"
+        },
+        {
+            "id": "srd:spell:ice-storm:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "ice-storm",
+            "checksum": "efe68d651cfe6abf59ed032a208853863e19eaa4300a1fa077c0e71092b7894a"
+        },
+        {
+            "id": "srd:spell:awaken:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "awaken",
+            "checksum": "b6248f485f049531985b76da94c429086188ff8e5fc4ba366fda7ce3312eb868"
+        },
+        {
+            "id": "srd:spell:animal-messenger:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "animal-messenger",
+            "checksum": "3f252607915528d236aada77037dd167cd380e11b9ca84401f9ee1d4237ca6e6"
+        },
+        {
+            "id": "srd:spell:transport-via-plants:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "transport-via-plants",
+            "checksum": "75f092e375b79706928ce307817df5225f70e8e35f3d747c12d140c60bc9b992"
+        },
+        {
+            "id": "srd:spell:beacon-of-hope:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "beacon-of-hope",
+            "checksum": "2a510bcdf83c3b83fa67a0bf1ae080dd62a5658840964513239c5ba27a8a2d26"
+        },
+        {
+            "id": "srd:spell:vitriolic-sphere:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "vitriolic-sphere",
+            "checksum": "7a5a96a916938afc47b8a765437e0e79c748f2a7eb46076e552e5cafd837a576"
+        },
+        {
+            "id": "srd:spell:telekinesis:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "telekinesis",
+            "checksum": "c95a6fed84c62cf9eed03ab03cfa46fe8e0c4d2f302c36e73d71e7f48d32f31c"
+        },
+        {
+            "id": "srd:spell:enthrall:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "enthrall",
+            "checksum": "7548d6b0b6a141e510c8dd14fd288cf40d616ca4c7d99e3ecdb1a9cacdb3de23"
+        },
+        {
+            "id": "srd:spell:heroes-feast:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "heroes-feast",
+            "checksum": "0a096c2aedbe1a29475bfafc246a2274832a2556687887513f6bc85898eaaaad"
+        },
+        {
+            "id": "srd:spell:protection-from-evil-and-good:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "protection-from-evil-and-good",
+            "checksum": "4feae1c06333983da7aff84fab30cc94754d00a62f45769d708478e0a4619769"
+        },
+        {
+            "id": "srd:spell:wall-of-stone:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "wall-of-stone",
+            "checksum": "4c056b923b1e853bed3e0919cd35749bbceec614ff6302a1130da494727903ca"
+        },
+        {
+            "id": "srd:spell:meld-into-stone:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "meld-into-stone",
+            "checksum": "f2eeb0b1f9dcd917076715b604e59ff2cc69913932c2eef435a332cb88d189b1"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

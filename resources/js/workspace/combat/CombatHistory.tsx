@@ -49,6 +49,8 @@ export function eventSummary(e: CombatEvent, scene: Scene) {
     if (e.type === 'ability.resolved') {
         const r = d.result,
             roll = r?.roll;
+        if (r?.gmContext?.contentUse)
+            return `${r.actorName} · ${r.abilityName} → ожидает решения GM`;
         const targetId = r?.target?.kind === 'token' ? r.target.id : null;
         const target =
             r?.outcomes?.length === 1

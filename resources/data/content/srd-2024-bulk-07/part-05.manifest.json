@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:magic_item:thunderous-greatclub:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:thunderous-greatclub",
+            "checksum": "50825e783ebff7e2a84982cbaad8d403feda8b173b7224f1dde8d198268aed9a"
+        },
+        {
+            "id": "srd:magic_item:staff-of-the-magi:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:staff-of-the-magi",
+            "checksum": "76abab5872e9dc911901d00e55f0b37b0b6b3cdbabf6400c9d0cce3f36b082e1"
+        },
+        {
+            "id": "srd:magic_item:brazier-of-commanding-fire-elementals:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:brazier-of-commanding-fire-elementals",
+            "checksum": "a4143f1cf9d7fa3b1100b9b9a97802c7e29be56dc421413c2210bf1e5f2dc205"
+        },
+        {
+            "id": "srd:magic_item:brooch-of-shielding:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:brooch-of-shielding",
+            "checksum": "6f7271884aec86e8a1f3458d17a8e45d89baaa9ad06e13e00a1240988cf4556b"
+        },
+        {
+            "id": "srd:magic_item:ammunition:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ammunition",
+            "checksum": "603d68909301826b7b4a28ca1760d41c998b509af55da0373e97a4682fb6f19c"
+        },
+        {
+            "id": "srd:magic_item:feather-token:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:feather-token",
+            "checksum": "5c6402ee04348a5bd986efb264e854a6ad9e6e8992bdb87f8c57cdf30aaeecd6"
+        },
+        {
+            "id": "srd:magic_item:helm-of-brilliance:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:helm-of-brilliance",
+            "checksum": "d2ae599eac7196fbab618c6f03741ed0fba1972641af2857578397481af227fd"
+        },
+        {
+            "id": "srd:magic_item:quarterstaff-of-the-acrobat:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:quarterstaff-of-the-acrobat",
+            "checksum": "43df9351a04817c5f0aa03cd05f1ba421b6666140660f6f35b3ea2ffdcb1e42e"
+        },
+        {
+            "id": "srd:magic_item:ring-of-djinni-summoning:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-djinni-summoning",
+            "checksum": "356779eb6462a1fd83a952ff6880868187896e5ed0e14c9b6e522dd08348c54f"
+        },
+        {
+            "id": "srd:magic_item:cloak-of-displacement:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:cloak-of-displacement",
+            "checksum": "99afd369eb4b627d8b17ae830ead4163b959545e52940cb2bf3b18b34bf5a8ee"
+        },
+        {
+            "id": "srd:magic_item:helm-of-telepathy:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:helm-of-telepathy",
+            "checksum": "b188066eb666616d13081ec9a57991ccc44f1d86c68e5123fa96e8abc157542a"
+        },
+        {
+            "id": "srd:magic_item:shield:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:shield",
+            "checksum": "c2a948fd091a3db5a3af12ab7e0b9c82247027a4e0523049ce14d57670cef70d"
+        },
+        {
+            "id": "srd:magic_item:ioun-stone:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ioun-stone",
+            "checksum": "35ce77fa0f5662ad8a5d477fc7cde2b2dcbec780d54b3e49b43f7080698f42cb"
+        },
+        {
+            "id": "srd:magic_item:marvelous-pigments:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:marvelous-pigments",
+            "checksum": "884ffbfa7ebdca420f892d55045a05d2ab5125cebe569fdecaa3ca70120d9908"
+        },
+        {
+            "id": "srd:magic_item:energy-bow:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:energy-bow",
+            "checksum": "810fd40680ddc709c28ae85d501200e560820d8b94db7c5d908ce110151c97a4"
+        },
+        {
+            "id": "srd:magic_item:talisman-of-the-sphere:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:talisman-of-the-sphere",
+            "checksum": "a1b89b5abf2d6ce1f0c1e73841c1dea79226625c8dc15486cdf7f390e166f013"
+        },
+        {
+            "id": "srd:magic_item:arrow-catching-shield:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:arrow-catching-shield",
+            "checksum": "21d10009ad98874006995a9e3108c4078c5a2ffc6f6d86c29f158930f6c342d9"
+        },
+        {
+            "id": "srd:magic_item:weapon-of-warning:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:weapon-of-warning",
+            "checksum": "70441277aef9f099ed1fa412690c5f2c759adde879e49ae3aef6d890437f9013"
+        },
+        {
+            "id": "srd:magic_item:belt-of-giant-strength:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:belt-of-giant-strength",
+            "checksum": "4f508279284440005294fbb9a2d3b0be51f92d122750a6cd0737bf225ef23fe6"
+        },
+        {
+            "id": "srd:magic_item:ring-of-regeneration:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-regeneration",
+            "checksum": "64624e18877de174d7f05d2a6b70af3f3ab696758b016670a0e5bb36e80c216e"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

@@ -35,6 +35,6 @@ class ItemDefinition extends Model
 
     protected function casts(): array
     {
-        return ['gameplay' => 'array', 'equipment_slots' => 'array', 'modifiers' => 'array', 'width' => 'integer', 'height' => 'integer', 'max_stack' => 'integer'];
+        return ['gameplay' => 'array', 'content' => 'array', 'equipment_slots' => 'array', 'modifiers' => 'array', 'width' => 'integer', 'height' => 'integer', 'max_stack' => 'integer'];
     }
 }

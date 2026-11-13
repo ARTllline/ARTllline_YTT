@@ -1,0 +1,46 @@
+{
+    "format": 1,
+    "adapter_version": 4,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:magic-missile:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "magic-missile",
+            "checksum": "f12ee013b3bbd77951377402ca2b83081297d6f2b239adf64a84daaff0fc67a9",
+            "correction": {
+                "evidence": "Agent editorial proposal; NOT human approval. SRD 5.2.1 p. 146; https:\/\/media.dndbeyond.com\/compendium-images\/srd\/5.2\/SRD_CC_v5.2.1.pdf; PDF SHA256 8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+                "fields": {
+                    "description_en": "You create three glowing darts of magical force. Each dart strikes a creature of your choice that you can see within range. A dart deals 1d4 + 1 Force damage to its target. The darts all strike simultaneously, and you can direct them to hit one creature or several.\n\nUsing a Higher-Level Spell Slot. The spell creates one more dart for each spell slot level above 1.",
+                    "description_ru": "Вы создаёте три светящихся заряда магической силы. Каждый заряд поражает существо по вашему выбору, которое вы видите в пределах дистанции. Заряд наносит своей цели 1d4 + 1 урона Силовой энергией. Все заряды поражают одновременно, и вы можете направить их в одно существо или в несколько.\n\nПри использовании ячейки более высокого уровня заклинание создаёт ещё один заряд за каждый уровень ячейки выше 1-го."
+                }
+            },
+            "content_checksum": "d216203216a7559e5ecd2b2630ef40f8b0791138bf8c4fba422e5f8a3bc03c6a"
+        }
+    ],
+    "reviews": [
+        {
+            "id": "srd:spell:magic-missile:2024",
+            "checksum": "d216203216a7559e5ecd2b2630ef40f8b0791138bf8c4fba422e5f8a3bc03c6a",
+            "projection_checksum": "87071af7c6ab94edf294a06d30a64eead4ad839611796758786501c1247e4ca2",
+            "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+            "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C13, EN\/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+            "languages": [
+                "en",
+                "ru"
+            ],
+            "confirmed": true,
+            "confirmed_at": "2026-11-12T20:00:01+00:00",
+            "browse": true,
+            "copy": true,
+            "execute": false
+        }
+    ],
+    "baseline_reviews": []
+}

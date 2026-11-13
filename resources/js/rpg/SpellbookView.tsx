@@ -5,6 +5,7 @@ import { AbilityCost } from '../gameplay/AbilityCost';
 import { canAfford, targetLabels, type Ability, type CharacterResource } from '../gameplay/model';
 import { abilityBinding } from '../gameplay/hotbarModel';
 import { useRpgDrag } from './RpgDrag';
+import { manualContent } from '../gameplay/ContentUsePanel';
 export function SpellbookView({
     abilities,
     resources,
@@ -303,13 +304,14 @@ export function SpellbookView({
                             <button
                                 className="rpg-gold-button"
                                 disabled={
-                                    !canAfford(selected, resources) ||
+                                    (!manualContent(selected) && !canAfford(selected, resources)) ||
                                     selected.spell?.prepared === false ||
-                                    selected.casting?.available === false
+                                    (!manualContent(selected) &&
+                                        selected.casting?.available === false)
                                 }
                                 onClick={() => onChoose(selected)}
                             >
-                                Применить
+                                Использовать
                             </button>
                             <button className="rpg-quiet-button" onClick={() => onBind(selected)}>
                                 В панель действий

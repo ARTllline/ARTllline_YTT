@@ -32,7 +32,7 @@ class CombatExecution
         return $r + ['context' => $context, 'bonusRolls' => $bonusRolls];
     }
 
-    public function resolve(User $author, Token|Character $subject, ?Token $actor, array $ability, array $targets, string $requested, Scene $scene): array
+    public function resolve(User $author, Token|Character $subject, ?Token $actor, array $ability, array $targets, string $requested, Scene $scene, bool $preview = false, ?array $prepared = null): array
     {
         $roll = $provenance = null;
         $success = true;
@@ -40,7 +40,7 @@ class CombatExecution
         $first = $targets[0] ?? null;
         $distance = $actor && $first ? app(AbilityGeometry::class)->distance($scene, $actor, $first) : 0;
         $save = $ability['save'] ?? null;
-        if (! $save && ($ability['check'] || ! empty($ability['attack']))) {
+        if (! $prepared && ! $save && ($ability['check'] || ! empty($ability['attack']))) {
             $config = $ability['check'] ?? ['dc' => 0, 'dc_visible' => false, 'defense' => 'ac'];
             $attack = $ability['category'] === 'attack';
             if (! empty($ability['attack'])) {
@@ -75,7 +75,15 @@ class CombatExecution
         if (! $components && ($ability['damage'] ?? null)) {
             $components = [['dice' => $ability['damage'], 'type' => null]];
         }
-        $rolled = $success && $components ? app(TypedDamage::class)->roll($components, $critical) : [];
+        $rolled = $prepared['damageRolls'] ?? ($success && $components ? app(TypedDamage::class)->roll($components, $critical) : []);
+        if ($prepared) {
+            ['roll' => $roll, 'provenance' => $provenance, 'success' => $success, 'critical' => $critical] = $prepared;
+        }
+        if ($preview) {
+            abort_if($save || ! empty($ability['condition_effects']), 422, 'Предпросмотр поддерживает только базовые рецепты.');
+
+            return compact('roll', 'provenance', 'success', 'critical') + ['damageRolls' => $rolled];
+        }
         $outcomes = $feedbacks = [];
         $combat = app(TurnBudget::class)->active($scene->id);
         if ($roll) {

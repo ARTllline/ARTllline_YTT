@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:equipment:wand:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "wand",
+            "checksum": "31450406f80603ba9eb6cedc09afdf7135851b9543ef639f6cad598b05e4c0d9"
+        },
+        {
+            "id": "srd:equipment:dungeoneer-pack:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "dungeoneer-pack",
+            "checksum": "fbdaa2b551a0491722e2987684d0065c334b88f5a783785d80f1b6515461c728"
+        },
+        {
+            "id": "srd:equipment:emblem:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "emblem",
+            "checksum": "bab667c685fbd2f369aab0df50eea6b36cec2e457f95c794d86edd41d9afb7a6"
+        },
+        {
+            "id": "srd:equipment:bolts:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "bolts",
+            "checksum": "dd783a60af12c06dec5db71fd0189f90ab02718b45bea7bc9395c79978c32e4c"
+        },
+        {
+            "id": "srd:equipment:splint-armor:2024",
+            "kind": "equipment",
+            "entity_type": "armor",
+            "external_key": "splint-armor",
+            "checksum": "e7f3a1c2907e9dd7671081eb9c705af05f7070c99997790b36881459a239852b"
+        },
+        {
+            "id": "srd:equipment:padded-armor:2024",
+            "kind": "equipment",
+            "entity_type": "armor",
+            "external_key": "padded-armor",
+            "checksum": "4f775fce4553ddcc82e6dbcc46030cac66d8d8a60c61757b4466119900766f6f"
+        },
+        {
+            "id": "srd:equipment:chain-shirt:2024",
+            "kind": "equipment",
+            "entity_type": "armor",
+            "external_key": "chain-shirt",
+            "checksum": "1011abd9cd28ac9900e3db40e4e2f1968c53e771d42706f71588377d719b4b46"
+        },
+        {
+            "id": "srd:equipment:tinkers-tools:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "tinkers-tools",
+            "checksum": "6b039a23518025e2b5501d1aa4adf27bcce41fbf89441a4b774c67f0b5e48c52"
+        },
+        {
+            "id": "srd:equipment:dice:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "dice",
+            "checksum": "afd62d842507069d494b7720acbaf4aaf9fed2992e4e2ceae5225be099a914c4"
+        },
+        {
+            "id": "srd:equipment:shortsword:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "shortsword",
+            "checksum": "68f9aa6698efc20106e55b2f8ea8df276d0a461fdc908fc61d65d9ee22f3289a"
+        },
+        {
+            "id": "srd:equipment:musket:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "musket",
+            "checksum": "d345a4b69888683f262d1d079b346566422ca6a527fd6e5a6ff329de15b5dbc5"
+        },
+        {
+            "id": "srd:equipment:sickle:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "sickle",
+            "checksum": "ceb8b4514df101374898a00db55e31bfbd8527e7661d8b2098a21846c9b2352f"
+        },
+        {
+            "id": "srd:equipment:horn:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "horn",
+            "checksum": "bec2f07da09492382d09d9c261045046f4b512a7b86e1b8b91ae8c7b47e5ef7e"
+        },
+        {
+            "id": "srd:equipment:thieves-tools:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "thieves-tools",
+            "checksum": "e925847a82dcad897bd430d68273d7b3cabe6d4878d8f3bbb4378f2c81c26604"
+        },
+        {
+            "id": "srd:equipment:sling:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "sling",
+            "checksum": "66b9e10995befc78ce21b36a8416deb46f8b763a3765a315f84a85abc48d564b"
+        },
+        {
+            "id": "srd:equipment:purple-worm-poison:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "purple-worm-poison",
+            "checksum": "79c85d9b09b94b356a7b3c09d2ff9d6cafe1e35925c1b4eee51a43881b93df96"
+        },
+        {
+            "id": "srd:equipment:grappling-hook:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "grappling-hook",
+            "checksum": "1b9417129bff32dc8737507dfe92704a0fa1a0ef4928409cf826a7f919dd772f"
+        },
+        {
+            "id": "srd:equipment:crystal:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "crystal",
+            "checksum": "73e46b3d5288a70192aa9c86dc68461ea25ed8369ac799fda74554a0d620facd"
+        },
+        {
+            "id": "srd:equipment:scholars-pack:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "scholars-pack",
+            "checksum": "03a613d08d1a2c047ffcab8985eb0815da23dab9dff8888594d0cb71330206fc"
+        },
+        {
+            "id": "srd:equipment:bullets-firearm:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "bullets-firearm",
+            "checksum": "ce6d33549c77fd21c8c29296a1db6dd673bba4311a9f7c7ddde6f84c5065606f"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write resources/js resources/css docs README.md vite.config.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:content-ux": "node scripts/qa/content-ux.mjs"
   },
   "dependencies": {
     "@3d-dice/dice-box-threejs": "^0.0.12",

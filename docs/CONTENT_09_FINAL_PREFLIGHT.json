@@ -1,0 +1,184 @@
+{
+    "status": "prepared_awaiting_two_separate_owner_permissions",
+    "checked_at_utc": "2026-11-13T11:48:22+00:00",
+    "target": "127.0.0.1:3306\/ytt_local",
+    "database_writes": 0,
+    "repair": {
+        "status": "PASS_not_applied",
+        "public_plan_sha256": "c1ad6b55edc830f95d7f2d64377d859ef7e0ab6abdfb01443caf7e50917421b8",
+        "private_patch_sha256": "6f48a126948e7d11f2334479cc924f610bc6936c0fb2509912415504c953e345",
+        "tables": {
+            "scenes": "ecc51f8b6d31dc5341762e5a1246c17139e7d181695fc32fb06c97f867c80ee8",
+            "fog_memories": "7e7ef0579257ab010a957d0e6ba21308c72ca67116c24bd2bd07ff44e7809eec"
+        },
+        "operations": [
+            {
+                "table": "scenes",
+                "id": 5,
+                "expected_row_sha256": "33f8c424b8ed30925c3457e3a36ca3f57fcdf354de8366ae753700e50e4b76ef",
+                "fields": [
+                    "revision",
+                    "updated_at"
+                ],
+                "set": {
+                    "revision": 13714,
+                    "updated_at": "2026-11-13 10:43:31"
+                }
+            },
+            {
+                "table": "scenes",
+                "id": 8,
+                "expected_row_sha256": "1651304ad1c895a3b136714a7754ff0990f264dcde64f71ccd9dfd957a418d2b",
+                "fields": [
+                    "revision",
+                    "updated_at"
+                ],
+                "set": {
+                    "revision": 452,
+                    "updated_at": "2026-11-13 10:43:31"
+                }
+            },
+            {
+                "table": "scenes",
+                "id": 9,
+                "expected_row_sha256": "c5f463fd877fd9ef5168d98ba13f10eb910568a19a53b6a0379a91998f72b733",
+                "fields": [
+                    "revision",
+                    "updated_at"
+                ],
+                "set": {
+                    "revision": 382,
+                    "updated_at": "2026-11-13 10:43:31"
+                }
+            },
+            {
+                "table": "scenes",
+                "id": 10,
+                "expected_row_sha256": "806dcae258a5e6ac26e7469db81b543350ce9ee39e7b0e852f40cef8f0b3a2c7",
+                "fields": [
+                    "revision",
+                    "updated_at"
+                ],
+                "set": {
+                    "revision": 3144,
+                    "updated_at": "2026-11-13 10:43:31"
+                }
+            },
+            {
+                "table": "scenes",
+                "id": 11,
+                "expected_row_sha256": "74961e1d83530c690213f8fc48d0805f00b9b1c9debc8eab63ccfe9836ba0ccd",
+                "fields": [
+                    "revision",
+                    "updated_at"
+                ],
+                "set": {
+                    "revision": 284,
+                    "updated_at": "2026-11-13 10:43:31"
+                }
+            },
+            {
+                "table": "fog_memories",
+                "id": 21,
+                "expected_row_sha256": "22247129df95d5bbf7efdc7cb8ce5497c2f4b82ff868b95732ecee4bd98e9b3b",
+                "fields": [
+                    "bits"
+                ],
+                "target_bits_sha256": "eae810dc7e3c1b806b264c0d7eed8ba1d1107fb4dff445c0ee801495e22196f7"
+            }
+        ]
+    },
+    "activation": {
+        "status": "draft_not_approved_not_activated",
+        "package_sha256": "d94f03a9835ff1f8b13db83d61ae18b53af08a49c6077b09822226c4a69cb42e",
+        "draft_manifest_sha256": "3c343138d0d7e8ffc8035e46e931ae0c36ea78f358cf96d3dd927eacda305364",
+        "unapproved_plan_checksum": "fb4f84704587c7ca79a6eeec13c7d7d94e979e5ab822019d11fe03ddb1236c06",
+        "validation_passed": true,
+        "review_ready": false,
+        "records": [
+            {
+                "entry_id": 73,
+                "name": "Cure Wounds",
+                "external_key": "cure-wounds",
+                "entity_type": "spells",
+                "source_checksum": "b5abdb0be7e0fa31a1db9ab639154a5c81fce55878c7cdcea9f426300c7eab7d",
+                "current_projection_checksum": "88f66b5581408d40fc45d3c465451aabef4a162a279909e0fdca9d5a28975708",
+                "candidate_projection_checksum": "8301a21fcdda6f92b8a7629493b0461e08ba27e753f63f3c4b555bd72fcc126a",
+                "execution_profile": {
+                    "supported": true,
+                    "checksum": "b523beee872d9fd3b5d0b1cb54059eb85ea2e5b969984440bb984e99264ba7c3"
+                },
+                "confirmation_profile": {
+                    "id": "cure-wounds",
+                    "checksum": "08a11fc613d5e3cd718da0a7e88b0f6eae938a5b0661b5bd6b1284bcf237a876"
+                },
+                "current_execute": false,
+                "approved": false,
+                "selection_id": "srd:spell:cure-wounds:2024",
+                "entry_baseline_digest": "fdf454334fd77c45631ac232a59a833e0400e48dd0a49a531e0d22a8b45716d8",
+                "adapter_version": 4,
+                "execution_contract": 1,
+                "confirmation_contract": "content-09b-v1",
+                "ruleset": "dnd-2024",
+                "rules_revision": "5.2.1",
+                "preflight": "PASS"
+            },
+            {
+                "entry_id": 436,
+                "name": "Longsword",
+                "external_key": "longsword",
+                "entity_type": "weapons",
+                "source_checksum": "db88a0878bb279d08635493d8f62b2747237674a648b1f2f663f268070e6e440",
+                "current_projection_checksum": "b31ae6cfbece1298c8b0006c58fc3ba0bf115ca3aa7959080fb798750df24fbe",
+                "candidate_projection_checksum": "8df563b651968b0a21de138a353daece34de27464631b3b93bc958708ed8ab3b",
+                "execution_profile": {
+                    "supported": true,
+                    "checksum": "efe82eecaeab2817871fea5631c24c309d4cdcccb8931fdb6eb0d931ed528657"
+                },
+                "confirmation_profile": {
+                    "id": "longsword",
+                    "checksum": "d5ca6ef9ab5e4892caaab6f33d19d62cffe6de7bc04dc7d99aee694114ab1f83"
+                },
+                "current_execute": false,
+                "approved": false,
+                "selection_id": "srd:equipment:longsword:2024",
+                "entry_baseline_digest": "bbdb973aaddecf11df98c760cef81451675bce3b1a72b1556268f2a444a1ef01",
+                "adapter_version": 4,
+                "execution_contract": 1,
+                "confirmation_contract": "content-09b-v1",
+                "ruleset": "dnd-2024",
+                "rules_revision": "5.2.1",
+                "preflight": "PASS"
+            },
+            {
+                "entry_id": 467,
+                "name": "Potion of Healing",
+                "external_key": "potion-of-healing",
+                "entity_type": "items",
+                "source_checksum": "496c81e1c47fded10cc863a7290bd8ec93023986400ed675a938d1b757bfe3f7",
+                "current_projection_checksum": "316dbe107739feccc292f13224f6a60b5fab265bc6e2f6d3190eef5938ac0c09",
+                "candidate_projection_checksum": "5565420674cb062df71b97da7a68ae97ace6e52867bb09232bded624dc717999",
+                "execution_profile": {
+                    "supported": true,
+                    "checksum": "80a6c25589906a46eb042e8b3d549df784cb21bc03b872cadf9f06b9ae5cf66e"
+                },
+                "confirmation_profile": {
+                    "id": "potion_of_healing",
+                    "checksum": "9eac650ca13d8c0a82990d64470b14d4a59ecdfc07c60d5d791e83a8272f214f"
+                },
+                "current_execute": false,
+                "approved": false,
+                "selection_id": "srd:equipment:potion-of-healing:2024",
+                "entry_baseline_digest": "803a00eb7c5ce57520291702eaaa10a8cbeb02f3bd077931e79764a904c8aa85",
+                "adapter_version": 4,
+                "execution_contract": 1,
+                "confirmation_contract": "content-09b-v1",
+                "ruleset": "dnd-2024",
+                "rules_revision": "5.2.1",
+                "preflight": "PASS"
+            }
+        ],
+        "writer": "Existing 13\/552-record permits do not cover this scope. A separate exact three-record local permit is required; old permits must remain closed."
+    },
+    "live_qa": "not_started_before_owner_permissions"
+}

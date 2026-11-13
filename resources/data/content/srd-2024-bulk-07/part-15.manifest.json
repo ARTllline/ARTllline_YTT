@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:equipment:costume:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "costume",
+            "checksum": "c7d48a7fb4bb7480f99bc34c6ad4f7796ae77679163ce3e12938220ab2555743"
+        },
+        {
+            "id": "srd:equipment:net:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "net",
+            "checksum": "1613c249425f3a26c8dd7d57483a91cee2e65c302df01f56da65ad4cec8109b3"
+        },
+        {
+            "id": "srd:equipment:book:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "book",
+            "checksum": "b2791008406b5d90ac049c5ebe1c2edf1724334e6e29f5393448965adf19678b"
+        },
+        {
+            "id": "srd:equipment:spyglass:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "spyglass",
+            "checksum": "0baabb2575c938c80a7dbd182a002564daa7c0a6dd4af6c0e94156e6dd330d75"
+        },
+        {
+            "id": "srd:equipment:paper:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "paper",
+            "checksum": "644851bb2317e2a51ea7ea9b13a1c388c09210f118bff0f551c918afb56395d9"
+        },
+        {
+            "id": "srd:equipment:signal-whistle:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "signal-whistle",
+            "checksum": "73e2087d2023ae283a7865751f0ebe0e61df5d72b14c18a3c9bd0fab89f84f13"
+        },
+        {
+            "id": "srd:equipment:quiver:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "quiver",
+            "checksum": "c37ed15ec605d779cd84c45502a1010f481faacd9aa2e4d8f4a334c25187e885"
+        },
+        {
+            "id": "srd:equipment:lantern-bullseye:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "lantern-bullseye",
+            "checksum": "24bf80f7b528f5a77745b3aef123f6cda18fedb9ff8eff5df9892e04acf47ef0"
+        },
+        {
+            "id": "srd:equipment:ball-bearings:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "ball-bearings",
+            "checksum": "dd560169ad337966c771d28da53aa4804c289360801ad7b6edee58dc1110fcf2"
+        },
+        {
+            "id": "srd:magic_item:potion-of-longevity:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-longevity",
+            "checksum": "ba38f65428364deb82c9720411f39e560f90b3a10c7a2d9ff23c745338534659"
+        },
+        {
+            "id": "srd:magic_item:talisman-of-pure-good:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:talisman-of-pure-good",
+            "checksum": "6707eef2586542db4bbc01d0e800ca1a45a7ea8e6edc18b9aa8905ae031302c8"
+        },
+        {
+            "id": "srd:magic_item:ring-of-spell-storing:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-spell-storing",
+            "checksum": "8356abcf1429acac7a8b193cf49ec5ae91a2555a20912850292189535e9ec5e4"
+        },
+        {
+            "id": "srd:magic_item:boots-of-the-winterlands:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:boots-of-the-winterlands",
+            "checksum": "3b194227af551f3aae528bbb78c11dfae38cf697f10d3b493be13f68410e069f"
+        },
+        {
+            "id": "srd:magic_item:potions-of-healing:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potions-of-healing",
+            "checksum": "99364aacd07ec71e0b9aaacab78cc03b323c5025721c11ac3c8b953eec04d863"
+        },
+        {
+            "id": "srd:magic_item:weapon-3:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:weapon-3",
+            "checksum": "ea09045c6b026d1ebb88fc6879e9fc1d7df2b55fe57bc2880fcd5de627fddf20"
+        },
+        {
+            "id": "srd:magic_item:sending-stones:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:sending-stones",
+            "checksum": "aee88cfd031e2fc99fc6eb84d6307c1f5631c93a1be9293c0c41f12b7cd042a4"
+        },
+        {
+            "id": "srd:magic_item:defender:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:defender",
+            "checksum": "6e35fea17cf49b6b7116d89a22e6c6fa4c59c3c8672d14fda172c40ccc96685f"
+        },
+        {
+            "id": "srd:magic_item:dagger-of-venom:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:dagger-of-venom",
+            "checksum": "f2e0190ddb077e10a9bb7bb9edeae8b7a1cb97d67ddc4d81841cb74e6305c973"
+        },
+        {
+            "id": "srd:magic_item:helm-of-comprehending-languages:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:helm-of-comprehending-languages",
+            "checksum": "a75e71fa1ab270b2a0cc1b1e28f6062cafcb9934e32a2725f54dd72ef22b9718"
+        },
+        {
+            "id": "srd:magic_item:figurine-of-wondrous-power:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:figurine-of-wondrous-power",
+            "checksum": "f55e6c396ec02751b5f3a95d463ad38c6ab8ec05f4d91108a6441b93501fd74d"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

@@ -18,9 +18,9 @@ use App\Models\User;
 use App\Realtime\CommandContext;
 use App\Services\AbilityGeometry;
 use App\Services\DamageRoller;
+use App\Services\SceneIllumination;
 use App\Services\SceneSnapshotBuilder;
 use App\Services\SceneVisibility;
-use App\Services\SceneIllumination;
 use App\Spells\SpellCasting;
 use App\Spells\SpellEffects;
 use App\Spells\SpellScrolls;
@@ -97,9 +97,9 @@ class AbilityActions
         }, 3);
     }
 
-    public function execute(User $user, Scene $scene, array $data, bool $fromItem = false): array
+    public function execute(User $user, Scene $scene, array $data, bool $fromItem = false, ?array $prepared = null): array
     {
-        return DB::transaction(function () use ($user, $scene, $data, $fromItem) {
+        return DB::transaction(function () use ($user, $scene, $data, $fromItem, $prepared) {
             $campaign = Campaign::whereKey($scene->campaign_id)->lockForUpdate()->firstOrFail();
             $scene = Scene::whereKey($scene->id)->lockForUpdate()->firstOrFail();
             $scene->setRelation('campaign', $campaign);
@@ -119,6 +119,7 @@ class AbilityActions
                 app(ItemActions::class)->resolve($character, $character->inventory()->with('definition')->findOrFail($data['inventoryItemId']), $data['itemAction'] ?? 'use') :
                 collect($character->abilities ?? [])->firstWhere('id', $data['abilityId']);
 
+            abort_if($prepared === null && isset($ability['spell']['content']['execution_profile']), 422, 'Используйте бросок с подтверждением GM.');
             abort_unless($ability && $ability['enabled'], 403, 'Способность больше недоступна.');
             abort_if(($ability['item_only'] ?? false) && ! $fromItem, 403, 'Это действие доступно только через предмет.');
             if (isset($ability['spell'])) {
@@ -164,7 +165,7 @@ class AbilityActions
             }
             abort_if(count($victims) > 200, 422, 'Слишком много целей.');
             $scrollCheck = isset($ability['_scroll']) ? app(SpellScrolls::class)->check($character, $ability, $actor) : null;
-            $resolved = $scrollCheck && ! $scrollCheck['success'] ? ['roll' => $scrollCheck, 'provenance' => $scrollCheck['provenance'], 'success' => false, 'critical' => false, 'damage' => null, 'damageRolls' => [], 'outcomes' => [], 'feedbacks' => []] : app(CombatExecution::class)->resolve($author, $character, $actor, $ability, $victims, $data['rollMode'], $scene);
+            $resolved = $scrollCheck && ! $scrollCheck['success'] ? ['roll' => $scrollCheck, 'provenance' => $scrollCheck['provenance'], 'success' => false, 'critical' => false, 'damage' => null, 'damageRolls' => [], 'outcomes' => [], 'feedbacks' => []] : app(CombatExecution::class)->resolve($author, $character, $actor, $ability, $victims, $data['rollMode'], $scene, false, $prepared);
             if (isset($ability['spell']) && (! $scrollCheck || $scrollCheck['success'])) {
                 app(SpellEffects::class)->start($author, $character, $actor, $scene, $ability, $victims, $resolved);
             }
@@ -179,7 +180,7 @@ class AbilityActions
             if ($success) {
                 $result = $ability['result'];
                 if ($result['type'] === 'heal') {
-                    $healingRoll = isset($result['dice']) ? app(DamageRoller::class)->roll($result['dice']) : null;
+                    $healingRoll = $prepared['healingRoll'] ?? (isset($result['dice']) ? app(DamageRoller::class)->roll($result['dice']) : null);
                     $healing = min(max(0, $target->max_hp - $target->hp), $healingRoll['total'] ?? $result['amount']);
                     if (app(LifeCycle::class)->state($target)['status'] === 'dead') {
                         $healing = 0;

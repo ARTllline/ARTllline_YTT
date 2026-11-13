@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:magic_item:crystal-ball:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:crystal-ball",
+            "checksum": "5e8c5fc50f93d522334d5cdb263ca6af70cadb72c6987e4d2d6b687a39222795"
+        },
+        {
+            "id": "srd:magic_item:sentinel-shield:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:sentinel-shield",
+            "checksum": "b366736a501c2ee4dbc2f8a32310b52ef2e8d90e2f5c3ac049d4362e2eecbcc7"
+        },
+        {
+            "id": "srd:magic_item:iron-flask:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:iron-flask",
+            "checksum": "7013624977d8eb3ee60cb40b54ff8683a0150446e4c09113a02ab7ceac51d8c3"
+        },
+        {
+            "id": "srd:magic_item:bowl-of-commanding-water-elementals:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:bowl-of-commanding-water-elementals",
+            "checksum": "12d00b04a4b6455d35be59c3c560484a6164e2cf43cefdb9eaf49f036ebb2107"
+        },
+        {
+            "id": "srd:magic_item:bracers-of-archery:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:bracers-of-archery",
+            "checksum": "dce7cacf8dc77b27eed156e634ca4ed99d6b6cdb2841eb6c63f6294021099794"
+        },
+        {
+            "id": "srd:magic_item:frost-brand:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:frost-brand",
+            "checksum": "78f1a452378f0d7e3b25c81e8769d7b260a15539154a94b5f20a4a647cc3d1cc"
+        },
+        {
+            "id": "srd:magic_item:plate-armor-of-etherealness:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:plate-armor-of-etherealness",
+            "checksum": "df4bf2376d73356400db9a15527251e844c451d6b5e228d126039bc2fe558308"
+        },
+        {
+            "id": "srd:magic_item:elven-chain:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:elven-chain",
+            "checksum": "5b12dcca7b733329b9008a94efa472c9974a639df13aac75c73c5e06c3adf40c"
+        },
+        {
+            "id": "srd:magic_item:ring-of-swimming:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-swimming",
+            "checksum": "7332c9b41f9437947289450f1d3f54b0cf3915f43bf94c890f6636a2f0b14d4b"
+        },
+        {
+            "id": "srd:magic_item:staff-of-fire:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:staff-of-fire",
+            "checksum": "932e523021544d8509648be8e83cb9cd137f6456caf5d43e38d7fb87f9d49465"
+        },
+        {
+            "id": "srd:magic_item:armor-3:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:armor-3",
+            "checksum": "617b0cfb1fd76898b4ef06353e6a6d78e1c39d27105639ad47d27f08c388c1ce"
+        },
+        {
+            "id": "srd:magic_item:dimensional-shackles:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:dimensional-shackles",
+            "checksum": "e3c01068d5d27150863cf4f768ed08938d496179fcf49164eb750db0f03636da"
+        },
+        {
+            "id": "srd:magic_item:weapon-1:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:weapon-1",
+            "checksum": "0f73b0b4323d45984c3a3b1f0327a638190101ac74bcf3e178bb5ed3eb7bb427"
+        },
+        {
+            "id": "srd:magic_item:candle-of-invocation:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:candle-of-invocation",
+            "checksum": "8bbe383d67282617a739b8e16b467fe92fb9578465b078c2e53222732fe3d682"
+        },
+        {
+            "id": "srd:magic_item:hammer-of-thunderbolts:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:hammer-of-thunderbolts",
+            "checksum": "9ecd648878327398a7dff29f0259fdf47fef1be6caf9452de19adf045a976e3e"
+        },
+        {
+            "id": "srd:magic_item:mace-of-disruption:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:mace-of-disruption",
+            "checksum": "4d8439d0dea1172df3d263ddaaa2a2baa522572a2a625942679469b0ed2b961f"
+        },
+        {
+            "id": "srd:magic_item:mithral-armor:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:mithral-armor",
+            "checksum": "04c15f993763d8e9c1379b2093879efd245821eb8e682ca6478417946ef89e39"
+        },
+        {
+            "id": "srd:magic_item:manual-of-bodily-health:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:manual-of-bodily-health",
+            "checksum": "85e89578b0f270edde0389f517004c6c32eecd950c8a29f5624a7f35498cafd5"
+        },
+        {
+            "id": "srd:magic_item:sovereign-glue:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:sovereign-glue",
+            "checksum": "03f6b1f86c6181160e2ef2383949d02f38f0da54217379e36b50b40ea764996e"
+        },
+        {
+            "id": "srd:magic_item:potion-of-diminution:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-diminution",
+            "checksum": "6921a115cbe3dd87e3878fe5479578d0f6813babbc73b53cedb8f310496a7b94"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

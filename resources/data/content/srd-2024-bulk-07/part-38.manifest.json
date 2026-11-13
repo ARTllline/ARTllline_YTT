@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:water-breathing:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "water-breathing",
+            "checksum": "4ccd933372ca63533472e137f2e5f9745ec2c233c91a1a40370246e8f76801c4"
+        },
+        {
+            "id": "srd:spell:dimension-door:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "dimension-door",
+            "checksum": "00bcb9b42aff4fb3164e6d76ca936325c2f1d1e5ffd925bca5f924a6894731e0"
+        },
+        {
+            "id": "srd:spell:dispel-evil-and-good:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "dispel-evil-and-good",
+            "checksum": "b530e3442d58b7e5d4d8393375cceae95a5e31f8c7ae6f7e9fbc8d18973caa30"
+        },
+        {
+            "id": "srd:spell:divine-smite:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "divine-smite",
+            "checksum": "1d925be7f984ff75a562e31a5b77ec4111bb022a63e32e44402f07cb1551b4cf"
+        },
+        {
+            "id": "srd:spell:magic-weapon:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "magic-weapon",
+            "checksum": "a0620473484b09ead170d52e589334e81640a2db825c3532bc0fdc18bcf387a7"
+        },
+        {
+            "id": "srd:spell:giant-insect:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "giant-insect",
+            "checksum": "c039468655145826660b72c4c9a60f588ebc8d5740c15be2d9462fd6064022df"
+        },
+        {
+            "id": "srd:spell:dispel-magic:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "dispel-magic",
+            "checksum": "8536b09a574206c7f35fd0b22a7fb355c9e3ed5d2905613040b0daef3ea1b037"
+        },
+        {
+            "id": "srd:spell:wall-of-force:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "wall-of-force",
+            "checksum": "37fcc14f10aa1d669f3ba2c5ce5f717c5b45d8d537195f21928880c00be084d7"
+        },
+        {
+            "id": "srd:spell:divine-favor:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "divine-favor",
+            "checksum": "79e8fc2975f0067a2f212d69a07886b5187f70fd76f673c6a876f52fd4141a30"
+        },
+        {
+            "id": "srd:spell:conjure-woodland-beings:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "conjure-woodland-beings",
+            "checksum": "290ec7683c8aa46fb4b6094366a69026e52c6c5585af04705eedd617b5187df9"
+        },
+        {
+            "id": "srd:spell:remove-curse:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "remove-curse",
+            "checksum": "acb5c5eddb6a0e44b61c4e1a9b6f0b2199eac06a7aa35abd6882b3ae0fccc3a9"
+        },
+        {
+            "id": "srd:spell:acid-arrow:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "acid-arrow",
+            "checksum": "3d03e007c145809872f4e8d4c9263d611ded08d07bbc204a88a73d6be96b499d"
+        },
+        {
+            "id": "srd:spell:purify-food-and-drink:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "purify-food-and-drink",
+            "checksum": "b57f306f1cc0c40ac7784813888d6bbb7121058d72ae2dad75eabb7af75befb0"
+        },
+        {
+            "id": "srd:spell:insect-plague:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "insect-plague",
+            "checksum": "bbfed5694058f50e5f1ea2f959b30b213e70e197c8967fb917947dca1edec46e"
+        },
+        {
+            "id": "srd:spell:mass-healing-word:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "mass-healing-word",
+            "checksum": "15a882847e39441a571b82ac94779ae87e47fd20c0ec0b8ed7d08c3c374bd326"
+        },
+        {
+            "id": "srd:spell:flame-blade:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "flame-blade",
+            "checksum": "cfe8af8d07ed3bfc0a5f6530a2d27584be6ff91f5e68c39da14f28dd2df9bc76"
+        },
+        {
+            "id": "srd:spell:jump:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "jump",
+            "checksum": "635bf2c48dc9f3ce57a17bdd7c8533ccf51a6294eb45d81bb9ba47e1887f5974"
+        },
+        {
+            "id": "srd:spell:summon-dragon:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "summon-dragon",
+            "checksum": "6daff4ae3b6ef6d246a3eb696ed9e898021d4ba276a018e0e2fb3a5fa5971262"
+        },
+        {
+            "id": "srd:spell:protection-from-energy:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "protection-from-energy",
+            "checksum": "5518636f1a2d97ce53e9a64cc23c3e371f6aea275921f4f28583321b47dd5cdf"
+        },
+        {
+            "id": "srd:spell:shatter:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "shatter",
+            "checksum": "e719a4c668f4045103a10f33ca9547e6f6dcf74c60cbc711491f1eed68219952"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

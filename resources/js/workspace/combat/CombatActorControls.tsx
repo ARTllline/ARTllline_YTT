@@ -15,6 +15,7 @@ import { AbilityTargeting } from '../../gameplay/AbilityTargeting';
 import { combatReason, CombatBudgetView } from '../../gameplay/combat';
 import { abilityPreview } from '../../gameplay/geometry';
 import { CastLevelChooser } from '../../gameplay/spellcasting';
+import { ContentUsePanel, manualContent } from '../../gameplay/ContentUsePanel';
 
 export function CombatActorControls({
     token,
@@ -38,6 +39,7 @@ export function CombatActorControls({
     const entry = combat?.combatants.find((e) => e.tokenId === token.id);
     const [aiming, setAiming] = useState<Ability | null>(null);
     const [casting, setCasting] = useState<Ability | null>(null);
+    const [manual, setManual] = useState<Ability | null>(null);
     const [cast, setCast] = useState<{ castLevel: number; effectChoice?: string }>();
     const [pending, setPending] = useState<AbilityCommand | null>(null);
     const [busy, setBusy] = useState(false),
@@ -121,7 +123,9 @@ export function CombatActorControls({
                         .map((a) => {
                             const reason =
                                 combatReason(a, entry?.budget) ||
-                                (a.casting?.available === false ? a.casting.reason : '');
+                                (!manualContent(a) && a.casting?.available === false
+                                    ? a.casting.reason
+                                    : '');
                             const damage =
                                 a.damage_components
                                     ?.map((c) => `${c.dice} ${c.type}`)
@@ -134,7 +138,8 @@ export function CombatActorControls({
                                         reason || `${a.description ?? ''} · Выбрать цель на карте`
                                     }
                                     onClick={() => {
-                                        if (a.spell) setCasting(a);
+                                        if (character && manualContent(a)) setManual(a);
+                                        else if (a.spell) setCasting(a);
                                         else choose(a);
                                     }}
                                 >
@@ -160,6 +165,14 @@ export function CombatActorControls({
                         })}
                     {!abilities.length && <p className="hint">Нет подготовленных действий.</p>}
                 </div>
+            )}
+            {manual && character && (
+                <ContentUsePanel
+                    selection={{ ability: manual }}
+                    character={character}
+                    store={store}
+                    onClose={() => setManual(null)}
+                />
             )}
             {aiming && renderer && (
                 <AbilityTargeting

@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:druidcraft:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "druidcraft",
+            "checksum": "52bdb9dd194f0fc446fd520bad78c9d5614b677d279a5c9a1ac77f1661c2bcc4"
+        },
+        {
+            "id": "srd:spell:tsunami:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "tsunami",
+            "checksum": "8f1e6d26d585aa1b17e8e46364e1b91384f1a08b0cc56e3ffcb3727b57943b81"
+        },
+        {
+            "id": "srd:spell:prismatic-spray:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "prismatic-spray",
+            "checksum": "5320c5bfe77122efa83eb29822a2ad21e3b486b86a642291705a6fd6c6876665"
+        },
+        {
+            "id": "srd:spell:prayer-of-healing:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "prayer-of-healing",
+            "checksum": "80c57eb68f8e16b519359c1c0b3f89e95f15b7f775e961c73110af1cc45ecf0c"
+        },
+        {
+            "id": "srd:spell:commune:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "commune",
+            "checksum": "3d2fa997ace0aabe8b7c625f509e9eb9f889075fb16243ce968bda788fe885b3"
+        },
+        {
+            "id": "srd:spell:phantom-steed:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "phantom-steed",
+            "checksum": "33e41a6eb505ffc4f57361854a257c9fc44b37978b449e1d50f06b72b411cbc1"
+        },
+        {
+            "id": "srd:spell:resurrection:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "resurrection",
+            "checksum": "1c051c697e0f840848c2ff2ee0a9245cd41a8f4eff6475722a29f302a214b196"
+        },
+        {
+            "id": "srd:spell:stoneskin:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "stoneskin",
+            "checksum": "e82a479ef6187c6a3a9cb3e975226180783412cd896a21cae4f1c21fececd413"
+        },
+        {
+            "id": "srd:spell:command:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "command",
+            "checksum": "f9e5cf1863da23168e251d9abc5952a1612cc4d99baebdb89550fabed55ce01a"
+        },
+        {
+            "id": "srd:spell:heal:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "heal",
+            "checksum": "82d55f7ba934241bd8efdddcae62da8f7ec01ee40e6a8de9cb33330098723843"
+        },
+        {
+            "id": "srd:spell:flaming-sphere:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "flaming-sphere",
+            "checksum": "84d3f16b73eb6aca4943cec4ed0f4bb97eeba492b89994b5ada726831721e738"
+        },
+        {
+            "id": "srd:spell:contact-other-plane:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "contact-other-plane",
+            "checksum": "b0b8c393d2b577b07f48cd4c544feb62b6d997fce8635277225c5336220b9af5"
+        },
+        {
+            "id": "srd:spell:shocking-grasp:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "shocking-grasp",
+            "checksum": "b8378ba0224e0671d9ec302836618ee85b2a88d35c63065b5fafc4c80b1797a0"
+        },
+        {
+            "id": "srd:spell:phantasmal-killer:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "phantasmal-killer",
+            "checksum": "9d46af3dff21e243469f2c149d54848cdf6eaf888a57ce0f79c628f08ffc8502"
+        },
+        {
+            "id": "srd:spell:vampiric-touch:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "vampiric-touch",
+            "checksum": "8e36852925071991548f43a57c8bdf3b784c7cd2cb033e37c9f9569892429aca"
+        },
+        {
+            "id": "srd:spell:disintegrate:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "disintegrate",
+            "checksum": "ab7195793d33012de723b62fdca6540259f95495afe2c969f968d8a12cecd097"
+        },
+        {
+            "id": "srd:spell:hex:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "hex",
+            "checksum": "65ded9c31c8263a4ce6d540cc47850473638fdf21f4f31e517aacc628d4ab1c3"
+        },
+        {
+            "id": "srd:spell:etherealness:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "etherealness",
+            "checksum": "23b604128900300628f6233dd7c44f81c308c3f077d25ad170d8255b2933247d"
+        },
+        {
+            "id": "srd:spell:pass-without-trace:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "pass-without-trace",
+            "checksum": "f9bb6989fc7a7ee639011704f646896ed223c76234ce5a47d7c2d71257c004d7"
+        },
+        {
+            "id": "srd:spell:telepathic-bond:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "telepathic-bond",
+            "checksum": "e04bf2f46aa226f548d2bb89fdb407c68e3a879cfe170134fd4b9e57dd7fab10"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

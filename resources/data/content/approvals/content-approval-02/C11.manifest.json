@@ -1,0 +1,46 @@
+{
+    "format": 1,
+    "adapter_version": 4,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:fireball:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "fireball",
+            "checksum": "babb980ff0d90a4c929cf75d201f327e82d80953af68842fdb90338005c06e97",
+            "correction": {
+                "evidence": "Agent editorial proposal; NOT human approval. SRD 5.2.1 p. 131; https:\/\/media.dndbeyond.com\/compendium-images\/srd\/5.2\/SRD_CC_v5.2.1.pdf; PDF SHA256 8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+                "fields": {
+                    "description_en": "A bright streak flashes from you to a point you choose within range and then blossoms with a low roar into a fiery explosion. Each creature in a 20-foot-radius Sphere centered on that point makes a Dexterity saving throw, taking 8d6 Fire damage on a failed save or half as much damage on a successful one.\n  Flammable objects in the area that aren't being worn or carried start burning.\n\nUsing a Higher-Level Spell Slot. The damage increases by 1d6 for each spell slot level above 3.",
+                    "description_ru": "Яркая вспышка проносится от вас к выбранной вами точке в пределах дистанции, а затем с низким гулом расцветает огненным взрывом. Каждое существо в Сфере радиусом 20 футов с центром в этой точке совершает спасбросок Ловкости, получая 8d6 урона Огнём при провале или половину этого урона при успехе.\n  Легковоспламеняющиеся объекты в области, которые никто не носит и не несёт, начинают гореть.\n\nПри использовании ячейки более высокого уровня урон увеличивается на 1d6 за каждый уровень ячейки выше 3-го."
+                }
+            },
+            "content_checksum": "56f3bef53a577baad6076e0939271950643b4a293afd633e01e16a6e32957322"
+        }
+    ],
+    "reviews": [
+        {
+            "id": "srd:spell:fireball:2024",
+            "checksum": "56f3bef53a577baad6076e0939271950643b4a293afd633e01e16a6e32957322",
+            "projection_checksum": "448b6ae3fda8adfe3a4158ae0eaf638e3b66ccfbb6a7495d20cbcc45f287a0a6",
+            "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+            "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C11, EN\/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+            "languages": [
+                "en",
+                "ru"
+            ],
+            "confirmed": true,
+            "confirmed_at": "2026-11-12T19:59:59+00:00",
+            "browse": true,
+            "copy": true,
+            "execute": false
+        }
+    ],
+    "baseline_reviews": []
+}

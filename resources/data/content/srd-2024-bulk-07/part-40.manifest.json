@@ -1,0 +1,133 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:feather-fall:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "feather-fall",
+            "checksum": "625e0fe0bbc3c6fce945866be5cc0bf378bfd1c31ea3e6a9b31d460c9906c6ee"
+        },
+        {
+            "id": "srd:spell:rope-trick:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "rope-trick",
+            "checksum": "f8abfafc8119c06a34060e828eb1dfd5b8a02b70b1daccbee2b43526a47e15a2"
+        },
+        {
+            "id": "srd:spell:goodberry:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "goodberry",
+            "checksum": "a450940b0ca72a8a855c94200aa06722849d5ee2ce64193d35e7df82d5be95ec"
+        },
+        {
+            "id": "srd:spell:thunderwave:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "thunderwave",
+            "checksum": "bb52c718942450858cc2d9471b4f9c31ef2a8cc141bdbdb3c9fd923f0820df0a"
+        },
+        {
+            "id": "srd:spell:spike-growth:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "spike-growth",
+            "checksum": "8b53f8c557c5c8cc6a7925668325dcabb0d6846d7e7df2cc4e2bde1e7d1eac0a"
+        },
+        {
+            "id": "srd:spell:find-familiar:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "find-familiar",
+            "checksum": "6045c51fdad07f933214caf78d1788bf2df57039a1caf6a107c60ad4b75486e0"
+        },
+        {
+            "id": "srd:spell:burning-hands:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "burning-hands",
+            "checksum": "a2bab99023272a3688f912d82e4b8573bf639f185d31d22a92e677471230cfac"
+        },
+        {
+            "id": "srd:spell:shining-smite:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "shining-smite",
+            "checksum": "f54cf9d23c997d99a51f1d0f9162c689e19921d21a7c3ff1cdf098f4cc4fe870"
+        },
+        {
+            "id": "srd:spell:ice-knife:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "ice-knife",
+            "checksum": "c62bfc51a25461f8951ae867f749c3d0288daea7012d36e00aa349730eea60f5"
+        },
+        {
+            "id": "srd:spell:levitate:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "levitate",
+            "checksum": "e66b8164b2ccf3521c3b61152d8c584e426cf32a339617d20c10e47fe3b20956"
+        },
+        {
+            "id": "srd:spell:darkvision:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "darkvision",
+            "checksum": "8b0a129a2e945062155b4f0aef66606bbd2615bbebed1068585b42d588d82c31"
+        },
+        {
+            "id": "srd:spell:enlarge-reduce:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "enlarge-reduce",
+            "checksum": "3bff728784e7abc1ad10e9b8f81ed250bb24553102ac9bf7db512d24992aca17"
+        },
+        {
+            "id": "srd:spell:enhance-ability:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "enhance-ability",
+            "checksum": "145ea5176eea7481781a819360e548225fdfd1a2df3b6b7e513891e15223a17e"
+        },
+        {
+            "id": "srd:spell:barkskin:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "barkskin",
+            "checksum": "e2978852d73bf55e0d84cc783dbf1d50149afe13cc9061899b5b15f1b959b147"
+        },
+        {
+            "id": "srd:spell:alter-self:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "alter-self",
+            "checksum": "45e47a7ec3f6e53a9e717cacfdcd159875ff62727a31909b4712fdb1dfdc9d17"
+        },
+        {
+            "id": "srd:spell:heat-metal:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "heat-metal",
+            "checksum": "9f01f48e4737608afde1e075571f59f3a79dd195e87773a19cc89cbcf89b9f3b"
+        },
+        {
+            "id": "srd:spell:blindness-deafness:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "blindness-deafness",
+            "checksum": "201ebbc4b3b86fc8774f8f081c23f5db12da88f1bc8f681d458cb7c157af9142"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:tiny-hut:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "tiny-hut",
+            "checksum": "8f108e6e043168fdff505baa321785d6a7eb2c85d9a417b9a3694938bb59ec9d"
+        },
+        {
+            "id": "srd:spell:mislead:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "mislead",
+            "checksum": "b0176872871d5e3b6fba3d5f6d701795605882b81aee08d72ce2b81d661151f4"
+        },
+        {
+            "id": "srd:spell:eyebite:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "eyebite",
+            "checksum": "3333d879fd730d0dbe42e03e87690672f89711c419a906dd5329ce67986c47be"
+        },
+        {
+            "id": "srd:spell:regenerate:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "regenerate",
+            "checksum": "805393caa1149f472d9128a0c8a69f980878a133f81ad689c0a5b3b8c3b38d89"
+        },
+        {
+            "id": "srd:spell:incendiary-cloud:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "incendiary-cloud",
+            "checksum": "3ef0fe45030d25126613e2133be164412e9d870597ed7533b5a67bb5f40d9e0c"
+        },
+        {
+            "id": "srd:spell:foresight:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "foresight",
+            "checksum": "6443ff58c3dc2d246ea042194d72191c15767f8b39c08fdad41dc3ebcd023f34"
+        },
+        {
+            "id": "srd:spell:animal-friendship:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "animal-friendship",
+            "checksum": "9b192ba62b30bc9b53860a8094d25f29fe7a8d9a7871edf7baa11f2fd489dae7"
+        },
+        {
+            "id": "srd:spell:scorching-ray:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "scorching-ray",
+            "checksum": "7c2bcf6772364a928a81b1be85fcd8fe5eed929eb99b2fbb9ab6b21a46012439"
+        },
+        {
+            "id": "srd:spell:hypnotic-pattern:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "hypnotic-pattern",
+            "checksum": "ed790553b2004c8fc35c74ac4788371773af91a902899c1591726ede78852de4"
+        },
+        {
+            "id": "srd:spell:blight:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "blight",
+            "checksum": "470bcfdc77e9c8a26159b095c449016b8e1cf6a67ed0fa22e82a1c6be9f3f6d8"
+        },
+        {
+            "id": "srd:spell:passwall:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "passwall",
+            "checksum": "ab2bb6f8bae7d6763dbd4b202affa1a09703032b3c5730960b16e02ed2de862e"
+        },
+        {
+            "id": "srd:spell:instant-summons:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "instant-summons",
+            "checksum": "5fd948e3de2bd9401693665f0e09e439b7031a9a97f97b055b3c5903b3ef6451"
+        },
+        {
+            "id": "srd:spell:glibness:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "glibness",
+            "checksum": "f268882260840f560aed5658e7c6c8b10a296ab8e9dc2a8beb9ea329a81912ca"
+        },
+        {
+            "id": "srd:spell:divine-word:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "divine-word",
+            "checksum": "c3c443137e81bec384988cff582ed11d2439cd43ec3abede42d599df1330cf4c"
+        },
+        {
+            "id": "srd:spell:weird:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "weird",
+            "checksum": "0352afee5dab95ec66a9b5af20fc34b501ee3ba96e34a4e9c09df84acd43b1ac"
+        },
+        {
+            "id": "srd:spell:detect-evil-and-good:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "detect-evil-and-good",
+            "checksum": "e7690ccd28d5cbc96df6d8ab83f68366d4f7692a77dada71c4c235659d5fa979"
+        },
+        {
+            "id": "srd:spell:gentle-repose:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "gentle-repose",
+            "checksum": "8b8a853b5932b60a967fda0ab25c9294b6f362e9323c9e5a905a7d92be70fd63"
+        },
+        {
+            "id": "srd:spell:slow:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "slow",
+            "checksum": "2200257d3df21c49916f33a483b2dc6eaab3ee61272651aad9d4efe5951b3954"
+        },
+        {
+            "id": "srd:spell:black-tentacles:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "black-tentacles",
+            "checksum": "f5340e55ea4e4d90c0a29c19672b38437f5b1f5bafda799f8907f6ed314ca668"
+        },
+        {
+            "id": "srd:spell:legend-lore:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "legend-lore",
+            "checksum": "81fcb8caa2bf6d35c745785c1befaa5a5074bd5534c9756f1a7cd39edc220612"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

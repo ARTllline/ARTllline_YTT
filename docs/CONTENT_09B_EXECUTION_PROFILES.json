@@ -1,0 +1,64 @@
+{
+    "rules": "D&D 2024 \/ SRD 5.2.1",
+    "approval_required": true,
+    "database_writes": 0,
+    "records": [
+        {
+            "entry_id": 73,
+            "name": "Cure Wounds",
+            "external_key": "cure-wounds",
+            "entity_type": "spells",
+            "source_checksum": "b5abdb0be7e0fa31a1db9ab639154a5c81fce55878c7cdcea9f426300c7eab7d",
+            "current_projection_checksum": "88f66b5581408d40fc45d3c465451aabef4a162a279909e0fdca9d5a28975708",
+            "candidate_projection_checksum": "8301a21fcdda6f92b8a7629493b0461e08ba27e753f63f3c4b555bd72fcc126a",
+            "execution_profile": {
+                "supported": true,
+                "checksum": "b523beee872d9fd3b5d0b1cb54059eb85ea2e5b969984440bb984e99264ba7c3"
+            },
+            "confirmation_profile": {
+                "id": "cure-wounds",
+                "checksum": "08a11fc613d5e3cd718da0a7e88b0f6eae938a5b0661b5bd6b1284bcf237a876"
+            },
+            "current_execute": false,
+            "approved": false
+        },
+        {
+            "entry_id": 436,
+            "name": "Longsword",
+            "external_key": "longsword",
+            "entity_type": "weapons",
+            "source_checksum": "db88a0878bb279d08635493d8f62b2747237674a648b1f2f663f268070e6e440",
+            "current_projection_checksum": "b31ae6cfbece1298c8b0006c58fc3ba0bf115ca3aa7959080fb798750df24fbe",
+            "candidate_projection_checksum": "8df563b651968b0a21de138a353daece34de27464631b3b93bc958708ed8ab3b",
+            "execution_profile": {
+                "supported": true,
+                "checksum": "efe82eecaeab2817871fea5631c24c309d4cdcccb8931fdb6eb0d931ed528657"
+            },
+            "confirmation_profile": {
+                "id": "longsword",
+                "checksum": "d5ca6ef9ab5e4892caaab6f33d19d62cffe6de7bc04dc7d99aee694114ab1f83"
+            },
+            "current_execute": false,
+            "approved": false
+        },
+        {
+            "entry_id": 467,
+            "name": "Potion of Healing",
+            "external_key": "potion-of-healing",
+            "entity_type": "items",
+            "source_checksum": "496c81e1c47fded10cc863a7290bd8ec93023986400ed675a938d1b757bfe3f7",
+            "current_projection_checksum": "316dbe107739feccc292f13224f6a60b5fab265bc6e2f6d3190eef5938ac0c09",
+            "candidate_projection_checksum": "5565420674cb062df71b97da7a68ae97ace6e52867bb09232bded624dc717999",
+            "execution_profile": {
+                "supported": true,
+                "checksum": "80a6c25589906a46eb042e8b3d549df784cb21bc03b872cadf9f06b9ae5cf66e"
+            },
+            "confirmation_profile": {
+                "id": "potion_of_healing",
+                "checksum": "9eac650ca13d8c0a82990d64470b14d4a59ecdfc07c60d5d791e83a8272f214f"
+            },
+            "current_execute": false,
+            "approved": false
+        }
+    ]
+}

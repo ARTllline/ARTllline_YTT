@@ -1,0 +1,433 @@
+{
+    "plan_checksum": "2e89b498fb9c6478a5602e51a538b610dc1bd5905166df7e5bb5ca7699a4bcd3",
+    "actions": {
+        "create": 1,
+        "update": 7,
+        "skip": 0,
+        "conflict": 7,
+        "not_compared": 0
+    },
+    "format": 1,
+    "mode": "dry-run",
+    "database_writes": 0,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "catalog_checked": true,
+    "source_exists": true,
+    "source_id": 1,
+    "source_declared_version": "5.2.1",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "adapter_version": 2,
+    "counts": {
+        "created": 0,
+        "updated": 0,
+        "unchanged": 0,
+        "rejected": 15
+    },
+    "validation_passed": true,
+    "review_ready": false,
+    "transaction_writer_ready": false,
+    "apply_blockers": [
+        "content_04_versioned_consumer_gates_and_raw_compatibility",
+        "separate_human_import_authorization"
+    ],
+    "import_available": false,
+    "runtime_execution_available": false,
+    "verification": {
+        "generated_at": "2026-11-12T15:24:12+02:00",
+        "only_select_queries": true,
+        "query_count": 25,
+        "catalog_before_after_equal": true,
+        "baseline_digest": "8c8e3de3cb7a8464b9eef953a24f6f0a8c4f22b53ffe7b5020b65af94b96e1fc"
+    },
+    "records": [
+        {
+            "id": "srd:equipment:acid:2024",
+            "state": "rejected",
+            "reason": "unmanaged_or_locally_modified_entry",
+            "action": "conflict",
+            "baseline": [
+                {
+                    "id": 340,
+                    "digest": "61b589d662b57002ac14d917e7070d3b3c61951d827eab9b5eb4a6daf2fabe80"
+                }
+            ],
+            "projection_checksum": "ef56d3801767b8c84e942ad1b184d307192fef4439e391829d7145b9423da430",
+            "source_checksum": "f5864f407cadbed32049992f8e4e22cab472192e18578209e75f6671876351cf",
+            "existing_entry_id": 340,
+            "identity": {
+                "source": "srd-2024",
+                "entity_type": "items",
+                "external_key": "acid"
+            },
+            "checksum": "f5864f407cadbed32049992f8e4e22cab472192e18578209e75f6671876351cf",
+            "gates": {
+                "browse": false,
+                "copy": false,
+                "execute": false
+            }
+        },
+        {
+            "id": "srd:equipment:arrows:2024",
+            "state": "rejected",
+            "reason": "unmanaged_or_locally_modified_entry",
+            "action": "conflict",
+            "baseline": [
+                {
+                    "id": 345,
+                    "digest": "c3a9091eaa0a9eb8d4346b805ee02ca798d969a6c6bab96a9580449245b7e2d8"
+                }
+            ],
+            "projection_checksum": "1f88b4f229ad09ea2dc104288202588c6238317b4d61d7d0e520fc16bfda2056",
+            "source_checksum": "13f1c3bd2b19d072847d47a35c48be5559f7d5c57ac8a3faf451d9b42a714e13",
+            "existing_entry_id": 345,
+            "identity": {
+                "source": "srd-2024",
+                "entity_type": "items",
+                "external_key": "arrows"
+            },
+            "checksum": "13f1c3bd2b19d072847d47a35c48be5559f7d5c57ac8a3faf451d9b42a714e13",
+            "gates": {
+                "browse": false,
+                "copy": false,
+                "execute": false
+            }
+        },
+        {
+            "id": "srd:equipment:chain-mail:2024",
+            "state": "rejected",
+            "reason": "unmanaged_or_locally_modified_entry",
+            "action": "conflict",
+            "baseline": [
+                {
+                    "id": 374,
+                    "digest": "9ab016ef867fe46282eafec7b0cbb21a013453b7713584993f1fbf54d4afef29"
+                }
+            ],
+            "projection_checksum": "c46e952f875e112c537daa2822a05f0f7066c43539a667af667fbe6418ff10cc",
+            "source_checksum": "6bb1e158068a10e42e3107ed55bb66bf39d7c692a75554184b7c30dbcd818b44",
+            "existing_entry_id": 374,
+            "identity": {
+                "source": "srd-2024",
+                "entity_type": "armor",
+                "external_key": "chain-mail"
+            },
+            "checksum": "6bb1e158068a10e42e3107ed55bb66bf39d7c692a75554184b7c30dbcd818b44",
+            "gates": {
+                "browse": false,
+                "copy": false,
+                "execute": false
+            }
+        },
+        {
+            "id": "srd:equipment:leather-armor:2024",
+            "state": "rejected",
+            "reason": "unmanaged_or_locally_modified_entry",
+            "action": "conflict",
+            "baseline": [
+                {
+                    "id": 430,
+                    "digest": "dcc3aeba8f72970522d7a01aa953286d6c4ca909940721bb5d355e2b2bca3d85"
+                }
+            ],
+            "projection_checksum": "a0e299d33320087996fb0d99e4691431d6b696d0451d270a60125d6c0a6f1358",
+            "source_checksum": "10c5fb4514a6ead647601691b0832c91d884b726ecd39a8767c722fcbcd7b313",
+            "existing_entry_id": 430,
+            "identity": {
+                "source": "srd-2024",
+                "entity_type": "armor",
+                "external_key": "leather-armor"
+            },
+            "checksum": "10c5fb4514a6ead647601691b0832c91d884b726ecd39a8767c722fcbcd7b313",
+            "gates": {
+                "browse": false,
+                "copy": false,
+                "execute": false
+            }
+        },
+        {
+            "id": "srd:equipment:longsword:2024",
+            "state": "rejected",
+            "reason": "unmanaged_or_locally_modified_entry",
+            "action": "conflict",
+            "baseline": [
+                {
+                    "id": 436,
+                    "digest": "b629882ef28edd4bc52045ee6acd7f6deada21fd0b44445773b10b629b9ad9bf"
+                }
+            ],
+            "projection_checksum": "45271e86f412dac50d87e9197161a9fc11405569516ad141b72b757a1e0d0859",
+            "source_checksum": "db88a0878bb279d08635493d8f62b2747237674a648b1f2f663f268070e6e440",
+            "existing_entry_id": 436,
+            "identity": {
+                "source": "srd-2024",
+                "entity_type": "weapons",
+                "external_key": "longsword"
+            },
+            "checksum": "db88a0878bb279d08635493d8f62b2747237674a648b1f2f663f268070e6e440",
+            "gates": {
+                "browse": false,
+                "copy": false,
+                "execute": false
+            }
+        },
+        {
+            "id": "srd:equipment:potion-of-healing:2024",
+            "state": "rejected",
+            "reason": "unmanaged_or_locally_modified_entry",
+            "action": "conflict",
+            "baseline": [
+                {
+                    "id": 467,
+                    "digest": "5322310b5da605e25d4d863fb383d439d211bcc153210a0d7f1728415863d4d8"
+                }
+            ],
+            "projection_checksum": "c3c0b4a8567d361a4f98bf07554220d04bd17008f52890b20b1ee7b5ec1bd344",
+            "source_checksum": "a724b55079637251e53252de95faa5ef580da4b555191a8b569f9810636105dd",
+            "existing_entry_id": 467,
+            "identity": {
+                "source": "srd-2024",
+                "entity_type": "items",
+                "external_key": "potion-of-healing"
+            },
+            "checksum": "496c81e1c47fded10cc863a7290bd8ec93023986400ed675a938d1b757bfe3f7",
+            "gates": {
+                "browse": false,
+                "copy": false,
+                "execute": false
+            }
+        },
+        {
+            "id": "srd:equipment:shield:2024",
+            "state": "rejected",
+            "reason": "unmanaged_or_locally_modified_entry",
+            "action": "conflict",
+            "baseline": [
+                {
+                    "id": 486,
+                    "digest": "35c25b0ab9d99301784023c17058009a2f624d7539065a43fbe8b1c4adfbcbbf"
+                }
+            ],
+            "projection_checksum": "7af7283a8882c66f600cb4423c923b62b9065327e63f618e9a57c44c6016cd0b",
+            "source_checksum": "d05f779c0fc504a1cae3b6506acacf784e702981a174f463b92050b960ee2c51",
+            "existing_entry_id": 486,
+            "identity": {
+                "source": "srd-2024",
+                "entity_type": "armor",
+                "external_key": "shield"
+            },
+            "checksum": "d05f779c0fc504a1cae3b6506acacf784e702981a174f463b92050b960ee2c51",
+            "gates": {
+                "browse": false,
+                "copy": false,
+                "execute": false
+            }
+        },
+        {
+            "id": "srd:magic_item:bag-of-holding:2024",
+            "state": "rejected",
+            "reason": "local_checksum_review_required",
+            "action": "create",
+            "baseline": [],
+            "projection_checksum": "19e1c40236b4539beed8a51f50c2bac2b06c46f5da6a46ec2aa3a6e4f3064a2d",
+            "source_checksum": "19cd6ace39617152a54aff49973d5fb777424c443b30b6aea0063c9b784252a3",
+            "existing_entry_id": null,
+            "identity": {
+                "source": "srd-2024",
+                "entity_type": "items",
+                "external_key": "magic-item:bag-of-holding"
+            },
+            "checksum": "b125cf57e16c46d32cec204dda2b2bb1ae578f289005458956c893fa01f65a8f",
+            "gates": {
+                "browse": false,
+                "copy": false,
+                "execute": false
+            }
+        },
+        {
+            "id": "srd:spell:cure-wounds:2024",
+            "state": "rejected",
+            "reason": "local_checksum_review_required",
+            "action": "update",
+            "baseline": [
+                {
+                    "id": 73,
+                    "digest": "233f73eeae936d895d0e637509bca7acdf4fe7262a5b74aafee99f7ce64b41b2"
+                }
+            ],
+            "projection_checksum": "0449869bf17146840068144e177aa7a7a69727b0b6ed46e3781a29cb74348c70",
+            "source_checksum": "b5abdb0be7e0fa31a1db9ab639154a5c81fce55878c7cdcea9f426300c7eab7d",
+            "existing_entry_id": 73,
+            "identity": {
+                "source": "srd-2024",
+                "entity_type": "spells",
+                "external_key": "cure-wounds"
+            },
+            "checksum": "b5abdb0be7e0fa31a1db9ab639154a5c81fce55878c7cdcea9f426300c7eab7d",
+            "gates": {
+                "browse": false,
+                "copy": false,
+                "execute": false
+            }
+        },
+        {
+            "id": "srd:spell:detect-magic:2024",
+            "state": "rejected",
+            "reason": "local_checksum_review_required",
+            "action": "update",
+            "baseline": [
+                {
+                    "id": 82,
+                    "digest": "1348c37a6bd6e1eb7190069fdc7dfa37cb64e534e1d8b693bbca4d46257c923d"
+                }
+            ],
+            "projection_checksum": "fc2ddc6a01cf6413c6942846bdf3b9f51e2fc41dbf0ac4ffd1ec56ddacd0d478",
+            "source_checksum": "1a8deb39006aca1759cb8acd962e97bd5b2d6a6b0cde41d41fde1c75f11ccab7",
+            "existing_entry_id": 82,
+            "identity": {
+                "source": "srd-2024",
+                "entity_type": "spells",
+                "external_key": "detect-magic"
+            },
+            "checksum": "1a8deb39006aca1759cb8acd962e97bd5b2d6a6b0cde41d41fde1c75f11ccab7",
+            "gates": {
+                "browse": false,
+                "copy": false,
+                "execute": false
+            }
+        },
+        {
+            "id": "srd:spell:fireball:2024",
+            "state": "rejected",
+            "reason": "local_checksum_review_required",
+            "action": "update",
+            "baseline": [
+                {
+                    "id": 126,
+                    "digest": "f8b0af579a5957e8e83d0a0d1beee88929076ce106395ea8113fd5574d7e580f"
+                }
+            ],
+            "projection_checksum": "9a361c7f6ebabde7c1fe2db5514d110d3eb300b085ec99441c2ceb133323a1e4",
+            "source_checksum": "babb980ff0d90a4c929cf75d201f327e82d80953af68842fdb90338005c06e97",
+            "existing_entry_id": 126,
+            "identity": {
+                "source": "srd-2024",
+                "entity_type": "spells",
+                "external_key": "fireball"
+            },
+            "checksum": "56f3bef53a577baad6076e0939271950643b4a293afd633e01e16a6e32957322",
+            "gates": {
+                "browse": false,
+                "copy": false,
+                "execute": false
+            }
+        },
+        {
+            "id": "srd:spell:healing-word:2024",
+            "state": "rejected",
+            "reason": "local_checksum_review_required",
+            "action": "update",
+            "baseline": [
+                {
+                    "id": 161,
+                    "digest": "eca877587991da9ee82546e66de70ec43f0194408c0b4e211fc0f40ca7f8a67d"
+                }
+            ],
+            "projection_checksum": "b9f2eec7c6308a28bb9f357ab20cc819afe353f00114dca74cbe9f038217fd62",
+            "source_checksum": "94b92d3c1fed76365a4b812da8444131bf5413265008c9611e524c7f0275f964",
+            "existing_entry_id": 161,
+            "identity": {
+                "source": "srd-2024",
+                "entity_type": "spells",
+                "external_key": "healing-word"
+            },
+            "checksum": "1864f0efb5131ca7647a60948c68261c2a87e71d02c547b94d1c5784057fbe47",
+            "gates": {
+                "browse": false,
+                "copy": false,
+                "execute": false
+            }
+        },
+        {
+            "id": "srd:spell:magic-missile:2024",
+            "state": "rejected",
+            "reason": "local_checksum_review_required",
+            "action": "update",
+            "baseline": [
+                {
+                    "id": 199,
+                    "digest": "462fb22c643f9d8cad142871dcc2520a4237bb167c3d803e6d739dae53603078"
+                }
+            ],
+            "projection_checksum": "e288c19505c156bae496434961dbef663e3cf09981a801d7f789c7c7bf147c0b",
+            "source_checksum": "f12ee013b3bbd77951377402ca2b83081297d6f2b239adf64a84daaff0fc67a9",
+            "existing_entry_id": 199,
+            "identity": {
+                "source": "srd-2024",
+                "entity_type": "spells",
+                "external_key": "magic-missile"
+            },
+            "checksum": "d216203216a7559e5ecd2b2630ef40f8b0791138bf8c4fba422e5f8a3bc03c6a",
+            "gates": {
+                "browse": false,
+                "copy": false,
+                "execute": false
+            }
+        },
+        {
+            "id": "srd:spell:shield:2024",
+            "state": "rejected",
+            "reason": "local_checksum_review_required",
+            "action": "update",
+            "baseline": [
+                {
+                    "id": 275,
+                    "digest": "f428522a8e8b21cbce980102f22e958097775ee5b95d2e670863ace3c12e72b9"
+                }
+            ],
+            "projection_checksum": "e0ef9f8ab33d8f4e864e24d4cde9097ecae0855eeebec356ab22a7369a98c49a",
+            "source_checksum": "7b71ae6fd2a2a83f258a7423ee278c594c6d0c1fe304751f0602f03e35ea63f9",
+            "existing_entry_id": 275,
+            "identity": {
+                "source": "srd-2024",
+                "entity_type": "spells",
+                "external_key": "shield"
+            },
+            "checksum": "7b71ae6fd2a2a83f258a7423ee278c594c6d0c1fe304751f0602f03e35ea63f9",
+            "gates": {
+                "browse": false,
+                "copy": false,
+                "execute": false
+            }
+        },
+        {
+            "id": "srd:spell:wish:2024",
+            "state": "rejected",
+            "reason": "local_checksum_review_required",
+            "action": "update",
+            "baseline": [
+                {
+                    "id": 337,
+                    "digest": "4489c3d8f7ed025bd7a8227e23911528296a877b3c4be4a616d6890a5c10c8a1"
+                }
+            ],
+            "projection_checksum": "157e0f4a809e0f6d15cd32d0adf1971b281c339bf9460382082710c5bf05c037",
+            "source_checksum": "1f779153ffeb2255bfaea562f22eb7f1a663218f65ca93f9c336d2b5f12202b0",
+            "existing_entry_id": 337,
+            "identity": {
+                "source": "srd-2024",
+                "entity_type": "spells",
+                "external_key": "wish"
+            },
+            "checksum": "cb26b66e86054106e3aeb94ea4f01098270a749c93a5b0ea9b4a99ae3a7c306e",
+            "gates": {
+                "browse": false,
+                "copy": false,
+                "execute": false
+            }
+        }
+    ]
+}

@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:longstrider:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "longstrider",
+            "checksum": "196782b64ee157ec89f43d640577044a5319eecbd6d828f0d8a7c2a94dd74334"
+        },
+        {
+            "id": "srd:spell:flame-strike:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "flame-strike",
+            "checksum": "e4ec3c3443b04595a354656cfb039360f2d04e56d84e90ce451121588fc7a7e7"
+        },
+        {
+            "id": "srd:spell:magic-circle:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "magic-circle",
+            "checksum": "c11c8c0e80b75e299e8438564cb82e68165d515fc97fa1e6ae6e921a3b38c297"
+        },
+        {
+            "id": "srd:spell:find-steed:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "find-steed",
+            "checksum": "a11052e298087b482f937486f9db9109d81544f5eaeea259209570d6972d8581"
+        },
+        {
+            "id": "srd:spell:create-or-destroy-water:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "create-or-destroy-water",
+            "checksum": "a8d4b22c6b17026fd7be7495b5d6e186c995a741ea3934209b9527bb6ef2ea7b"
+        },
+        {
+            "id": "srd:spell:misty-step:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "misty-step",
+            "checksum": "3be4961595ce85168360d032b0a53647260b31a04b58e28f2d82ac4d296177da"
+        },
+        {
+            "id": "srd:spell:blink:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "blink",
+            "checksum": "5bea4b4f85bfcbc44e872ffbab4e938817321db4fd1770acf230a8d99f6f5aa7"
+        },
+        {
+            "id": "srd:spell:sanctuary:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "sanctuary",
+            "checksum": "ba55671a74d439008a7b15c58e15501260957987f46f1c2e2e81277aefccfe17"
+        },
+        {
+            "id": "srd:spell:continual-flame:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "continual-flame",
+            "checksum": "8a08a6394bce22baa733b335aa52e1a3a8bc9d601100585bcc4b95c8a08ff16a"
+        },
+        {
+            "id": "srd:spell:spirit-guardians:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "spirit-guardians",
+            "checksum": "67a17402b9490101ab420e69d94c9b879d05bd651f507322036ae87452f4bb43"
+        },
+        {
+            "id": "srd:spell:guiding-bolt:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "guiding-bolt",
+            "checksum": "d46b8b222df3baf447335846269cb01c0e113a0b381f6eec3549ae72ebb09ade"
+        },
+        {
+            "id": "srd:spell:spider-climb:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "spider-climb",
+            "checksum": "0f68219aa95cf448e894503e5b1ec5de1e90d62d4b72ac24477509e5f6f845da"
+        },
+        {
+            "id": "srd:spell:grease:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "grease",
+            "checksum": "1490c1556a40738a8eae3007422b8e536ed88b7a2c9c3761338d2b9cbc452832"
+        },
+        {
+            "id": "srd:spell:gust-of-wind:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "gust-of-wind",
+            "checksum": "6f73bbab156a4cc06edff720b6365e5a3ecd6805a0739a5a5f4d821c851f437b"
+        },
+        {
+            "id": "srd:spell:expeditious-retreat:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "expeditious-retreat",
+            "checksum": "a3109c8fee0f4e52c53630c2634119b39e81afb18c42c1921c12700f6c49f709"
+        },
+        {
+            "id": "srd:spell:darkness:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "darkness",
+            "checksum": "c16dee0aed3c17c0859f198a1b73dba4021e949ed12cdb8852c07041cb692ec3"
+        },
+        {
+            "id": "srd:spell:entangle:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "entangle",
+            "checksum": "b9dbf99cbb60d46a034a5ac03d687af6b1776b69fc6fb14468ce2e8e4d1a228e"
+        },
+        {
+            "id": "srd:spell:knock:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "knock",
+            "checksum": "c54a6d1900fed25d67c6a6018c352bdf90cb75a6ba425aebd95b0cdf6a188317"
+        },
+        {
+            "id": "srd:spell:fog-cloud:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "fog-cloud",
+            "checksum": "eb22fe02dd53be7a3e421ac48a4c4e7ba6d6431eea4ef41ca3e24cbd037981f1"
+        },
+        {
+            "id": "srd:spell:moonbeam:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "moonbeam",
+            "checksum": "ec4e23323760075c578fbbce76502dd2449760b372090c2e1bfc8f811621456d"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

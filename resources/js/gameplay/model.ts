@@ -48,6 +48,7 @@ export interface Ability {
     }[];
     item_only?: boolean;
     spell?: {
+        content?: import('../compendium/ContentReference').ContentReferenceData;
         coverage?: 'FULL' | 'PARTIAL' | 'MANUAL';
         reasons?: string[];
         source_key?: string;

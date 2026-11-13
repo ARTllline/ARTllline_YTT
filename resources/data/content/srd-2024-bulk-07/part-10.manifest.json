@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:equipment:cartographer-tools:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "cartographer-tools",
+            "checksum": "b8faeec70bb462218aff539a55754ed5bd13f7b8bb68a3ab43497f95f4def4b4"
+        },
+        {
+            "id": "srd:equipment:halberd:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "halberd",
+            "checksum": "d27a6138e76a4d18bd0434d3691c72c6f16e9ef0da9e1572904b923171e6e31e"
+        },
+        {
+            "id": "srd:equipment:hand-crossbow:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "hand-crossbow",
+            "checksum": "b50a5b988cae73b552dde20d2a50fce2cabded60c07f954effb4bba95e2fbaa7"
+        },
+        {
+            "id": "srd:equipment:light-hammer:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "light-hammer",
+            "checksum": "94668df81472864932af4ed82a498c85646f799c27ccc9aead9cf58deedce999"
+        },
+        {
+            "id": "srd:equipment:flute:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "flute",
+            "checksum": "105d40575bb5031edf50bda8f836f5aac5eb8d1946fab5653ccbc27f59690922"
+        },
+        {
+            "id": "srd:equipment:truth-serum:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "truth-serum",
+            "checksum": "449c34f291014bca4dce2bd45a02f77aac75165344c725c260ee8c993419b31f"
+        },
+        {
+            "id": "srd:equipment:case-crossbow-bolt:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "case-crossbow-bolt",
+            "checksum": "41e0441555e915632fab2510a689b854586cc2bca154566fc56105f199767404"
+        },
+        {
+            "id": "srd:equipment:smiths-tools:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "smiths-tools",
+            "checksum": "4f1d5b367c614cb59caea3d15ea31662a696b0142f9d588e4253dd11a9ca10cb"
+        },
+        {
+            "id": "srd:equipment:rapier:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "rapier",
+            "checksum": "e64b2090b9238ed20c046ad252439f0edafc74aae1dc225fa44bf84c807c026a"
+        },
+        {
+            "id": "srd:equipment:club:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "club",
+            "checksum": "ba8ab5e0c37d49c268e1c70ea9e77b80098858d0953cb1ef14930bc2c4d6dbff"
+        },
+        {
+            "id": "srd:equipment:drum:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "drum",
+            "checksum": "48e5c2d5bafbafdc334336f2d405f395e857491a49843e321250be4a04832c28"
+        },
+        {
+            "id": "srd:equipment:spiders-sting:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "spiders-sting",
+            "checksum": "e994539eecb242b29da51662ab5d1f3588696d138aff1534858af7d15b95fa13"
+        },
+        {
+            "id": "srd:equipment:holy-water:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "holy-water",
+            "checksum": "22be56a0a88411ff0e83cb070d40c04d15b6cb2331aa78fb5d891264f1a94af4"
+        },
+        {
+            "id": "srd:equipment:masons-tools:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "masons-tools",
+            "checksum": "31c4080b3655134d223514d53c82ca0633460838079b5bfaa58bb107a837cc1e"
+        },
+        {
+            "id": "srd:equipment:warhammer:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "warhammer",
+            "checksum": "4d6d0100a564cedf0eb8fe8b59f4638dd54529ab6d603a3a4ece28bec698881e"
+        },
+        {
+            "id": "srd:equipment:mace:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "mace",
+            "checksum": "c3c2a9b143307f60a873275cc46ccdc436c1f59f607e3c60d75f18a0e5429bb1"
+        },
+        {
+            "id": "srd:equipment:viol:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "viol",
+            "checksum": "4c6f68b356a32c475630982f9e0e8adfb37c19be30aec180a57f936a0f5ec043"
+        },
+        {
+            "id": "srd:equipment:essence-of-ether:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "essence-of-ether",
+            "checksum": "0a40763c5ab0ec6acbef81ba040d8e045b2ef08ca49433e6a84c71123f3b09f0"
+        },
+        {
+            "id": "srd:equipment:spellbook:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "spellbook",
+            "checksum": "5c670d11985de2d99374d05c805aeee604ecaaa65b32ff904bcb1e46c0573202"
+        },
+        {
+            "id": "srd:equipment:brewers-supplies:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "brewers-supplies",
+            "checksum": "d92093200bc38b7b038235a941ca4be201afddbb9a4d97f956dfcf7e8bd6568c"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

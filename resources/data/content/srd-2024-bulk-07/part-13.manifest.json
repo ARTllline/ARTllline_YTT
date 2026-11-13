@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:equipment:sack:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "sack",
+            "checksum": "539a2683086f4ffb9d46bc98ecb4d52a0c7e73ffb3eb70fdef4350f2c8368e36"
+        },
+        {
+            "id": "srd:equipment:ram-portable:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "ram-portable",
+            "checksum": "5dceadb49db89ee565d2cc0a2e184c9a37e2edb969b84dee81ae13d4df3e7b80"
+        },
+        {
+            "id": "srd:equipment:pot-iron:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "pot-iron",
+            "checksum": "9d0d500b7ceaf63c2a0d1eb12cce78b9217a93de15e35ec89fa57d7cce0d002f"
+        },
+        {
+            "id": "srd:equipment:rations:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "rations",
+            "checksum": "ca6a480cf8775affc90d547cb3b83fc429b4207fdaea9648f3b1baf5685baaed"
+        },
+        {
+            "id": "srd:equipment:alchemists-fire:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "alchemists-fire",
+            "checksum": "2891f1c99e268af0e7613d228efd3fdd592bf772742d90d839e08f82cca77aaa"
+        },
+        {
+            "id": "srd:equipment:bell:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "bell",
+            "checksum": "65046669c393959c0e5976dc2ba0df467e2da538bdf3567df8e4eba94f03139f"
+        },
+        {
+            "id": "srd:equipment:oil:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "oil",
+            "checksum": "af46818513db654d75a32b71488a80c796b3b0d5f2def5706f8d9d2b2d5a2807"
+        },
+        {
+            "id": "srd:equipment:clothes-travelers:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "clothes-travelers",
+            "checksum": "8fa66c467a1b1d36d915eccd50f8ba5efc98944d303663c4ba53dc47861e4db2"
+        },
+        {
+            "id": "srd:equipment:shovel:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "shovel",
+            "checksum": "c132a572e95f142188e4949b6f863dcfb1acf452a05a4ca78d15cb27046f4806"
+        },
+        {
+            "id": "srd:equipment:crowbar:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "crowbar",
+            "checksum": "852d30dcbe6414edc1d057c0b1d91a2a4eeecc0616207031a7ffcf38a2b2b0a7"
+        },
+        {
+            "id": "srd:equipment:explorers-pack:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "explorers-pack",
+            "checksum": "b3fd818b289bdcf65d0fc2206258f5520ca0c0cc6b686dd0bc87614ba6409a87"
+        },
+        {
+            "id": "srd:equipment:candle:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "candle",
+            "checksum": "66431518a94bff03adcc9a3f29605368bb5e7add4792b32009b3d6651e6e1bd4"
+        },
+        {
+            "id": "srd:equipment:entertainers-pack:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "entertainers-pack",
+            "checksum": "8201aa07336a1d59693ed9497ac78b8ac40742ce4f852a26c06eecc5d9315310"
+        },
+        {
+            "id": "srd:equipment:string:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "string",
+            "checksum": "556c66470410f6d802f65b4bf2d0d2777d8896ccec6f6a9dce1eb324843513f3"
+        },
+        {
+            "id": "srd:equipment:spikes-iron:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "spikes-iron",
+            "checksum": "b859fbfe317dc28a666930e4f981149495a26ba44e49ba9df707972c96a81dad"
+        },
+        {
+            "id": "srd:equipment:pouch:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "pouch",
+            "checksum": "b3967386980ce7aaffc7219158270b95fe895ef0810f2a172c9d567ca6a69497"
+        },
+        {
+            "id": "srd:equipment:spell-scroll-cantrip:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "spell-scroll-cantrip",
+            "checksum": "97f1f4d64d9019b78a941a2999c1a8b7dd1d0ff599e4a14854c37cec56237129"
+        },
+        {
+            "id": "srd:equipment:lock:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "lock",
+            "checksum": "55d0d026c1c7498be37d520e031c8bfb7d64bca029225175de9375872b1be049"
+        },
+        {
+            "id": "srd:equipment:robe:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "robe",
+            "checksum": "604dc611a5f7c984a014ca6d90327ff7468a0e6605c1778866ff5db2f5753c1b"
+        },
+        {
+            "id": "srd:equipment:bucket:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "bucket",
+            "checksum": "1081a485dddba12a537b15e0df623e2dc2d41e071fcc71e90063645a366c8a4e"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

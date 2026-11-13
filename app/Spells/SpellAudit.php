@@ -2,6 +2,7 @@
 
 namespace App\Spells;
 
+use App\Compendium\CompendiumContent;
 use App\Compendium\SrdSpellMapper;
 use App\Models\CompendiumEntry;
 use App\Services\CharacterGameplay;
@@ -15,21 +16,31 @@ class SpellAudit
         $counts = ['FULL' => 0, 'PARTIAL' => 0, 'MANUAL' => 0];
         $errors = [];
         foreach (CompendiumEntry::whereHas('source', fn ($q) => $q->where('key', 'srd-2024'))->where('entity_type', 'spells')->orderBy('external_key')->get() as $entry) {
-            $n = array_replace($entry->normalized_data, app(SrdSpellMapper::class)->map($entry->raw_data));
+            $consumer = app(CompendiumContent::class);
+            if (! $consumer->gates($entry)['browse']) {
+                $errors[$entry->external_key] = ['Pending/stale local content review; excluded from execution audit.'];
+
+                continue;
+            }
+            $n = $consumer->unified($entry) ? $consumer->normalized($entry) : array_replace($entry->normalized_data, app(SrdSpellMapper::class)->map($entry->raw_data));
             $n['source_key'] = $entry->external_key;
             $n['source_entry_id'] = $entry->id;
-            $ability = app(SpellProjection::class)->ability($n, 0);
+            $ability = $consumer->unified($entry) ? $consumer->ability($entry) : app(SpellProjection::class)->ability($n, 0);
             $v = Validator::make(['abilities' => [$ability]], CharacterGameplay::rules());
             if ($v->fails()) {
                 $errors[$entry->external_key] = $v->errors()->all();
             }
             $coverage = app(SpellProjection::class)->coverage($entry->external_key);
+            if ($consumer->unified($entry) && ! $consumer->gates($entry)['execute']) {
+                $coverage = array_replace($coverage, ['status' => 'MANUAL', 'reason' => 'Local execution approval missing; GM resolution only.']);
+            }
             $counts[$coverage['status']]++;
             $warnings = [];
-            if (str_contains(strtolower($entry->raw_data['range'] ?? ''), 'component')) {
+            $raw = $entry->raw_data['record']['raw'] ?? $entry->raw_data;
+            if (str_contains(strtolower($raw['range'] ?? ''), 'component')) {
                 $warnings[] = 'Components embedded in range; original retained, requires reviewed correction.';
             }
-            if (empty($entry->raw_data['damage']['damage_at_character_level']) && $n['spell_level'] === 0 && isset($entry->raw_data['damage'])) {
+            if (empty($raw['damage']['damage_at_character_level']) && $n['spell_level'] === 0 && isset($raw['damage'])) {
                 $warnings[] = 'Cantrip progression absent from structured damage; explicit tier/recipe required.';
             }
             $rows[] = ['key' => $entry->external_key, 'name' => $entry->name, 'level' => $n['spell_level'], ...$coverage, 'warnings' => $warnings, 'checksum' => $entry->checksum];

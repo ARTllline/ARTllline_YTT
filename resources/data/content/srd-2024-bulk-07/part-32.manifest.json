@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:dominate-person:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "dominate-person",
+            "checksum": "2f759118404342a85b954fd3ee23b5d10fdca30306c7e2225f03eb4fd5c8876e"
+        },
+        {
+            "id": "srd:spell:wall-of-ice:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "wall-of-ice",
+            "checksum": "52e87ec5c8300b6898d3c80edd0b08eb6ff42c56ddaa9bb0149666383a3e3950"
+        },
+        {
+            "id": "srd:spell:simulacrum:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "simulacrum",
+            "checksum": "46b515050d081e5d461f1c5c85f517a3659d73ecbe91f644b57bffce05d6f687"
+        },
+        {
+            "id": "srd:spell:ray-of-sickness:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "ray-of-sickness",
+            "checksum": "c4fe871074c985e1c68cbad5fec68c178b51782011eb356da61e1bdda85e1ecb"
+        },
+        {
+            "id": "srd:spell:thaumaturgy:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "thaumaturgy",
+            "checksum": "71030c3db2e85168c32d0d4099532a2b6a2152dc0397fbf3b08eb3cd326dde35"
+        },
+        {
+            "id": "srd:spell:maze:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "maze",
+            "checksum": "6b25c9e01ad3ed36bdbeaeb6f223615fb0792de570bc707e17ede892f1033356"
+        },
+        {
+            "id": "srd:spell:arcane-lock:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "arcane-lock",
+            "checksum": "e825cde904bcb6342f4bfe697564a9228f680bcb1b92ef3d49bf536a5bb2e0ad"
+        },
+        {
+            "id": "srd:spell:clairvoyance:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "clairvoyance",
+            "checksum": "4af481cde506fe78e85f57001efcf0346d0dc9b522f180ab45f0c6b87c22f8a8"
+        },
+        {
+            "id": "srd:spell:geas:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "geas",
+            "checksum": "80a430be4626e8dfd5849a733884f3a950907908c32b7c2eb6c3859baa06bc6e"
+        },
+        {
+            "id": "srd:spell:wall-of-fire:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "wall-of-fire",
+            "checksum": "ba5cfae6839d5d92120b69a64633db0a38affa44cba2f0733383a5f841bc7c49"
+        },
+        {
+            "id": "srd:spell:harm:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "harm",
+            "checksum": "3d232ea10d3da28bfc30b57d83586f53964943d18d80da0b462ae13c3f420e2c"
+        },
+        {
+            "id": "srd:spell:disguise-self:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "disguise-self",
+            "checksum": "bc8b982e643a1862952b98522a8df245996f1c04568235cfdca758bd9ec526e9"
+        },
+        {
+            "id": "srd:spell:prestidigitation:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "prestidigitation",
+            "checksum": "52cec02a4702cc5b215fa38fcbd38285033facda4504146cf0d7534471570a39"
+        },
+        {
+            "id": "srd:spell:conjure-celestial:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "conjure-celestial",
+            "checksum": "1b819b30a4b045507f0b9559508b504a004e2290ad256e86f719547a23ac4341"
+        },
+        {
+            "id": "srd:spell:lesser-restoration:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "lesser-restoration",
+            "checksum": "5ec9e1524c09b482e2c9c8e5178ee85a93b06e13f2f191f838b99cc64490b0f7"
+        },
+        {
+            "id": "srd:spell:sending:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "sending",
+            "checksum": "6d3b6a08f7251b77762005b48e20c2943ab730cc63f0120fff8b815e14475caa"
+        },
+        {
+            "id": "srd:spell:fire-shield:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "fire-shield",
+            "checksum": "e9d8673351780092d52b4cdd0647b28236833441ecf0ebd57a0a34207d945f5b"
+        },
+        {
+            "id": "srd:spell:creation:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "creation",
+            "checksum": "14d8bb3096991a61b8947ea69734de28e00957df9cf8fec2f9ebdfbc8dfb53ac"
+        },
+        {
+            "id": "srd:spell:magic-jar:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "magic-jar",
+            "checksum": "0a1554df353fc66990885414de2a62002f3f81cc546c6bc6e5cc97d89ef62d76"
+        },
+        {
+            "id": "srd:spell:dissonant-whispers:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "dissonant-whispers",
+            "checksum": "4a75230ede9af88d8b34e752a5eed4d4abcdfc730543d63e683dcd5179f4e824"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

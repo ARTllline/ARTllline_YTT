@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:magic_item:circlet-of-blasting:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:circlet-of-blasting",
+            "checksum": "ac696958856b4ce29120e094e4222938104ae36a83f1c8674e336e9850a0ff9c"
+        },
+        {
+            "id": "srd:magic_item:staff-of-the-woodlands:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:staff-of-the-woodlands",
+            "checksum": "a6f13ddc13eaed195cb98d3d5083bf8880093dbe2694fa101151733c40b764b8"
+        },
+        {
+            "id": "srd:magic_item:oil-of-slipperiness:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:oil-of-slipperiness",
+            "checksum": "18b5a9539937c002698c3721773fbe8d8183719f2e165b18ad6b0285de828b6f"
+        },
+        {
+            "id": "srd:magic_item:armor-of-vulnerability:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:armor-of-vulnerability",
+            "checksum": "bfbf627db5442236cf4199519d1cacdfaf115617368ef5011081055db23b2b49"
+        },
+        {
+            "id": "srd:magic_item:staff-of-the-python:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:staff-of-the-python",
+            "checksum": "156ce46c4590cfd198ee93b3cf4f478509d1b88d223650cb496dc2e9cce7085e"
+        },
+        {
+            "id": "srd:magic_item:flame-tongue:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:flame-tongue",
+            "checksum": "c97459ab752de075dfc16f64096cc35fec6ea6445832c6199ee36ecad6c3c15b"
+        },
+        {
+            "id": "srd:magic_item:periapt-of-wound-closure:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:periapt-of-wound-closure",
+            "checksum": "b0fe3f5e7629038d344f562a971ca9cc7ab85b3175997d586cbba62586b15922"
+        },
+        {
+            "id": "srd:magic_item:boots-of-speed:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:boots-of-speed",
+            "checksum": "d35a92d6baf3cf6baddfd9edb34ab1a05f1c2931723a008387e500f629aac3a7"
+        },
+        {
+            "id": "srd:magic_item:gloves-of-missile-snaring:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:gloves-of-missile-snaring",
+            "checksum": "9a5b59d89f5dabf55abc918e040f779600f56d0f0e30fff24656ae525241d8f6"
+        },
+        {
+            "id": "srd:magic_item:shield-2:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:shield-2",
+            "checksum": "7a5068f4ae96a6fca74b8372a844855b35ef79ce27af9472d6cdef776ba54dda"
+        },
+        {
+            "id": "srd:magic_item:decanter-of-endless-water:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:decanter-of-endless-water",
+            "checksum": "05bba0505e53a2e3b43de23469e23aa4b9ec7e4a170064f5a354dc96a362e95c"
+        },
+        {
+            "id": "srd:magic_item:horn-of-valhalla-2:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:horn-of-valhalla-2",
+            "checksum": "dd594f3ff0bb31dd16ba3d2e274c2a5ecf2ca857546d0daafe8a3d35979479b2"
+        },
+        {
+            "id": "srd:magic_item:ring-of-jumping:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-jumping",
+            "checksum": "8b3c82a4076bec2af53fad20cdf5e5978cc603811f26e3186992bd9b8dc08849"
+        },
+        {
+            "id": "srd:magic_item:potion-of-mind-reading:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-mind-reading",
+            "checksum": "d76e898a4841ff93c3b52eaa9dcc8b3b31e75e65f638436c7bb0a9c03db21bb9"
+        },
+        {
+            "id": "srd:magic_item:ring-of-water-walking:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-water-walking",
+            "checksum": "5487064be6926373319aee5fd1db16c84802094bd213b1a5b80659aa05ddc4b0"
+        },
+        {
+            "id": "srd:magic_item:sword-of-life-stealing:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:sword-of-life-stealing",
+            "checksum": "4b037ff13a3a836e6a5d051156089d05ffbb28e0a68fa38e7d5aeb7f20cb8171"
+        },
+        {
+            "id": "srd:magic_item:stone-of-good-luck-(luckstone):2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:stone-of-good-luck-(luckstone)",
+            "checksum": "82ff413347692331cff014893204fd734a90d21734697dff5810aa10ed57ee0d"
+        },
+        {
+            "id": "srd:magic_item:weapon-2:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:weapon-2",
+            "checksum": "cacc16301174ffa9521ccde31416c994681e879f08a522f8349935a40e54722c"
+        },
+        {
+            "id": "srd:magic_item:wand-of-magic-missiles:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wand-of-magic-missiles",
+            "checksum": "179090c7340ca39cd6b37a3c9dc34341294d3568b0352f6d88d5b5bf36e3941f"
+        },
+        {
+            "id": "srd:magic_item:armor-1:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:armor-1",
+            "checksum": "526597e8c7d2f5b78e123a312f52931007c55e8605056c6353ef4b283c4503e6"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

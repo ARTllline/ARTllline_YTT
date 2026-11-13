@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:magic_item:staff-of-power:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:staff-of-power",
+            "checksum": "fcb8859358bf17f8245682d5f4f61b06e40db689be35e04f7827a67e6907d67e"
+        },
+        {
+            "id": "srd:magic_item:potion-of-vitality:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-vitality",
+            "checksum": "480d333346aa7adebec89fca2bb5a88b56a597170cc5e731e25db223094e7e77"
+        },
+        {
+            "id": "srd:magic_item:universal-solvent:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:universal-solvent",
+            "checksum": "4bb4c54b138a64616ffabfc511e59495f568036894c0e78daa7fbd5f6442d287"
+        },
+        {
+            "id": "srd:magic_item:horn-of-valhalla-1:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:horn-of-valhalla-1",
+            "checksum": "d08017ef482169fde74b10bb240743985eabdd646bdca1387f0dd560617acc2f"
+        },
+        {
+            "id": "srd:magic_item:amulet-of-proof-against-detection-and-location:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:amulet-of-proof-against-detection-and-location",
+            "checksum": "ca0cc50476e45b399d82947fa1e57e3042c1421499f715dfbc161f1c5dc015fb"
+        },
+        {
+            "id": "srd:magic_item:scimitar-of-speed:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:scimitar-of-speed",
+            "checksum": "11f37b00d7200a833049966849bd0d264631ccc404eb47c3e6882594260cfefb"
+        },
+        {
+            "id": "srd:magic_item:rod-of-resurrection:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:rod-of-resurrection",
+            "checksum": "6fbac895c640ffd3924c9eb3052f615d87a47ab377d04ce739e113ac44b91a24"
+        },
+        {
+            "id": "srd:magic_item:ring-of-three-wishes:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-three-wishes",
+            "checksum": "3e2bde8cfcbea4e82ba6657f44f7f37d71eb2a782fb7b6ca97da219d5b961758"
+        },
+        {
+            "id": "srd:magic_item:rope-of-entanglement:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:rope-of-entanglement",
+            "checksum": "f02314581fa961924662e08a8a0a51082e0f4c6eca83634ec0b09479ca4a25e7"
+        },
+        {
+            "id": "srd:magic_item:ring-of-mind-shielding:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-mind-shielding",
+            "checksum": "ec3c58cffbf2949d1e82564f819613e5d2d3e86edc58ace873a4b81a041aa277"
+        },
+        {
+            "id": "srd:magic_item:amulet-of-the-planes:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:amulet-of-the-planes",
+            "checksum": "71a03b3f6e4bf573da905e880b64e956d468af8e75176941e11a4e95c1a71e88"
+        },
+        {
+            "id": "srd:magic_item:cloak-of-invisibility:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:cloak-of-invisibility",
+            "checksum": "6c7752764f90a42f00528e9233b0b7fee9a40688a8d7c02825e0f2c2ae2d9b5a"
+        },
+        {
+            "id": "srd:magic_item:scarab-of-protection:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:scarab-of-protection",
+            "checksum": "05d581d4a0a99cea3e588c2b469567469c97080e8b2f3625afd0d9867fbc83c0"
+        },
+        {
+            "id": "srd:magic_item:wand-of-binding:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wand-of-binding",
+            "checksum": "2e0b16d522d62b5c366a3e1b777e5c4e2d294bdc4899054b0e4f7d89af225dc1"
+        },
+        {
+            "id": "srd:magic_item:medallion-of-thoughts:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:medallion-of-thoughts",
+            "checksum": "78b7cd23c18db82208ef3aa888b23ac31941743fbb8b0f2f8050f2373bcb3820"
+        },
+        {
+            "id": "srd:magic_item:efreeti-bottle:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:efreeti-bottle",
+            "checksum": "1538a759a347dec7650be736beabd2faaa447c9c2d5057ea57cc90b12c4989db"
+        },
+        {
+            "id": "srd:magic_item:bead-of-nourishment:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:bead-of-nourishment",
+            "checksum": "231f768e6a3d1fae1c5a27313a60faf73d08c18d26c8e3439b7d0ebb30cc792b"
+        },
+        {
+            "id": "srd:magic_item:ring-of-spell-turning:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-spell-turning",
+            "checksum": "cccd4ce53304fb7a6e1d3315a656669cddf4d8f6d3dedc4d78d1de1537ff4cf4"
+        },
+        {
+            "id": "srd:magic_item:wand-of-enemy-detection:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wand-of-enemy-detection",
+            "checksum": "e183b8333713ab300dfda33e5f2440847730e9ce4e9ff445dd0a0d290809a6fa"
+        },
+        {
+            "id": "srd:magic_item:rope-of-climbing:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:rope-of-climbing",
+            "checksum": "3a3981b19e1b2618faba7e77f29e7d681888e6a1041f7e0f205f531c7c366eba"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

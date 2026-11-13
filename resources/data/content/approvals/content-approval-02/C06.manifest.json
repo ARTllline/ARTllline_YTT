@@ -1,0 +1,56 @@
+{
+    "format": 1,
+    "adapter_version": 4,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:equipment:potion-of-healing:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "potion-of-healing",
+            "checksum": "a724b55079637251e53252de95faa5ef580da4b555191a8b569f9810636105dd",
+            "correction": {
+                "evidence": "Agent editorial proposal; NOT human approval. SRD 5.2.1 p. 95, 99; https:\/\/media.dndbeyond.com\/compendium-images\/srd\/5.2\/SRD_CC_v5.2.1.pdf; PDF SHA256 8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+                "fields": {
+                    "description_ru": "Это зелье — магический предмет. Бонусным действием вы можете выпить его или напоить им другое существо в пределах 5 футов от себя. Существо, выпившее магическую красную жидкость из этой склянки, восстанавливает 2d4 + 2 хита."
+                }
+            },
+            "content_checksum": "496c81e1c47fded10cc863a7290bd8ec93023986400ed675a938d1b757bfe3f7"
+        }
+    ],
+    "reviews": [
+        {
+            "id": "srd:equipment:potion-of-healing:2024",
+            "checksum": "496c81e1c47fded10cc863a7290bd8ec93023986400ed675a938d1b757bfe3f7",
+            "projection_checksum": "316dbe107739feccc292f13224f6a60b5fab265bc6e2f6d3190eef5938ac0c09",
+            "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+            "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C6, EN\/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+            "languages": [
+                "en",
+                "ru"
+            ],
+            "confirmed": true,
+            "confirmed_at": "2026-11-12T19:59:53+00:00",
+            "browse": true,
+            "copy": true,
+            "execute": false
+        }
+    ],
+    "baseline_reviews": [
+        {
+            "id": "srd:equipment:potion-of-healing:2024",
+            "policy": "legacy-equipment-missing-null-ammunition-v1",
+            "entry_id": 467,
+            "baseline_digest": "5322310b5da605e25d4d863fb383d439d211bcc153210a0d7f1728415863d4d8",
+            "confirmed": true,
+            "confirmed_at": "2026-11-12T21:59:44+02:00",
+            "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+            "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B6. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id\/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+        }
+    ]
+}

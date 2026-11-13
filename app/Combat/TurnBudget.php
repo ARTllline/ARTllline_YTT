@@ -48,25 +48,37 @@ class TurnBudget
         }
     }
 
-    public function spend(?Token $actor, string $cost, int $sceneId): void
+    public function validate(?Token $actor, string $cost, int $sceneId): ?Combatant
     {
         if ($actor) {
             abort_if(app(ConditionRules::class)->inactive($actor), 422, 'Персонаж недееспособен и не может действовать.');
         }
         $combat = $this->active($sceneId);
         if (! $combat) {
-            return;
+            return null;
         }
         $entry = $actor ? $combat->combatants()->where('token_id', $actor->id)->first() : null;
         abort_unless($entry, 422, 'Добавьте действующий токен в бой.');
         if ($cost === 'free') {
-            return;
+            return null;
         }
         abort_if($cost !== 'reaction' && $combat->current_combatant_id !== $entry->id, 422, 'Сейчас ход другого участника.');
         $field = ['action' => 'action_available', 'bonus_action' => 'bonus_available', 'reaction' => 'reaction_available'][$cost];
         abort_unless($entry->$field, 422, match ($cost) {
             'action' => 'Действие уже потрачено.','bonus_action' => 'Бонусное действие уже потрачено.',default => 'Реакция недоступна до начала следующего хода.'
         });
+
+        return $entry;
+    }
+
+    public function spend(?Token $actor, string $cost, int $sceneId): void
+    {
+        $entry = $this->validate($actor, $cost, $sceneId);
+        if (! $entry) {
+            return;
+        }
+        $combat = $this->active($sceneId);
+        $field = ['action' => 'action_available', 'bonus_action' => 'bonus_available', 'reaction' => 'reaction_available'][$cost];
         $entry->update([$field => false]);
         app(CombatLog::class)->write($combat, $cost.'.spent', ['tokenId' => (string) $actor->id]);
     }

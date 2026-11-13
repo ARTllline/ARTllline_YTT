@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:equipment:war-pick:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "war-pick",
+            "checksum": "ed291cb0fbe1ced94ce01f4725fe0a1d2e4ecb4d42dbd322e6309684bb626ee1"
+        },
+        {
+            "id": "srd:equipment:javelin:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "javelin",
+            "checksum": "dc8a55730478fc6360489449036c7d99101ce6d5b220a7ecc808d9e58e9c55cc"
+        },
+        {
+            "id": "srd:equipment:shawm:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "shawm",
+            "checksum": "dcb6fd299d0ae546df74ccd5185c4a2145f43e020e83592b647e613c326ad192"
+        },
+        {
+            "id": "srd:equipment:crawler-mucus:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "crawler-mucus",
+            "checksum": "e1cc29d1538db223b1bc8cba5036963aab7944e1601e90713806dd4dec8bf064"
+        },
+        {
+            "id": "srd:equipment:ink:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "ink",
+            "checksum": "4be21c8430b167eeb0b79fe9cf1ebc92c738f621d512149da609ccd93dae7b37"
+        },
+        {
+            "id": "srd:equipment:weavers-tools:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "weavers-tools",
+            "checksum": "82aee791f57fd3d1c7a33a3332171124288bffa65b2e252943c9f47c9748661f"
+        },
+        {
+            "id": "srd:equipment:scimitar:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "scimitar",
+            "checksum": "6c4d974690f73bb96385966fe1537aac21e1735a03094b40d1d1675ba016de74"
+        },
+        {
+            "id": "srd:equipment:pan-flute:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "pan-flute",
+            "checksum": "6701cbe529c99a2318ea978d2262d6929874674eb82464467aa5b901f0763997"
+        },
+        {
+            "id": "srd:equipment:oil-of-taggit:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "oil-of-taggit",
+            "checksum": "4ba2ad076bafd2806c26d3eb5f0d6611d2f79f3e6238b15b7b455ea45a080b1c"
+        },
+        {
+            "id": "srd:equipment:chest:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "chest",
+            "checksum": "bcb077acfe06880ce48f8081e5c8dd94867e0f2a5c109e93e0e15cf70d652eb9"
+        },
+        {
+            "id": "srd:equipment:carpenters-tools:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "carpenters-tools",
+            "checksum": "d54db5c6fa4d2ea84c5ff4417d0899949c84f686c7b5eab80f54e044c7ea1f12"
+        },
+        {
+            "id": "srd:equipment:glaive:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "glaive",
+            "checksum": "64de86e7eccffa701b089f0a81d2c8d30ec981aefa853ea05ec26b957a01735b"
+        },
+        {
+            "id": "srd:equipment:malice:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "malice",
+            "checksum": "c0ee7ce441f33f1be46f436d92451c532e3015ed6a72b211a96fd3864448ba43"
+        },
+        {
+            "id": "srd:equipment:perfume:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "perfume",
+            "checksum": "52c980dd0d891109e143c1a79405149cb120d9c72c08931cece5016686993244"
+        },
+        {
+            "id": "srd:equipment:cobblers-tools:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "cobblers-tools",
+            "checksum": "844c563f66e301baa8b544a544448edfea15136efe5c5f25aa1a107b9a51b420"
+        },
+        {
+            "id": "srd:equipment:greatsword:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "greatsword",
+            "checksum": "476ed778467c36e3081badffaf36cc261db3efee9e46d8add8fd2ebc35c2cad5"
+        },
+        {
+            "id": "srd:equipment:assassins-blood:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "assassins-blood",
+            "checksum": "a1a57808ec725c25274fbc04818835504282228c464fcb5ca72390a21efdbe71"
+        },
+        {
+            "id": "srd:equipment:waterskin:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "waterskin",
+            "checksum": "fe00f28472268f2ea026fa43f9d436c3a9185fd7da61846f3b7166ffea60a21e"
+        },
+        {
+            "id": "srd:equipment:calligraphers-supplies:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "calligraphers-supplies",
+            "checksum": "d12d742ed6fc8709408b8cecb30c08a061f50535855433e4067ad854f6e010f4"
+        },
+        {
+            "id": "srd:equipment:maul:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "maul",
+            "checksum": "2faf2617e9abec50a945fafda2c6b16bf10edd94c1049e05b537df4f8fe83db3"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

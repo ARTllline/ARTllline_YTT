@@ -26,6 +26,12 @@ import { HeroPortrait } from './HeroPortrait';
 import { CombatSupport } from './CombatSupport';
 import { combatReason } from './combat';
 import { usePlayerDice } from './PlayerDiceProvider';
+import {
+    ContentUsePanel,
+    manualContent,
+    manualItem,
+    type ContentSelection,
+} from './ContentUsePanel';
 
 export function PlayerGameplayHUD({
     store,
@@ -105,6 +111,7 @@ function CharacterHUD({
     actors: Token[];
 }) {
     const [panel, setPanel] = useState<RpgWindowKind | null>(null);
+    const [contentUse, setContentUse] = useState<ContentSelection | null>(null);
     useEffect(() => {
         const open = () => setPanel('character');
         window.addEventListener('ytt:character-panel', open);
@@ -198,6 +205,11 @@ function CharacterHUD({
             });
     };
     const choose = (ability: Ability, inventoryItemId?: string) => {
+        if (!disabled && !inventoryItemId && manualContent(ability)) {
+            setPanel(null);
+            setContentUse({ ability });
+            return;
+        }
         castLevel.current = undefined;
         effectChoice.current = undefined;
         if (ability.spell && !inventoryItemId && ability.casting?.available === false) {
@@ -213,6 +225,11 @@ function CharacterHUD({
         else beginChoose(ability, inventoryItemId);
     };
     const chooseItem = (item: InventoryItem, mode: 'use' | 'throw' = 'use') => {
+        if (!disabled && manualItem(item)) {
+            setPanel(null);
+            setContentUse({ item });
+            return;
+        }
         itemMode.current = mode;
         if (item.action && !item.action.available) {
             setError(item.action.reason);
@@ -576,6 +593,14 @@ function CharacterHUD({
                         });
                         setTargeting(null);
                     }}
+                />
+            )}
+            {contentUse && (
+                <ContentUsePanel
+                    selection={contentUse}
+                    character={character}
+                    store={store}
+                    onClose={() => setContentUse(null)}
                 />
             )}
             {invocation && (

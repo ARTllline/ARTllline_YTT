@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:magic_item:dragon-orb:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:dragon-orb",
+            "checksum": "67b28cc4e8c268a1198b47cd5a30888efd0159657ba1e8106d372acc29b7dca6"
+        },
+        {
+            "id": "srd:magic_item:potion-of-climbing:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-climbing",
+            "checksum": "5652cfdc17578e7477be7eca9fc9f5c49ec19c2cc75cc56044ac727636ed7279"
+        },
+        {
+            "id": "srd:magic_item:crystal-ball-of-true-seeing:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:crystal-ball-of-true-seeing",
+            "checksum": "782eb8477650fdaab89041cc8a4de842959247f165b38262c8428eb0ccb2c86a"
+        },
+        {
+            "id": "srd:magic_item:bag-of-beans:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:bag-of-beans",
+            "checksum": "359e61c4196742fc704446fcd62311bd69de2b9c76d9220505ab4c37d05ef29c"
+        },
+        {
+            "id": "srd:magic_item:armor:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:armor",
+            "checksum": "99d347a9e8b0de330e0d6ecd6f8cb7439984c2dc192ff25af17509ad0e5e6e89"
+        },
+        {
+            "id": "srd:magic_item:ammunition-2:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ammunition-2",
+            "checksum": "df217c0a106428f2cb53d1f8ccca0c3a02f495e9611f5fc40038fc6560fc4812"
+        },
+        {
+            "id": "srd:magic_item:horn-of-valhalla:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:horn-of-valhalla",
+            "checksum": "0ddc00f7eebf44f5b3035b38b2243080e32885fcca4b74a50e02394e0fd59dc8"
+        },
+        {
+            "id": "srd:magic_item:gloves-of-swimming-and-climbing:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:gloves-of-swimming-and-climbing",
+            "checksum": "00fe436866755793cf2c45837b346f0f960246d660b2ad4598c8c9d3c2d1088f"
+        },
+        {
+            "id": "srd:magic_item:ammunition-1:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ammunition-1",
+            "checksum": "44e35cbc77b021e896331d504b3a129098276ec020060b20425dc450c0766ddf"
+        },
+        {
+            "id": "srd:magic_item:wand-of-the-war-mage:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wand-of-the-war-mage",
+            "checksum": "74db46a43b8c17623ddc79c43649c8b036591bdde57d81f2c51fd5d5f042b1b4"
+        },
+        {
+            "id": "srd:magic_item:potion-of-giant-strength:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-giant-strength",
+            "checksum": "74adfaa50f008c0fc9fc2a207816c85992e1b8a50cdc564ac306a193f050d145"
+        },
+        {
+            "id": "srd:magic_item:dragon-scale-mail:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:dragon-scale-mail",
+            "checksum": "98180dd0b540c26b74348d60af475e870d8d2c22b5f092dab1b832639d542780"
+        },
+        {
+            "id": "srd:magic_item:ammunition-3:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ammunition-3",
+            "checksum": "f064bb7491497438757bf4c7da6642f080692232c94582773a101bddc5347699"
+        },
+        {
+            "id": "srd:magic_item:hat-of-many-spells:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:hat-of-many-spells",
+            "checksum": "904d4c7934961febaf0f3322e69622e4f54cf42f69c792b21e6603ca512da9e1"
+        },
+        {
+            "id": "srd:magic_item:armor-of-invulnerability:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:armor-of-invulnerability",
+            "checksum": "53f8b5d6909541451d8e675095a701d4da46ba867088cc6f474521a4f55029f0"
+        },
+        {
+            "id": "srd:magic_item:mace-of-terror:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:mace-of-terror",
+            "checksum": "bd0f0abc418eaf9c7bbcbd9e212289e782f20fb9d01534518feda99aeb6ed626"
+        },
+        {
+            "id": "srd:magic_item:deck-of-illusions:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:deck-of-illusions",
+            "checksum": "ad2dfab143b9398ee3d824fb6dec1f341b8015df3177399aac910c7ea48c7663"
+        },
+        {
+            "id": "srd:magic_item:weapon:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:weapon",
+            "checksum": "774fe2f2e88123c4348712225ff6facfafb9b75517505b90d94ee4b938f235f0"
+        },
+        {
+            "id": "srd:magic_item:spell-scroll:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:spell-scroll",
+            "checksum": "822cfe2a77050f896182952e744700865a37712061d4689ba76053ba44ec7170"
+        },
+        {
+            "id": "srd:magic_item:ring-of-telekinesis:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-telekinesis",
+            "checksum": "a76469a0d212a9211170c3baffbaa46e630624821d4f1deddc51e641a93fb368"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

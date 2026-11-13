@@ -1,0 +1,38 @@
+{
+    "format": 1,
+    "adapter_version": 4,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:shield:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "shield",
+            "checksum": "7b71ae6fd2a2a83f258a7423ee278c594c6d0c1fe304751f0602f03e35ea63f9"
+        }
+    ],
+    "reviews": [
+        {
+            "id": "srd:spell:shield:2024",
+            "checksum": "7b71ae6fd2a2a83f258a7423ee278c594c6d0c1fe304751f0602f03e35ea63f9",
+            "projection_checksum": "571bc396f26cc5ab42166f97ad5f4a9c476688bf4c7ad72bf60213dc558af35a",
+            "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+            "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C14, EN\/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+            "languages": [
+                "en",
+                "ru"
+            ],
+            "confirmed": true,
+            "confirmed_at": "2026-11-12T20:00:03+00:00",
+            "browse": true,
+            "copy": true,
+            "execute": false
+        }
+    ],
+    "baseline_reviews": []
+}

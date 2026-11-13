@@ -3,6 +3,7 @@ import { commandId } from '../api/workspace';
 import type { Character } from '../tabletop/types/scene';
 import type { Ability } from '../gameplay/model';
 export interface ItemDefinition {
+    content?: import('../compendium/ContentReference').ContentReferenceData | null;
     gameplay?: import('./itemGameplay').ItemGameplay | null;
     compendium_entry_id?: number | null;
     id: string;

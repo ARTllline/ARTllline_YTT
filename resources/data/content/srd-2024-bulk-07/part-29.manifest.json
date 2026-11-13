@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:control-water:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "control-water",
+            "checksum": "82afef626e5d3824a80c24bf526aacd41f34e1233feb25ba46a0d9545a8684ae"
+        },
+        {
+            "id": "srd:spell:forbiddance:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "forbiddance",
+            "checksum": "6a89a6166436bdd3d8f7094c8438a6a20085bb4c16f01568b0dd8503a64b7bd9"
+        },
+        {
+            "id": "srd:spell:teleport:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "teleport",
+            "checksum": "c796b9b3b322f36177bfa40ac3bdc2963810b9228c30401859bb89d497995e43"
+        },
+        {
+            "id": "srd:spell:power-word-stun:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "power-word-stun",
+            "checksum": "fc93bc3b7b70ce6be012fdea230af1ab7891b1f367b7797dd5c07ac6711e4955"
+        },
+        {
+            "id": "srd:spell:time-stop:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "time-stop",
+            "checksum": "672eb3918f4408e5fd8f354105bbe11e17755bc33221d12fe4774b046fff62c4"
+        },
+        {
+            "id": "srd:spell:hunters-mark:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "hunters-mark",
+            "checksum": "7cbce5b87bb385e7841b17fb30e8467dd467c8c778310d5ac9fd626121f9942b"
+        },
+        {
+            "id": "srd:spell:acid-splash:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "acid-splash",
+            "checksum": "6733018e5487e9413f46a0880e27b76765ce67637bb53c954aeca09ca0f846a2"
+        },
+        {
+            "id": "srd:spell:mirror-image:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "mirror-image",
+            "checksum": "650d9f31ec03a9a890f02dbad61341d39b8059285cf58782b325aece29d27fa2"
+        },
+        {
+            "id": "srd:spell:revivify:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "revivify",
+            "checksum": "e093b956e3def74faf4e39f93ed3dcb992772b9e6d3246c016bcd9a5853362d5"
+        },
+        {
+            "id": "srd:spell:freedom-of-movement:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "freedom-of-movement",
+            "checksum": "02ba662329cde080b4a0151e5d3b935be286dae3abdf36ded706c41e9b1f9459"
+        },
+        {
+            "id": "srd:spell:tree-stride:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "tree-stride",
+            "checksum": "e50d7535c73b588c211469cfd2444b68b12d2315a3e0f25e0ee6a5751172093f"
+        },
+        {
+            "id": "srd:spell:true-seeing:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "true-seeing",
+            "checksum": "3134613620b28e48077d56847f29a20c802b8c5dd9043bd8298c5ee16e7a1cca"
+        },
+        {
+            "id": "srd:spell:befuddlement:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "befuddlement",
+            "checksum": "2f9593d5985ea27776cfb955e4fd47d7c9dca9f954b3117299e9c3452f837767"
+        },
+        {
+            "id": "srd:spell:arcane-sword:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "arcane-sword",
+            "checksum": "d4a08fe4ed7518291b2ca06224626b7a70ac3b4e6479ed79335a95135471aa37"
+        },
+        {
+            "id": "srd:spell:true-polymorph:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "true-polymorph",
+            "checksum": "6cdbd449b36906d79744362950ab7eeca8cd109e14d50ba39e906096cbe59182"
+        },
+        {
+            "id": "srd:spell:minor-illusion:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "minor-illusion",
+            "checksum": "b2730c37a9ae3bb677f2490683c78b3146fcbfdca968590e89c05f99ad2df5b5"
+        },
+        {
+            "id": "srd:spell:inflict-wounds:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "inflict-wounds",
+            "checksum": "020efb544042c053840301fadfd20a8296c806b13c3a74239c97b453633dee01"
+        },
+        {
+            "id": "srd:spell:protection-from-poison:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "protection-from-poison",
+            "checksum": "c1702f13e21b4db3d22bf9ed3c88782149ecef967bb58adcb658a2350f9b4011"
+        },
+        {
+            "id": "srd:spell:call-lightning:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "call-lightning",
+            "checksum": "0c14ebfdcf215ce5e7464876bf604ecc5ef631a3e110a354d6be288dbf3deb5d"
+        },
+        {
+            "id": "srd:spell:locate-creature:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "locate-creature",
+            "checksum": "5475637559dfc02614cdfcf465838fa5629a3999ed45c370ce90393b95e2545d"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:magic_item:potion-of-invisibility:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-invisibility",
+            "checksum": "7ad9c7b6708c50cb180ffecf46a96f5bd7ee0ba78b380d9612ef29defa0fb370"
+        },
+        {
+            "id": "srd:magic_item:bracers-of-defense:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:bracers-of-defense",
+            "checksum": "5eb4ae0de2d2bdb2061d4a0fc46ea03cd7f7f8eb1cdd112ee35841d540937290"
+        },
+        {
+            "id": "srd:magic_item:ring-of-evasion:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-evasion",
+            "checksum": "f86232c54c9a649340ea74d1699f7780db4a2ec4d074dd9f88f28b8b1456b09f"
+        },
+        {
+            "id": "srd:magic_item:robe-of-eyes:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:robe-of-eyes",
+            "checksum": "e499614b0c36f2466181e20606001dd86da04625086a9165c1d1cafab18247e5"
+        },
+        {
+            "id": "srd:magic_item:oil-of-etherealness:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:oil-of-etherealness",
+            "checksum": "2b40a122a89a89a7d3895ec74eb97aa974d080372b0ea0abce51c96a8fab8d6a"
+        },
+        {
+            "id": "srd:spell:antipathy-sympathy:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "antipathy-sympathy",
+            "checksum": "c364f273b690fb273b972373f35ea75fd0db12ff0cfecfd30c287448c7858726"
+        },
+        {
+            "id": "srd:spell:meteor-swarm:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "meteor-swarm",
+            "checksum": "2eea9254e74b9bb64b0366947d24b4ea72b23562c1a7963529ccb9f149ff0a13"
+        },
+        {
+            "id": "srd:spell:identify:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "identify",
+            "checksum": "0266f22c3b346b792a250be9a2ec62445357d434cb0e5665ce397ca59cb5e018"
+        },
+        {
+            "id": "srd:spell:blur:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "blur",
+            "checksum": "3a69c797e44354dad5ffbe43a73b917b78af16f3d8b2b2261ac4b1ad289aa880"
+        },
+        {
+            "id": "srd:spell:animate-dead:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "animate-dead",
+            "checksum": "47bf726ccb2064c9754eeeef174024ad4bf87cc3252b760fb628d134a07c847f"
+        },
+        {
+            "id": "srd:spell:polymorph:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "polymorph",
+            "checksum": "7e7f3f25dcb7620b2108826de88ef65a965e2b6fbc0af1ef60c08a4f7c569033"
+        },
+        {
+            "id": "srd:spell:cloudkill:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "cloudkill",
+            "checksum": "75c0fbee979c60d9997ba7e0e89d64316b0e27423f2147433287dd28d69b8f30"
+        },
+        {
+            "id": "srd:spell:find-the-path:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "find-the-path",
+            "checksum": "60cd774c91f6420546b80a20063a75b321f48737015fb3dbed3c471b306c1a58"
+        },
+        {
+            "id": "srd:spell:dominate-monster:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "dominate-monster",
+            "checksum": "16efc13d009daf1380f8c4141c62745a1c3f26e59ff00e0d8897848b49f3ff84"
+        },
+        {
+            "id": "srd:spell:forcecage:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "forcecage",
+            "checksum": "b1435edbe6135f39ac982f5393bd5e3652af72d1a720609cf845beef26b6b16f"
+        },
+        {
+            "id": "srd:spell:astral-projection:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "astral-projection",
+            "checksum": "95604ae95df43d1c8ee2da18de597d4da305a509544dac5a36700d113f567709"
+        },
+        {
+            "id": "srd:spell:illusory-script:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "illusory-script",
+            "checksum": "ffc285ae13db462ee9c4266acd52755b7fcf18d1be48aabd51c72d249c9dfbaf"
+        },
+        {
+            "id": "srd:spell:dragons-breath:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "dragons-breath",
+            "checksum": "75bb3034757a556b1316e541c08781d08793fe16d37dcb5a158cb844a93d5472"
+        },
+        {
+            "id": "srd:spell:stinking-cloud:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "stinking-cloud",
+            "checksum": "d59279b3f8eae10e389eaee70befbe69c41ff70e9f83979a96c8e99f69519c0e"
+        },
+        {
+            "id": "srd:spell:arcane-eye:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "arcane-eye",
+            "checksum": "7c361e2e4f69aa373e260ab6033de7d5b8ac4e21a862462e65a85b1c926dd507"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

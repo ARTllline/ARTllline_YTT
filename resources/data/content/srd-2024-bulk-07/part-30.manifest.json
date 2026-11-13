@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:modify-memory:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "modify-memory",
+            "checksum": "1273737a66957e73aba9cd2a825f2765db1206d0cad1c2194dca29df8481d173"
+        },
+        {
+            "id": "srd:spell:chain-lightning:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "chain-lightning",
+            "checksum": "f1c8b1e438240efb0c72267790a4146dc345ac0ce12c5520f51bb8915cd326d9"
+        },
+        {
+            "id": "srd:spell:project-image:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "project-image",
+            "checksum": "5dd70adfe234bfb558b8f40775781ff866be1900689a4c6789f8f376e2259435"
+        },
+        {
+            "id": "srd:spell:animal-shapes:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "animal-shapes",
+            "checksum": "c1d39465ad6fec5da06774ff2a8cac5322e1d423ffb0b5df171ec5e978687628"
+        },
+        {
+            "id": "srd:spell:spare-the-dying:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "spare-the-dying",
+            "checksum": "4851966d70ce3bec98bea613d02d90ba3cedd6cf08913e553c8965fd5fee9360"
+        },
+        {
+            "id": "srd:spell:imprisonment:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "imprisonment",
+            "checksum": "6c4e63fabbd44c2e8bf969368da76287b6e191675085243e90d0e0b093ac8874"
+        },
+        {
+            "id": "srd:spell:floating-disk:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "floating-disk",
+            "checksum": "573ff99de7c76a030e53aa482beb41afb603eca85c5df483d01602b1a5cdde8d"
+        },
+        {
+            "id": "srd:spell:detect-thoughts:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "detect-thoughts",
+            "checksum": "deaadfb9f4b91927c69ec789c7b81e6526287ca34040ed46277964f70eb3261e"
+        },
+        {
+            "id": "srd:spell:charm-monster:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "charm-monster",
+            "checksum": "4caa20a80e719f83d0a6283668971db8deab53ffcfef8b3cf7cc6a5500570f0c"
+        },
+        {
+            "id": "srd:spell:lightning-bolt:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "lightning-bolt",
+            "checksum": "36d6f05282259b58fe69c3d7edf8b9c864039e7b528d648e4431b0808c6b8505"
+        },
+        {
+            "id": "srd:spell:seeming:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "seeming",
+            "checksum": "d7a5ccfec0c38c9c9c01eb30d36cf65c01e84385f9150dd95b2fe71ff6cf7014"
+        },
+        {
+            "id": "srd:spell:create-undead:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "create-undead",
+            "checksum": "653818447cf35dc2181c99e418865459c6cb5b5a4d17ffa2ab5309cbac57ff95"
+        },
+        {
+            "id": "srd:spell:sequester:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "sequester",
+            "checksum": "8f3c3dbb9d35280c71c3e0c46004c37a797505c1d94da3488ae3cf63dc7f3aca"
+        },
+        {
+            "id": "srd:spell:antimagic-field:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "antimagic-field",
+            "checksum": "af263dfa48aa139cda6965989e48904303d5d21ae00214ab543bc80d98a86ed4"
+        },
+        {
+            "id": "srd:spell:power-word-heal:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "power-word-heal",
+            "checksum": "aab4b38ee013f3cbceb7261312f577ef053e61860fe4397affe03a4f6a884a00"
+        },
+        {
+            "id": "srd:spell:unseen-servant:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "unseen-servant",
+            "checksum": "0b3c53cc8365042aa3f2a46534fbafeb7dbc1eb83094640bc7a2693a282c248b"
+        },
+        {
+            "id": "srd:spell:locate-object:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "locate-object",
+            "checksum": "3ed8eafdc7ae4ec2e44bf41caf7735e02e9e013563d9a7c88244f590baa25651"
+        },
+        {
+            "id": "srd:spell:fire-bolt:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "fire-bolt",
+            "checksum": "39a48281513f3c5feb7e2685cc8c4ff9709ab3f7a8dd660be2fe046d5664a45b"
+        },
+        {
+            "id": "srd:spell:fear:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "fear",
+            "checksum": "f470a5fa87a0852b4e2d3f2e99b2fad8d86cf161f2dc034b801d1267cca286df"
+        },
+        {
+            "id": "srd:spell:contagion:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "contagion",
+            "checksum": "f8f7c63be4e9df0b4367c81609456286d77ca1f079189d399c1a738f34b35273"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

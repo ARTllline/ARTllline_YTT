@@ -1,0 +1,49 @@
+{
+    "format": 1,
+    "adapter_version": 4,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:equipment:acid:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "acid",
+            "checksum": "f5864f407cadbed32049992f8e4e22cab472192e18578209e75f6671876351cf"
+        }
+    ],
+    "reviews": [
+        {
+            "id": "srd:equipment:acid:2024",
+            "checksum": "f5864f407cadbed32049992f8e4e22cab472192e18578209e75f6671876351cf",
+            "projection_checksum": "4a9d05f0dbd25e76ace8206439efd4d51a6153cad5402553083f8a94a11ad60b",
+            "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+            "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C1, EN\/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+            "languages": [
+                "en",
+                "ru"
+            ],
+            "confirmed": true,
+            "confirmed_at": "2026-11-12T19:59:45+00:00",
+            "browse": true,
+            "copy": true,
+            "execute": false
+        }
+    ],
+    "baseline_reviews": [
+        {
+            "id": "srd:equipment:acid:2024",
+            "policy": "legacy-equipment-missing-null-ammunition-v1",
+            "entry_id": 340,
+            "baseline_digest": "61b589d662b57002ac14d917e7070d3b3c61951d827eab9b5eb4a6daf2fabe80",
+            "confirmed": true,
+            "confirmed_at": "2026-11-12T21:59:44+02:00",
+            "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+            "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B1. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id\/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+        }
+    ]
+}

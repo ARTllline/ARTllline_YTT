@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:equipment:barrel:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "barrel",
+            "checksum": "88048035c356bb19deba8be1705489a65b0507db95dac495663c34830a532e6e"
+        },
+        {
+            "id": "srd:equipment:mirror:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "mirror",
+            "checksum": "34fb8ca430247ac1077fae2a7a359f60c48015f007d95952db9f215d4f938ede"
+        },
+        {
+            "id": "srd:equipment:magnifying-glass:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "magnifying-glass",
+            "checksum": "6dc8f96b63c0593c913aab2b61b245a48855f228aff6ae70aeb4a90cea1651c4"
+        },
+        {
+            "id": "srd:equipment:map:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "map",
+            "checksum": "d5f6cc2d89b4c83dd45e52ab33d3263e550af3c8213227d803bb4aa973b0a7f7"
+        },
+        {
+            "id": "srd:equipment:jug:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "jug",
+            "checksum": "45c42a2039428732256e16d1cb7a984c82e9bf06a43d84b97cdb4daadaaeb57b"
+        },
+        {
+            "id": "srd:equipment:lamp:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "lamp",
+            "checksum": "22212ceb55cf29d900b2efa7252384d4a8e491d0108fe048ee7eebe763eec633"
+        },
+        {
+            "id": "srd:equipment:ink-pen:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "ink-pen",
+            "checksum": "7c0829db84178bcf4b28138c2e162e69467f96b02c7e9d4f31c9912eb4723f5d"
+        },
+        {
+            "id": "srd:equipment:flask:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "flask",
+            "checksum": "73ce928c5554459d572864ad7e6b856d4e865768d858922c9eacf98cfe71a2df"
+        },
+        {
+            "id": "srd:equipment:torch:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "torch",
+            "checksum": "6e53d8ad6c08d41ca5f36769feb51d0cacc6fce07a8393c9a681fd481a8b1e6a"
+        },
+        {
+            "id": "srd:equipment:antitoxin:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "antitoxin",
+            "checksum": "2159837729b093597798a5b888c3651f422bcb34df5871fade97af312005ffc9"
+        },
+        {
+            "id": "srd:equipment:rope:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "rope",
+            "checksum": "de3ffdbd3fd4911ca0fd6fb23f08f864503347cfd3f4c0ea7ff6deecc75b5d94"
+        },
+        {
+            "id": "srd:equipment:caltrops:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "caltrops",
+            "checksum": "680a95841245e7c2d142e6c642996d8852bc5388bc2d48a6cf2f98d7cf03849f"
+        },
+        {
+            "id": "srd:equipment:poison-basic:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "poison-basic",
+            "checksum": "0d6b0813f30dd0da9677bc7fd46570d4c3b00c64343fa6f65bc862d7f6046086"
+        },
+        {
+            "id": "srd:equipment:basket:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "basket",
+            "checksum": "ff8e348d11e63e309ff0d1b4a366c826d19b052627e9c899006b945994ae28ab"
+        },
+        {
+            "id": "srd:equipment:manacles:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "manacles",
+            "checksum": "1c6b9d38af2db1b2bdeb7a170c56e87449de0659d73c30e7e18e1ff90cef8705"
+        },
+        {
+            "id": "srd:equipment:healers-kit:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "healers-kit",
+            "checksum": "581d7eb911d38e58106c6392cc8a6bca81fa114b64449347f632f9f5ec1248f9"
+        },
+        {
+            "id": "srd:equipment:bottle-glass:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "bottle-glass",
+            "checksum": "3b2e5d7ad6d88027ca118eeb9a8ffa350a499b1ec8ec6f5f12e04bdb9976abe8"
+        },
+        {
+            "id": "srd:equipment:tinderbox:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "tinderbox",
+            "checksum": "a190f11ae55eb2443f1177febb761baf2b66d18a2b7f7b347150f430384d0132"
+        },
+        {
+            "id": "srd:equipment:pole:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "pole",
+            "checksum": "3317bdacee5bc5edcd9f810035d94c2ed6e6038ad78199f86087968e9956b873"
+        },
+        {
+            "id": "srd:equipment:hunting-trap:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "hunting-trap",
+            "checksum": "6c5e871963321e3f061ae462f500bcdfb59f6903c8b5d71cf5ea3f6cd4aab5a6"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

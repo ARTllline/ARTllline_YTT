@@ -1,0 +1,197 @@
+{
+  "task": "CONTENT-05A",
+  "status": "completed",
+  "verified_at": "2026-11-12T22:33:11+02:00",
+  "target": {
+    "database": "ytt_local",
+    "host": "127.0.0.1",
+    "port": 3306
+  },
+  "authorization": {
+    "approved": true,
+    "target": "ytt_local",
+    "host": "127.0.0.1",
+    "port": 3306,
+    "migration": "2026_11_12_170000_add_compendium_copy_contracts",
+    "migration_sha256": "bad9678e9795aadd6dcef808abc34f1205906806df6937366e5bd2280cc5b77c",
+    "recorded_at": "2026-11-12T22:25:27+02:00",
+    "source": "Explicit owner reply to CONTENT-05A authorization question in this chat",
+    "exact_answer": "Разрешаю применить только эту миграцию",
+    "content_import_authorized": false,
+    "production_authorized": false
+  },
+  "migration": {
+    "generated_at": "2026-11-12T22:26:26+02:00",
+    "target": "ytt_local",
+    "applied_migration": "2026_11_12_170000_add_compendium_copy_contracts",
+    "migration_count": 54,
+    "historical_tables_verified": 73,
+    "all_historical_rows_preserved": true,
+    "historical_added_fields_null": true,
+    "columns": [
+      {
+        "TABLE_NAME": "compendium_copies",
+        "COLUMN_NAME": "campaign_id",
+        "DATA_TYPE": "bigint",
+        "IS_NULLABLE": "YES"
+      },
+      {
+        "TABLE_NAME": "compendium_copies",
+        "COLUMN_NAME": "owner_user_id",
+        "DATA_TYPE": "bigint",
+        "IS_NULLABLE": "YES"
+      },
+      {
+        "TABLE_NAME": "item_definitions",
+        "COLUMN_NAME": "content",
+        "DATA_TYPE": "json",
+        "IS_NULLABLE": "YES"
+      }
+    ],
+    "foreign_keys": [
+      {
+        "CONSTRAINT_NAME": "compendium_copies_campaign_id_foreign",
+        "DELETE_RULE": "CASCADE",
+        "REFERENCED_TABLE_NAME": "campaigns"
+      },
+      {
+        "CONSTRAINT_NAME": "compendium_copies_character_id_foreign",
+        "DELETE_RULE": "CASCADE",
+        "REFERENCED_TABLE_NAME": "characters"
+      },
+      {
+        "CONSTRAINT_NAME": "compendium_copies_compendium_entry_id_foreign",
+        "DELETE_RULE": "RESTRICT",
+        "REFERENCED_TABLE_NAME": "compendium_entries"
+      },
+      {
+        "CONSTRAINT_NAME": "compendium_copies_owner_user_id_foreign",
+        "DELETE_RULE": "RESTRICT",
+        "REFERENCED_TABLE_NAME": "users"
+      }
+    ],
+    "old_foreign_keys_preserved": true,
+    "content_import_executed": false,
+    "mechanics_changed": false,
+    "authorization_record": "owner-authorization.json"
+  },
+  "recovery": {
+    "backup": {
+      "generated_at": "2026-11-12T22:16:29+02:00",
+      "database": "ytt_local",
+      "database_writes": 0,
+      "writers_paused": true,
+      "tables": 73,
+      "private_files": 1268,
+      "all_rows_unchanged": true,
+      "sql_bytes": 423377173,
+      "backup_checksums_complete": true
+    },
+    "restore": {
+      "generated_at": "2026-11-12T22:20:33+02:00",
+      "isolated_port": 3313,
+      "isolated_database": "ytt_content_05a_20261112_201829_23c0",
+      "restored_tables": 73,
+      "all_table_fingerprints_match": true,
+      "private_files_verified": 1268,
+      "restricted_user": true,
+      "cross_database_select_denied": true,
+      "backup_checksums_verified": true,
+      "migrations_executed": false,
+      "main_database_writes": 0
+    },
+    "primary_path": "B:\\DnD\\YTT\\artifacts\\content-05a\\backup",
+    "secondary_path": "B:\\DnD\\YTT-Recovery\\CONTENT-05A-20261112-221629",
+    "checksums": {
+      "database.sql": "8c1edeb27f14b5df4bb02da1dbae3f493254ae958ce9542286c8533cc4ead0cd",
+      "private-assets.tar.gz": "181c6f0d4799975768eedf49f443c3c6c75c51abb781d9aefdd1af4f9b224ba0",
+      "private-assets-hashes.private.json": "5fa20ef3a9dc903354b39fc7f986350b4264cda2dafd5ffc4ada0e2fbca21b01",
+      "environment.dpapi": "3ecc71263169128c30fa763bf89b2c69e93d0a6916dc18008b2492145982776c",
+      "release-code.tar.gz": "4b8cebf09729341329d9e92b916f5ef7aee012c533dd35c7cdf253681f32175f",
+      "release-files.private.txt": "ff20887fc412169167c4326df5ee8818e0ac611156666437e42467bbeb2531a5",
+      "release-identity.txt": "82f8a06214819a8f47a978a073641da7428dd99fe6c1c99a1fc0b6b6bada7684"
+    },
+    "dpapi_round_trip_verified": true,
+    "same_local_volume": true
+  },
+  "tests": {
+    "database": "SQLite :memory:",
+    "filter": "CompendiumCopySchemaTest|CompendiumConsumersTest|ItemLibraryTest|SpellLibraryTest",
+    "tests": 27,
+    "assertions": 413,
+    "status": "PASS"
+  },
+  "browser": {
+    "base": "http://localhost:8090",
+    "status": "PASS",
+    "checks": [
+      "Owner 1: Item copy HTTP 200, idempotent replay, UI edit and real reload",
+      "Owner 2: Item copy HTTP 200, idempotent replay, UI edit and real reload",
+      "GM/Player cannot list or edit the other owner private Items",
+      "Owner 1: Spell copy HTTP 200, idempotent replay, UI edit and real reload",
+      "Owner 2: Spell copy HTTP 200, idempotent replay, UI edit and real reload",
+      "GM/Player cannot list, edit or copy the other owner private Spells",
+      "Separate real browser contexts; no React runtime errors; no gameplay commands"
+    ],
+    "react_errors": 0,
+    "api_mocks": false,
+    "temporary_copies_cleaned": true,
+    "source_scope": "Existing legacy API entries; Unified v4 not imported"
+  },
+  "data_preservation": {
+    "generated_at": "2026-11-12T22:30:05+02:00",
+    "browser_status": "passed",
+    "browser_checks": 7,
+    "deleted_only_new_qa_rows": {
+      "library_items": 2,
+      "private_spells": 2,
+      "qa_copy_receipts": 2,
+      "qa_mutation_receipts": 8
+    },
+    "all_73_tables_match_post_migration_baseline": true,
+    "historical_rows_preserved": true,
+    "orphan_references": {
+      "campaign_id": 0,
+      "compendium_entry_id": 0,
+      "character_id": 0,
+      "owner_user_id": 0
+    },
+    "private_files_unchanged": 1268,
+    "approved_manifest_sha256": "f995208190268c9621f98ae498a733d7bd877dc7149a220a3f1c16f2eca5ade9",
+    "migration_count": 54,
+    "no_content_import": true,
+    "no_gameplay_commands": true
+  },
+  "runtime": {
+    "services": [
+      {
+        "service": "app",
+        "running": true
+      },
+      {
+        "service": "reverb",
+        "running": true
+      },
+      {
+        "service": "queue",
+        "running": true
+      },
+      {
+        "service": "scheduler",
+        "running": true
+      }
+    ],
+    "maintenance": false,
+    "http_login_status": 200,
+    "all_73_tables_unchanged_after_worker_resume": true,
+    "queue_startup_collision": "Windows bootstrap/cache/services.php rename collision; only exited queue worker restarted and verified running"
+  },
+  "content_05_import": false,
+  "production_touched": false,
+  "remaining_content_05_requirements": [
+    "Separate writer enablement and import authorization",
+    "Fresh consistent recovery set before import",
+    "New live diff for approved 13-record manifest after schema activation"
+  ],
+  "execution_permissions_changed": false
+}

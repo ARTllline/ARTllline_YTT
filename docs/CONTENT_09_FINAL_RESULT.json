@@ -1,0 +1,325 @@
+{
+    "status": "CONTENT_closed_local",
+    "completed_at_utc": "2026-11-13T12:26:52+00:00",
+    "owner_authorization": "Current chat, 2026-11-13: permission for all presented final operations",
+    "reviewed_profiles_package_sha256": "d94f03a9835ff1f8b13db83d61ae18b53af08a49c6077b09822226c4a69cb42e",
+    "reviewed_repair_plan_sha256": "c1ad6b55edc830f95d7f2d64377d859ef7e0ab6abdfb01443caf7e50917421b8",
+    "recovered_private_patch_sha256": "9165e3accd58012efe8c18ab79da458ddef544f9d911720f7ea365759029c7ce",
+    "repair_backup_sha256": "a2009b1b6060c4462421723717d0c79b433a4cc35c3e70c22c48ac67f59bd5af",
+    "repair": {
+        "status": "PASS",
+        "mode": "applied",
+        "rows": 6,
+        "live_writes": 6,
+        "target_hashes": {
+            "scenes": "41591fd93bfe606908329c34cc7ba600a8d031d20719eaeb27fcee1abcf142e1",
+            "fog_memories": "4ba1ea90d5fc8d74c9f9da6b428c3f993f78f18cd1e427e322d001d4334f996e"
+        },
+        "original_private_patch_missing": true,
+        "recovered_targets_verified": true
+    },
+    "final_table_hashes": {
+        "scenes": "41591fd93bfe606908329c34cc7ba600a8d031d20719eaeb27fcee1abcf142e1",
+        "fog_memories": "4ba1ea90d5fc8d74c9f9da6b428c3f993f78f18cd1e427e322d001d4334f996e"
+    },
+    "activated_profiles": [
+        {
+            "id": 73,
+            "name": "Cure Wounds",
+            "source_checksum": "b5abdb0be7e0fa31a1db9ab639154a5c81fce55878c7cdcea9f426300c7eab7d",
+            "projection_checksum": "8301a21fcdda6f92b8a7629493b0461e08ba27e753f63f3c4b555bd72fcc126a",
+            "execution": {
+                "supported": true,
+                "checksum": "b523beee872d9fd3b5d0b1cb54059eb85ea2e5b969984440bb984e99264ba7c3"
+            },
+            "confirmation": {
+                "id": "cure-wounds",
+                "checksum": "08a11fc613d5e3cd718da0a7e88b0f6eae938a5b0661b5bd6b1284bcf237a876"
+            },
+            "gates": {
+                "browse": true,
+                "copy": true,
+                "execute": true
+            },
+            "adapter_version": 4,
+            "execution_contract": 1,
+            "confirmation_contract": "content-09b-v1",
+            "rules_revision": "5.2.1"
+        },
+        {
+            "id": 436,
+            "name": "Longsword",
+            "source_checksum": "db88a0878bb279d08635493d8f62b2747237674a648b1f2f663f268070e6e440",
+            "projection_checksum": "8df563b651968b0a21de138a353daece34de27464631b3b93bc958708ed8ab3b",
+            "execution": {
+                "supported": true,
+                "checksum": "efe82eecaeab2817871fea5631c24c309d4cdcccb8931fdb6eb0d931ed528657"
+            },
+            "confirmation": {
+                "id": "longsword",
+                "checksum": "d5ca6ef9ab5e4892caaab6f33d19d62cffe6de7bc04dc7d99aee694114ab1f83"
+            },
+            "gates": {
+                "browse": true,
+                "copy": true,
+                "execute": true
+            },
+            "adapter_version": 4,
+            "execution_contract": 1,
+            "confirmation_contract": "content-09b-v1",
+            "rules_revision": "5.2.1"
+        },
+        {
+            "id": 467,
+            "name": "Potion of Healing",
+            "source_checksum": "496c81e1c47fded10cc863a7290bd8ec93023986400ed675a938d1b757bfe3f7",
+            "projection_checksum": "5565420674cb062df71b97da7a68ae97ace6e52867bb09232bded624dc717999",
+            "execution": {
+                "supported": true,
+                "checksum": "80a6c25589906a46eb042e8b3d549df784cb21bc03b872cadf9f06b9ae5cf66e"
+            },
+            "confirmation": {
+                "id": "potion_of_healing",
+                "checksum": "9eac650ca13d8c0a82990d64470b14d4a59ecdfc07c60d5d791e83a8272f214f"
+            },
+            "gates": {
+                "browse": true,
+                "copy": true,
+                "execute": true
+            },
+            "adapter_version": 4,
+            "execution_contract": 1,
+            "confirmation_contract": "content-09b-v1",
+            "rules_revision": "5.2.1"
+        }
+    ],
+    "activation": {
+        "status": "PASS",
+        "updated": {
+            "73": {
+                "create": 0,
+                "update": 1,
+                "skip": 0
+            },
+            "436": {
+                "create": 0,
+                "update": 1,
+                "skip": 0
+            },
+            "467": {
+                "create": 0,
+                "update": 1,
+                "skip": 0
+            }
+        },
+        "repeat": {
+            "73": "skip",
+            "436": "skip",
+            "467": "skip"
+        },
+        "permit_closed": true
+    },
+    "qa": {
+        "status": "PASS",
+        "scene": 7,
+        "roles": [
+            "GM",
+            "Player 1",
+            "Player 2"
+        ],
+        "isolatedContexts": 3,
+        "cases": [
+            {
+                "profile": "potion_of_healing",
+                "entry_id": 467,
+                "execution": "ab151110-b500-4826-93a6-e753ab3dba1d",
+                "roll": {
+                    "total": 8,
+                    "rawDice": [
+                        3,
+                        3
+                    ],
+                    "modifier": 2,
+                    "expression": "2d4+2"
+                },
+                "hp": 26,
+                "quantity": 0,
+                "bonusSpent": true,
+                "pendingReload": true,
+                "resultReload": true,
+                "realtimePlayers": 2,
+                "replay": 409
+            },
+            {
+                "profile": "cure-wounds",
+                "entry_id": 73,
+                "execution": "c61310a1-cd80-4cef-bbd1-d13145690c71",
+                "roll": {
+                    "total": 17,
+                    "rawDice": [
+                        4,
+                        3,
+                        2,
+                        4
+                    ],
+                    "modifier": 4,
+                    "expression": "4d8+4"
+                },
+                "hp": 43,
+                "slot2": 0,
+                "actionSpent": true,
+                "pendingReload": true,
+                "resultReload": true,
+                "realtimePlayers": 2,
+                "replay": 409
+            },
+            {
+                "profile": "longsword",
+                "entry_id": 436,
+                "execution": "cc807be8-d37d-40aa-b883-36e9707397e2",
+                "natural": 14,
+                "success": true,
+                "critical": false,
+                "damage": 11,
+                "hp": 29,
+                "weaponQuantity": 1,
+                "actionSpent": true,
+                "sapApplied": false,
+                "pendingReload": true,
+                "resultReload": true,
+                "realtimePlayers": 2,
+                "replay": 409
+            }
+        ],
+        "realtime": true,
+        "reload": true,
+        "combatBudgets": true,
+        "gmOnlyQueue": 403,
+        "sessionLog": 3,
+        "errors": []
+    },
+    "cleanup": {
+        "status": "PASS",
+        "exact_restoration": [
+            "campaigns",
+            "scenes",
+            "fog_memories",
+            "characters",
+            "tokens",
+            "inventory_items",
+            "combats",
+            "combatants",
+            "token_conditions",
+            "spell_effects"
+        ],
+        "changed_fields": {
+            "campaigns": {
+                "5": [
+                    "updated_at",
+                    "active_scene_id",
+                    "live_revision"
+                ]
+            },
+            "scenes": {
+                "5": [
+                    "revision",
+                    "updated_at"
+                ],
+                "7": [
+                    "revision",
+                    "updated_at"
+                ],
+                "8": [
+                    "revision",
+                    "updated_at"
+                ],
+                "9": [
+                    "revision",
+                    "updated_at"
+                ],
+                "10": [
+                    "revision",
+                    "updated_at"
+                ],
+                "11": [
+                    "revision",
+                    "updated_at"
+                ]
+            },
+            "fog_memories": {
+                "21": [
+                    "bits"
+                ]
+            },
+            "characters": {
+                "5": [
+                    "hp",
+                    "updated_at"
+                ],
+                "6": [
+                    "hp",
+                    "updated_at",
+                    "abilities",
+                    "spellcasting"
+                ]
+            },
+            "tokens": {
+                "25": [
+                    "x",
+                    "y",
+                    "updated_at"
+                ]
+            },
+            "inventory_items": {
+                "01a1a7d1-341b-7392-b09f-0ac3ddadf205": [
+                    "equipped_slot"
+                ]
+            },
+            "combats": {
+                "70": [
+                    "status",
+                    "round",
+                    "current_combatant_id",
+                    "started_at",
+                    "updated_at",
+                    "turn_sequence"
+                ]
+            },
+            "combatants": {
+                "403": [
+                    "updated_at",
+                    "action_available"
+                ],
+                "404": [
+                    "updated_at",
+                    "action_available"
+                ]
+            }
+        },
+        "deleted_own_rows": {
+            "combat_events": 18,
+            "ability_executions": 6,
+            "scene_mutation_receipts": 10,
+            "inventory_commands": 0,
+            "compendium_copies": 3,
+            "inventory_items": 2,
+            "item_definitions": 2,
+            "combatants": 0
+        },
+        "activated_entries_preserved": [
+            73,
+            436,
+            467
+        ],
+        "destroyed_temporary_sessions": 6
+    },
+    "production_changed": false,
+    "gameplay_engine_changed": false,
+    "existing_copies_rewritten": false,
+    "unsupported_effects_automated": false,
+    "limitations": [
+        "Bounded SRD 5.2.1 profiles only; GM confirmation and manual fallback remain.",
+        "Sap and other unsupported effects remain manual.",
+        "Old copies remain unchanged; execution is carried by new copies."
+    ]
+}

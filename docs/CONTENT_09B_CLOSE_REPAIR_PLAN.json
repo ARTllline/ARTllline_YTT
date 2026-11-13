@@ -1,0 +1,91 @@
+{
+    "status": "prepared_not_applied",
+    "live_writes": 0,
+    "private_patch_sha256": "6f48a126948e7d11f2334479cc924f610bc6936c0fb2509912415504c953e345",
+    "tables": {
+        "scenes": {
+            "expected_sha256": "ecc51f8b6d31dc5341762e5a1246c17139e7d181695fc32fb06c97f867c80ee8",
+            "target_sha256": "41591fd93bfe606908329c34cc7ba600a8d031d20719eaeb27fcee1abcf142e1"
+        },
+        "fog_memories": {
+            "expected_sha256": "7e7ef0579257ab010a957d0e6ba21308c72ca67116c24bd2bd07ff44e7809eec",
+            "target_sha256": "4ba1ea90d5fc8d74c9f9da6b428c3f993f78f18cd1e427e322d001d4334f996e"
+        }
+    },
+    "operations": [
+        {
+            "table": "scenes",
+            "id": 5,
+            "expected_row_sha256": "33f8c424b8ed30925c3457e3a36ca3f57fcdf354de8366ae753700e50e4b76ef",
+            "fields": [
+                "revision",
+                "updated_at"
+            ],
+            "set": {
+                "revision": 13714,
+                "updated_at": "2026-11-13 10:43:31"
+            }
+        },
+        {
+            "table": "scenes",
+            "id": 8,
+            "expected_row_sha256": "1651304ad1c895a3b136714a7754ff0990f264dcde64f71ccd9dfd957a418d2b",
+            "fields": [
+                "revision",
+                "updated_at"
+            ],
+            "set": {
+                "revision": 452,
+                "updated_at": "2026-11-13 10:43:31"
+            }
+        },
+        {
+            "table": "scenes",
+            "id": 9,
+            "expected_row_sha256": "c5f463fd877fd9ef5168d98ba13f10eb910568a19a53b6a0379a91998f72b733",
+            "fields": [
+                "revision",
+                "updated_at"
+            ],
+            "set": {
+                "revision": 382,
+                "updated_at": "2026-11-13 10:43:31"
+            }
+        },
+        {
+            "table": "scenes",
+            "id": 10,
+            "expected_row_sha256": "806dcae258a5e6ac26e7469db81b543350ce9ee39e7b0e852f40cef8f0b3a2c7",
+            "fields": [
+                "revision",
+                "updated_at"
+            ],
+            "set": {
+                "revision": 3144,
+                "updated_at": "2026-11-13 10:43:31"
+            }
+        },
+        {
+            "table": "scenes",
+            "id": 11,
+            "expected_row_sha256": "74961e1d83530c690213f8fc48d0805f00b9b1c9debc8eab63ccfe9836ba0ccd",
+            "fields": [
+                "revision",
+                "updated_at"
+            ],
+            "set": {
+                "revision": 284,
+                "updated_at": "2026-11-13 10:43:31"
+            }
+        },
+        {
+            "table": "fog_memories",
+            "id": 21,
+            "expected_row_sha256": "22247129df95d5bbf7efdc7cb8ce5497c2f4b82ff868b95732ecee4bd98e9b3b",
+            "fields": [
+                "bits"
+            ],
+            "target_bits_sha256": "eae810dc7e3c1b806b264c0d7eed8ba1d1107fb4dff445c0ee801495e22196f7"
+        }
+    ]
+}

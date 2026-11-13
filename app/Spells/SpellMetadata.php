@@ -7,12 +7,38 @@ use App\Services\DamageRoller;
 /** Bounded spell data extends Ability, not a second executable language. */
 class SpellMetadata
 {
-    public const FIELDS = 'level,school,classes,known,prepared,ritual,concentration,available,coverage,reasons,source_key,source_entry_id,reference,casting_time,duration,duration_text,components,material,scaling,cantrip_dice,cantrip_tier,effects,manual_allowed,material_definition_id,material_quantity,consume_material';
+    public const FIELDS = 'level,school,classes,known,prepared,ritual,concentration,available,coverage,reasons,source_key,source_entry_id,reference,casting_time,duration,duration_text,components,material,scaling,cantrip_dice,cantrip_tier,effects,manual_allowed,material_definition_id,material_quantity,consume_material,content';
 
     public static function rules(): array
     {
         $p = 'abilities.*.spell.';
         $rules = [
+            $p.'content' => 'sometimes|array:key,version,license,external_key,normalization_version,attribution,source_url,ruleset,rules_revision,export,checksum,projection_checksum,gates,reference,gm_required,localized,facts,catalog_type,rarity_text,range_text,execution_profile',
+            $p.'content.execution_profile' => 'sometimes|array:id,checksum',
+            $p.'content.execution_profile.id' => 'required_with:'.$p.'content.execution_profile|in:cure-wounds',
+            $p.'content.execution_profile.checksum' => 'required_with:'.$p.'content.execution_profile|regex:/^[a-f0-9]{64}$/D',
+            $p.'content.ruleset' => 'required_with:'.$p.'content|in:dnd-2024',
+            $p.'content.gates' => 'required_with:'.$p.'content|array:browse,copy,execute',
+            $p.'content.gates.browse' => 'required_with:'.$p.'content|boolean',
+            $p.'content.gates.copy' => 'required_with:'.$p.'content|boolean',
+            $p.'content.gates.execute' => 'required_with:'.$p.'content|boolean',
+            $p.'content.checksum' => 'required_with:'.$p.'content|regex:/^[a-f0-9]{64}$/D',
+            $p.'content.projection_checksum' => 'required_with:'.$p.'content|regex:/^[a-f0-9]{64}$/D',
+            $p.'content.catalog_type' => 'sometimes|in:items,weapons,armor,spells',
+            $p.'content.rarity_text' => 'sometimes|nullable|string|max:255',
+            $p.'content.range_text' => 'sometimes|nullable|string|max:160',
+            $p.'content.reference' => 'sometimes|nullable|string|max:60000',
+            $p.'content.gm_required' => 'sometimes|array|list|max:12', $p.'content.gm_required.*' => 'string|max:300',
+            $p.'content.facts' => 'sometimes|array|list|max:20', $p.'content.facts.*' => 'string|max:1000',
+            $p.'content.localized' => 'sometimes|nullable|array:name,description',
+            $p.'content.localized.name' => 'sometimes|nullable|string|max:255',
+            $p.'content.localized.description' => ['sometimes', 'nullable', function ($attribute, $value, $fail) {
+                $parts = is_string($value) ? [$value] : $value;
+                if (! is_array($parts) || ! array_is_list($parts) || count($parts) > 100
+                    || count(array_filter($parts, 'is_string')) !== count($parts) || mb_strlen(implode('', $parts)) > 60000) {
+                    $fail('Описание источника должно быть ограниченным текстом или списком текстов.');
+                }
+            }],
             $p.'available' => 'sometimes|boolean', $p.'manual_allowed' => 'sometimes|boolean',
             $p.'coverage' => 'sometimes|in:FULL,PARTIAL,MANUAL', $p.'reasons' => 'sometimes|array|list|max:12', $p.'reasons.*' => 'string|max:300',
             $p.'source_key' => 'sometimes|string|max:100', $p.'source_entry_id' => 'sometimes|nullable|integer|min:1',

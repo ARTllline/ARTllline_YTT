@@ -1,3 +1,4 @@
+import { rarityLabels } from '../compendium/presentation';
 import { ItemFacts, itemCategories } from './itemGameplay';
 import { useState } from 'react';
 import { RpgIcon } from '../gameplay/RpgIcon';
@@ -145,7 +146,9 @@ export function InventoryGridView({
                             Надеть
                         </button>
                     )}
-                    {menu.definition.use_ability_id && (
+                    {(menu.definition.use_ability_id ||
+                        menu.action?.ability ||
+                        menu.definition.content?.gates.execute === false) && (
                         <button
                             role="menuitem"
                             onClick={() => {
@@ -204,16 +207,7 @@ export function ItemDetails({
             </aside>
         );
     const d = item.definition;
-    const rarity =
-        (
-            {
-                common: 'Обычный',
-                uncommon: 'Необычный',
-                rare: 'Редкий',
-                epic: 'Эпический',
-                legendary: 'Легендарный',
-            } as Record<string, string>
-        )[d.rarity] ?? d.rarity;
+    const rarity = rarityLabels[d.rarity] ?? d.rarity;
     const category =
         itemCategories[d.category] ??
         (
@@ -298,11 +292,16 @@ export function ItemDetails({
                     {item.equipped_slot ? 'Снять' : 'Надеть'}
                 </button>
             )}
-            {(d.use_ability_id || item.action?.ability) && (
+            {(d.use_ability_id || item.action?.ability || d.content?.gates.execute === false) && (
                 <>
                     <button
                         className="rpg-gold-button"
-                        disabled={item.quantity < 1 || (item.action && !item.action.available)}
+                        disabled={
+                            item.quantity < 1 ||
+                            (d.content?.gates.execute !== false &&
+                                item.action &&
+                                !item.action.available)
+                        }
                         onClick={() => onUse(item)}
                     >
                         {d.gameplay?.weapon ? 'Атаковать' : 'Использовать'}

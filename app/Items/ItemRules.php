@@ -63,6 +63,11 @@ class ItemRules
 
     public function validateDefinition(ItemDefinition $d): void
     {
+        if (data_get($d->content, 'gates.execute') === false) {
+            abort_unless(empty($d->equipment_slots) && empty($d->modifiers) && empty($d->use_ability_id)
+                && ! array_intersect(array_keys($d->gameplay ?? []), ['weapon', 'armor', 'ammunition', 'use']), 422,
+                'Справочная копия требует решения GM; экипировка и автоматические эффекты не одобрены.');
+        }
         $g = $d->gameplay ?? [];
         $w = $g['weapon'] ?? null;
         $a = $g['armor'] ?? null;

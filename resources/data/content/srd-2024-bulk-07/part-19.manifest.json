@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:magic_item:adamantine-armor:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:adamantine-armor",
+            "checksum": "fae73e4f53b53c315374bc4008bf25b27336eeb6d224d107db5c9a71b89a44fb"
+        },
+        {
+            "id": "srd:magic_item:rod-of-security:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:rod-of-security",
+            "checksum": "55199b2cc31c1202ccc2da5ee31271558a502b4b0c4e722e8913ef4a73d96609"
+        },
+        {
+            "id": "srd:magic_item:robe-of-the-archmagi:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:robe-of-the-archmagi",
+            "checksum": "049225e9b4ff66491f54512ca7b8130b4230d6b6a3d5cfe7d7e8c5bffa725d06"
+        },
+        {
+            "id": "srd:magic_item:wand-of-fireballs:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wand-of-fireballs",
+            "checksum": "dc99b68e8de5d0af658600c116da843e190561240d59c0e4696cc6e5629ded9a"
+        },
+        {
+            "id": "srd:magic_item:philter-of-love:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:philter-of-love",
+            "checksum": "29d655dda315c8c51493523861a572d30597c654655f88767bc85a109c0ba29c"
+        },
+        {
+            "id": "srd:magic_item:staff-of-striking:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:staff-of-striking",
+            "checksum": "e1bf25eeed5e83df427751bb452f1a1e29e86135104c8922ab516da3f4e17a7c"
+        },
+        {
+            "id": "srd:magic_item:horn-of-valhalla-4:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:horn-of-valhalla-4",
+            "checksum": "5d2bc1cd10c274bb51b48ea7c79448eeed9b3e30bbc44a36a809135b2c8012f0"
+        },
+        {
+            "id": "srd:magic_item:belt-of-dwarvenkind:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:belt-of-dwarvenkind",
+            "checksum": "02366baa75932ce2d41231fa575bb0bc5513c3ed8abc9cae4017dea7c80d34f3"
+        },
+        {
+            "id": "srd:magic_item:efficient-quiver:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:efficient-quiver",
+            "checksum": "e3b74b4267cf0c119c83d68b26237c10a4bafb03570481b6c0e126bc5efe8a89"
+        },
+        {
+            "id": "srd:magic_item:sword-of-sharpness:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:sword-of-sharpness",
+            "checksum": "329962876bc74d4e4ba418b193dc14c03ac1fb3a579351b709f638f2eeb9c092"
+        },
+        {
+            "id": "srd:magic_item:mysterious-deck:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:mysterious-deck",
+            "checksum": "2a1cb8db5c1dc4811c6efd5db40d98aa7726a1e40b4f4c39ad4a4477a5736dd5"
+        },
+        {
+            "id": "srd:magic_item:staff-of-swarming-insects:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:staff-of-swarming-insects",
+            "checksum": "8002697e5e48e830f3fc671ff732def3194a02bb18c03facbfe4c59a3b013377"
+        },
+        {
+            "id": "srd:magic_item:pipes-of-the-sewers:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:pipes-of-the-sewers",
+            "checksum": "99f271b89a35a4b293eee665eec6369438031c2dc5d2478f27e3b41bf69a09df"
+        },
+        {
+            "id": "srd:magic_item:demon-armor:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:demon-armor",
+            "checksum": "773ac23fb0f1c75db59994e6b1d852be194f5b98dee6a3e4be6556bfb0970dc4"
+        },
+        {
+            "id": "srd:magic_item:ring-of-invisibility:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-invisibility",
+            "checksum": "4cc75e0aa073d848803c18259e1241e7f631b2b38b0e898767d3c0e00ef4ad82"
+        },
+        {
+            "id": "srd:magic_item:giant-slayer:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:giant-slayer",
+            "checksum": "d50a602140ce14cd7e67ec03f6b234d5e142d62601f748d27afb08a7bd8b8dae"
+        },
+        {
+            "id": "srd:magic_item:wind-fan:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wind-fan",
+            "checksum": "61b031205ef34a8333794affc253fe114843fde8e4a0d9564d1d5915d883dfc8"
+        },
+        {
+            "id": "srd:magic_item:bag-of-devouring:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:bag-of-devouring",
+            "checksum": "0d3324ec265280687f0c41a9116a9c83996938d284e7f028cdc6a08eb07868bd"
+        },
+        {
+            "id": "srd:magic_item:crystal-ball-of-mind-reading:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:crystal-ball-of-mind-reading",
+            "checksum": "50cafc4dccba380051684be8dc544bf54f0029947eceff446dfec016a295960c"
+        },
+        {
+            "id": "srd:magic_item:boots-of-levitation:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:boots-of-levitation",
+            "checksum": "d69448c0dae0d8b9d1d171346c2cc5e49093c93109f3d64b087d8c0c774fb145"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

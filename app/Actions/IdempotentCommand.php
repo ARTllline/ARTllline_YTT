@@ -103,11 +103,14 @@ class IdempotentCommand
                         if (in_array($payload['action'] ?? '', ['give', 'remove', 'put']) || (($payload['action'] ?? '') === 'configure' && array_key_exists('weapon_proficient', $payload))) {
                             Gate::forUser($user)->authorize('update', $campaign);
                         }
-                    } elseif (in_array($operation, ['scene.ability', 'campaign.resource', 'scene.inventory.use'])) {
+                    } elseif (in_array($operation, ['scene.ability', 'campaign.resource', 'scene.inventory.use', 'scene.content.use'])) {
                         if ($operation === 'scene.ability') {
                             app(AbilityActions::class)->authorizeActor($user, Scene::findOrFail($resource), $payload);
                         } else {
                             app(AbilityActions::class)->authorize($user, $campaign, $payload['characterId']);
+                            if ($operation === 'scene.content.use') {
+                                app(ContentUseActions::class)->target($user, Scene::findOrFail($resource), isset($payload['targetId']) ? (int) $payload['targetId'] : null);
+                            }
                         }
                     } elseif ($operation === 'scene.interact') {
                         $scene = Scene::findOrFail($resource);

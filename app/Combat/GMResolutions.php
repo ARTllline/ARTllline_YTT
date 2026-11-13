@@ -2,9 +2,11 @@
 
 namespace App\Combat;
 
+use App\Actions\ContentUseActions;
 use App\Models\AbilityExecution;
 use App\Models\Scene;
 use App\Models\User;
+use Illuminate\Support\Facades\Gate;
 
 /** Manual work belongs to the durable cast receipt; coverage remains unchanged. */
 class GMResolutions
@@ -21,11 +23,17 @@ class GMResolutions
             'createdAt' => $e->created_at, 'result' => $e->result];
     }
 
-    public function resolve(User $user, Scene $scene, string $id, string $status, string $note): void
+    public function resolve(User $user, Scene $scene, string $id, string $status, string $note, array $confirmation = []): void
     {
+        Gate::forUser($user)->authorize('update', $scene);
         $cast = AbilityExecution::where('campaign_id', $scene->campaign_id)->where('context->sceneId', (string) $scene->id)->findOrFail($id);
         $result = $cast->result;
         abort_unless(($result['manualResolution'] ?? null) === 'pending', 409, 'Этот ручной шаг уже закрыт.');
+        if (isset($result['gmContext']['contentUse']) && $status === 'resolved') {
+            abort_unless(($confirmation['confirmed'] ?? false) === true, 422, 'Подтвердите параметры ручного разрешения.');
+            $result['confirmedEffect'] = app(ContentUseActions::class)->confirm($user, $scene, $cast, $confirmation);
+            $note = trim($note.' · '.implode(' · ', $result['confirmedEffect']['summary']), ' ·');
+        }
         $result['manualResolution'] = $status === 'dismissed' ? 'dismissed_by_gm' : 'resolved_by_gm';
         $result['resolution'] = ['status' => $status, 'note' => $note, 'userId' => $user->id, 'resolvedAt' => now()->toIso8601String()];
         $cast->update(['result' => $result]);

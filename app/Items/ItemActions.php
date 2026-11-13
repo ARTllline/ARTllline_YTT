@@ -159,7 +159,7 @@ class ItemActions
         }
     }
 
-    private function spendStack(InventoryItem $i): void
+    public function spendStack(InventoryItem $i): void
     {
         abort_if($i->quantity < 1, 422, 'Предмет закончился.');
         $i->quantity--;

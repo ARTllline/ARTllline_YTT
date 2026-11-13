@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:magic_item:dust-of-dryness:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:dust-of-dryness",
+            "checksum": "5dcad39107e96463f2c2351fe36dbc64123cef96a248d559d6f2ec2675f37f1b"
+        },
+        {
+            "id": "srd:magic_item:dwarven-thrower:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:dwarven-thrower",
+            "checksum": "826f0991f1829fe8aff27ad92bececa71ebe15a5017528f623858db6d35d5658"
+        },
+        {
+            "id": "srd:magic_item:vorpal-sword:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:vorpal-sword",
+            "checksum": "12ec48087f5c4aa6462c5bae2dc5adf01271c5b68c08f3458b2c9ad21b4bdd42"
+        },
+        {
+            "id": "srd:magic_item:ring-of-free-action:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-free-action",
+            "checksum": "ff3fc2682d534018192c85e954658205e2fc81bbb2069dbf8d97f88dde4a7d2e"
+        },
+        {
+            "id": "srd:magic_item:winged-boots:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:winged-boots",
+            "checksum": "d429d6709291e3f1ed5607f5f67329f4854c47d2f9c9ae746ef13c50d5048ca3"
+        },
+        {
+            "id": "srd:magic_item:wand-of-polymorph:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wand-of-polymorph",
+            "checksum": "80eda3c7b5b0d43fdd43c147f84bae8c0b86656369b4342980ad0b75ad740418"
+        },
+        {
+            "id": "srd:magic_item:crystal-ball-of-telepathy:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:crystal-ball-of-telepathy",
+            "checksum": "66410969a65d85a7a94aca97d07fac2aece92bbf785a472dcb7e8dfdb578cfbb"
+        },
+        {
+            "id": "srd:magic_item:staff-of-charming:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:staff-of-charming",
+            "checksum": "e0620de63b842f5493896e277b229e2f0b3901777b255543f25918340430db9a"
+        },
+        {
+            "id": "srd:magic_item:dust-of-sneezing-and-choking:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:dust-of-sneezing-and-choking",
+            "checksum": "717a2f3c92a7d23a4e652379fabf5a5d22529867385711ca01f546adae3b3c8d"
+        },
+        {
+            "id": "srd:magic_item:ring-of-shooting-stars:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-shooting-stars",
+            "checksum": "0f33108be052fe3739117bd887470063f3fac208bddd9cd87ca2042bdf606dc7"
+        },
+        {
+            "id": "srd:magic_item:ring-of-elemental-command:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-elemental-command",
+            "checksum": "1a20fbffe703562067447a7b4eeff2737e97b90b015f909e71398d88c16d0f9d"
+        },
+        {
+            "id": "srd:magic_item:periapt-of-proof-against-poison:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:periapt-of-proof-against-poison",
+            "checksum": "dd371011e83d278d19fc6acbe06048a3a7b427889ca17f8c9643f85522034957"
+        },
+        {
+            "id": "srd:magic_item:potion-of-water-breathing:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-water-breathing",
+            "checksum": "7f73d2a145bb88da3e2674025ca226b6290759f5182c4cb3bb0cebe6df685fd4"
+        },
+        {
+            "id": "srd:magic_item:dwarven-plate:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:dwarven-plate",
+            "checksum": "7bd545bb0297a61212f7c763ea6b558cd409a2058e6eefbc761d6800aed8ccc8"
+        },
+        {
+            "id": "srd:magic_item:holy-avenger:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:holy-avenger",
+            "checksum": "628cab0cc0d0fa91c5201d6b2569cdd7fb9afdaf1042135e1b1faef210b2802c"
+        },
+        {
+            "id": "srd:magic_item:mantle-of-spell-resistance:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:mantle-of-spell-resistance",
+            "checksum": "505329ca3e30ffe8228d3d03075bbfc05a3820fa096c7f45514d60ceda039c80"
+        },
+        {
+            "id": "srd:magic_item:lantern-of-revealing:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:lantern-of-revealing",
+            "checksum": "c46cc07c5ecf29e9465d9aea38eec3aa362bf6304015108bb319071e70f58963"
+        },
+        {
+            "id": "srd:magic_item:ammunition-of-slaying:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ammunition-of-slaying",
+            "checksum": "b2b916c3300fb2400e86817e0d9edd5d6d68b8c2e322aef5dfce0e45837fa146"
+        },
+        {
+            "id": "srd:magic_item:talisman-of-ultimate-evil:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:talisman-of-ultimate-evil",
+            "checksum": "b36a3b66cefb38d3d2867d239f1baea768e136e03efc997d4e5beb9015179819"
+        },
+        {
+            "id": "srd:magic_item:amulet-of-health:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:amulet-of-health",
+            "checksum": "3260c9be6f23a3c03f724f1ad1d4d75ad322cac5c5abd1b8ab5841a8b5505b18"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

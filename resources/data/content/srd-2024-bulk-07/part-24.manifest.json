@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:magic_item:nine-lives-stealer:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:nine-lives-stealer",
+            "checksum": "636d6e82eef0a58dc1db5bf60da17a6922100afaa75f4cfd48a604ea5bd68e74"
+        },
+        {
+            "id": "srd:magic_item:wand-of-paralysis:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wand-of-paralysis",
+            "checksum": "fdf12d894be0d8d27a5324052cfa1de206f73b75960ca182f902ff0a29ed9b5e"
+        },
+        {
+            "id": "srd:magic_item:goggles-of-night:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:goggles-of-night",
+            "checksum": "d8c843b9e2849654f46671eff52adcebf065933ad534ccd7907e912fbfd25ebe"
+        },
+        {
+            "id": "srd:magic_item:cloak-of-arachnida:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:cloak-of-arachnida",
+            "checksum": "20b061144367be07f896f3ef4cc6ca48fa8978a665cb5d0876923e7b23c04ad9"
+        },
+        {
+            "id": "srd:magic_item:wand-of-lightning-bolts:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wand-of-lightning-bolts",
+            "checksum": "faecf5e01c0f1ae5d40e86600da679eb7f4040e7b332d94445cce95b8d3d1843"
+        },
+        {
+            "id": "srd:magic_item:gauntlets-of-ogre-power:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:gauntlets-of-ogre-power",
+            "checksum": "0671b3684b65dec39c9798caeb32a2d9e1c569c4b1f6f6ca687c055cb50a96a0"
+        },
+        {
+            "id": "srd:magic_item:staff-of-thunder-and-lightning:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:staff-of-thunder-and-lightning",
+            "checksum": "8a5785ffa1c18c70f36c662c7b1b3883ca463111781de5ad21d9b5aa6b804dac"
+        },
+        {
+            "id": "srd:magic_item:armor-of-resistance:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:armor-of-resistance",
+            "checksum": "2cdfa388c264e8271a3ba789c46769aaea76a1b1f86a961a2b9b7250c146f22b"
+        },
+        {
+            "id": "srd:magic_item:wand-of-web:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wand-of-web",
+            "checksum": "9c3670e040c08a5ce499f3081d020f61b8dda9850282418327dab59ec5af41b2"
+        },
+        {
+            "id": "srd:magic_item:dancing-sword:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:dancing-sword",
+            "checksum": "39b40f600d689aeaf66c752c8e11bec85f4eb5ebf66d744ddb0d620778ed9e2d"
+        },
+        {
+            "id": "srd:magic_item:berserker-axe:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:berserker-axe",
+            "checksum": "08b997dc009a543b43bee851b39ada6fedb3744f72a12d01a98a0b4380a59165"
+        },
+        {
+            "id": "srd:magic_item:javelin-of-lightning:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:javelin-of-lightning",
+            "checksum": "bb5559c5b8d40500cf8f468b1d37e9c2ad01132b96d530c08a55b90ccfa4fd63"
+        },
+        {
+            "id": "srd:magic_item:rod-of-absorption:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:rod-of-absorption",
+            "checksum": "84065e5ee2f49477228d6d3e87a9acb85215e6c8eb143d2afc512300b5f14cde"
+        },
+        {
+            "id": "srd:magic_item:portable-hole:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:portable-hole",
+            "checksum": "47a17eef73263cdbf3676fa12b59e315c367f66b1453154b0d585864a0610a83"
+        },
+        {
+            "id": "srd:magic_item:potion-of-resistance:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-resistance",
+            "checksum": "fdbe01ee8aaa0d472c6b49cc9939e42c61df8ded8a2078fe3875517b95f14c44"
+        },
+        {
+            "id": "srd:magic_item:bead-of-force:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:bead-of-force",
+            "checksum": "3ce0f5e8eda148d77105b31f443d911dfe46bb429abbf05155a2066416aadb1e"
+        },
+        {
+            "id": "srd:magic_item:eyes-of-charming:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:eyes-of-charming",
+            "checksum": "aef1fe2fde24c54069b6e7bc3c4b5d4c9633b7812852042d4886c634fd1ac258"
+        },
+        {
+            "id": "srd:magic_item:iron-bands:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:iron-bands",
+            "checksum": "23384194b0427a3c4d0012993f8dbf85ae6e4d673120e46203391ebd51fbae25"
+        },
+        {
+            "id": "srd:magic_item:potion-of-poison:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-poison",
+            "checksum": "05fcba24cd5e08eb42760cb481b15072b57a580cbb71502a1ede721053214193"
+        },
+        {
+            "id": "srd:magic_item:helm-of-teleportation:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:helm-of-teleportation",
+            "checksum": "edde42834df0e6ee87e7853745abdfe70a041ad2aaed0c6077c1a1e60dddfad0"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

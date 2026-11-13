@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Combat\CombatMetadata;
+use App\Compendium\CompendiumContent;
 use App\Models\Campaign;
 use App\Models\Character;
 use App\Models\Cue;
@@ -82,6 +83,11 @@ class CharacterGameplay
             }
         }
         foreach ($abilities as &$ability) {
+            $previous = collect($character?->abilities ?? [])->firstWhere('id', $ability['id']);
+            if (isset($previous['spell']['content'])) {
+                $ability['spell']['content'] = $previous['spell']['content'];
+            }
+            CompendiumContent::validateAbility($ability);
             if (isset($ability['spell'])) {
                 SpellMetadata::validate($ability['spell']);
                 $classes = $ability['spell']['classes'];

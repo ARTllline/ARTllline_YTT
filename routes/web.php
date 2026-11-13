@@ -97,6 +97,8 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::post('/library/spells', [SpellLibraryController::class, 'save'])->name('library.spells.save')->middleware(IdempotentMutation::class);
         Route::post('/library/characters/{character}/spells', [SpellLibraryController::class, 'command'])->name('library.spells.command')->middleware(IdempotentMutation::class);
         Route::get('/library/items', [ItemLibraryController::class, 'index']);
+        Route::get('/library/items/compendium', [ItemLibraryController::class, 'compendium']);
+        Route::post('/library/items/compendium', [ItemLibraryController::class, 'copyCompendium'])->name('library.items.compendium.copy')->middleware(IdempotentMutation::class);
         Route::post('/library/items', [ItemLibraryController::class, 'save'])->name('library.items.save')->middleware(IdempotentMutation::class);
         Route::get('/library/characters/{character}/inventory', [ItemLibraryController::class, 'inventory']);
         Route::post('/library/characters/{character}/inventory', [ItemLibraryController::class, 'command'])->name('library.inventory.command')->middleware(IdempotentMutation::class);
@@ -116,6 +118,7 @@ Route::prefix('api')->middleware(PrivateResponse::class)->group(function () {
         Route::get('/campaigns/{campaign}/characters/{character}/hotbar', [CharacterHotbarController::class, 'show']);
         Route::put('/campaigns/{campaign}/characters/{character}/hotbar', [CharacterHotbarController::class, 'update']);
         Route::post('/scenes/{scene}/abilities/execute', [AbilityController::class, 'execute'])->name('scene.ability')->middleware([IdempotentMutation::class, 'throttle:60,1']);
+        Route::post('/scenes/{scene}/content-use', \App\Http\Controllers\ContentUseController::class)->name('scene.content.use')->middleware([IdempotentMutation::class, 'throttle:60,1']);
         Route::get('/campaigns/{campaign}/spellcasting', [SpellcastingController::class, 'index']);
         Route::post('/campaigns/{campaign}/spellcasting', [SpellcastingController::class, 'command'])->name('campaign.spellcasting')->middleware(IdempotentMutation::class);
         Route::post('/campaigns/{campaign}/resources/adjust', [AbilityController::class, 'resource'])->name('campaign.resource')->middleware(IdempotentMutation::class);

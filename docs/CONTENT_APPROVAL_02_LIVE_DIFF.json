@@ -1,0 +1,886 @@
+{
+  "format": 1,
+  "mode": "dry-run",
+  "source": "srd-2024",
+  "ruleset": "dnd-2024",
+  "export": {
+    "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+    "library_version": "0.9.0-audit.1"
+  },
+  "adapter_version": 4,
+  "source_id": 1,
+  "source_declared_version": "5.2.1",
+  "plan_checksum": "42a29e8da9929035d133abb335d6bc6b3beecbaa1d27390398659b29c999e4be",
+  "actions": {
+    "create": 0,
+    "update": 13,
+    "skip": 0,
+    "conflict": 0,
+    "not_compared": 0
+  },
+  "counts": {
+    "created": 0,
+    "updated": 13,
+    "unchanged": 0,
+    "rejected": 0
+  },
+  "catalog_checked": true,
+  "validation_passed": true,
+  "review_ready": true,
+  "transaction_writer_ready": true,
+  "import_available": false,
+  "runtime_execution_available": false,
+  "generated_at": "2026-11-12T22:02:26+02:00",
+  "database_writes": 0,
+  "manifest": "resources/data/content/srd-2024-approved-13.manifest.json",
+  "manifest_sha256": "f995208190268c9621f98ae498a733d7bd877dc7149a220a3f1c16f2eca5ade9",
+  "approval_snapshot_sha256": "e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8",
+  "pin_verification": {
+    "all_15_source_content_projection_and_baselines_match": true,
+    "baseline_reviews_approved": 7,
+    "content_reviews_approved": 13
+  },
+  "verification": {
+    "generated_at": "2026-11-12T22:02:26+02:00",
+    "database_writes": 0,
+    "only_select_queries": true,
+    "query_count": 54,
+    "preflight_related_state_equal": true,
+    "before_after_equal": true,
+    "related_state_sha256": "6c5858e2c9eb9c3fc717377190472be273aca55b438e72e3ab9e1b64612d86bb",
+    "table_fingerprints": {
+      "compendium_sources": {
+        "count": 2,
+        "sha256": "18def7b3917ed26aca0d7ebdc9c1f8d26f34f57e34bc6d5052f55b47da799672"
+      },
+      "compendium_entries": {
+        "count": 970,
+        "sha256": "b86302910b1a684fd39a2e4287e78022f2484e3e928beb5d7c9dffa1301246ea"
+      },
+      "compendium_copies": {
+        "count": 686,
+        "sha256": "5337f41237c5577e930347b90b24dade5e44b329356c8fe8220fdc1064562fda"
+      },
+      "item_definitions": {
+        "count": 14,
+        "sha256": "8e3c18dc13e4b076a41672ebd985ec7e0b1862621f1bbcc0aac15e34d0d00df6"
+      },
+      "inventory_items": {
+        "count": 24,
+        "sha256": "8d0271e8f779ac7de66888eddd968db251181795c8fdfb789c8c5c2c34bd8158"
+      },
+      "characters": {
+        "count": 9,
+        "sha256": "e4bf52b76620824a081a1e0841c1f0164d24c89822ca732e9db454b610f42861"
+      },
+      "library_items": {
+        "count": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "token_conditions": {
+        "count": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "assets": {
+        "count": 76,
+        "sha256": "983d8093d5c4b612cb69b5cf45655e2999f655b9cf4be80704b12e5fa364c290"
+      },
+      "migrations": {
+        "count": 53,
+        "sha256": "c13907892e475e9937cba468796788c9e27fdb93a7ff2c424a04b8ecd406fca1"
+      }
+    },
+    "live_schema_columns": [
+      {
+        "TABLE_NAME": "compendium_copies",
+        "COLUMN_NAME": "campaign_id",
+        "IS_NULLABLE": "NO",
+        "DATA_TYPE": "bigint"
+      }
+    ],
+    "consumer_migration_applied": false,
+    "approved_pins_match": true,
+    "selected_count": 13,
+    "baseline_reviews": 7,
+    "all_execute_false": true,
+    "deferred_wish_unchanged": true,
+    "deferred_bag_not_created": true,
+    "manifest_sha256": "f995208190268c9621f98ae498a733d7bd877dc7149a220a3f1c16f2eca5ade9",
+    "live_diff_sha256": "034a81b50e4fef1257dad84baadf2fcec34409dbdcea489ed2f8dfcc3d77012c",
+    "plan_checksum": "42a29e8da9929035d133abb335d6bc6b3beecbaa1d27390398659b29c999e4be"
+  },
+  "reported_apply_blockers": [
+    "live_consumer_contract_migration_required",
+    "explicit_baseline_and_content_approvals_required",
+    "separate_execution_profile_approval_for_automation",
+    "content_05_writer_enablement_and_import_authorization"
+  ],
+  "remaining_blockers": [
+    "live_consumer_contract_migration_required",
+    "content_05_writer_enablement_and_separate_import_authorization",
+    "fresh_backup_and_revalidation_before_later_apply"
+  ],
+  "execution_approval_required_for_reference_only_import": false,
+  "deferred": [
+    {
+      "decision_id": "C8",
+      "id": "srd:magic_item:bag-of-holding:2024",
+      "decision": "defer",
+      "operation": "do_not_create",
+      "existing_entry_id": null
+    },
+    {
+      "decision_id": "C15",
+      "id": "srd:spell:wish:2024",
+      "decision": "defer",
+      "operation": "preserve",
+      "existing_entry_id": 337
+    }
+  ],
+  "records": [
+    {
+      "id": "srd:equipment:acid:2024",
+      "existing_entry_id": 340,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "items",
+        "external_key": "acid"
+      },
+      "action": "update",
+      "reason": null,
+      "baseline": [
+        {
+          "id": 340,
+          "digest": "61b589d662b57002ac14d917e7070d3b3c61951d827eab9b5eb4a6daf2fabe80"
+        }
+      ],
+      "baseline_assessment": {
+        "status": "legacy-equipment-missing-null-ammunition-v1",
+        "accepted": true,
+        "difference": {
+          "path": "normalized_data.ammunition",
+          "before": "absent",
+          "current_mapper": null
+        },
+        "entry_id": 340,
+        "baseline_digest": "61b589d662b57002ac14d917e7070d3b3c61951d827eab9b5eb4a6daf2fabe80",
+        "review_status": "explicitly_confirmed"
+      },
+      "source_checksum": "f5864f407cadbed32049992f8e4e22cab472192e18578209e75f6671876351cf",
+      "checksum": "f5864f407cadbed32049992f8e4e22cab472192e18578209e75f6671876351cf",
+      "projection_checksum": "4a9d05f0dbd25e76ace8206439efd4d51a6153cad5402553083f8a94a11ad60b",
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "decision_id": "C1",
+      "approval": {
+        "id": "srd:equipment:acid:2024",
+        "checksum": "f5864f407cadbed32049992f8e4e22cab472192e18578209e75f6671876351cf",
+        "projection_checksum": "4a9d05f0dbd25e76ace8206439efd4d51a6153cad5402553083f8a94a11ad60b",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C1, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+        "languages": [
+          "en",
+          "ru"
+        ],
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T19:59:45+00:00",
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "single_record_manifest": "resources/data/content/approvals/content-approval-02/C01.manifest.json",
+      "baseline_decision_id": "B1",
+      "baseline_approval": {
+        "id": "srd:equipment:acid:2024",
+        "policy": "legacy-equipment-missing-null-ammunition-v1",
+        "entry_id": 340,
+        "baseline_digest": "61b589d662b57002ac14d917e7070d3b3c61951d827eab9b5eb4a6daf2fabe80",
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T21:59:44+02:00",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B1. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+      }
+    },
+    {
+      "id": "srd:equipment:arrows:2024",
+      "existing_entry_id": 345,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "items",
+        "external_key": "arrows"
+      },
+      "action": "update",
+      "reason": null,
+      "baseline": [
+        {
+          "id": 345,
+          "digest": "c3a9091eaa0a9eb8d4346b805ee02ca798d969a6c6bab96a9580449245b7e2d8"
+        }
+      ],
+      "baseline_assessment": {
+        "status": "legacy-equipment-missing-null-ammunition-v1",
+        "accepted": true,
+        "difference": {
+          "path": "normalized_data.ammunition",
+          "before": "absent",
+          "current_mapper": null
+        },
+        "entry_id": 345,
+        "baseline_digest": "c3a9091eaa0a9eb8d4346b805ee02ca798d969a6c6bab96a9580449245b7e2d8",
+        "review_status": "explicitly_confirmed"
+      },
+      "source_checksum": "13f1c3bd2b19d072847d47a35c48be5559f7d5c57ac8a3faf451d9b42a714e13",
+      "checksum": "13f1c3bd2b19d072847d47a35c48be5559f7d5c57ac8a3faf451d9b42a714e13",
+      "projection_checksum": "170af7df21d7e9583bdaef623395d6f4d4b5836c8345cdc2e4c79076f8b5b019",
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "decision_id": "C2",
+      "approval": {
+        "id": "srd:equipment:arrows:2024",
+        "checksum": "13f1c3bd2b19d072847d47a35c48be5559f7d5c57ac8a3faf451d9b42a714e13",
+        "projection_checksum": "170af7df21d7e9583bdaef623395d6f4d4b5836c8345cdc2e4c79076f8b5b019",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C2, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+        "languages": [
+          "en",
+          "ru"
+        ],
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T19:59:47+00:00",
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "single_record_manifest": "resources/data/content/approvals/content-approval-02/C02.manifest.json",
+      "baseline_decision_id": "B2",
+      "baseline_approval": {
+        "id": "srd:equipment:arrows:2024",
+        "policy": "legacy-equipment-missing-null-ammunition-v1",
+        "entry_id": 345,
+        "baseline_digest": "c3a9091eaa0a9eb8d4346b805ee02ca798d969a6c6bab96a9580449245b7e2d8",
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T21:59:44+02:00",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B2. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+      }
+    },
+    {
+      "id": "srd:equipment:chain-mail:2024",
+      "existing_entry_id": 374,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "armor",
+        "external_key": "chain-mail"
+      },
+      "action": "update",
+      "reason": null,
+      "baseline": [
+        {
+          "id": 374,
+          "digest": "9ab016ef867fe46282eafec7b0cbb21a013453b7713584993f1fbf54d4afef29"
+        }
+      ],
+      "baseline_assessment": {
+        "status": "legacy-equipment-missing-null-ammunition-v1",
+        "accepted": true,
+        "difference": {
+          "path": "normalized_data.ammunition",
+          "before": "absent",
+          "current_mapper": null
+        },
+        "entry_id": 374,
+        "baseline_digest": "9ab016ef867fe46282eafec7b0cbb21a013453b7713584993f1fbf54d4afef29",
+        "review_status": "explicitly_confirmed"
+      },
+      "source_checksum": "6bb1e158068a10e42e3107ed55bb66bf39d7c692a75554184b7c30dbcd818b44",
+      "checksum": "6bb1e158068a10e42e3107ed55bb66bf39d7c692a75554184b7c30dbcd818b44",
+      "projection_checksum": "64410f43023cfedb14e2ea34ae4aa7dc9b3520f8ae2a9a0c55a267e36bf71260",
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "decision_id": "C3",
+      "approval": {
+        "id": "srd:equipment:chain-mail:2024",
+        "checksum": "6bb1e158068a10e42e3107ed55bb66bf39d7c692a75554184b7c30dbcd818b44",
+        "projection_checksum": "64410f43023cfedb14e2ea34ae4aa7dc9b3520f8ae2a9a0c55a267e36bf71260",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C3, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+        "languages": [
+          "en",
+          "ru"
+        ],
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T19:59:48+00:00",
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "single_record_manifest": "resources/data/content/approvals/content-approval-02/C03.manifest.json",
+      "baseline_decision_id": "B3",
+      "baseline_approval": {
+        "id": "srd:equipment:chain-mail:2024",
+        "policy": "legacy-equipment-missing-null-ammunition-v1",
+        "entry_id": 374,
+        "baseline_digest": "9ab016ef867fe46282eafec7b0cbb21a013453b7713584993f1fbf54d4afef29",
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T21:59:44+02:00",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B3. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+      }
+    },
+    {
+      "id": "srd:equipment:leather-armor:2024",
+      "existing_entry_id": 430,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "armor",
+        "external_key": "leather-armor"
+      },
+      "action": "update",
+      "reason": null,
+      "baseline": [
+        {
+          "id": 430,
+          "digest": "dcc3aeba8f72970522d7a01aa953286d6c4ca909940721bb5d355e2b2bca3d85"
+        }
+      ],
+      "baseline_assessment": {
+        "status": "legacy-equipment-missing-null-ammunition-v1",
+        "accepted": true,
+        "difference": {
+          "path": "normalized_data.ammunition",
+          "before": "absent",
+          "current_mapper": null
+        },
+        "entry_id": 430,
+        "baseline_digest": "dcc3aeba8f72970522d7a01aa953286d6c4ca909940721bb5d355e2b2bca3d85",
+        "review_status": "explicitly_confirmed"
+      },
+      "source_checksum": "10c5fb4514a6ead647601691b0832c91d884b726ecd39a8767c722fcbcd7b313",
+      "checksum": "10c5fb4514a6ead647601691b0832c91d884b726ecd39a8767c722fcbcd7b313",
+      "projection_checksum": "c3376d93c11ecde3f8378b41139cf3c8f5e89e0e6ac7ae75a787486459d49613",
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "decision_id": "C4",
+      "approval": {
+        "id": "srd:equipment:leather-armor:2024",
+        "checksum": "10c5fb4514a6ead647601691b0832c91d884b726ecd39a8767c722fcbcd7b313",
+        "projection_checksum": "c3376d93c11ecde3f8378b41139cf3c8f5e89e0e6ac7ae75a787486459d49613",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C4, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+        "languages": [
+          "en",
+          "ru"
+        ],
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T19:59:50+00:00",
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "single_record_manifest": "resources/data/content/approvals/content-approval-02/C04.manifest.json",
+      "baseline_decision_id": "B4",
+      "baseline_approval": {
+        "id": "srd:equipment:leather-armor:2024",
+        "policy": "legacy-equipment-missing-null-ammunition-v1",
+        "entry_id": 430,
+        "baseline_digest": "dcc3aeba8f72970522d7a01aa953286d6c4ca909940721bb5d355e2b2bca3d85",
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T21:59:44+02:00",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B4. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+      }
+    },
+    {
+      "id": "srd:equipment:longsword:2024",
+      "existing_entry_id": 436,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "weapons",
+        "external_key": "longsword"
+      },
+      "action": "update",
+      "reason": null,
+      "baseline": [
+        {
+          "id": 436,
+          "digest": "b629882ef28edd4bc52045ee6acd7f6deada21fd0b44445773b10b629b9ad9bf"
+        }
+      ],
+      "baseline_assessment": {
+        "status": "legacy-equipment-missing-null-ammunition-v1",
+        "accepted": true,
+        "difference": {
+          "path": "normalized_data.ammunition",
+          "before": "absent",
+          "current_mapper": null
+        },
+        "entry_id": 436,
+        "baseline_digest": "b629882ef28edd4bc52045ee6acd7f6deada21fd0b44445773b10b629b9ad9bf",
+        "review_status": "explicitly_confirmed"
+      },
+      "source_checksum": "db88a0878bb279d08635493d8f62b2747237674a648b1f2f663f268070e6e440",
+      "checksum": "db88a0878bb279d08635493d8f62b2747237674a648b1f2f663f268070e6e440",
+      "projection_checksum": "b31ae6cfbece1298c8b0006c58fc3ba0bf115ca3aa7959080fb798750df24fbe",
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "decision_id": "C5",
+      "approval": {
+        "id": "srd:equipment:longsword:2024",
+        "checksum": "db88a0878bb279d08635493d8f62b2747237674a648b1f2f663f268070e6e440",
+        "projection_checksum": "b31ae6cfbece1298c8b0006c58fc3ba0bf115ca3aa7959080fb798750df24fbe",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C5, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+        "languages": [
+          "en",
+          "ru"
+        ],
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T19:59:51+00:00",
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "single_record_manifest": "resources/data/content/approvals/content-approval-02/C05.manifest.json",
+      "baseline_decision_id": "B5",
+      "baseline_approval": {
+        "id": "srd:equipment:longsword:2024",
+        "policy": "legacy-equipment-missing-null-ammunition-v1",
+        "entry_id": 436,
+        "baseline_digest": "b629882ef28edd4bc52045ee6acd7f6deada21fd0b44445773b10b629b9ad9bf",
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T21:59:44+02:00",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B5. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+      }
+    },
+    {
+      "id": "srd:equipment:potion-of-healing:2024",
+      "existing_entry_id": 467,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "items",
+        "external_key": "potion-of-healing"
+      },
+      "action": "update",
+      "reason": null,
+      "baseline": [
+        {
+          "id": 467,
+          "digest": "5322310b5da605e25d4d863fb383d439d211bcc153210a0d7f1728415863d4d8"
+        }
+      ],
+      "baseline_assessment": {
+        "status": "legacy-equipment-missing-null-ammunition-v1",
+        "accepted": true,
+        "difference": {
+          "path": "normalized_data.ammunition",
+          "before": "absent",
+          "current_mapper": null
+        },
+        "entry_id": 467,
+        "baseline_digest": "5322310b5da605e25d4d863fb383d439d211bcc153210a0d7f1728415863d4d8",
+        "review_status": "explicitly_confirmed"
+      },
+      "source_checksum": "a724b55079637251e53252de95faa5ef580da4b555191a8b569f9810636105dd",
+      "checksum": "496c81e1c47fded10cc863a7290bd8ec93023986400ed675a938d1b757bfe3f7",
+      "projection_checksum": "316dbe107739feccc292f13224f6a60b5fab265bc6e2f6d3190eef5938ac0c09",
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "decision_id": "C6",
+      "approval": {
+        "id": "srd:equipment:potion-of-healing:2024",
+        "checksum": "496c81e1c47fded10cc863a7290bd8ec93023986400ed675a938d1b757bfe3f7",
+        "projection_checksum": "316dbe107739feccc292f13224f6a60b5fab265bc6e2f6d3190eef5938ac0c09",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C6, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+        "languages": [
+          "en",
+          "ru"
+        ],
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T19:59:53+00:00",
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "single_record_manifest": "resources/data/content/approvals/content-approval-02/C06.manifest.json",
+      "baseline_decision_id": "B6",
+      "baseline_approval": {
+        "id": "srd:equipment:potion-of-healing:2024",
+        "policy": "legacy-equipment-missing-null-ammunition-v1",
+        "entry_id": 467,
+        "baseline_digest": "5322310b5da605e25d4d863fb383d439d211bcc153210a0d7f1728415863d4d8",
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T21:59:44+02:00",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B6. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+      }
+    },
+    {
+      "id": "srd:equipment:shield:2024",
+      "existing_entry_id": 486,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "armor",
+        "external_key": "shield"
+      },
+      "action": "update",
+      "reason": null,
+      "baseline": [
+        {
+          "id": 486,
+          "digest": "35c25b0ab9d99301784023c17058009a2f624d7539065a43fbe8b1c4adfbcbbf"
+        }
+      ],
+      "baseline_assessment": {
+        "status": "legacy-equipment-missing-null-ammunition-v1",
+        "accepted": true,
+        "difference": {
+          "path": "normalized_data.ammunition",
+          "before": "absent",
+          "current_mapper": null
+        },
+        "entry_id": 486,
+        "baseline_digest": "35c25b0ab9d99301784023c17058009a2f624d7539065a43fbe8b1c4adfbcbbf",
+        "review_status": "explicitly_confirmed"
+      },
+      "source_checksum": "d05f779c0fc504a1cae3b6506acacf784e702981a174f463b92050b960ee2c51",
+      "checksum": "d05f779c0fc504a1cae3b6506acacf784e702981a174f463b92050b960ee2c51",
+      "projection_checksum": "aa6de60c2b28659cf3810e12f09e0f2ed8eac3dbebd713ea8192bab44117e9a1",
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "decision_id": "C7",
+      "approval": {
+        "id": "srd:equipment:shield:2024",
+        "checksum": "d05f779c0fc504a1cae3b6506acacf784e702981a174f463b92050b960ee2c51",
+        "projection_checksum": "aa6de60c2b28659cf3810e12f09e0f2ed8eac3dbebd713ea8192bab44117e9a1",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C7, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+        "languages": [
+          "en",
+          "ru"
+        ],
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T19:59:54+00:00",
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "single_record_manifest": "resources/data/content/approvals/content-approval-02/C07.manifest.json",
+      "baseline_decision_id": "B7",
+      "baseline_approval": {
+        "id": "srd:equipment:shield:2024",
+        "policy": "legacy-equipment-missing-null-ammunition-v1",
+        "entry_id": 486,
+        "baseline_digest": "35c25b0ab9d99301784023c17058009a2f624d7539065a43fbe8b1c4adfbcbbf",
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T21:59:44+02:00",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B7. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+      }
+    },
+    {
+      "id": "srd:spell:cure-wounds:2024",
+      "existing_entry_id": 73,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "spells",
+        "external_key": "cure-wounds"
+      },
+      "action": "update",
+      "reason": null,
+      "baseline": [
+        {
+          "id": 73,
+          "digest": "233f73eeae936d895d0e637509bca7acdf4fe7262a5b74aafee99f7ce64b41b2"
+        }
+      ],
+      "baseline_assessment": {
+        "status": "legacy_exact",
+        "accepted": true
+      },
+      "source_checksum": "b5abdb0be7e0fa31a1db9ab639154a5c81fce55878c7cdcea9f426300c7eab7d",
+      "checksum": "b5abdb0be7e0fa31a1db9ab639154a5c81fce55878c7cdcea9f426300c7eab7d",
+      "projection_checksum": "88f66b5581408d40fc45d3c465451aabef4a162a279909e0fdca9d5a28975708",
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "decision_id": "C9",
+      "approval": {
+        "id": "srd:spell:cure-wounds:2024",
+        "checksum": "b5abdb0be7e0fa31a1db9ab639154a5c81fce55878c7cdcea9f426300c7eab7d",
+        "projection_checksum": "88f66b5581408d40fc45d3c465451aabef4a162a279909e0fdca9d5a28975708",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C9, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+        "languages": [
+          "en",
+          "ru"
+        ],
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T19:59:56+00:00",
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "single_record_manifest": "resources/data/content/approvals/content-approval-02/C09.manifest.json"
+    },
+    {
+      "id": "srd:spell:detect-magic:2024",
+      "existing_entry_id": 82,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "spells",
+        "external_key": "detect-magic"
+      },
+      "action": "update",
+      "reason": null,
+      "baseline": [
+        {
+          "id": 82,
+          "digest": "1348c37a6bd6e1eb7190069fdc7dfa37cb64e534e1d8b693bbca4d46257c923d"
+        }
+      ],
+      "baseline_assessment": {
+        "status": "legacy_exact",
+        "accepted": true
+      },
+      "source_checksum": "1a8deb39006aca1759cb8acd962e97bd5b2d6a6b0cde41d41fde1c75f11ccab7",
+      "checksum": "1a8deb39006aca1759cb8acd962e97bd5b2d6a6b0cde41d41fde1c75f11ccab7",
+      "projection_checksum": "bb99401f100c419766f65d3aa48d64c15f271bdcf660c5b8fa12a5fda8141d58",
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "decision_id": "C10",
+      "approval": {
+        "id": "srd:spell:detect-magic:2024",
+        "checksum": "1a8deb39006aca1759cb8acd962e97bd5b2d6a6b0cde41d41fde1c75f11ccab7",
+        "projection_checksum": "bb99401f100c419766f65d3aa48d64c15f271bdcf660c5b8fa12a5fda8141d58",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C10, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+        "languages": [
+          "en",
+          "ru"
+        ],
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T19:59:57+00:00",
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "single_record_manifest": "resources/data/content/approvals/content-approval-02/C10.manifest.json"
+    },
+    {
+      "id": "srd:spell:fireball:2024",
+      "existing_entry_id": 126,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "spells",
+        "external_key": "fireball"
+      },
+      "action": "update",
+      "reason": null,
+      "baseline": [
+        {
+          "id": 126,
+          "digest": "f8b0af579a5957e8e83d0a0d1beee88929076ce106395ea8113fd5574d7e580f"
+        }
+      ],
+      "baseline_assessment": {
+        "status": "legacy_exact",
+        "accepted": true
+      },
+      "source_checksum": "babb980ff0d90a4c929cf75d201f327e82d80953af68842fdb90338005c06e97",
+      "checksum": "56f3bef53a577baad6076e0939271950643b4a293afd633e01e16a6e32957322",
+      "projection_checksum": "448b6ae3fda8adfe3a4158ae0eaf638e3b66ccfbb6a7495d20cbcc45f287a0a6",
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "decision_id": "C11",
+      "approval": {
+        "id": "srd:spell:fireball:2024",
+        "checksum": "56f3bef53a577baad6076e0939271950643b4a293afd633e01e16a6e32957322",
+        "projection_checksum": "448b6ae3fda8adfe3a4158ae0eaf638e3b66ccfbb6a7495d20cbcc45f287a0a6",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C11, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+        "languages": [
+          "en",
+          "ru"
+        ],
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T19:59:59+00:00",
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "single_record_manifest": "resources/data/content/approvals/content-approval-02/C11.manifest.json"
+    },
+    {
+      "id": "srd:spell:healing-word:2024",
+      "existing_entry_id": 161,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "spells",
+        "external_key": "healing-word"
+      },
+      "action": "update",
+      "reason": null,
+      "baseline": [
+        {
+          "id": 161,
+          "digest": "eca877587991da9ee82546e66de70ec43f0194408c0b4e211fc0f40ca7f8a67d"
+        }
+      ],
+      "baseline_assessment": {
+        "status": "legacy_exact",
+        "accepted": true
+      },
+      "source_checksum": "94b92d3c1fed76365a4b812da8444131bf5413265008c9611e524c7f0275f964",
+      "checksum": "1864f0efb5131ca7647a60948c68261c2a87e71d02c547b94d1c5784057fbe47",
+      "projection_checksum": "c64590cc2eaa00dafdee67dd43589ea5cf756017298c1453f49c4180705dab10",
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "decision_id": "C12",
+      "approval": {
+        "id": "srd:spell:healing-word:2024",
+        "checksum": "1864f0efb5131ca7647a60948c68261c2a87e71d02c547b94d1c5784057fbe47",
+        "projection_checksum": "c64590cc2eaa00dafdee67dd43589ea5cf756017298c1453f49c4180705dab10",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C12, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+        "languages": [
+          "en",
+          "ru"
+        ],
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T20:00:00+00:00",
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "single_record_manifest": "resources/data/content/approvals/content-approval-02/C12.manifest.json"
+    },
+    {
+      "id": "srd:spell:magic-missile:2024",
+      "existing_entry_id": 199,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "spells",
+        "external_key": "magic-missile"
+      },
+      "action": "update",
+      "reason": null,
+      "baseline": [
+        {
+          "id": 199,
+          "digest": "462fb22c643f9d8cad142871dcc2520a4237bb167c3d803e6d739dae53603078"
+        }
+      ],
+      "baseline_assessment": {
+        "status": "legacy_exact",
+        "accepted": true
+      },
+      "source_checksum": "f12ee013b3bbd77951377402ca2b83081297d6f2b239adf64a84daaff0fc67a9",
+      "checksum": "d216203216a7559e5ecd2b2630ef40f8b0791138bf8c4fba422e5f8a3bc03c6a",
+      "projection_checksum": "87071af7c6ab94edf294a06d30a64eead4ad839611796758786501c1247e4ca2",
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "decision_id": "C13",
+      "approval": {
+        "id": "srd:spell:magic-missile:2024",
+        "checksum": "d216203216a7559e5ecd2b2630ef40f8b0791138bf8c4fba422e5f8a3bc03c6a",
+        "projection_checksum": "87071af7c6ab94edf294a06d30a64eead4ad839611796758786501c1247e4ca2",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C13, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+        "languages": [
+          "en",
+          "ru"
+        ],
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T20:00:01+00:00",
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "single_record_manifest": "resources/data/content/approvals/content-approval-02/C13.manifest.json"
+    },
+    {
+      "id": "srd:spell:shield:2024",
+      "existing_entry_id": 275,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "spells",
+        "external_key": "shield"
+      },
+      "action": "update",
+      "reason": null,
+      "baseline": [
+        {
+          "id": 275,
+          "digest": "f428522a8e8b21cbce980102f22e958097775ee5b95d2e670863ace3c12e72b9"
+        }
+      ],
+      "baseline_assessment": {
+        "status": "legacy_exact",
+        "accepted": true
+      },
+      "source_checksum": "7b71ae6fd2a2a83f258a7423ee278c594c6d0c1fe304751f0602f03e35ea63f9",
+      "checksum": "7b71ae6fd2a2a83f258a7423ee278c594c6d0c1fe304751f0602f03e35ea63f9",
+      "projection_checksum": "571bc396f26cc5ab42166f97ad5f4a9c476688bf4c7ad72bf60213dc558af35a",
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "decision_id": "C14",
+      "approval": {
+        "id": "srd:spell:shield:2024",
+        "checksum": "7b71ae6fd2a2a83f258a7423ee278c594c6d0c1fe304751f0602f03e35ea63f9",
+        "projection_checksum": "571bc396f26cc5ab42166f97ad5f4a9c476688bf4c7ad72bf60213dc558af35a",
+        "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+        "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C14, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+        "languages": [
+          "en",
+          "ru"
+        ],
+        "confirmed": true,
+        "confirmed_at": "2026-11-12T20:00:03+00:00",
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "single_record_manifest": "resources/data/content/approvals/content-approval-02/C14.manifest.json"
+    }
+  ]
+}

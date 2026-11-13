@@ -89,6 +89,11 @@ class CompendiumSync
                     // local identity and existing provenance instead of duplicating it.
                     $entry = $source->entries()->whereIn('entity_type', ['items', 'weapons', 'armor'])->where('external_key', $data['external_key'])->first();
                 }
+                // A legacy API refresh must not erase checksum reviews/provenance
+                // and turn controlled content back into implicitly executable v1.
+                if ($entry && app(CompendiumContent::class)->unified($entry)) {
+                    throw new InvalidArgumentException('API sync cannot replace controlled Unified entries; use a checksum-reviewed Unified manifest.');
+                }
                 $state = ! $entry ? 'created' : (($force || $entry->checksum !== $data['checksum'] || $entry->normalization_version !== self::VERSION || json_encode(self::canonical($entry->normalized_data)) !== json_encode(self::canonical($data['normalized_data']))) ? 'updated' : 'unchanged');
                 $counts[$data['entity_type']][$state]++;
                 if (! $dryRun && $state !== 'unchanged') {

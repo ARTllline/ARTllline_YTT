@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:equipment:half-plate-armor:2024",
+            "kind": "equipment",
+            "entity_type": "armor",
+            "external_key": "half-plate-armor",
+            "checksum": "7a2b2f6f2b6d06c6c2a6c519bb348aee8410e9368253cd5edaed2fac4c942c3b"
+        },
+        {
+            "id": "srd:equipment:alchemists-supplies:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "alchemists-supplies",
+            "checksum": "c55c42d6a5854c4afb4a6517e2e39e02bb98c59466b48df86260b9cac160a492"
+        },
+        {
+            "id": "srd:equipment:dragonchess:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "dragonchess",
+            "checksum": "2cedfff09ab3061d71f9653b317ab7d4189877d8f450448270ea42bb74b136f4"
+        },
+        {
+            "id": "srd:equipment:flail:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "flail",
+            "checksum": "47812ba67b5801d6fa3f2c9c5712a8f65f559ee4c14b80c5eca4e509f3fa15a4"
+        },
+        {
+            "id": "srd:equipment:pistol:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "pistol",
+            "checksum": "e6728fbe4a970d4ed552c9f11f8973fc0e0d6e1de317a557b87396fa52559cbe"
+        },
+        {
+            "id": "srd:equipment:handaxe:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "handaxe",
+            "checksum": "647031babef1a1d3f570748f40bf1f0f76763fa87d5417139585dc313c546452"
+        },
+        {
+            "id": "srd:equipment:lute:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "lute",
+            "checksum": "7037be91f8d07e393cff360e842eb991b07aeedd216e23b4c65a24bc1c61769d"
+        },
+        {
+            "id": "srd:equipment:herbalism-kit:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "herbalism-kit",
+            "checksum": "eb9542b460704f1a6abce69a386de4b37293cb35f890663e09a6b7e9db54f075"
+        },
+        {
+            "id": "srd:equipment:dart:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "dart",
+            "checksum": "5db614b3e1038457d519528ac65b23e16e43b3c61be5c92697afd62c943682b2"
+        },
+        {
+            "id": "srd:equipment:burnt-othur-fumes:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "burnt-othur-fumes",
+            "checksum": "cd4df379049df831dc252e9e805f20bdfce4a4b01b9117cecf56f4dfde7c8482"
+        },
+        {
+            "id": "srd:equipment:parchment:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "parchment",
+            "checksum": "f64753ae6ed250d981b8b2a936964d7e658fe07f0f2640149b29661897a98435"
+        },
+        {
+            "id": "srd:equipment:burglars-pack:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "burglars-pack",
+            "checksum": "4c2f36e4e80203e199e1ab8e3f7a259e6f3bb8c0fad1b356b7cbb75dd9714733"
+        },
+        {
+            "id": "srd:equipment:potters-tools:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "potters-tools",
+            "checksum": "6773036119d91ca56848eca267f4cd0e166e547782b3da6855ab9d0127620f53"
+        },
+        {
+            "id": "srd:equipment:greataxe:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "greataxe",
+            "checksum": "e4a878daf003a222c1d70f42c5770158eb5811bd155d365657f0f38dffbd8f9e"
+        },
+        {
+            "id": "srd:equipment:blowgun:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "blowgun",
+            "checksum": "df5e43438bbace0ab0eec397c6959dc88a01c9944f9f5af620fd788f14107849"
+        },
+        {
+            "id": "srd:equipment:greatclub:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "greatclub",
+            "checksum": "7dbc5bc0985efa22094da01fb91d57e6f8418feb9e6d9b300fec9ce66e2e3716"
+        },
+        {
+            "id": "srd:equipment:bagpipes:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "bagpipes",
+            "checksum": "282328b95d371439532c56b8c5e35d71ea019e10e93e05933c64b3e62b958954"
+        },
+        {
+            "id": "srd:equipment:poisoners-kit:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "poisoners-kit",
+            "checksum": "08adfb01064867a0e45c6217cca069ee316adab96192a7b267a7a38d97f12c77"
+        },
+        {
+            "id": "srd:equipment:torpor:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "torpor",
+            "checksum": "2757efe780e3857d40289b533593abfacd6b579df6c80367fc710df01402f22d"
+        },
+        {
+            "id": "srd:equipment:tent:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "tent",
+            "checksum": "680556dbe1e60be6833ca3b463a035430d5714629f83c789827d429fa49e85a5"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

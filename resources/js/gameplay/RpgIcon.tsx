@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 
 export const rpgIconKeys = new Set([
     'sword',
@@ -38,12 +38,14 @@ export function RpgIcon({
 }) {
     const utility = icon === 'book' || icon === 'search';
     const key = rpgIconKeys.has(icon) || utility ? icon : 'spark';
+    const [failed, setFailed] = useState<string>();
+    const asset = /^asset:[1-9][0-9]*$/.test(icon);
     return (
         <img
             className={`rpg-icon ${utility ? 'utility-pack-icon' : ''}`}
             src={
-                /^asset:[1-9][0-9]*$/.test(icon)
-                    ? `/api/assets/${icon.slice(6)}`
+                asset && failed !== icon
+                    ? `/api/assets/${icon.slice(6)}/thumbnail`
                     : utility
                       ? `/assets/player/utility/${key}.svg`
                       : `/assets/player/icons/${key}.png`
@@ -52,6 +54,11 @@ export function RpgIcon({
             height={size}
             alt=""
             draggable={false}
+            loading="lazy"
+            decoding="async"
+            onError={() => {
+                if (asset) setFailed(icon);
+            }}
             style={style}
         />
     );

@@ -6,6 +6,8 @@ import { commandId } from '../api/workspace';
 import { charactersApi } from '../api/characters';
 import type { Character } from '../tabletop/types/scene';
 import './compendium.css';
+import { ContentReference, type ContentReferenceData } from './ContentReference';
+import { RpgIcon } from '../gameplay/RpgIcon';
 
 interface Source {
     id: number;
@@ -16,6 +18,9 @@ interface Source {
     metadata: { attribution: string; license_url: string; api_ruleset: string };
 }
 interface Entry {
+    icon?: string | null;
+    permissions?: { browse: boolean; copy: boolean; execute: boolean };
+    content_reference?: ContentReferenceData | null;
     id: number;
     name: string;
     entity_type: string;
@@ -104,10 +109,18 @@ export function CompendiumBrowser({ campaignId }: { campaignId: string }) {
     useEffect(() => {
         if (selected === null) return;
         const abort = new AbortController();
-        void request<{ entry: Entry }>(`${base}/${selected}`, 'GET', undefined, abort.signal)
+        void request<{
+            entry: Entry;
+            permissions?: Entry['permissions'];
+            content_reference?: ContentReferenceData | null;
+        }>(`${base}/${selected}`, 'GET', undefined, abort.signal)
             .then((r) => {
                 if (!abort.signal.aborted) {
-                    setEntry(r.entry);
+                    setEntry({
+                        ...r.entry,
+                        permissions: r.permissions,
+                        content_reference: r.content_reference,
+                    });
                     setDetailLoading(false);
                 }
             })
@@ -240,7 +253,9 @@ export function CompendiumBrowser({ campaignId }: { campaignId: string }) {
                                     setMessage('');
                                 }}
                             >
-                                <strong>{e.name}</strong>
+                                <strong>
+                                    {e.icon && <RpgIcon icon={e.icon} size={28} />} {e.name}
+                                </strong>
                                 <small>
                                     {labels[e.entity_type]} · {e.source.version}
                                 </small>
@@ -279,7 +294,9 @@ export function CompendiumBrowser({ campaignId }: { campaignId: string }) {
             {detailLoading && <p role="status">Загрузка записи…</p>}
             {entry && (
                 <article className="compendium-detail">
-                    <h3>{entry.name}</h3>
+                    <h3>
+                        {entry.icon && <RpgIcon icon={entry.icon} size={48} />} {entry.name}
+                    </h3>
                     <p className="hint">
                         {entry.source.name} · {entry.source.license}
                     </p>
@@ -287,6 +304,7 @@ export function CompendiumBrowser({ campaignId }: { campaignId: string }) {
                         {entry.normalized_data?.description ||
                             'Описание отсутствует; доступные поля приведены ниже.'}
                     </p>
+                    <ContentReference content={entry.content_reference} showText={false} />
                     {entry.entity_type === 'spells' && (
                         <>
                             <label className="field">
@@ -315,7 +333,11 @@ export function CompendiumBrowser({ campaignId }: { campaignId: string }) {
                     ) && (
                         <button
                             className="primary-button"
-                            disabled={busy || (entry.entity_type === 'spells' && !character)}
+                            disabled={
+                                busy ||
+                                entry.permissions?.copy === false ||
+                                (entry.entity_type === 'spells' && !character)
+                            }
                             onClick={() => void copy()}
                         >
                             {busy

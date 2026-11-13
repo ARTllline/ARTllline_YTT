@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:magic_item:mace-of-smiting:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:mace-of-smiting",
+            "checksum": "71578ace2d5cad5046ac725e305c1b10943195eeff191c049831b533661c2c90"
+        },
+        {
+            "id": "srd:magic_item:trident-of-fish-command:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:trident-of-fish-command",
+            "checksum": "fdede49e524635bea0ff7bc2e7d59c0d9f0854e1137dd4bda6be6629f6e98f5d"
+        },
+        {
+            "id": "srd:magic_item:horseshoes-of-a-zephyr:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:horseshoes-of-a-zephyr",
+            "checksum": "a68945c517f1a43c5874770e2e173cbaf6d6afb9b5979135b8fbe527862c16b0"
+        },
+        {
+            "id": "srd:magic_item:sun-blade:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:sun-blade",
+            "checksum": "493fed7dc90a3dac2c5f15d7f08013b834925e457dcfa3fbe6c1e3fc42039b17"
+        },
+        {
+            "id": "srd:magic_item:boots-of-striding-and-springing:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:boots-of-striding-and-springing",
+            "checksum": "0861e4f36a8bf2716b754670ca1cea5c945501cdd994d6c97f90d3e2f9ec4c5f"
+        },
+        {
+            "id": "srd:magic_item:potion-of-flying:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-flying",
+            "checksum": "8e5c671996b7ea154bb7f034023831c62c852e3adfddfecfd08a44d9f78b8867"
+        },
+        {
+            "id": "srd:magic_item:glamoured-studded-leather:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:glamoured-studded-leather",
+            "checksum": "ad057c790144498606ce1faa0c7885274e7ef6b74d9056659884db0de9c1f6d3"
+        },
+        {
+            "id": "srd:magic_item:eversmoking-bottle:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:eversmoking-bottle",
+            "checksum": "223818dde96dde3a9e6a13fb0a98e566bf315acaf0d75053f7c61a4d1211c8a5"
+        },
+        {
+            "id": "srd:magic_item:robe-of-scintillating-colors:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:robe-of-scintillating-colors",
+            "checksum": "6877f335e551522908283e07726f4d3e411b6aa08f3ec810a497e29c7c10f4a3"
+        },
+        {
+            "id": "srd:magic_item:gem-of-seeing:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:gem-of-seeing",
+            "checksum": "081a593b018c9cbd4829f55bba863f9e8a66a279e57ce52531a1a3dfddb38c64"
+        },
+        {
+            "id": "srd:magic_item:boots-of-elvenkind:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:boots-of-elvenkind",
+            "checksum": "db8201081379ee0f6b887b8a72626d308a44cd498a876c2d9e7122a1c73856df"
+        },
+        {
+            "id": "srd:magic_item:potion-of-speed:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:potion-of-speed",
+            "checksum": "c27a076423b007832b1f5ddc66382e2b9dc0194c3bd70e4d60f9d79fb701c32a"
+        },
+        {
+            "id": "srd:magic_item:dragon-slayer:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:dragon-slayer",
+            "checksum": "e856a74811fa4315199ce40155233c9bda8f563a762a5f2b2f2023fcdbd89f0b"
+        },
+        {
+            "id": "srd:magic_item:headband-of-intellect:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:headband-of-intellect",
+            "checksum": "99e69e095d3bb8993e7e77b19f023aac521d931a4f0c36fe74bbdee52f599441"
+        },
+        {
+            "id": "srd:magic_item:robe-of-stars:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:robe-of-stars",
+            "checksum": "6c7a22bf8cf2cbb3a1a6a5ae404f2f00f9c0009caa0478f6bfb1de9138d1a43a"
+        },
+        {
+            "id": "srd:magic_item:staff-of-healing:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:staff-of-healing",
+            "checksum": "a2e40e35db90de6f891e15593924671c76c978674d3555b2f65de18ac4248044"
+        },
+        {
+            "id": "srd:magic_item:slippers-of-spider-climbing:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:slippers-of-spider-climbing",
+            "checksum": "008d4152d0497d02f1bf0a2a259b801b14a7d0291d0839716df8170dd68b4c28"
+        },
+        {
+            "id": "srd:magic_item:tome-of-leadership-and-influence:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:tome-of-leadership-and-influence",
+            "checksum": "d63f9824099e028d1f0289e738703e41d8c57084a5e9337ac370ef014f9ac20d"
+        },
+        {
+            "id": "srd:magic_item:handy-haversack:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:handy-haversack",
+            "checksum": "3184e3b80b14964bfa78d6e35f9f22f24bbf54ce21e32addf02fd07229434898"
+        },
+        {
+            "id": "srd:magic_item:eyes-of-minute-seeing:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:eyes-of-minute-seeing",
+            "checksum": "2a5603148e8667459e82e877e733dd12bc2b20bb9d2a141e586f65d9921abd22"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

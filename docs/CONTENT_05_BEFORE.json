@@ -1,0 +1,466 @@
+{
+  "plan_checksum": "42a29e8da9929035d133abb335d6bc6b3beecbaa1d27390398659b29c999e4be",
+  "actions": {
+    "create": 0,
+    "update": 13,
+    "skip": 0,
+    "conflict": 0,
+    "not_compared": 0
+  },
+  "counts": {
+    "created": 0,
+    "updated": 13,
+    "unchanged": 0,
+    "rejected": 0
+  },
+  "adapter_version": 4,
+  "review_ready": true,
+  "transaction_writer_ready": true,
+  "generated_at": "2026-11-12T22:42:10+02:00",
+  "manifest_sha256": "f995208190268c9621f98ae498a733d7bd877dc7149a220a3f1c16f2eca5ade9",
+  "database_writes": 0,
+  "records": [
+    {
+      "id": "srd:equipment:acid:2024",
+      "existing_entry_id": 340,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "items",
+        "external_key": "acid"
+      },
+      "source_checksum": "f5864f407cadbed32049992f8e4e22cab472192e18578209e75f6671876351cf",
+      "checksum": "f5864f407cadbed32049992f8e4e22cab472192e18578209e75f6671876351cf",
+      "projection_checksum": "4a9d05f0dbd25e76ace8206439efd4d51a6153cad5402553083f8a94a11ad60b",
+      "baseline": [
+        {
+          "id": 340,
+          "digest": "61b589d662b57002ac14d917e7070d3b3c61951d827eab9b5eb4a6daf2fabe80"
+        }
+      ],
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "entry_changes": {
+        "checksum": {
+          "before": "751ec91f6d395e2b3b4f2179cc54c3338b9797ea2fefd38cf2df1fc6097e8fc2",
+          "after": "f5864f407cadbed32049992f8e4e22cab472192e18578209e75f6671876351cf"
+        },
+        "normalization_version": {
+          "before": 1,
+          "after": 4
+        }
+      },
+      "name": "Acid"
+    },
+    {
+      "id": "srd:equipment:arrows:2024",
+      "existing_entry_id": 345,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "items",
+        "external_key": "arrows"
+      },
+      "source_checksum": "13f1c3bd2b19d072847d47a35c48be5559f7d5c57ac8a3faf451d9b42a714e13",
+      "checksum": "13f1c3bd2b19d072847d47a35c48be5559f7d5c57ac8a3faf451d9b42a714e13",
+      "projection_checksum": "170af7df21d7e9583bdaef623395d6f4d4b5836c8345cdc2e4c79076f8b5b019",
+      "baseline": [
+        {
+          "id": 345,
+          "digest": "c3a9091eaa0a9eb8d4346b805ee02ca798d969a6c6bab96a9580449245b7e2d8"
+        }
+      ],
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "entry_changes": {
+        "checksum": {
+          "before": "c6bf8fd78800a08c818ffdd01f8b0b0df075effabb294dce78eaf6a3ed8e3336",
+          "after": "13f1c3bd2b19d072847d47a35c48be5559f7d5c57ac8a3faf451d9b42a714e13"
+        },
+        "normalization_version": {
+          "before": 1,
+          "after": 4
+        }
+      },
+      "name": "Arrows"
+    },
+    {
+      "id": "srd:equipment:chain-mail:2024",
+      "existing_entry_id": 374,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "armor",
+        "external_key": "chain-mail"
+      },
+      "source_checksum": "6bb1e158068a10e42e3107ed55bb66bf39d7c692a75554184b7c30dbcd818b44",
+      "checksum": "6bb1e158068a10e42e3107ed55bb66bf39d7c692a75554184b7c30dbcd818b44",
+      "projection_checksum": "64410f43023cfedb14e2ea34ae4aa7dc9b3520f8ae2a9a0c55a267e36bf71260",
+      "baseline": [
+        {
+          "id": 374,
+          "digest": "9ab016ef867fe46282eafec7b0cbb21a013453b7713584993f1fbf54d4afef29"
+        }
+      ],
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "entry_changes": {
+        "checksum": {
+          "before": "4f4dffb3803a3a5fb567de443422e09623ffb0f0bec184249f07ec0a0d789c05",
+          "after": "6bb1e158068a10e42e3107ed55bb66bf39d7c692a75554184b7c30dbcd818b44"
+        },
+        "normalization_version": {
+          "before": 1,
+          "after": 4
+        }
+      },
+      "name": "Chain Mail"
+    },
+    {
+      "id": "srd:equipment:leather-armor:2024",
+      "existing_entry_id": 430,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "armor",
+        "external_key": "leather-armor"
+      },
+      "source_checksum": "10c5fb4514a6ead647601691b0832c91d884b726ecd39a8767c722fcbcd7b313",
+      "checksum": "10c5fb4514a6ead647601691b0832c91d884b726ecd39a8767c722fcbcd7b313",
+      "projection_checksum": "c3376d93c11ecde3f8378b41139cf3c8f5e89e0e6ac7ae75a787486459d49613",
+      "baseline": [
+        {
+          "id": 430,
+          "digest": "dcc3aeba8f72970522d7a01aa953286d6c4ca909940721bb5d355e2b2bca3d85"
+        }
+      ],
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "entry_changes": {
+        "checksum": {
+          "before": "6b8dbf407f30d6c50e07a02a5fd534a30ec888e1e0c80f0a6c21b0c671552ab8",
+          "after": "10c5fb4514a6ead647601691b0832c91d884b726ecd39a8767c722fcbcd7b313"
+        },
+        "normalization_version": {
+          "before": 1,
+          "after": 4
+        }
+      },
+      "name": "Leather Armor"
+    },
+    {
+      "id": "srd:equipment:longsword:2024",
+      "existing_entry_id": 436,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "weapons",
+        "external_key": "longsword"
+      },
+      "source_checksum": "db88a0878bb279d08635493d8f62b2747237674a648b1f2f663f268070e6e440",
+      "checksum": "db88a0878bb279d08635493d8f62b2747237674a648b1f2f663f268070e6e440",
+      "projection_checksum": "b31ae6cfbece1298c8b0006c58fc3ba0bf115ca3aa7959080fb798750df24fbe",
+      "baseline": [
+        {
+          "id": 436,
+          "digest": "b629882ef28edd4bc52045ee6acd7f6deada21fd0b44445773b10b629b9ad9bf"
+        }
+      ],
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "entry_changes": {
+        "checksum": {
+          "before": "b0888d1448bffd6cbab6839445df17da35fb66c7b7001e4767487ce9aafbf6ea",
+          "after": "db88a0878bb279d08635493d8f62b2747237674a648b1f2f663f268070e6e440"
+        },
+        "normalization_version": {
+          "before": 1,
+          "after": 4
+        }
+      },
+      "name": "Longsword"
+    },
+    {
+      "id": "srd:equipment:potion-of-healing:2024",
+      "existing_entry_id": 467,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "items",
+        "external_key": "potion-of-healing"
+      },
+      "source_checksum": "a724b55079637251e53252de95faa5ef580da4b555191a8b569f9810636105dd",
+      "checksum": "496c81e1c47fded10cc863a7290bd8ec93023986400ed675a938d1b757bfe3f7",
+      "projection_checksum": "316dbe107739feccc292f13224f6a60b5fab265bc6e2f6d3190eef5938ac0c09",
+      "baseline": [
+        {
+          "id": 467,
+          "digest": "5322310b5da605e25d4d863fb383d439d211bcc153210a0d7f1728415863d4d8"
+        }
+      ],
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "entry_changes": {
+        "checksum": {
+          "before": "f7e2aa3087fc5d567044bb7eca449945d23887ec2d095536b399ecdc9e4895a1",
+          "after": "496c81e1c47fded10cc863a7290bd8ec93023986400ed675a938d1b757bfe3f7"
+        },
+        "normalization_version": {
+          "before": 1,
+          "after": 4
+        }
+      },
+      "name": "Potion of Healing"
+    },
+    {
+      "id": "srd:equipment:shield:2024",
+      "existing_entry_id": 486,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "armor",
+        "external_key": "shield"
+      },
+      "source_checksum": "d05f779c0fc504a1cae3b6506acacf784e702981a174f463b92050b960ee2c51",
+      "checksum": "d05f779c0fc504a1cae3b6506acacf784e702981a174f463b92050b960ee2c51",
+      "projection_checksum": "aa6de60c2b28659cf3810e12f09e0f2ed8eac3dbebd713ea8192bab44117e9a1",
+      "baseline": [
+        {
+          "id": 486,
+          "digest": "35c25b0ab9d99301784023c17058009a2f624d7539065a43fbe8b1c4adfbcbbf"
+        }
+      ],
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "entry_changes": {
+        "checksum": {
+          "before": "009ec6d01434c3eca077b47290601119ac1eb1031b70200ab84a0b6ebcd9f79a",
+          "after": "d05f779c0fc504a1cae3b6506acacf784e702981a174f463b92050b960ee2c51"
+        },
+        "normalization_version": {
+          "before": 1,
+          "after": 4
+        }
+      },
+      "name": "Shield"
+    },
+    {
+      "id": "srd:spell:cure-wounds:2024",
+      "existing_entry_id": 73,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "spells",
+        "external_key": "cure-wounds"
+      },
+      "source_checksum": "b5abdb0be7e0fa31a1db9ab639154a5c81fce55878c7cdcea9f426300c7eab7d",
+      "checksum": "b5abdb0be7e0fa31a1db9ab639154a5c81fce55878c7cdcea9f426300c7eab7d",
+      "projection_checksum": "88f66b5581408d40fc45d3c465451aabef4a162a279909e0fdca9d5a28975708",
+      "baseline": [
+        {
+          "id": 73,
+          "digest": "233f73eeae936d895d0e637509bca7acdf4fe7262a5b74aafee99f7ce64b41b2"
+        }
+      ],
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "entry_changes": {
+        "checksum": {
+          "before": "1bf59199da42fa52a51553001793a6c444cf5c4a3e338d0c4ebc8a751f556235",
+          "after": "b5abdb0be7e0fa31a1db9ab639154a5c81fce55878c7cdcea9f426300c7eab7d"
+        },
+        "normalization_version": {
+          "before": 1,
+          "after": 4
+        }
+      },
+      "name": "Cure Wounds"
+    },
+    {
+      "id": "srd:spell:detect-magic:2024",
+      "existing_entry_id": 82,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "spells",
+        "external_key": "detect-magic"
+      },
+      "source_checksum": "1a8deb39006aca1759cb8acd962e97bd5b2d6a6b0cde41d41fde1c75f11ccab7",
+      "checksum": "1a8deb39006aca1759cb8acd962e97bd5b2d6a6b0cde41d41fde1c75f11ccab7",
+      "projection_checksum": "bb99401f100c419766f65d3aa48d64c15f271bdcf660c5b8fa12a5fda8141d58",
+      "baseline": [
+        {
+          "id": 82,
+          "digest": "1348c37a6bd6e1eb7190069fdc7dfa37cb64e534e1d8b693bbca4d46257c923d"
+        }
+      ],
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "entry_changes": {
+        "checksum": {
+          "before": "ffcb9b7647742056a5f4d1d6e80b43f1078ddecff89d877abcfc6aad25d79170",
+          "after": "1a8deb39006aca1759cb8acd962e97bd5b2d6a6b0cde41d41fde1c75f11ccab7"
+        },
+        "normalization_version": {
+          "before": 1,
+          "after": 4
+        }
+      },
+      "name": "Detect Magic"
+    },
+    {
+      "id": "srd:spell:fireball:2024",
+      "existing_entry_id": 126,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "spells",
+        "external_key": "fireball"
+      },
+      "source_checksum": "babb980ff0d90a4c929cf75d201f327e82d80953af68842fdb90338005c06e97",
+      "checksum": "56f3bef53a577baad6076e0939271950643b4a293afd633e01e16a6e32957322",
+      "projection_checksum": "448b6ae3fda8adfe3a4158ae0eaf638e3b66ccfbb6a7495d20cbcc45f287a0a6",
+      "baseline": [
+        {
+          "id": 126,
+          "digest": "f8b0af579a5957e8e83d0a0d1beee88929076ce106395ea8113fd5574d7e580f"
+        }
+      ],
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "entry_changes": {
+        "checksum": {
+          "before": "8505cbc90db4530e1a3f2d1971057b177de08ef87014cdc70a01bcc8c78530a4",
+          "after": "56f3bef53a577baad6076e0939271950643b4a293afd633e01e16a6e32957322"
+        },
+        "normalization_version": {
+          "before": 1,
+          "after": 4
+        }
+      },
+      "name": "Fireball"
+    },
+    {
+      "id": "srd:spell:healing-word:2024",
+      "existing_entry_id": 161,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "spells",
+        "external_key": "healing-word"
+      },
+      "source_checksum": "94b92d3c1fed76365a4b812da8444131bf5413265008c9611e524c7f0275f964",
+      "checksum": "1864f0efb5131ca7647a60948c68261c2a87e71d02c547b94d1c5784057fbe47",
+      "projection_checksum": "c64590cc2eaa00dafdee67dd43589ea5cf756017298c1453f49c4180705dab10",
+      "baseline": [
+        {
+          "id": 161,
+          "digest": "eca877587991da9ee82546e66de70ec43f0194408c0b4e211fc0f40ca7f8a67d"
+        }
+      ],
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "entry_changes": {
+        "checksum": {
+          "before": "6e7fcd5db6697fa45ba298f80b7213dbd72757763214ea09c25fce183231f24c",
+          "after": "1864f0efb5131ca7647a60948c68261c2a87e71d02c547b94d1c5784057fbe47"
+        },
+        "normalization_version": {
+          "before": 1,
+          "after": 4
+        }
+      },
+      "name": "Healing Word"
+    },
+    {
+      "id": "srd:spell:magic-missile:2024",
+      "existing_entry_id": 199,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "spells",
+        "external_key": "magic-missile"
+      },
+      "source_checksum": "f12ee013b3bbd77951377402ca2b83081297d6f2b239adf64a84daaff0fc67a9",
+      "checksum": "d216203216a7559e5ecd2b2630ef40f8b0791138bf8c4fba422e5f8a3bc03c6a",
+      "projection_checksum": "87071af7c6ab94edf294a06d30a64eead4ad839611796758786501c1247e4ca2",
+      "baseline": [
+        {
+          "id": 199,
+          "digest": "462fb22c643f9d8cad142871dcc2520a4237bb167c3d803e6d739dae53603078"
+        }
+      ],
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "entry_changes": {
+        "checksum": {
+          "before": "acb128e6bf2add71ef2884ea9a49b4660cf80afcadf4a3ccf72d51eb6d7a2785",
+          "after": "d216203216a7559e5ecd2b2630ef40f8b0791138bf8c4fba422e5f8a3bc03c6a"
+        },
+        "normalization_version": {
+          "before": 1,
+          "after": 4
+        }
+      },
+      "name": "Magic Missile"
+    },
+    {
+      "id": "srd:spell:shield:2024",
+      "existing_entry_id": 275,
+      "identity": {
+        "source": "srd-2024",
+        "entity_type": "spells",
+        "external_key": "shield"
+      },
+      "source_checksum": "7b71ae6fd2a2a83f258a7423ee278c594c6d0c1fe304751f0602f03e35ea63f9",
+      "checksum": "7b71ae6fd2a2a83f258a7423ee278c594c6d0c1fe304751f0602f03e35ea63f9",
+      "projection_checksum": "571bc396f26cc5ab42166f97ad5f4a9c476688bf4c7ad72bf60213dc558af35a",
+      "baseline": [
+        {
+          "id": 275,
+          "digest": "f428522a8e8b21cbce980102f22e958097775ee5b95d2e670863ace3c12e72b9"
+        }
+      ],
+      "gates": {
+        "browse": true,
+        "copy": true,
+        "execute": false
+      },
+      "entry_changes": {
+        "checksum": {
+          "before": "ba3dff92928e98fb4b83b6786b2882acb72b3adf06e363155c598f897704de7d",
+          "after": "7b71ae6fd2a2a83f258a7423ee278c594c6d0c1fe304751f0602f03e35ea63f9"
+        },
+        "normalization_version": {
+          "before": 1,
+          "after": 4
+        }
+      },
+      "name": "Shield"
+    }
+  ]
+}

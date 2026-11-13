@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:magic_item:eyes-of-the-eagle:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:eyes-of-the-eagle",
+            "checksum": "3e27245930bd28c593edb2558f3c624a875fec5fc29ed502380d2fc30303b389"
+        },
+        {
+            "id": "srd:magic_item:manual-of-golems:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:manual-of-golems",
+            "checksum": "8c7734f5d632d29373d16d401a902b72da75cbc5aef21d3cb1549574b6471805"
+        },
+        {
+            "id": "srd:magic_item:wand-of-wonder:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wand-of-wonder",
+            "checksum": "292d35bcccdd1d97addfa93be0e355e7864ceae4aed97cde1561216b1d49b858"
+        },
+        {
+            "id": "srd:magic_item:periapt-of-health:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:periapt-of-health",
+            "checksum": "7d646396f9b9cc029c34894a906e7299934fe5b1d0d133e41b3b183af2db4abe"
+        },
+        {
+            "id": "srd:magic_item:wand-of-the-war-mage-3:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wand-of-the-war-mage-3",
+            "checksum": "4a3ed022d94a3b8ed831183d8be04ffbaa7c7547a18af82b78bec56d02a70344"
+        },
+        {
+            "id": "srd:magic_item:chime-of-opening:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:chime-of-opening",
+            "checksum": "1c57384e36636b14453f3e3ead056211193ef4dbee3b41cf60507b8d0d9ec01a"
+        },
+        {
+            "id": "srd:magic_item:immovable-rod:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:immovable-rod",
+            "checksum": "62da8ee4da9164dd936dc46aecc68d4d5f69d8b621a41bc0fc250a14dfa7d1ec"
+        },
+        {
+            "id": "srd:magic_item:armor-2:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:armor-2",
+            "checksum": "5b2300ceda7ecb14074f16467f9d53bff4bff9b31c4deaefb1cefff09bf6460d"
+        },
+        {
+            "id": "srd:magic_item:stone-of-controlling-earth-elementals:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:stone-of-controlling-earth-elementals",
+            "checksum": "19f24e39d4af1ca4c54e77f64a49e5893a11eba7c6b0f45047e9ad0a903f9f11"
+        },
+        {
+            "id": "srd:magic_item:robe-of-useful-items:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:robe-of-useful-items",
+            "checksum": "36698930d5efcb5d439a9b687cfe0309471778accc175d3995caedd9d0e8bad0"
+        },
+        {
+            "id": "srd:magic_item:tome-of-understanding:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:tome-of-understanding",
+            "checksum": "fbfbe183537f396f8eb43f887e5d8ab7d5898f120a4da29d361ae346cda413fa"
+        },
+        {
+            "id": "srd:magic_item:ring-of-the-ram:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-the-ram",
+            "checksum": "80a6cc9dcd2c6b8918a6e178c8333ff010447ffa110c2568c447ff7ebbbc06f6"
+        },
+        {
+            "id": "srd:magic_item:cloak-of-elvenkind:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:cloak-of-elvenkind",
+            "checksum": "86965fdd35ddacbe414d0b4c331206ca1e96a3047e5779a1787b1f395d7ad260"
+        },
+        {
+            "id": "srd:magic_item:staff-of-frost:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:staff-of-frost",
+            "checksum": "694c035dfc222c450388758267bcbb79645f856836ece22d1cba87c49270049b"
+        },
+        {
+            "id": "srd:magic_item:wand-of-the-war-mage-2:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:wand-of-the-war-mage-2",
+            "checksum": "92b771b5cec2000e671f0f00da0bf0af69005ad58d1ff2d88b0bae9a77c10c2d"
+        },
+        {
+            "id": "srd:magic_item:cloak-of-the-manta-ray:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:cloak-of-the-manta-ray",
+            "checksum": "c930d413bf07ec51748723bc1e48b32466bc2e1f430fe3e654465a6ef1f86fe1"
+        },
+        {
+            "id": "srd:magic_item:shield-3:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:shield-3",
+            "checksum": "4a65307ff962e63b57105600e4b5645a31e5887dd43f81a5a4a29b7a63014b52"
+        },
+        {
+            "id": "srd:magic_item:ring-of-animal-influence:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:ring-of-animal-influence",
+            "checksum": "f82a8bf944dffd973197da5d4b76f597714266fa3a2143eeaf5624dfc09fc0a5"
+        },
+        {
+            "id": "srd:magic_item:necklace-of-adaptation:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:necklace-of-adaptation",
+            "checksum": "011831b9281305cb369bb5d67be1dc3883c21d363d2c68c42e62f6a3d98c54e2"
+        },
+        {
+            "id": "srd:magic_item:manual-of-gainful-exercise:2024",
+            "kind": "magic_item",
+            "entity_type": "items",
+            "external_key": "magic-item:manual-of-gainful-exercise",
+            "checksum": "e46b04a5d8bbc2773d8e404c112c884a55b585641fc7347c14d6c8884c1e666b"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

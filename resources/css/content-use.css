@@ -1,0 +1,80 @@
+.content-use-panel {
+    display: grid;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    max-width: 470px;
+    max-height: 72vh;
+    overflow: auto;
+    padding: 8px;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+}
+.content-use-panel > * {
+    min-width: 0;
+}
+.content-use-panel p {
+    margin: 0;
+    white-space: normal;
+}
+.content-use-facts {
+    display: grid;
+    gap: 4px;
+}
+.editor-dialog:has(.content-use-panel) {
+    width: min(520px, calc(100vw - 32px));
+}
+.content-use-panel header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.content-use-panel h3 {
+    margin: 0 0 5px;
+}
+.content-use-panel fieldset {
+    display: grid;
+    gap: 10px;
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+.content-use-panel label,
+.content-use-confirm label {
+    display: grid;
+    gap: 5px;
+}
+.content-use-panel select,
+.content-use-confirm select,
+.content-use-confirm input[type='number'] {
+    width: 100%;
+    min-width: 0;
+}
+.session-content-list {
+    display: grid;
+    gap: 6px;
+    max-height: 300px;
+    overflow: auto;
+}
+.session-content-list button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+}
+.session-content-list button span {
+    flex: 1;
+}
+.content-use-confirm {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid #74634b;
+    border-radius: 8px;
+    background: #171a21;
+}
+.content-use-confirm label:has(input[type='checkbox']) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}

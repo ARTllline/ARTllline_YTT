@@ -1,0 +1,25 @@
+{
+    "pack": "unified-dnd-local-v1",
+    "installed_locally": true,
+    "eligible": 755,
+    "linked": 638,
+    "unlinked": 117,
+    "unique_assets": 481,
+    "items": { "linked": 356, "unlinked": 60 },
+    "spells": { "linked": 282, "unlinked": 57 },
+    "unlinked_reasons": { "unconfirmed_visual_review": 61, "no_confirmed_image": 56 },
+    "repeat": { "create": 0, "skip": 638, "all_74_tables_unchanged": true },
+    "qa": {
+        "browser": "pass",
+        "final_build_browser": "pass",
+        "react_errors": 0,
+        "post_cleanup_all_74_tables_match": true,
+        "original_private_files_verified": 1268,
+        "original_private_files_changed": 0,
+        "temporary_copies_retained": 0
+    },
+    "srd_import_resumed": false,
+    "existing_copies_modified": false,
+    "mechanics_modified": false,
+    "extracted_art_in_git_or_frontend_build": false
+}

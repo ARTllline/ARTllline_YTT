@@ -4,6 +4,7 @@ namespace App\Spells;
 
 use App\Combat\LifeCycle;
 use App\Combat\TurnBudget;
+use App\Compendium\CompendiumContent;
 use App\Models\Character;
 use App\Models\Scene;
 use App\Services\CharacterRules;
@@ -25,6 +26,7 @@ class SpellCasting
 
     public function validate(Character $c, array $a, ?int $level, bool $item = false, bool $completed = false): int
     {
+        CompendiumContent::validateAbility($a);
         abort_if(app(LifeCycle::class)->blocked($c), 422, 'Персонаж без сознания, побеждён или мёртв и не может колдовать.');
         $s = $a['spell'];
         if (! $item) {

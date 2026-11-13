@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Compendium\CompendiumContent;
 use App\Compendium\CompendiumSync;
 use App\Compendium\CopyCompendiumEntry;
 use App\Models\Campaign;
@@ -19,7 +20,8 @@ class CompendiumController extends Controller
         Gate::authorize('update', $campaign);
         $data = $r->validate(['search' => 'sometimes|nullable|string|max:100', 'type' => ['sometimes', 'nullable', Rule::in(CompendiumSync::TYPES)],
             'source' => 'sometimes|nullable|integer|min:1', 'page' => 'sometimes|integer|min:1']);
-        $query = CompendiumEntry::with('source')->whereNull('library_user_id')->select(['id', 'source_id', 'entity_type', 'external_key', 'name', 'slug']);
+        $consumer = app(CompendiumContent::class);
+        $query = $consumer->browseQuery(CompendiumEntry::with('source')->whereNull('library_user_id'));
         if ($data['type'] ?? null) {
             $query->where('entity_type', $data['type']);
         }
@@ -32,7 +34,7 @@ class CompendiumController extends Controller
         }
         $page = $query->orderBy('name')->orderBy('id')->paginate(30);
 
-        return ['entries' => $page->items(), 'page' => $page->currentPage(), 'pages' => $page->lastPage(), 'total' => $page->total(),
+        return ['entries' => collect($page->items())->filter(fn ($e) => $consumer->gates($e)['browse'])->map(fn ($e) => $e->only(['id', 'source_id', 'entity_type', 'external_key', 'name', 'slug']) + ['source' => $e->source, 'icon' => $e->visualIcon()])->values()->all(), 'page' => $page->currentPage(), 'pages' => $page->lastPage(), 'total' => $page->total(),
             'sources' => CompendiumSource::orderBy('name')->get(), 'types' => CompendiumSync::TYPES];
     }
 
@@ -41,8 +43,9 @@ class CompendiumController extends Controller
         Gate::authorize('update', $campaign);
 
         abort_if($entry->library_user_id !== null, 404);
+        app(CompendiumContent::class)->require($entry, 'browse');
 
-        return ['entry' => $entry->load('source'), 'copies' => CompendiumCopy::where('campaign_id', $campaign->id)->where('compendium_entry_id', $entry->id)->orderByDesc('id')->limit(20)->get()];
+        return ['entry' => $entry->load('source')->toArray() + ['icon' => $entry->visualIcon()], 'permissions' => app(CompendiumContent::class)->gates($entry), 'content_reference' => app(CompendiumContent::class)->unified($entry) ? app(CompendiumContent::class)->reference($entry) : null, 'copies' => CompendiumCopy::where('campaign_id', $campaign->id)->where('compendium_entry_id', $entry->id)->orderByDesc('id')->limit(20)->get()];
     }
 
     public function copy(Request $r, Campaign $campaign, CopyCompendiumEntry $copy): array

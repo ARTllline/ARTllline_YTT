@@ -1,0 +1,49 @@
+{
+    "format": 1,
+    "adapter_version": 4,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:equipment:chain-mail:2024",
+            "kind": "equipment",
+            "entity_type": "armor",
+            "external_key": "chain-mail",
+            "checksum": "6bb1e158068a10e42e3107ed55bb66bf39d7c692a75554184b7c30dbcd818b44"
+        }
+    ],
+    "reviews": [
+        {
+            "id": "srd:equipment:chain-mail:2024",
+            "checksum": "6bb1e158068a10e42e3107ed55bb66bf39d7c692a75554184b7c30dbcd818b44",
+            "projection_checksum": "64410f43023cfedb14e2ea34ae4aa7dc9b3520f8ae2a9a0c55a267e36bf71260",
+            "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+            "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C3, EN\/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+            "languages": [
+                "en",
+                "ru"
+            ],
+            "confirmed": true,
+            "confirmed_at": "2026-11-12T19:59:48+00:00",
+            "browse": true,
+            "copy": true,
+            "execute": false
+        }
+    ],
+    "baseline_reviews": [
+        {
+            "id": "srd:equipment:chain-mail:2024",
+            "policy": "legacy-equipment-missing-null-ammunition-v1",
+            "entry_id": 374,
+            "baseline_digest": "9ab016ef867fe46282eafec7b0cbb21a013453b7713584993f1fbf54d4afef29",
+            "confirmed": true,
+            "confirmed_at": "2026-11-12T21:59:44+02:00",
+            "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+            "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B3. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id\/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+        }
+    ]
+}

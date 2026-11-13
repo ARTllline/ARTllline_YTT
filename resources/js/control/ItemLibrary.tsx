@@ -1,12 +1,24 @@
 import { AssetIconPicker } from './AssetLibrary';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Plus, Package } from 'lucide-react';
 import { request } from '../api/client';
 import { commandId } from '../api/workspace';
 import { RpgIcon } from '../gameplay/RpgIcon';
-import { ItemFacts, itemCategories } from '../rpg/itemGameplay';
+import { itemCategories } from '../rpg/itemGameplay';
 import { ItemGameplayEditor } from '../rpg/ItemGameplayEditor';
 import type { ItemDefinition } from '../rpg/model';
+import { ItemMechanics } from '../compendium/EntryFacts';
+import { rarityLabels, itemCategoryLabel } from '../compendium/presentation';
+import { ContentReference } from '../compendium/ContentReference';
+import { ItemCatalog, type SystemItem } from '../compendium/ItemCatalog';
+import {
+    CatalogBack,
+    CatalogCardHeader,
+    CoverageBadge,
+    focusCatalogInspector,
+    OriginBadge,
+    rulesLabel,
+} from '../compendium/Catalog';
 
 export const libraryItemsApi = {
     list: (signal?: AbortSignal) =>
@@ -30,50 +42,65 @@ export const equipmentSlots: Record<string, string> = {
     off_hand: 'Вторая рука',
     ranged: 'Дальний бой',
 };
-export function ItemCard({ definition: d }: { definition: ItemDefinition }) {
+export function ItemCard({
+    definition: d,
+    sourceLabel,
+    actions,
+}: {
+    definition: ItemDefinition;
+    sourceLabel?: string;
+    actions?: ReactNode;
+}) {
     return (
         <>
-            <RpgIcon icon={d.icon} size={72} />
-            <h3>{d.name}</h3>
-            <p className="muted">
-                {itemCategories[d.category]} · {rarities[d.rarity] ?? d.rarity}
-            </p>
-            <ItemFacts definition={d} />
-            <p>{d.description || 'Описание пока не добавлено.'}</p>
-            {d.modifiers.ac ? (
-                <p>
-                    Защита {d.modifiers.ac >= 0 ? '+' : ''}
-                    {d.modifiers.ac} AC
+            <CatalogCardHeader
+                name={d.name}
+                icon={d.icon}
+                kind="item"
+                tone={`rarity-${d.rarity}`}
+                subtitle={`${itemCategoryLabel(d)} · ${rarityLabels[d.rarity] ?? d.rarity}`}
+            >
+                <span className="catalog-rules">{rulesLabel(d.content, sourceLabel)}</span>
+                {d.content?.gates.execute === false && <CoverageBadge coverage="MANUAL" />}
+                {actions}
+            </CatalogCardHeader>
+            <section className="catalog-sheet-section">
+                <h4 className="catalog-section-title">Механики YTT</h4>
+                <ItemMechanics definition={d} />
+                <p className="catalog-storage">
+                    {d.equipment_slots.map((s) => equipmentSlots[s] ?? s).join(' · ') ||
+                        'Хранится в рюкзаке'}
+                    {d.max_stack > 1 ? ` · Стопка до ${d.max_stack}` : ''}
                 </p>
-            ) : null}
-            {d.modifiers.speed ? (
-                <p>
-                    Скорость {d.modifiers.speed >= 0 ? '+' : ''}
-                    {d.modifiers.speed} ft
+            </section>
+            <section className="catalog-sheet-section">
+                <h4 className="catalog-section-title">Описание</h4>
+                <p className="spell-reference">
+                    {d.content?.reference || d.description || 'Описание пока не добавлено.'}
                 </p>
-            ) : null}
-            {!!d.modifiers.checks && (
-                <p>
-                    {Object.entries(d.modifiers.checks)
-                        .map(([key, value]) => `${key}: ${value >= 0 ? '+' : ''}${value}`)
-                        .join(' · ')}
-                </p>
+            </section>
+            {d.content && (
+                <details className="catalog-source">
+                    <summary>Сведения источника и примечания</summary>
+                    <ContentReference content={d.content} showText={false} />
+                </details>
             )}
-            <p className="hint">
-                {d.equipment_slots.map((s) => equipmentSlots[s] ?? s).join(' · ') ||
-                    'Хранится в рюкзаке'}
-                {d.max_stack > 1 ? ` · Стопка до ${d.max_stack}` : ''}
-            </p>
         </>
     );
 }
-const rarities: Record<string, string> = {
-    common: 'Обычный',
-    uncommon: 'Необычный',
-    rare: 'Редкий',
-    epic: 'Эпический',
-    legendary: 'Легендарный',
-};
+const rarities = Object.fromEntries(
+    [
+        'common',
+        'uncommon',
+        'rare',
+        'very_rare',
+        'epic',
+        'legendary',
+        'artifact',
+        'varies',
+        'unknown',
+    ].map((key) => [key, rarityLabels[key]]),
+);
 const icons = [
     'item_sword',
     'item_shield',
@@ -109,27 +136,37 @@ const empty = (): ItemDefinition => ({
 });
 
 export function ItemLibrary() {
+    const inspector = useRef<HTMLElement>(null);
     const [items, setItems] = useState<ItemDefinition[] | null>(null),
         [error, setError] = useState(''),
-        [search, setSearch] = useState('');
+        [system, setSystem] = useState<SystemItem | null>(null);
+    const [message, setMessage] = useState('');
+    const [itemsLoading, setItemsLoading] = useState(true);
     const [selected, setSelected] = useState<ItemDefinition | null>(null),
         [draft, setDraft] = useState<ItemDefinition | null>(null),
         [busy, setBusy] = useState(false);
     const [mutation, setMutation] = useState(commandId());
     const load = () => {
         setError('');
+        setItemsLoading(true);
         void libraryItemsApi
             .list()
             .then((r) => setItems(r.definitions))
-            .catch((e) => setError(e.message));
+            .catch((e) => setError(e.message))
+            .finally(() => setItemsLoading(false));
     };
     useEffect(() => {
         const abort = new AbortController();
         void libraryItemsApi
             .list(abort.signal)
-            .then((r) => setItems(r.definitions))
+            .then((r) => {
+                if (!abort.signal.aborted) setItems(r.definitions);
+            })
             .catch((e) => {
                 if (!abort.signal.aborted) setError(e.message);
+            })
+            .finally(() => {
+                if (!abort.signal.aborted) setItemsLoading(false);
             });
         return () => abort.abort();
     }, []);
@@ -166,6 +203,7 @@ export function ItemLibrary() {
                 ...(all ?? []).filter((i) => i.id !== r.definition.id),
             ]);
             setSelected(r.definition);
+            setSystem(null);
             setDraft(null);
         } catch (e) {
             setError((e as Error).message);
@@ -174,10 +212,10 @@ export function ItemLibrary() {
         }
     };
     return (
-        <section className="item-library">
+        <section className="item-library visual-compendium">
             <header className="control-heading">
                 <div>
-                    <span className="eyebrow">GM HUB / ITEM LIBRARY</span>
+                    <span className="eyebrow">КОМПЕНДИУМ / ПРЕДМЕТЫ</span>
                     <h1>Предметы</h1>
                     <p className="muted">Одна коллекция для ваших героев и кампаний.</p>
                 </div>
@@ -186,64 +224,42 @@ export function ItemLibrary() {
                     Создать предмет
                 </button>
             </header>
+            {message && (
+                <p role="status" className="catalog-success">
+                    {message}
+                </p>
+            )}
             {error && (
                 <p role="alert" className="form-error">
                     {error} <button onClick={load}>Повторить загрузку</button>
                 </p>
             )}
-            <div className="item-library-layout">
-                <div>
-                    <input
-                        aria-label="Найти предмет"
-                        placeholder="Поиск в коллекции…"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                    {items === null ? (
-                        <p role="status">Загрузка предметов…</p>
-                    ) : !items.length ? (
-                        <div className="control-empty">
-                            <Package size={40} />
-                            <h2>Соберите арсенал для ваших историй</h2>
-                            <p>
-                                Начните с оружия, доспеха или памятной вещи. Выдавайте их любому
-                                своему персонажу.
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="library-item-grid">
-                            {items
-                                .filter((d) =>
-                                    d.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
-                                )
-                                .map((d) => (
-                                    <button
-                                        key={d.id}
-                                        className={`library-item rarity-${d.rarity}`}
-                                        aria-pressed={selected?.id === d.id}
-                                        onClick={() => setSelected(d)}
-                                        onDoubleClick={() => edit(d)}
-                                    >
-                                        <RpgIcon icon={d.icon} size={64} />
-                                        <strong>{d.name}</strong>
-                                        <small>{itemCategories[d.category]}</small>
-                                        <span className="rpg-tooltip">
-                                            <strong>{d.name}</strong>
-                                            <ItemFacts definition={d} />
-                                            <span>{d.description}</span>
-                                        </span>
-                                    </button>
-                                ))}
-                        </div>
-                    )}
-                    {items?.length &&
-                    !items.some((d) =>
-                        d.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
-                    ) ? (
-                        <p className="hint">Предметов по этому запросу нет.</p>
-                    ) : null}
-                </div>
-                <aside className="library-inspector">
+            <div className={`item-library-layout ${selected || draft ? 'has-inspection' : ''}`}>
+                <ItemCatalog
+                    items={items}
+                    itemsLoading={itemsLoading}
+                    selectedKey={
+                        selected
+                            ? `${system ? 'system' : 'custom'}:${system?.id ?? selected.id}`
+                            : undefined
+                    }
+                    onInspect={(definition, entry) => {
+                        if (busy) return;
+                        if (draft && !confirm('Отменить несохранённые изменения предмета?')) return;
+                        setDraft(null);
+                        setSelected(definition);
+                        setSystem(entry ?? null);
+                        setMessage('');
+                        focusCatalogInspector(inspector);
+                    }}
+                />
+                <aside
+                    ref={inspector}
+                    tabIndex={-1}
+                    className="library-inspector catalog-inspector"
+                    aria-label="Просмотр предмета"
+                >
+                    {(selected || draft) && <CatalogBack />}
                     {draft ? (
                         <>
                             <h2>{draft.id ? 'Редактировать предмет' : 'Новый предмет'}</h2>
@@ -423,13 +439,96 @@ export function ItemLibrary() {
                         </>
                     ) : selected ? (
                         <>
-                            <ItemCard definition={selected} />
-                            <button className="secondary-button" onClick={() => edit(selected)}>
-                                Редактировать
-                            </button>
-                            <button className="primary-button" onClick={() => edit(selected, true)}>
-                                Duplicate · создать вариант
-                            </button>
+                            <OriginBadge custom={!system} />
+                            <ItemCard
+                                definition={selected}
+                                sourceLabel={
+                                    system?.source
+                                        ? `${system.source.name} ${system.source.version}`
+                                        : undefined
+                                }
+                                actions={
+                                    <div className="button-row">
+                                        {system ? (
+                                            <button
+                                                className="primary-button"
+                                                disabled={busy || !system.copyable}
+                                                onClick={async () => {
+                                                    setBusy(true);
+                                                    setError('');
+                                                    try {
+                                                        const result = await request<{
+                                                            definition: ItemDefinition;
+                                                        }>('/library/items/compendium', 'POST', {
+                                                            entryId: system.id,
+                                                            clientMutationId: commandId(),
+                                                        });
+                                                        setItems((all) => [
+                                                            result.definition,
+                                                            ...(all ?? []).filter(
+                                                                (d) =>
+                                                                    d.id !== result.definition.id,
+                                                            ),
+                                                        ]);
+                                                        setSelected(result.definition);
+                                                        setSystem(null);
+                                                        setMessage(
+                                                            'Независимая копия добавлена в мою коллекцию. Теперь её можно редактировать.',
+                                                        );
+                                                    } catch (e) {
+                                                        setError((e as Error).message);
+                                                    } finally {
+                                                        setBusy(false);
+                                                    }
+                                                }}
+                                            >
+                                                {busy
+                                                    ? 'Создание копии…'
+                                                    : 'Копировать в мою коллекцию'}
+                                            </button>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    className="secondary-button"
+                                                    onClick={() => edit(selected)}
+                                                >
+                                                    Редактировать
+                                                </button>
+                                                <button
+                                                    className="primary-button"
+                                                    onClick={() => edit(selected, true)}
+                                                >
+                                                    Создать вариант
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                }
+                            />
+                            {system && (
+                                <>
+                                    <p className="hint">
+                                        Системная запись доступна для чтения. Копия в вашей
+                                        коллекции независима от каталога.
+                                    </p>
+                                    {system.source && (
+                                        <details>
+                                            <summary>
+                                                Источник · {system.source.name}{' '}
+                                                {system.source.version}
+                                            </summary>
+                                            <p>{system.source.attribution}</p>
+                                            <p>{system.source.license}</p>
+                                        </details>
+                                    )}
+                                    {!system.copyable && (
+                                        <p className="hint">
+                                            Источник разрешает просмотр; копирование пока
+                                            недоступно.
+                                        </p>
+                                    )}
+                                </>
+                            )}
                         </>
                     ) : (
                         <div className="control-empty">

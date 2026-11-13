@@ -1,0 +1,416 @@
+{
+  "format": 1,
+  "adapter_version": 4,
+  "source": "srd-2024",
+  "ruleset": "dnd-2024",
+  "export": {
+    "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+    "library_version": "0.9.0-audit.1"
+  },
+  "selection": [
+    {
+      "id": "srd:equipment:acid:2024",
+      "kind": "equipment",
+      "entity_type": "items",
+      "external_key": "acid",
+      "checksum": "f5864f407cadbed32049992f8e4e22cab472192e18578209e75f6671876351cf"
+    },
+    {
+      "id": "srd:equipment:arrows:2024",
+      "kind": "equipment",
+      "entity_type": "items",
+      "external_key": "arrows",
+      "checksum": "13f1c3bd2b19d072847d47a35c48be5559f7d5c57ac8a3faf451d9b42a714e13"
+    },
+    {
+      "id": "srd:equipment:chain-mail:2024",
+      "kind": "equipment",
+      "entity_type": "armor",
+      "external_key": "chain-mail",
+      "checksum": "6bb1e158068a10e42e3107ed55bb66bf39d7c692a75554184b7c30dbcd818b44"
+    },
+    {
+      "id": "srd:equipment:leather-armor:2024",
+      "kind": "equipment",
+      "entity_type": "armor",
+      "external_key": "leather-armor",
+      "checksum": "10c5fb4514a6ead647601691b0832c91d884b726ecd39a8767c722fcbcd7b313"
+    },
+    {
+      "id": "srd:equipment:longsword:2024",
+      "kind": "equipment",
+      "entity_type": "weapons",
+      "external_key": "longsword",
+      "checksum": "db88a0878bb279d08635493d8f62b2747237674a648b1f2f663f268070e6e440"
+    },
+    {
+      "id": "srd:equipment:potion-of-healing:2024",
+      "kind": "equipment",
+      "entity_type": "items",
+      "external_key": "potion-of-healing",
+      "checksum": "a724b55079637251e53252de95faa5ef580da4b555191a8b569f9810636105dd",
+      "correction": {
+        "evidence": "Agent editorial proposal; NOT human approval. SRD 5.2.1 p. 95, 99; https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf; PDF SHA256 8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+        "fields": {
+          "description_ru": "Это зелье — магический предмет. Бонусным действием вы можете выпить его или напоить им другое существо в пределах 5 футов от себя. Существо, выпившее магическую красную жидкость из этой склянки, восстанавливает 2d4 + 2 хита."
+        }
+      },
+      "content_checksum": "496c81e1c47fded10cc863a7290bd8ec93023986400ed675a938d1b757bfe3f7"
+    },
+    {
+      "id": "srd:equipment:shield:2024",
+      "kind": "equipment",
+      "entity_type": "armor",
+      "external_key": "shield",
+      "checksum": "d05f779c0fc504a1cae3b6506acacf784e702981a174f463b92050b960ee2c51"
+    },
+    {
+      "id": "srd:spell:cure-wounds:2024",
+      "kind": "spell",
+      "entity_type": "spells",
+      "external_key": "cure-wounds",
+      "checksum": "b5abdb0be7e0fa31a1db9ab639154a5c81fce55878c7cdcea9f426300c7eab7d"
+    },
+    {
+      "id": "srd:spell:detect-magic:2024",
+      "kind": "spell",
+      "entity_type": "spells",
+      "external_key": "detect-magic",
+      "checksum": "1a8deb39006aca1759cb8acd962e97bd5b2d6a6b0cde41d41fde1c75f11ccab7"
+    },
+    {
+      "id": "srd:spell:fireball:2024",
+      "kind": "spell",
+      "entity_type": "spells",
+      "external_key": "fireball",
+      "checksum": "babb980ff0d90a4c929cf75d201f327e82d80953af68842fdb90338005c06e97",
+      "correction": {
+        "evidence": "Agent editorial proposal; NOT human approval. SRD 5.2.1 p. 131; https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf; PDF SHA256 8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+        "fields": {
+          "description_en": "A bright streak flashes from you to a point you choose within range and then blossoms with a low roar into a fiery explosion. Each creature in a 20-foot-radius Sphere centered on that point makes a Dexterity saving throw, taking 8d6 Fire damage on a failed save or half as much damage on a successful one.\n  Flammable objects in the area that aren't being worn or carried start burning.\n\nUsing a Higher-Level Spell Slot. The damage increases by 1d6 for each spell slot level above 3.",
+          "description_ru": "Яркая вспышка проносится от вас к выбранной вами точке в пределах дистанции, а затем с низким гулом расцветает огненным взрывом. Каждое существо в Сфере радиусом 20 футов с центром в этой точке совершает спасбросок Ловкости, получая 8d6 урона Огнём при провале или половину этого урона при успехе.\n  Легковоспламеняющиеся объекты в области, которые никто не носит и не несёт, начинают гореть.\n\nПри использовании ячейки более высокого уровня урон увеличивается на 1d6 за каждый уровень ячейки выше 3-го."
+        }
+      },
+      "content_checksum": "56f3bef53a577baad6076e0939271950643b4a293afd633e01e16a6e32957322"
+    },
+    {
+      "id": "srd:spell:healing-word:2024",
+      "kind": "spell",
+      "entity_type": "spells",
+      "external_key": "healing-word",
+      "checksum": "94b92d3c1fed76365a4b812da8444131bf5413265008c9611e524c7f0275f964",
+      "correction": {
+        "evidence": "Agent editorial proposal; NOT human approval. SRD 5.2.1 p. 139; https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf; PDF SHA256 8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+        "fields": {
+          "description_en": "A creature of your choice that you can see within range regains Hit Points equal to 2d4 plus your spellcasting ability modifier.\n\nUsing a Higher-Level Spell Slot. The healing increases by 2d4 for each spell slot level above 1.",
+          "description_ru": "Существо по вашему выбору, которое вы видите в пределах дистанции, восстанавливает Хиты в количестве, равном 2d4 плюс модификатор вашей магической характеристики.\n\nПри использовании ячейки более высокого уровня лечение увеличивается на 2d4 за каждый уровень ячейки выше 1-го."
+        }
+      },
+      "content_checksum": "1864f0efb5131ca7647a60948c68261c2a87e71d02c547b94d1c5784057fbe47"
+    },
+    {
+      "id": "srd:spell:magic-missile:2024",
+      "kind": "spell",
+      "entity_type": "spells",
+      "external_key": "magic-missile",
+      "checksum": "f12ee013b3bbd77951377402ca2b83081297d6f2b239adf64a84daaff0fc67a9",
+      "correction": {
+        "evidence": "Agent editorial proposal; NOT human approval. SRD 5.2.1 p. 146; https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf; PDF SHA256 8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+        "fields": {
+          "description_en": "You create three glowing darts of magical force. Each dart strikes a creature of your choice that you can see within range. A dart deals 1d4 + 1 Force damage to its target. The darts all strike simultaneously, and you can direct them to hit one creature or several.\n\nUsing a Higher-Level Spell Slot. The spell creates one more dart for each spell slot level above 1.",
+          "description_ru": "Вы создаёте три светящихся заряда магической силы. Каждый заряд поражает существо по вашему выбору, которое вы видите в пределах дистанции. Заряд наносит своей цели 1d4 + 1 урона Силовой энергией. Все заряды поражают одновременно, и вы можете направить их в одно существо или в несколько.\n\nПри использовании ячейки более высокого уровня заклинание создаёт ещё один заряд за каждый уровень ячейки выше 1-го."
+        }
+      },
+      "content_checksum": "d216203216a7559e5ecd2b2630ef40f8b0791138bf8c4fba422e5f8a3bc03c6a"
+    },
+    {
+      "id": "srd:spell:shield:2024",
+      "kind": "spell",
+      "entity_type": "spells",
+      "external_key": "shield",
+      "checksum": "7b71ae6fd2a2a83f258a7423ee278c594c6d0c1fe304751f0602f03e35ea63f9"
+    }
+  ],
+  "reviews": [
+    {
+      "id": "srd:equipment:acid:2024",
+      "checksum": "f5864f407cadbed32049992f8e4e22cab472192e18578209e75f6671876351cf",
+      "projection_checksum": "4a9d05f0dbd25e76ace8206439efd4d51a6153cad5402553083f8a94a11ad60b",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C1, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+      "languages": [
+        "en",
+        "ru"
+      ],
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T19:59:45+00:00",
+      "browse": true,
+      "copy": true,
+      "execute": false
+    },
+    {
+      "id": "srd:equipment:arrows:2024",
+      "checksum": "13f1c3bd2b19d072847d47a35c48be5559f7d5c57ac8a3faf451d9b42a714e13",
+      "projection_checksum": "170af7df21d7e9583bdaef623395d6f4d4b5836c8345cdc2e4c79076f8b5b019",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C2, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+      "languages": [
+        "en",
+        "ru"
+      ],
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T19:59:47+00:00",
+      "browse": true,
+      "copy": true,
+      "execute": false
+    },
+    {
+      "id": "srd:equipment:chain-mail:2024",
+      "checksum": "6bb1e158068a10e42e3107ed55bb66bf39d7c692a75554184b7c30dbcd818b44",
+      "projection_checksum": "64410f43023cfedb14e2ea34ae4aa7dc9b3520f8ae2a9a0c55a267e36bf71260",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C3, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+      "languages": [
+        "en",
+        "ru"
+      ],
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T19:59:48+00:00",
+      "browse": true,
+      "copy": true,
+      "execute": false
+    },
+    {
+      "id": "srd:equipment:leather-armor:2024",
+      "checksum": "10c5fb4514a6ead647601691b0832c91d884b726ecd39a8767c722fcbcd7b313",
+      "projection_checksum": "c3376d93c11ecde3f8378b41139cf3c8f5e89e0e6ac7ae75a787486459d49613",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C4, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+      "languages": [
+        "en",
+        "ru"
+      ],
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T19:59:50+00:00",
+      "browse": true,
+      "copy": true,
+      "execute": false
+    },
+    {
+      "id": "srd:equipment:longsword:2024",
+      "checksum": "db88a0878bb279d08635493d8f62b2747237674a648b1f2f663f268070e6e440",
+      "projection_checksum": "b31ae6cfbece1298c8b0006c58fc3ba0bf115ca3aa7959080fb798750df24fbe",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C5, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+      "languages": [
+        "en",
+        "ru"
+      ],
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T19:59:51+00:00",
+      "browse": true,
+      "copy": true,
+      "execute": false
+    },
+    {
+      "id": "srd:equipment:potion-of-healing:2024",
+      "checksum": "496c81e1c47fded10cc863a7290bd8ec93023986400ed675a938d1b757bfe3f7",
+      "projection_checksum": "316dbe107739feccc292f13224f6a60b5fab265bc6e2f6d3190eef5938ac0c09",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C6, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+      "languages": [
+        "en",
+        "ru"
+      ],
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T19:59:53+00:00",
+      "browse": true,
+      "copy": true,
+      "execute": false
+    },
+    {
+      "id": "srd:equipment:shield:2024",
+      "checksum": "d05f779c0fc504a1cae3b6506acacf784e702981a174f463b92050b960ee2c51",
+      "projection_checksum": "aa6de60c2b28659cf3810e12f09e0f2ed8eac3dbebd713ea8192bab44117e9a1",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C7, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+      "languages": [
+        "en",
+        "ru"
+      ],
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T19:59:54+00:00",
+      "browse": true,
+      "copy": true,
+      "execute": false
+    },
+    {
+      "id": "srd:spell:cure-wounds:2024",
+      "checksum": "b5abdb0be7e0fa31a1db9ab639154a5c81fce55878c7cdcea9f426300c7eab7d",
+      "projection_checksum": "88f66b5581408d40fc45d3c465451aabef4a162a279909e0fdca9d5a28975708",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C9, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+      "languages": [
+        "en",
+        "ru"
+      ],
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T19:59:56+00:00",
+      "browse": true,
+      "copy": true,
+      "execute": false
+    },
+    {
+      "id": "srd:spell:detect-magic:2024",
+      "checksum": "1a8deb39006aca1759cb8acd962e97bd5b2d6a6b0cde41d41fde1c75f11ccab7",
+      "projection_checksum": "bb99401f100c419766f65d3aa48d64c15f271bdcf660c5b8fa12a5fda8141d58",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C10, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+      "languages": [
+        "en",
+        "ru"
+      ],
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T19:59:57+00:00",
+      "browse": true,
+      "copy": true,
+      "execute": false
+    },
+    {
+      "id": "srd:spell:fireball:2024",
+      "checksum": "56f3bef53a577baad6076e0939271950643b4a293afd633e01e16a6e32957322",
+      "projection_checksum": "448b6ae3fda8adfe3a4158ae0eaf638e3b66ccfbb6a7495d20cbcc45f287a0a6",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C11, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+      "languages": [
+        "en",
+        "ru"
+      ],
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T19:59:59+00:00",
+      "browse": true,
+      "copy": true,
+      "execute": false
+    },
+    {
+      "id": "srd:spell:healing-word:2024",
+      "checksum": "1864f0efb5131ca7647a60948c68261c2a87e71d02c547b94d1c5784057fbe47",
+      "projection_checksum": "c64590cc2eaa00dafdee67dd43589ea5cf756017298c1453f49c4180705dab10",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C12, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+      "languages": [
+        "en",
+        "ru"
+      ],
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T20:00:00+00:00",
+      "browse": true,
+      "copy": true,
+      "execute": false
+    },
+    {
+      "id": "srd:spell:magic-missile:2024",
+      "checksum": "d216203216a7559e5ecd2b2630ef40f8b0791138bf8c4fba422e5f8a3bc03c6a",
+      "projection_checksum": "87071af7c6ab94edf294a06d30a64eead4ad839611796758786501c1247e4ca2",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C13, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+      "languages": [
+        "en",
+        "ru"
+      ],
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T20:00:01+00:00",
+      "browse": true,
+      "copy": true,
+      "execute": false
+    },
+    {
+      "id": "srd:spell:shield:2024",
+      "checksum": "7b71ae6fd2a2a83f258a7423ee278c594c6d0c1fe304751f0602f03e35ea63f9",
+      "projection_checksum": "571bc396f26cc5ab42166f97ad5f4a9c476688bf4c7ad72bf60213dc558af35a",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C14, EN/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+      "languages": [
+        "en",
+        "ru"
+      ],
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T20:00:03+00:00",
+      "browse": true,
+      "copy": true,
+      "execute": false
+    }
+  ],
+  "baseline_reviews": [
+    {
+      "id": "srd:equipment:acid:2024",
+      "policy": "legacy-equipment-missing-null-ammunition-v1",
+      "entry_id": 340,
+      "baseline_digest": "61b589d662b57002ac14d917e7070d3b3c61951d827eab9b5eb4a6daf2fabe80",
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T21:59:44+02:00",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B1. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+    },
+    {
+      "id": "srd:equipment:arrows:2024",
+      "policy": "legacy-equipment-missing-null-ammunition-v1",
+      "entry_id": 345,
+      "baseline_digest": "c3a9091eaa0a9eb8d4346b805ee02ca798d969a6c6bab96a9580449245b7e2d8",
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T21:59:44+02:00",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B2. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+    },
+    {
+      "id": "srd:equipment:chain-mail:2024",
+      "policy": "legacy-equipment-missing-null-ammunition-v1",
+      "entry_id": 374,
+      "baseline_digest": "9ab016ef867fe46282eafec7b0cbb21a013453b7713584993f1fbf54d4afef29",
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T21:59:44+02:00",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B3. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+    },
+    {
+      "id": "srd:equipment:leather-armor:2024",
+      "policy": "legacy-equipment-missing-null-ammunition-v1",
+      "entry_id": 430,
+      "baseline_digest": "dcc3aeba8f72970522d7a01aa953286d6c4ca909940721bb5d355e2b2bca3d85",
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T21:59:44+02:00",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B4. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+    },
+    {
+      "id": "srd:equipment:longsword:2024",
+      "policy": "legacy-equipment-missing-null-ammunition-v1",
+      "entry_id": 436,
+      "baseline_digest": "b629882ef28edd4bc52045ee6acd7f6deada21fd0b44445773b10b629b9ad9bf",
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T21:59:44+02:00",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B5. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+    },
+    {
+      "id": "srd:equipment:potion-of-healing:2024",
+      "policy": "legacy-equipment-missing-null-ammunition-v1",
+      "entry_id": 467,
+      "baseline_digest": "5322310b5da605e25d4d863fb383d439d211bcc153210a0d7f1728415863d4d8",
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T21:59:44+02:00",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B6. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+    },
+    {
+      "id": "srd:equipment:shield:2024",
+      "policy": "legacy-equipment-missing-null-ammunition-v1",
+      "entry_id": 486,
+      "baseline_digest": "35c25b0ab9d99301784023c17058009a2f624d7539065a43fbe8b1c4adfbcbbf",
+      "confirmed": true,
+      "confirmed_at": "2026-11-12T21:59:44+02:00",
+      "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+      "evidence": "CONTENT-APPROVAL-02: owner explicitly approved B7. CONTENT_APPROVAL_01; snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8. Fresh SELECT audit matches exact entry_id/digest. Only missing ammunition equivalent to null; no other differences authorized. C approval separate."
+    }
+  ]
+}

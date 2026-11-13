@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:fabricate:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "fabricate",
+            "checksum": "8999bcb54d8009a4a9a2e91f716d206c06e6c7a640776f942b47580c89166ad1"
+        },
+        {
+            "id": "srd:spell:globe-of-invulnerability:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "globe-of-invulnerability",
+            "checksum": "6a7849f9006323641a398cdf716619a1d3a060727796dda85cf326651e2daa80"
+        },
+        {
+            "id": "srd:spell:plane-shift:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "plane-shift",
+            "checksum": "af3120eb88177736f4c63180669e43fadefc78353850d00250dd003e416f1b07"
+        },
+        {
+            "id": "srd:spell:power-word-kill:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "power-word-kill",
+            "checksum": "374bfb58f51c8e2091870aceab7fa32c38c5bf4e33d853ede59d4faba5abd7eb"
+        },
+        {
+            "id": "srd:spell:sunburst:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "sunburst",
+            "checksum": "7d99b97275a91bf8bfce97db5db6b12159a1335cb1475f4069a230ffd46ede3b"
+        },
+        {
+            "id": "srd:spell:speak-with-animals:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "speak-with-animals",
+            "checksum": "63edb7ed09870be64094954d1ab06177ac8c47ff4feafe50b58401d58ce8d3a5"
+        },
+        {
+            "id": "srd:spell:silence:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "silence",
+            "checksum": "f4c9dd9b8f5bfba0878861e563228b4114c43340b26080aabcd7a68e1dfe3786"
+        },
+        {
+            "id": "srd:spell:chill-touch:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "chill-touch",
+            "checksum": "abcfbe64b884c54f164786ff570bddaf15e2c7d34fd267f0f51b03b53f3f4084"
+        },
+        {
+            "id": "srd:spell:haste:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "haste",
+            "checksum": "55cfc0e29c462a06700d375c0ee5fb7601d0480274052857feac64cb85b767b0"
+        },
+        {
+            "id": "srd:spell:banishment:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "banishment",
+            "checksum": "35201fc441eb9f73c61baf52462abe0661db64a4c07caf6be816562eff93a51c"
+        },
+        {
+            "id": "srd:spell:teleportation-circle:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "teleportation-circle",
+            "checksum": "687dae2b0eb04fa1c7c7ae20e34529d82f9c480428e689686eb9f87daeaa001f"
+        },
+        {
+            "id": "srd:spell:irresistible-dance:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "irresistible-dance",
+            "checksum": "586a046cbcf601f79554d0390bddb4a75f9a14b4d8ca9c6ce3ffd3d32180f94a"
+        },
+        {
+            "id": "srd:spell:fire-storm:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "fire-storm",
+            "checksum": "d86781f6b9ed59f6d080a544fae49bc1b9dca644d3bf5f7ce912e8aebb4c5415"
+        },
+        {
+            "id": "srd:spell:detect-poison-and-disease:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "detect-poison-and-disease",
+            "checksum": "3281096e45a13dac0f7669092ff8490b2b1f7f5f1284863033967449c841bb1b"
+        },
+        {
+            "id": "srd:spell:phantasmal-force:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "phantasmal-force",
+            "checksum": "ab96a28a168f229d178286626d0b38fe17c43cc5c4fd73329c1ab5250029f8fa"
+        },
+        {
+            "id": "srd:spell:speak-with-dead:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "speak-with-dead",
+            "checksum": "dc6db38de4862e3fabc921bbc5911d837a754309eb082bc128b45e9d8f22ac23"
+        },
+        {
+            "id": "srd:spell:shillelagh:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "shillelagh",
+            "checksum": "4395fada8eb19251babff33de97dfaaeb64807354c877370ff5f0732c7c84b1b"
+        },
+        {
+            "id": "srd:spell:mass-heal:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "mass-heal",
+            "checksum": "0c289ba06e2ad58a750f89fabc3cb4f0d22506ef848806b473098c17b184f5f3"
+        },
+        {
+            "id": "srd:spell:demiplane:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "demiplane",
+            "checksum": "6449659ba97cce7dae65d18ea95aa926767ee08808feb21e2c7260bfab9bc31d"
+        },
+        {
+            "id": "srd:spell:divination:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "divination",
+            "checksum": "b985fefadf6e0abaf0aaa07fd2234dd27e8430c1f8f595dfc7ce7dc2b7bf5883"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

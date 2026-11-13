@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:equipment:vial:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "vial",
+            "checksum": "47baa1f8d7ec039fd96e6264500a96aa72fd5d78d45833cdedeadf04d1e56fca"
+        },
+        {
+            "id": "srd:equipment:rod:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "rod",
+            "checksum": "674edce6924cd189067f89813c5e43c256fe51e18061750f2213a5e60e451ef7"
+        },
+        {
+            "id": "srd:equipment:staff:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "staff",
+            "checksum": "ee8eb91099aeb74d94252ca2ee90256dbb8d121c5c0cbde9e1f11f8c85e62ad4"
+        },
+        {
+            "id": "srd:equipment:yew-wand:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "yew-wand",
+            "checksum": "3dfb9082fbcb54890e1de7ab8aea19d262efaa8450bfd54018aeb691f73b73ae"
+        },
+        {
+            "id": "srd:equipment:diplomat-pack:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "diplomat-pack",
+            "checksum": "600e885581d59d3d58422b65b2fa77ff2254e06bd87cbda79a96892b5365f1f7"
+        },
+        {
+            "id": "srd:equipment:reliquary:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "reliquary",
+            "checksum": "7ceee5ca8c74faecd512acb6198c671eeacf008cb3df01acf2c9b71591a08bd9"
+        },
+        {
+            "id": "srd:equipment:disguise-kit:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "disguise-kit",
+            "checksum": "e25718249e69d3eafa8a9bb42ff0c4a19f8d652813f90372294ecd346b104f5d"
+        },
+        {
+            "id": "srd:equipment:needles:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "needles",
+            "checksum": "93b728a61e7178d7a1acd072711bb89194d94448817fe1e35f939a30e19dcd3a"
+        },
+        {
+            "id": "srd:equipment:quarterstaff:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "quarterstaff",
+            "checksum": "147c05824351418f970d873fbc25f26256621818f4419591dae0329cee29c3c3"
+        },
+        {
+            "id": "srd:equipment:ring-mail:2024",
+            "kind": "equipment",
+            "entity_type": "armor",
+            "external_key": "ring-mail",
+            "checksum": "6248fdeb1cd5f7a67e6213f1be5a3a938e01b16c17204747ff449bea642367a3"
+        },
+        {
+            "id": "srd:equipment:hide-armor:2024",
+            "kind": "equipment",
+            "entity_type": "armor",
+            "external_key": "hide-armor",
+            "checksum": "75b6359dc95ee0d23320a582c014811b1a51cfcf564ecd4ddefdc03dc2f050bf"
+        },
+        {
+            "id": "srd:equipment:scale-mail:2024",
+            "kind": "equipment",
+            "entity_type": "armor",
+            "external_key": "scale-mail",
+            "checksum": "aaa77a1a807a2b9359379b28d99c87c90ee106b5954741f0ddc405e5c846c88d"
+        },
+        {
+            "id": "srd:equipment:leatherworkers-tools:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "leatherworkers-tools",
+            "checksum": "ffc8b8ca421bf456206908d32949c1eff8b313257960b2c63231ca8c0d174584"
+        },
+        {
+            "id": "srd:equipment:playing-cards:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "playing-cards",
+            "checksum": "4f33e9092f8bc497ffd3b4939ee97508ebcbeab14ba0ee61c841633e349bf9b8"
+        },
+        {
+            "id": "srd:equipment:trident:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "trident",
+            "checksum": "5aa392d6b37714e5758b477fee0a82d0d91d9da0d92c16f5b02c76f492e1efd2"
+        },
+        {
+            "id": "srd:equipment:longbow:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "longbow",
+            "checksum": "eee6ceb278096b49b2d2925f9a4e9ca07679b235fa1029624efcdb5a0f4b6469"
+        },
+        {
+            "id": "srd:equipment:dagger:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "dagger",
+            "checksum": "934fadf02233b2f92c3aa7cc7454acbd397e056cbd2b58ccba734640830cf363"
+        },
+        {
+            "id": "srd:equipment:lyre:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "lyre",
+            "checksum": "9a78c22e08563536abdb7292821a683318f399b4c8bbcab909442a7f204eb46b"
+        },
+        {
+            "id": "srd:equipment:forgery-kit:2024",
+            "kind": "equipment",
+            "entity_type": "items",
+            "external_key": "forgery-kit",
+            "checksum": "da3d2545a6eabacfd3ee4eb5e4956f52bf6fbb5945d99afac2ee1bc01c023aac"
+        },
+        {
+            "id": "srd:equipment:light-crossbow:2024",
+            "kind": "equipment",
+            "entity_type": "weapons",
+            "external_key": "light-crossbow",
+            "checksum": "c5a8ec97ffe39f41816a3b344b7dcb63428176a945f646234effd47478c92fb3"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

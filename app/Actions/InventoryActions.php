@@ -222,6 +222,7 @@ class InventoryActions
             abort_if(AbilityExecution::where('user_id', $user->id)->where('mutation_id', app(CommandContext::class)->id())->exists(), 409);
             $item = $c->inventory()->with('definition')->where('quantity', '>', 0)->findOrFail($data['inventoryItemId']);
             abort_unless(($item->definition->use_ability_id || isset($item->definition->gameplay['weapon']) || isset($item->definition->gameplay['use'])), 422, 'Предмет нельзя использовать.');
+            abort_if(isset($item->definition->content['execution_profile']), 422, 'Используйте бросок с подтверждением GM.');
             $response = app(AbilityActions::class)->execute($user, $scene, [...$data, 'abilityId' => app(ItemActions::class)->key($item->id, $data['itemAction'] ?? 'use')], true);
             app(ItemActions::class)->consume($user, $c, $item, $data['itemAction'] ?? 'use', $scene, $data['target'] ?? null);
             app(CharacterActions::class)->publish($user, $c->fresh());

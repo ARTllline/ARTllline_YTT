@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 4,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:resistance:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "resistance",
+            "checksum": "8d89d84a1c19de46379af75b2d0fd95eeff30c5b6b8ccc98cdb18504fc7969d2"
+        },
+        {
+            "id": "srd:spell:mage-hand:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "mage-hand",
+            "checksum": "e554811b0b68f4b56b3236f2af91d414608b4b08e6cab7be239e2a4471644307"
+        },
+        {
+            "id": "srd:spell:guidance:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "guidance",
+            "checksum": "7ddc577dfa51007f97a118e2eae7b50ae96f5417559c993d88c0415ea5f5a22c"
+        },
+        {
+            "id": "srd:spell:vicious-mockery:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "vicious-mockery",
+            "checksum": "d866344fc56f2a84974b502d15dc391ebb83f2a6cf6b8eec82332de1c1bd3806"
+        },
+        {
+            "id": "srd:spell:sorcerous-burst:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "sorcerous-burst",
+            "checksum": "ee2c525e44b1e14770d0132cc50d204acb0091dcc1b35b05256fd7b4150118d9"
+        },
+        {
+            "id": "srd:spell:dancing-lights:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "dancing-lights",
+            "checksum": "e525ef520fb97a1997537d5c19a1dd3ee4fd7b6cc93298cfef677890f36c1e9b"
+        },
+        {
+            "id": "srd:spell:poison-spray:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "poison-spray",
+            "checksum": "a138a7aae3d8d5d634c6d274cf7387570a96094ad903fed02246fee754d221d1"
+        },
+        {
+            "id": "srd:spell:message:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "message",
+            "checksum": "79217ae798a451179bf7427b0016f84467b471f40b52195b8d6e8d38744d3c5d"
+        },
+        {
+            "id": "srd:spell:shield-of-faith:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "shield-of-faith",
+            "checksum": "d2b9a450ab5a1a84ef46f979db55598bb3952be7ed14a68442f4031f04233bea"
+        },
+        {
+            "id": "srd:spell:warding-bond:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "warding-bond",
+            "checksum": "e1318a77300ee9b5f4699f42886ac0d199d20d4b61207f29318c08d5a62116de"
+        },
+        {
+            "id": "srd:spell:glyph-of-warding:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "glyph-of-warding",
+            "checksum": "fe7a7383a6057c8a63157e1f4ce41c23dfc5f160f9a037c24fd125d02f18dc85"
+        },
+        {
+            "id": "srd:spell:resilient-sphere:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "resilient-sphere",
+            "checksum": "ef11c031076a611e2e8ae481c64d8cac90a9ed9b91f93f45a6b1dfe1d6ce1f2f"
+        },
+        {
+            "id": "srd:spell:hallow:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "hallow",
+            "checksum": "4bef4612e55a988fa59eed88f01ba5eb410b4d97e44b558d8a1abd363b00df88"
+        },
+        {
+            "id": "srd:spell:guards-and-wards:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "guards-and-wards",
+            "checksum": "1ff37d1d7b3bdb96a7893895230806b33d3a0a8c6275787ec4c2cc665b05891e"
+        },
+        {
+            "id": "srd:spell:symbol:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "symbol",
+            "checksum": "21b00de23ae01a50def78a5551ef96cafe3a58b4522bf11e98daec5df91c3512"
+        },
+        {
+            "id": "srd:spell:mind-blank:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "mind-blank",
+            "checksum": "0dbf3074adfc0aa7804cc224db7ea036dd482e31b2622c4dc3d271b70c7d0cc4"
+        },
+        {
+            "id": "srd:spell:prismatic-wall:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "prismatic-wall",
+            "checksum": "44f4b507d7792b136ec84adc6809b6a30e78f15b1a0ad67251ea7e94436b2a9b"
+        },
+        {
+            "id": "srd:spell:ensnaring-strike:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "ensnaring-strike",
+            "checksum": "290aa5a06fbb52c530788d240e1f0d6e65c1c7f5b56eb78e9f7942532fda743a"
+        },
+        {
+            "id": "srd:spell:locate-animals-or-plants:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "locate-animals-or-plants",
+            "checksum": "24c99ab05ecda0766aaa6c119a20f3e011083086bad187a2d47d015d38f9efff"
+        },
+        {
+            "id": "srd:spell:confusion:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "confusion",
+            "checksum": "11fcbba39024687a9587a1ef611a99546aabd2a194584dc6e545c95ffbd8464d"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

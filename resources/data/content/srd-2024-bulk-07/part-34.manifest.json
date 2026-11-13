@@ -1,0 +1,154 @@
+{
+    "format": 1,
+    "adapter_version": 5,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:eldritch-blast:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "eldritch-blast",
+            "checksum": "a0f05a8dc9dcb8823e17482058704b72a7f2a2c8394f4f9dca907c5782b2a45c"
+        },
+        {
+            "id": "srd:spell:hallucinatory-terrain:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "hallucinatory-terrain",
+            "checksum": "2c0347a8e4d49def16c1191042c5a1f16989c71520889ad7c3a7c2960a515b5f"
+        },
+        {
+            "id": "srd:spell:bestow-curse:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "bestow-curse",
+            "checksum": "adecc4d8926976a05b6e449a12a36785fe8c5f808eaa9d0439c60d291c2c9b6d"
+        },
+        {
+            "id": "srd:spell:flesh-to-stone:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "flesh-to-stone",
+            "checksum": "0b26ef7d4d25f0a1c3d900b01e19d0938dacc8691de54086e36a86eee7be735a"
+        },
+        {
+            "id": "srd:spell:heroism:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "heroism",
+            "checksum": "19d43c49c34b30991d69c50383a6ac501d619cf3d2c89d7cf7fe51d358e0919d"
+        },
+        {
+            "id": "srd:spell:aid:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "aid",
+            "checksum": "ab9fd10646b9c23e7db57a8f756c49af141edeec93982aad691661677400d8ca"
+        },
+        {
+            "id": "srd:spell:sleet-storm:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "sleet-storm",
+            "checksum": "b91b0336a2b9358c42759dfed26ee4f1592d2bf68480732cb1f34af8454b5ef5"
+        },
+        {
+            "id": "srd:spell:scrying:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "scrying",
+            "checksum": "8c1e1c0b9337f7658b4c765091983dc40588195261f3eb5707b8eaa35a58e80b"
+        },
+        {
+            "id": "srd:spell:sacred-flame:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "sacred-flame",
+            "checksum": "a0f672fc27eaae1cb517c78597b69782e33c94a50f649d8feb5a07346d97e112"
+        },
+        {
+            "id": "srd:spell:stone-shape:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "stone-shape",
+            "checksum": "f43758c35effe6bd2430599a34076ea93653ddc2a585695f6a727fe155e45288"
+        },
+        {
+            "id": "srd:spell:sleep:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "sleep",
+            "checksum": "5831f701d01333ba9568c97af982163c32267467e70b4dfb874318f55e21946f"
+        },
+        {
+            "id": "srd:spell:arcanists-magic-aura:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "arcanists-magic-aura",
+            "checksum": "9a692e9cce9431b5872e2de39675148de8142a719ee89c13b71ed24afd48d584"
+        },
+        {
+            "id": "srd:spell:false-life:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "false-life",
+            "checksum": "4e6b9e033c1886244f4d6a6228254ab6e3bbc01cd23ab32a46242bc0751ce293"
+        },
+        {
+            "id": "srd:spell:contingency:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "contingency",
+            "checksum": "27678d634ee981a1023c0be3b1c201bdfcbe6bc9a48e7f51778875f98969aab8"
+        },
+        {
+            "id": "srd:spell:create-food-and-water:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "create-food-and-water",
+            "checksum": "f45344630428dcc58669c8aec9250042133165c439acb4acb37cae7314964d08"
+        },
+        {
+            "id": "srd:spell:commune-with-nature:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "commune-with-nature",
+            "checksum": "e857853d94b72258a5c0e668f597f38e948ef50fb69a371b7e45b1d86684b4e5"
+        },
+        {
+            "id": "srd:spell:ray-of-frost:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "ray-of-frost",
+            "checksum": "62abddf3820d025772135865cf6b2a11868106c44c76745250683504a3b46d1c"
+        },
+        {
+            "id": "srd:spell:move-earth:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "move-earth",
+            "checksum": "575bbf275063e095ffca6305a0f839bc0b5248ff03054a0ea52783f693e6aa1c"
+        },
+        {
+            "id": "srd:spell:calm-emotions:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "calm-emotions",
+            "checksum": "feb90718565e75b2720da0c9f008d7d59dcef3d7249d3d6ab0b64c3da8bdfb25"
+        },
+        {
+            "id": "srd:spell:silent-image:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "silent-image",
+            "checksum": "ad58c357a61888140121065b72c5c16950be8414eb981dc9aabae75a351894d2"
+        }
+    ],
+    "reviews": [],
+    "baseline_reviews": []
+}

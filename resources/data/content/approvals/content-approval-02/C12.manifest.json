@@ -1,0 +1,46 @@
+{
+    "format": 1,
+    "adapter_version": 4,
+    "source": "srd-2024",
+    "ruleset": "dnd-2024",
+    "export": {
+        "srd_commit": "dff09cc6f6764734d20fdba65a07a041613697ca",
+        "library_version": "0.9.0-audit.1"
+    },
+    "selection": [
+        {
+            "id": "srd:spell:healing-word:2024",
+            "kind": "spell",
+            "entity_type": "spells",
+            "external_key": "healing-word",
+            "checksum": "94b92d3c1fed76365a4b812da8444131bf5413265008c9611e524c7f0275f964",
+            "correction": {
+                "evidence": "Agent editorial proposal; NOT human approval. SRD 5.2.1 p. 139; https:\/\/media.dndbeyond.com\/compendium-images\/srd\/5.2\/SRD_CC_v5.2.1.pdf; PDF SHA256 8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+                "fields": {
+                    "description_en": "A creature of your choice that you can see within range regains Hit Points equal to 2d4 plus your spellcasting ability modifier.\n\nUsing a Higher-Level Spell Slot. The healing increases by 2d4 for each spell slot level above 1.",
+                    "description_ru": "Существо по вашему выбору, которое вы видите в пределах дистанции, восстанавливает Хиты в количестве, равном 2d4 плюс модификатор вашей магической характеристики.\n\nПри использовании ячейки более высокого уровня лечение увеличивается на 2d4 за каждый уровень ячейки выше 1-го."
+                }
+            },
+            "content_checksum": "1864f0efb5131ca7647a60948c68261c2a87e71d02c547b94d1c5784057fbe47"
+        }
+    ],
+    "reviews": [
+        {
+            "id": "srd:spell:healing-word:2024",
+            "checksum": "1864f0efb5131ca7647a60948c68261c2a87e71d02c547b94d1c5784057fbe47",
+            "projection_checksum": "c64590cc2eaa00dafdee67dd43589ea5cf756017298c1453f49c4180705dab10",
+            "reviewer": "Владелец проекта (решение в чате CONTENT-APPROVAL-02)",
+            "evidence": "CONTENT-APPROVAL-02: owner explicitly approved C12, EN\/RU and v4 with all CONTENT_APPROVAL_01 row conditions. Snapshot SHA256 e3bbb61db08689ab73b7345e253e52f6112d509cf0b05a72296c56ba105960a8; fresh preflight pins match. browse=true, copy=true, execute=false. No import, migration, runtime, artwork or automation authorization.",
+            "languages": [
+                "en",
+                "ru"
+            ],
+            "confirmed": true,
+            "confirmed_at": "2026-11-12T20:00:00+00:00",
+            "browse": true,
+            "copy": true,
+            "execute": false
+        }
+    ],
+    "baseline_reviews": []
+}

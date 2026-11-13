@@ -496,6 +496,7 @@
 .rarity-rare {
     --item-rarity: #7d9ab9;
 }
+.rarity-very_rare,
 .rarity-epic {
     --item-rarity: #ad8fbb;
 }
@@ -1903,3 +1904,6 @@
         grid-column: 2 / 4;
     }
 }
+
+.rarity-artifact { --item-rarity: #d6b478; }
+.rarity-varies, .rarity-unknown { --item-rarity: #a7adb6; }
